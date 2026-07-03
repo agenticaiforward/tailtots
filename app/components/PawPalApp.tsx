@@ -125,6 +125,7 @@ export function PawPalApp() {
   const [newChild, setNewChild] = useState({ name: "", code: "" });
   const [newPet, setNewPet] = useState({ name: "", species: "", food: "" });
   const [momentDraft, setMomentDraft] = useState("A kind moment with our pet was...");
+  const [familyPhotoUrl, setFamilyPhotoUrl] = useState<string>();
 
   const activeChild = children.find((child) => child.id === activeChildId) ?? children[0];
   const activePet = pets[0];
@@ -171,6 +172,27 @@ export function PawPalApp() {
       },
     ]);
     setNewPet({ name: "", species: "", food: "" });
+  }
+
+  function imageUrlFromFile(file?: File) {
+    return file ? URL.createObjectURL(file) : undefined;
+  }
+
+  function updateFamilyPhoto(file?: File) {
+    const url = imageUrlFromFile(file);
+    if (url) setFamilyPhotoUrl(url);
+  }
+
+  function updateChildPhoto(childId: string, file?: File) {
+    const url = imageUrlFromFile(file);
+    if (!url) return;
+    setChildren((items) => items.map((child) => (child.id === childId ? { ...child, photoUrl: url } : child)));
+  }
+
+  function updatePetPhoto(petId: string, file?: File) {
+    const url = imageUrlFromFile(file);
+    if (!url) return;
+    setPets((items) => items.map((pet) => (pet.id === petId ? { ...pet, photoUrl: url } : pet)));
   }
 
   function childLogin() {
@@ -278,11 +300,20 @@ export function PawPalApp() {
       <section className="mx-auto grid max-w-7xl gap-5 px-4 py-5 sm:px-6 lg:grid-cols-[280px_1fr]">
         <aside className="space-y-4">
           <div className="overflow-hidden rounded-lg border border-[#ded8c7] bg-white">
-            <div className="relative h-36 bg-[linear-gradient(135deg,#165a4b,#f47b20_50%,#7c3aed)]">
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_25%_25%,rgba(255,255,255,0.55),transparent_22%),radial-gradient(circle_at_70%_35%,rgba(255,255,255,0.35),transparent_18%)]" />
-              <div className="absolute bottom-4 left-4 right-4 rounded-lg bg-white/88 p-3 shadow-sm backdrop-blur">
+            <div className="relative min-h-64 bg-[linear-gradient(135deg,#165a4b,#f47b20_50%,#7c3aed)]">
+              {familyPhotoUrl && <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${familyPhotoUrl})` }} />}
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_25%_25%,rgba(255,255,255,0.55),transparent_22%),linear-gradient(to_top,rgba(23,35,31,0.62),transparent_55%)]" />
+              <div className="absolute right-4 top-4 flex items-end gap-2">
+                <AnimatedFamilyCharacter tone="#ffd166" shirt="#165a4b" delay="0s" />
+                <AnimatedPetBuddy color="#f47b20" delay="0.1s" />
+              </div>
+              <div className="absolute bottom-4 left-4 right-4 rounded-lg bg-white/90 p-3 shadow-sm backdrop-blur">
                 <p className="text-xs font-black uppercase tracking-[0.16em] text-[#7a4b12]">Family</p>
                 <h2 className="text-2xl font-black">Nalajala Pack</h2>
+                <label className="mt-3 inline-flex cursor-pointer rounded-lg bg-[#17231f] px-3 py-2 text-xs font-black text-white">
+                  Upload family picture
+                  <input className="sr-only" type="file" accept="image/*" onChange={(event) => updateFamilyPhoto(event.target.files?.[0])} />
+                </label>
               </div>
             </div>
             <p className="p-4 text-sm font-semibold text-[#5f6a65]">
@@ -330,7 +361,20 @@ export function PawPalApp() {
             taskProgress={taskProgress}
             approvedMissionCount={approvedMissionCount}
           />
-          <FamilyPhotoStrip childProfiles={children} pets={pets} />
+          <ProfileStrips
+            childProfiles={children}
+            pets={pets}
+            activeChildId={activeChild?.id}
+            setActiveChildId={setActiveChildId}
+            updateChildPhoto={updateChildPhoto}
+            updatePetPhoto={updatePetPhoto}
+          />
+          <FamilyPhotoStrip
+            childProfiles={children}
+            pets={pets}
+            familyPhotoUrl={familyPhotoUrl}
+            updateFamilyPhoto={updateFamilyPhoto}
+          />
           {activeTab === "missions" && (
             <MissionsPanel
               activeChild={activeChild}
@@ -341,7 +385,7 @@ export function PawPalApp() {
               completeMission={completeMission}
             />
           )}
-          {activeTab === "pets" && <PassportPanel pets={pets} />}
+          {activeTab === "pets" && <PassportPanel pets={pets} updatePetPhoto={updatePetPhoto} />}
           {activeTab === "bank" && (
             <BankPanel child={activeChild} transactions={transactions} goals={goals} requestBankMove={requestBankMove} />
           )}
@@ -406,8 +450,8 @@ function Hero({
             </p>
           </div>
           <div className="flex items-center justify-center gap-4">
-            <ProfilePhoto label={child?.name ?? "Kid"} initial={childLook.initial} colors={childLook.colors} size="lg" variant="kid" hair={childLook.hair} />
-            <ProfilePhoto label={pet?.name ?? "Pet"} initial={petLook.face} colors={petLook.colors} size="lg" variant="pet" petKind={petLook.kind} />
+            <ProfilePhoto label={child?.name ?? "Kid"} initial={childLook.initial} colors={childLook.colors} size="lg" variant="kid" hair={childLook.hair} photoUrl={child?.photoUrl} />
+            <ProfilePhoto label={pet?.name ?? "Pet"} initial={petLook.face} colors={petLook.colors} size="lg" variant="pet" petKind={petLook.kind} photoUrl={pet?.photoUrl} />
           </div>
         </div>
         <div className="grid gap-3 border-t border-white/15 bg-white/8 p-5 sm:grid-cols-3">
@@ -418,7 +462,7 @@ function Hero({
       </div>
       <div className="rounded-lg border border-[#ded8c7] bg-white p-5">
         <div className="flex items-center gap-4">
-          <ProfilePhoto label={child?.name ?? "Kid"} initial={childLook.initial} colors={childLook.colors} variant="kid" hair={childLook.hair} />
+          <ProfilePhoto label={child?.name ?? "Kid"} initial={childLook.initial} colors={childLook.colors} variant="kid" hair={childLook.hair} photoUrl={child?.photoUrl} />
           <div>
             <p className="text-xs font-black uppercase tracking-[0.18em] text-[#f47b20]">Active child</p>
             <h3 className="text-3xl font-black">{child?.name ?? "Add a child"}</h3>
@@ -447,24 +491,128 @@ function Hero({
   );
 }
 
-function FamilyPhotoStrip({ childProfiles, pets }: { childProfiles: Child[]; pets: Pet[] }) {
+function ProfileStrips({
+  childProfiles,
+  pets,
+  activeChildId,
+  setActiveChildId,
+  updateChildPhoto,
+  updatePetPhoto,
+}: {
+  childProfiles: Child[];
+  pets: Pet[];
+  activeChildId?: string;
+  setActiveChildId: (childId: string) => void;
+  updateChildPhoto: (childId: string, file?: File) => void;
+  updatePetPhoto: (petId: string, file?: File) => void;
+}) {
+  return (
+    <section className="grid gap-4 xl:grid-cols-2">
+      <div className="rounded-lg border border-[#ded8c7] bg-white p-4">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-[#f47b20]">Kids</p>
+            <h2 className="text-2xl font-black">Profiles and progress</h2>
+          </div>
+          <button onClick={() => setActiveChildId(childProfiles[0]?.id ?? "")} className="rounded-lg bg-[#17231f] px-3 py-2 text-xs font-black text-white">
+            View all
+          </button>
+        </div>
+        <div className="flex gap-3 overflow-x-auto pb-1">
+          {childProfiles.map((child) => {
+            const look = getChildLook(child.id);
+            const progress = Math.min(100, Math.round((child.points / 220) * 100));
+            return (
+              <button
+                key={child.id}
+                onClick={() => setActiveChildId(child.id)}
+                className={`min-w-48 rounded-lg border p-3 text-left ${activeChildId === child.id ? "border-[#f47b20] bg-[#fff4d8]" : "border-[#ded8c7] bg-[#f8f6ed]"}`}
+              >
+                <div className="flex items-center gap-3">
+                  <ProfilePhoto label={child.name} initial={look.initial} colors={look.colors} variant="kid" hair={look.hair} photoUrl={child.photoUrl} />
+                  <div className="min-w-0">
+                    <p className="truncate text-lg font-black">{child.name}</p>
+                    <p className="text-xs font-bold text-[#69736f]">{levelLabels[child.level]}</p>
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <Meter label="Tasks" value={progress} color="#f47b20" />
+                </div>
+                <label className="mt-3 inline-flex cursor-pointer rounded-lg bg-white px-3 py-2 text-xs font-black text-[#17231f]">
+                  Add photo
+                  <input className="sr-only" type="file" accept="image/*" onChange={(event) => updateChildPhoto(child.id, event.target.files?.[0])} />
+                </label>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+      <div className="rounded-lg border border-[#ded8c7] bg-white p-4">
+        <div className="mb-4">
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-[#0f766e]">Pets</p>
+          <h2 className="text-2xl font-black">Profiles and pictures</h2>
+        </div>
+        <div className="flex gap-3 overflow-x-auto pb-1">
+          {pets.map((pet) => {
+            const look = getPetLook(pet.id);
+            return (
+              <div key={pet.id} className="min-w-48 rounded-lg border border-[#ded8c7] bg-[#f8f6ed] p-3">
+                <div className="flex items-center gap-3">
+                  <ProfilePhoto label={pet.name} initial={look.face} colors={look.colors} variant="pet" petKind={look.kind} photoUrl={pet.photoUrl} />
+                  <div className="min-w-0">
+                    <p className="truncate text-lg font-black">{pet.name}</p>
+                    <p className="text-xs font-bold text-[#69736f]">{pet.species}</p>
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <Meter label="Happy" value={look.happiness} color="#0f766e" />
+                </div>
+                <label className="mt-3 inline-flex cursor-pointer rounded-lg bg-[#165a4b] px-3 py-2 text-xs font-black text-white">
+                  Take or upload
+                  <input className="sr-only" type="file" accept="image/*" capture="environment" onChange={(event) => updatePetPhoto(pet.id, event.target.files?.[0])} />
+                </label>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function FamilyPhotoStrip({
+  childProfiles,
+  pets,
+  familyPhotoUrl,
+  updateFamilyPhoto,
+}: {
+  childProfiles: Child[];
+  pets: Pet[];
+  familyPhotoUrl?: string;
+  updateFamilyPhoto: (file?: File) => void;
+}) {
   return (
     <section className="rounded-lg border border-[#ded8c7] bg-white p-4">
       <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
-        <div className="relative min-h-48 overflow-hidden rounded-lg bg-[linear-gradient(135deg,#ffe6a7,#b8f7d4_45%,#d8ccff)] p-5">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_18%,rgba(255,255,255,0.75),transparent_18%),radial-gradient(circle_at_82%_18%,rgba(255,255,255,0.55),transparent_16%),radial-gradient(circle_at_50%_78%,rgba(255,255,255,0.45),transparent_24%)]" />
+        <div className="relative min-h-56 overflow-hidden rounded-lg bg-[linear-gradient(135deg,#ffe6a7,#b8f7d4_45%,#d8ccff)] p-5">
+          {familyPhotoUrl && <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${familyPhotoUrl})` }} />}
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_18%,rgba(255,255,255,0.75),transparent_18%),linear-gradient(to_top,rgba(23,35,31,0.55),transparent_60%)]" />
           <div className="relative">
             <p className="text-xs font-black uppercase tracking-[0.18em] text-[#7a4b12]">Family picture</p>
             <h2 className="mt-2 max-w-md text-3xl font-black">A bright home base for everyone caring together.</h2>
+            <label className="mt-4 inline-flex cursor-pointer rounded-lg bg-[#17231f] px-4 py-3 text-sm font-black text-white">
+              Upload family picture
+              <input className="sr-only" type="file" accept="image/*" onChange={(event) => updateFamilyPhoto(event.target.files?.[0])} />
+            </label>
           </div>
           <div className="absolute bottom-5 left-5 flex -space-x-3">
             {childProfiles.map((child) => {
               const look = getChildLook(child.id);
-              return <ProfilePhoto key={child.id} label={child.name} initial={look.initial} colors={look.colors} variant="kid" hair={look.hair} />;
+              return <ProfilePhoto key={child.id} label={child.name} initial={look.initial} colors={look.colors} variant="kid" hair={look.hair} photoUrl={child.photoUrl} />;
             })}
             {pets.map((pet) => {
               const look = getPetLook(pet.id);
-              return <ProfilePhoto key={pet.id} label={pet.name} initial={look.face} colors={look.colors} variant="pet" petKind={look.kind} />;
+              return <ProfilePhoto key={pet.id} label={pet.name} initial={look.face} colors={look.colors} variant="pet" petKind={look.kind} photoUrl={pet.photoUrl} />;
             })}
           </div>
           <div className="absolute bottom-5 right-5 hidden items-end gap-3 sm:flex">
@@ -516,7 +664,7 @@ function MissionsPanel(props: {
                 <div className="flex flex-wrap gap-2">
                   <span className="rounded-full bg-white px-3 py-1 text-xs font-black">{levelLabels[mission.difficulty]}</span>
                   <span className="inline-flex items-center gap-2 rounded-full bg-[#e7f4ef] py-1 pl-1 pr-3 text-xs font-black">
-                    <ProfilePhoto label={pet?.name ?? "Family"} initial={getPetLook(pet?.id).face} colors={getPetLook(pet?.id).colors} size="xs" variant="pet" petKind={getPetLook(pet?.id).kind} />
+                    <ProfilePhoto label={pet?.name ?? "Family"} initial={getPetLook(pet?.id).face} colors={getPetLook(pet?.id).colors} size="xs" variant="pet" petKind={getPetLook(pet?.id).kind} photoUrl={pet?.photoUrl} />
                     {pet?.name ?? "Family"}
                   </span>
                   <span className="rounded-full bg-[#fff4d8] px-3 py-1 text-xs font-black">+{mission.points} pts</span>
@@ -539,17 +687,21 @@ function MissionsPanel(props: {
   );
 }
 
-function PassportPanel({ pets }: { pets: Pet[] }) {
+function PassportPanel({ pets, updatePetPhoto }: { pets: Pet[]; updatePetPhoto: (petId: string, file?: File) => void }) {
   return (
     <section className="grid gap-4 md:grid-cols-2">
       {pets.map((pet) => (
         <article key={pet.id} className="rounded-lg border border-[#ded8c7] bg-white p-5">
           <div className="flex items-center gap-4">
-            <ProfilePhoto label={pet.name} initial={getPetLook(pet.id).face} colors={getPetLook(pet.id).colors} size="lg" variant="pet" petKind={getPetLook(pet.id).kind} />
+            <ProfilePhoto label={pet.name} initial={getPetLook(pet.id).face} colors={getPetLook(pet.id).colors} size="lg" variant="pet" petKind={getPetLook(pet.id).kind} photoUrl={pet.photoUrl} />
             <div>
               <p className="text-xs font-black uppercase tracking-[0.18em] text-[#7a4b12]">{pet.name}&apos;s passport</p>
               <h2 className="text-3xl font-black">{pet.name}</h2>
               <p className="text-sm font-black text-[#0f766e]">{pet.species}</p>
+              <label className="mt-3 inline-flex cursor-pointer rounded-lg bg-[#165a4b] px-3 py-2 text-xs font-black text-white">
+                Take pet picture
+                <input className="sr-only" type="file" accept="image/*" capture="environment" onChange={(event) => updatePetPhoto(pet.id, event.target.files?.[0])} />
+              </label>
             </div>
           </div>
           <div className="mt-5 grid gap-3">
@@ -683,7 +835,7 @@ function GrowthPanel(props: {
           <div key={child.id} className="rounded-lg bg-[#f8f6ed] p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <ProfilePhoto label={child.name} initial={getChildLook(child.id).initial} colors={getChildLook(child.id).colors} variant="kid" hair={getChildLook(child.id).hair} />
+                <ProfilePhoto label={child.name} initial={getChildLook(child.id).initial} colors={getChildLook(child.id).colors} variant="kid" hair={getChildLook(child.id).hair} photoUrl={child.photoUrl} />
                 <h3 className="text-xl font-black">{child.name}</h3>
               </div>
               <span className="rounded-full bg-white px-3 py-1 text-xs font-black">{levelLabels[child.level]}</span>
@@ -723,6 +875,7 @@ function ProfilePhoto({
   variant = "kid",
   hair = "#2f1b12",
   petKind = "pet",
+  photoUrl,
 }: {
   label: string;
   initial: string;
@@ -731,19 +884,24 @@ function ProfilePhoto({
   variant?: "kid" | "pet";
   hair?: string;
   petKind?: "dog" | "guinea" | "pet";
+  photoUrl?: string;
 }) {
   const sizeClass = size === "lg" ? "size-24 text-4xl" : size === "xs" ? "size-7 text-xs" : "size-16 text-2xl";
   return (
     <div
       aria-label={`${label} photo placeholder`}
-      className={`${sizeClass} relative grid shrink-0 place-items-center overflow-visible rounded-full border-4 border-white bg-gradient-to-br ${colors} font-black text-white shadow-md`}
+      className={`${sizeClass} relative grid shrink-0 place-items-center overflow-hidden rounded-full border-4 border-white bg-gradient-to-br ${colors} font-black text-white shadow-md`}
       title={`${label} photo`}
     >
-      {variant === "pet" ? (
-        <PetCharacter kind={petKind} size={size} />
-      ) : (
-        <KidCharacter initial={initial} hair={hair} size={size} />
-      )}
+      {photoUrl && <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${photoUrl})` }} />}
+      {photoUrl && <div className="absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-white/15" />}
+      <div className={photoUrl ? "relative scale-75 opacity-95" : "relative"}>
+        {variant === "pet" ? (
+          <PetCharacter kind={petKind} size={size} />
+        ) : (
+          <KidCharacter initial={initial} hair={hair} size={size} />
+        )}
+      </div>
     </div>
   );
 }

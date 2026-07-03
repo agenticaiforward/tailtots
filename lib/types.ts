@@ -7,6 +7,7 @@ export type Child = {
   id: string;
   name: string;
   secretCode: string;
+  photoUrl?: string;
   points: number;
   coins: number;
   level: LevelKey;
@@ -21,6 +22,7 @@ export type Pet = {
   careNotes: string;
   vet: string;
   medicine: string;
+  photoUrl?: string;
 };
 
 export type Mission = {
