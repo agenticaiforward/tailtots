@@ -14,9 +14,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "PawPal Quest | Character Growth for Pet Care Kids",
+  title: "PawPal Quest | Family Pet Care MVP",
   description:
-    "A mobile-first family PWA where kids learn responsibility, empathy, kindness, and money habits by caring for pets.",
+    "A mobile-first family PWA where kids use pet care missions, approvals, Kid Bank goals, and memory moments to grow responsibility and empathy.",
   manifest: "/manifest.webmanifest",
   icons: {
     icon: "/favicon.svg",
