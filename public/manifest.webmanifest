@@ -1,0 +1,19 @@
+{
+  "name": "PawPal Quest",
+  "short_name": "PawPal",
+  "description": "Pet care missions, character growth, and kid money habits for families.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fbfaf4",
+  "theme_color": "#165a4b",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["education", "kids", "productivity", "finance"]
+}
