@@ -92,14 +92,14 @@ const starterTransactions: BankTransaction[] = [
   { id: "tx-2", childId: "leo", category: "give", amount: 2, description: "Donation jar request", status: "pending" },
 ];
 
-const childLooks: Record<string, { initial: string; colors: string; joy: number; love: number }> = {
-  maya: { initial: "M", colors: "from-[#ffcf70] via-[#ff8a65] to-[#7c3aed]", joy: 92, love: 88 },
-  leo: { initial: "L", colors: "from-[#79d6ff] via-[#4ade80] to-[#2563eb]", joy: 78, love: 84 },
+const childLooks: Record<string, { initial: string; colors: string; joy: number; love: number; hair: string }> = {
+  maya: { initial: "M", colors: "from-[#ffcf70] via-[#ff8a65] to-[#7c3aed]", joy: 92, love: 88, hair: "#4a2718" },
+  leo: { initial: "L", colors: "from-[#79d6ff] via-[#4ade80] to-[#2563eb]", joy: 78, love: 84, hair: "#1f2937" },
 };
 
-const petLooks: Record<string, { face: string; colors: string; happiness: number; loved: number }> = {
-  luna: { face: "D", colors: "from-[#fbbf24] via-[#f97316] to-[#7c2d12]", happiness: 94, loved: 91 },
-  mochi: { face: "G", colors: "from-[#bef264] via-[#5eead4] to-[#0f766e]", happiness: 83, loved: 89 },
+const petLooks: Record<string, { face: string; colors: string; happiness: number; loved: number; kind: "dog" | "guinea" | "pet" }> = {
+  luna: { face: "D", colors: "from-[#fbbf24] via-[#f97316] to-[#7c2d12]", happiness: 94, loved: 91, kind: "dog" },
+  mochi: { face: "G", colors: "from-[#bef264] via-[#5eead4] to-[#0f766e]", happiness: 83, loved: 89, kind: "guinea" },
 };
 
 const familyStats = [
@@ -406,8 +406,8 @@ function Hero({
             </p>
           </div>
           <div className="flex items-center justify-center gap-4">
-            <ProfilePhoto label={child?.name ?? "Kid"} initial={childLook.initial} colors={childLook.colors} size="lg" />
-            <ProfilePhoto label={pet?.name ?? "Pet"} initial={petLook.face} colors={petLook.colors} size="lg" />
+            <ProfilePhoto label={child?.name ?? "Kid"} initial={childLook.initial} colors={childLook.colors} size="lg" variant="kid" hair={childLook.hair} />
+            <ProfilePhoto label={pet?.name ?? "Pet"} initial={petLook.face} colors={petLook.colors} size="lg" variant="pet" petKind={petLook.kind} />
           </div>
         </div>
         <div className="grid gap-3 border-t border-white/15 bg-white/8 p-5 sm:grid-cols-3">
@@ -418,7 +418,7 @@ function Hero({
       </div>
       <div className="rounded-lg border border-[#ded8c7] bg-white p-5">
         <div className="flex items-center gap-4">
-          <ProfilePhoto label={child?.name ?? "Kid"} initial={childLook.initial} colors={childLook.colors} />
+          <ProfilePhoto label={child?.name ?? "Kid"} initial={childLook.initial} colors={childLook.colors} variant="kid" hair={childLook.hair} />
           <div>
             <p className="text-xs font-black uppercase tracking-[0.18em] text-[#f47b20]">Active child</p>
             <h3 className="text-3xl font-black">{child?.name ?? "Add a child"}</h3>
@@ -460,12 +460,17 @@ function FamilyPhotoStrip({ childProfiles, pets }: { childProfiles: Child[]; pet
           <div className="absolute bottom-5 left-5 flex -space-x-3">
             {childProfiles.map((child) => {
               const look = getChildLook(child.id);
-              return <ProfilePhoto key={child.id} label={child.name} initial={look.initial} colors={look.colors} />;
+              return <ProfilePhoto key={child.id} label={child.name} initial={look.initial} colors={look.colors} variant="kid" hair={look.hair} />;
             })}
             {pets.map((pet) => {
               const look = getPetLook(pet.id);
-              return <ProfilePhoto key={pet.id} label={pet.name} initial={look.face} colors={look.colors} />;
+              return <ProfilePhoto key={pet.id} label={pet.name} initial={look.face} colors={look.colors} variant="pet" petKind={look.kind} />;
             })}
+          </div>
+          <div className="absolute bottom-5 right-5 hidden items-end gap-3 sm:flex">
+            <AnimatedFamilyCharacter tone="#ffd166" shirt="#165a4b" delay="0s" />
+            <AnimatedFamilyCharacter tone="#f6b38a" shirt="#7c3aed" delay="0.25s" />
+            <AnimatedPetBuddy color="#f47b20" delay="0.1s" />
           </div>
         </div>
         <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
@@ -511,7 +516,7 @@ function MissionsPanel(props: {
                 <div className="flex flex-wrap gap-2">
                   <span className="rounded-full bg-white px-3 py-1 text-xs font-black">{levelLabels[mission.difficulty]}</span>
                   <span className="inline-flex items-center gap-2 rounded-full bg-[#e7f4ef] py-1 pl-1 pr-3 text-xs font-black">
-                    <ProfilePhoto label={pet?.name ?? "Family"} initial={getPetLook(pet?.id).face} colors={getPetLook(pet?.id).colors} size="xs" />
+                    <ProfilePhoto label={pet?.name ?? "Family"} initial={getPetLook(pet?.id).face} colors={getPetLook(pet?.id).colors} size="xs" variant="pet" petKind={getPetLook(pet?.id).kind} />
                     {pet?.name ?? "Family"}
                   </span>
                   <span className="rounded-full bg-[#fff4d8] px-3 py-1 text-xs font-black">+{mission.points} pts</span>
@@ -540,7 +545,7 @@ function PassportPanel({ pets }: { pets: Pet[] }) {
       {pets.map((pet) => (
         <article key={pet.id} className="rounded-lg border border-[#ded8c7] bg-white p-5">
           <div className="flex items-center gap-4">
-            <ProfilePhoto label={pet.name} initial={getPetLook(pet.id).face} colors={getPetLook(pet.id).colors} size="lg" />
+            <ProfilePhoto label={pet.name} initial={getPetLook(pet.id).face} colors={getPetLook(pet.id).colors} size="lg" variant="pet" petKind={getPetLook(pet.id).kind} />
             <div>
               <p className="text-xs font-black uppercase tracking-[0.18em] text-[#7a4b12]">{pet.name}&apos;s passport</p>
               <h2 className="text-3xl font-black">{pet.name}</h2>
@@ -678,7 +683,7 @@ function GrowthPanel(props: {
           <div key={child.id} className="rounded-lg bg-[#f8f6ed] p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <ProfilePhoto label={child.name} initial={getChildLook(child.id).initial} colors={getChildLook(child.id).colors} />
+                <ProfilePhoto label={child.name} initial={getChildLook(child.id).initial} colors={getChildLook(child.id).colors} variant="kid" hair={getChildLook(child.id).hair} />
                 <h3 className="text-xl font-black">{child.name}</h3>
               </div>
               <span className="rounded-full bg-white px-3 py-1 text-xs font-black">{levelLabels[child.level]}</span>
@@ -715,20 +720,104 @@ function ProfilePhoto({
   initial,
   colors,
   size = "md",
+  variant = "kid",
+  hair = "#2f1b12",
+  petKind = "pet",
 }: {
   label: string;
   initial: string;
   colors: string;
   size?: "xs" | "md" | "lg";
+  variant?: "kid" | "pet";
+  hair?: string;
+  petKind?: "dog" | "guinea" | "pet";
 }) {
   const sizeClass = size === "lg" ? "size-24 text-4xl" : size === "xs" ? "size-7 text-xs" : "size-16 text-2xl";
   return (
     <div
       aria-label={`${label} photo placeholder`}
-      className={`${sizeClass} grid shrink-0 place-items-center rounded-full border-4 border-white bg-gradient-to-br ${colors} font-black text-white shadow-md`}
+      className={`${sizeClass} relative grid shrink-0 place-items-center overflow-visible rounded-full border-4 border-white bg-gradient-to-br ${colors} font-black text-white shadow-md`}
       title={`${label} photo`}
     >
-      {initial}
+      {variant === "pet" ? (
+        <PetCharacter kind={petKind} size={size} />
+      ) : (
+        <KidCharacter initial={initial} hair={hair} size={size} />
+      )}
+    </div>
+  );
+}
+
+function KidCharacter({ initial, hair, size }: { initial: string; hair: string; size: "xs" | "md" | "lg" }) {
+  const compact = size === "xs";
+  return (
+    <div className={`relative ${compact ? "scale-[0.45]" : size === "lg" ? "scale-110" : "scale-90"} animate-[character-bob_2.8s_ease-in-out_infinite]`}>
+      <div className="absolute -left-5 top-6 h-7 w-3 origin-top rounded-full bg-[#ffe7c2] animate-[arm-wave_1.8s_ease-in-out_infinite]" />
+      <div className="absolute -right-5 top-7 h-7 w-3 origin-top rounded-full bg-[#ffe7c2] animate-[arm-wave_2.1s_ease-in-out_infinite_reverse]" />
+      <div className="relative size-14 rounded-full bg-[#ffe7c2] shadow-inner">
+        <div className="absolute -top-2 left-2 right-2 h-5 rounded-t-full" style={{ backgroundColor: hair }} />
+        <div className="absolute left-4 top-6 size-1.5 rounded-full bg-[#17231f]" />
+        <div className="absolute right-4 top-6 size-1.5 rounded-full bg-[#17231f]" />
+        <div className="absolute bottom-3 left-1/2 h-2 w-5 -translate-x-1/2 rounded-b-full border-b-2 border-[#17231f]" />
+      </div>
+      <div className="mx-auto -mt-1 grid h-8 w-12 place-items-center rounded-t-2xl bg-white/90 text-sm font-black text-[#17231f]">
+        {initial}
+      </div>
+    </div>
+  );
+}
+
+function PetCharacter({ kind, size }: { kind: "dog" | "guinea" | "pet"; size: "xs" | "md" | "lg" }) {
+  const compact = size === "xs";
+  const isDog = kind === "dog";
+  return (
+    <div className={`relative ${compact ? "scale-[0.42]" : size === "lg" ? "scale-110" : "scale-90"} animate-[pet-wiggle_2.4s_ease-in-out_infinite]`}>
+      {isDog ? (
+        <>
+          <div className="absolute -left-4 top-2 h-9 w-5 rotate-[-22deg] rounded-full bg-[#6b3b19] animate-[ear-flop_1.9s_ease-in-out_infinite]" />
+          <div className="absolute -right-4 top-2 h-9 w-5 rotate-[22deg] rounded-full bg-[#6b3b19] animate-[ear-flop_2.1s_ease-in-out_infinite_reverse]" />
+        </>
+      ) : (
+        <>
+          <div className="absolute -left-2 top-0 size-5 rounded-full bg-[#f7d7aa]" />
+          <div className="absolute -right-2 top-0 size-5 rounded-full bg-[#f7d7aa]" />
+        </>
+      )}
+      <div className="relative size-16 rounded-full bg-[#f9d8a7] shadow-inner">
+        <div className="absolute left-4 top-6 size-2 rounded-full bg-[#17231f]" />
+        <div className="absolute right-4 top-6 size-2 rounded-full bg-[#17231f]" />
+        <div className="absolute left-1/2 top-8 size-3 -translate-x-1/2 rounded-full bg-[#17231f]" />
+        <div className="absolute bottom-3 left-1/2 h-2 w-6 -translate-x-1/2 rounded-b-full border-b-2 border-[#17231f]" />
+        <div className="absolute -bottom-1 right-2 h-3 w-6 rounded-full bg-[#ff7a7a] animate-[tongue-pop_2.5s_ease-in-out_infinite]" />
+      </div>
+    </div>
+  );
+}
+
+function AnimatedFamilyCharacter({ tone, shirt, delay }: { tone: string; shirt: string; delay: string }) {
+  return (
+    <div className="relative h-24 w-16 animate-[character-bob_2.6s_ease-in-out_infinite]" style={{ animationDelay: delay }}>
+      <div className="absolute left-1/2 top-0 size-12 -translate-x-1/2 rounded-full shadow-inner" style={{ backgroundColor: tone }}>
+        <div className="absolute left-3 top-6 size-1.5 rounded-full bg-[#17231f]" />
+        <div className="absolute right-3 top-6 size-1.5 rounded-full bg-[#17231f]" />
+        <div className="absolute bottom-2 left-1/2 h-2 w-5 -translate-x-1/2 rounded-b-full border-b-2 border-[#17231f]" />
+      </div>
+      <div className="absolute bottom-0 left-1/2 h-12 w-14 -translate-x-1/2 rounded-t-3xl" style={{ backgroundColor: shirt }} />
+      <div className="absolute bottom-7 left-0 h-8 w-3 origin-top rounded-full animate-[arm-wave_1.7s_ease-in-out_infinite]" style={{ backgroundColor: tone }} />
+    </div>
+  );
+}
+
+function AnimatedPetBuddy({ color, delay }: { color: string; delay: string }) {
+  return (
+    <div className="relative h-20 w-20 animate-[pet-wiggle_2.1s_ease-in-out_infinite]" style={{ animationDelay: delay }}>
+      <div className="absolute left-2 top-3 h-9 w-5 -rotate-12 rounded-full bg-[#6b3b19]" />
+      <div className="absolute right-2 top-3 h-9 w-5 rotate-12 rounded-full bg-[#6b3b19]" />
+      <div className="absolute bottom-0 left-1/2 size-16 -translate-x-1/2 rounded-full" style={{ backgroundColor: color }}>
+        <div className="absolute left-5 top-7 size-2 rounded-full bg-[#17231f]" />
+        <div className="absolute right-5 top-7 size-2 rounded-full bg-[#17231f]" />
+        <div className="absolute bottom-4 left-1/2 size-3 -translate-x-1/2 rounded-full bg-[#17231f]" />
+      </div>
     </div>
   );
 }
@@ -748,9 +837,9 @@ function Meter({ label, value, color, dark = false }: { label: string; value: nu
 }
 
 function getChildLook(childId?: string) {
-  return childLooks[childId ?? ""] ?? { initial: "K", colors: "from-[#ffd166] via-[#f47b20] to-[#165a4b]", joy: 80, love: 80 };
+  return childLooks[childId ?? ""] ?? { initial: "K", colors: "from-[#ffd166] via-[#f47b20] to-[#165a4b]", joy: 80, love: 80, hair: "#2f1b12" };
 }
 
 function getPetLook(petId?: string) {
-  return petLooks[petId ?? ""] ?? { face: "P", colors: "from-[#ffd166] via-[#f47b20] to-[#165a4b]", happiness: 80, loved: 80 };
+  return petLooks[petId ?? ""] ?? { face: "P", colors: "from-[#ffd166] via-[#f47b20] to-[#165a4b]", happiness: 80, loved: 80, kind: "pet" };
 }
