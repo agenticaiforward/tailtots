@@ -92,6 +92,22 @@ const starterTransactions: BankTransaction[] = [
   { id: "tx-2", childId: "leo", category: "give", amount: 2, description: "Donation jar request", status: "pending" },
 ];
 
+const childLooks: Record<string, { initial: string; colors: string; joy: number; love: number }> = {
+  maya: { initial: "M", colors: "from-[#ffcf70] via-[#ff8a65] to-[#7c3aed]", joy: 92, love: 88 },
+  leo: { initial: "L", colors: "from-[#79d6ff] via-[#4ade80] to-[#2563eb]", joy: 78, love: 84 },
+};
+
+const petLooks: Record<string, { face: string; colors: string; happiness: number; loved: number }> = {
+  luna: { face: "D", colors: "from-[#fbbf24] via-[#f97316] to-[#7c2d12]", happiness: 94, loved: 91 },
+  mochi: { face: "G", colors: "from-[#bef264] via-[#5eead4] to-[#0f766e]", happiness: 83, loved: 89 },
+};
+
+const familyStats = [
+  ["Family joy", 88, "#f47b20"],
+  ["Pet happiness", 91, "#0f766e"],
+  ["Kids loving it", 86, "#7c3aed"],
+];
+
 export function PawPalApp() {
   const [role, setRole] = useState<Role>("parent");
   const [activeTab, setActiveTab] = useState("missions");
@@ -112,6 +128,9 @@ export function PawPalApp() {
 
   const activeChild = children.find((child) => child.id === activeChildId) ?? children[0];
   const activePet = pets[0];
+  const approvedMissionCount = missions.filter((mission) => mission.status === "approved").length;
+  const completedMissionCount = missions.filter((mission) => mission.completedBy).length;
+  const taskProgress = Math.round((completedMissionCount / Math.max(1, missions.length)) * 100);
 
   const pendingApprovals = useMemo(
     () => [
@@ -258,10 +277,15 @@ export function PawPalApp() {
 
       <section className="mx-auto grid max-w-7xl gap-5 px-4 py-5 sm:px-6 lg:grid-cols-[280px_1fr]">
         <aside className="space-y-4">
-          <div className="rounded-lg border border-[#ded8c7] bg-white p-4">
-            <p className="text-xs font-black uppercase tracking-[0.16em] text-[#7a4b12]">Family</p>
-            <h2 className="mt-2 text-2xl font-black">Nalajala Pack</h2>
-            <p className="mt-2 text-sm font-semibold text-[#5f6a65]">
+          <div className="overflow-hidden rounded-lg border border-[#ded8c7] bg-white">
+            <div className="relative h-36 bg-[linear-gradient(135deg,#165a4b,#f47b20_50%,#7c3aed)]">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_25%_25%,rgba(255,255,255,0.55),transparent_22%),radial-gradient(circle_at_70%_35%,rgba(255,255,255,0.35),transparent_18%)]" />
+              <div className="absolute bottom-4 left-4 right-4 rounded-lg bg-white/88 p-3 shadow-sm backdrop-blur">
+                <p className="text-xs font-black uppercase tracking-[0.16em] text-[#7a4b12]">Family</p>
+                <h2 className="text-2xl font-black">Nalajala Pack</h2>
+              </div>
+            </div>
+            <p className="p-4 text-sm font-semibold text-[#5f6a65]">
               {isSupabaseConfigured ? "Supabase connected" : "Demo mode until Supabase keys are added"}
             </p>
           </div>
@@ -284,7 +308,7 @@ export function PawPalApp() {
           )}
 
           <nav className="grid gap-2">
-            {["missions", "passport", "bank", "approvals", "setup", "growth"].map((tab) => (
+            {["missions", "pets", "bank", "approvals", "setup", "growth"].map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -299,7 +323,14 @@ export function PawPalApp() {
         </aside>
 
         <div className="space-y-5">
-          <Hero child={activeChild} pet={activePet} pendingCount={pendingApprovals.length} />
+          <Hero
+            child={activeChild}
+            pet={activePet}
+            pendingCount={pendingApprovals.length}
+            taskProgress={taskProgress}
+            approvedMissionCount={approvedMissionCount}
+          />
+          <FamilyPhotoStrip childProfiles={children} pets={pets} />
           {activeTab === "missions" && (
             <MissionsPanel
               activeChild={activeChild}
@@ -310,7 +341,7 @@ export function PawPalApp() {
               completeMission={completeMission}
             />
           )}
-          {activeTab === "passport" && <PassportPanel pets={pets} />}
+          {activeTab === "pets" && <PassportPanel pets={pets} />}
           {activeTab === "bank" && (
             <BankPanel child={activeChild} transactions={transactions} goals={goals} requestBankMove={requestBankMove} />
           )}
@@ -348,23 +379,101 @@ export function PawPalApp() {
   );
 }
 
-function Hero({ child, pet, pendingCount }: { child?: Child; pet?: Pet; pendingCount: number }) {
+function Hero({
+  child,
+  pet,
+  pendingCount,
+  taskProgress,
+  approvedMissionCount,
+}: {
+  child?: Child;
+  pet?: Pet;
+  pendingCount: number;
+  taskProgress: number;
+  approvedMissionCount: number;
+}) {
+  const childLook = getChildLook(child?.id);
+  const petLook = getPetLook(pet?.id);
   return (
     <section className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
-      <div className="rounded-lg bg-[#165a4b] p-5 text-white">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#b7e7d5]">Today&apos;s quest</p>
-        <h2 className="mt-3 text-4xl font-black">Help {pet?.name ?? "your pet"} feel safe, fed, and loved.</h2>
-        <p className="mt-4 max-w-2xl text-sm font-semibold leading-6 text-[#d8f5e8]">
-          Aarush&apos;s levels power the missions. Sahasra&apos;s secret code, passport, goals, and memory moments shape the family experience.
-        </p>
+      <div className="overflow-hidden rounded-lg bg-[#165a4b] text-white">
+        <div className="grid gap-5 p-5 md:grid-cols-[1fr_auto] md:items-center">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-[#b7e7d5]">Today&apos;s quest</p>
+            <h2 className="mt-3 text-4xl font-black">Help {pet?.name ?? "your pet"} feel safe, fed, and loved.</h2>
+            <p className="mt-4 max-w-2xl text-sm font-semibold leading-6 text-[#d8f5e8]">
+              The app now tracks task progress, pet happiness, and how much kids are enjoying the habit.
+            </p>
+          </div>
+          <div className="flex items-center justify-center gap-4">
+            <ProfilePhoto label={child?.name ?? "Kid"} initial={childLook.initial} colors={childLook.colors} size="lg" />
+            <ProfilePhoto label={pet?.name ?? "Pet"} initial={petLook.face} colors={petLook.colors} size="lg" />
+          </div>
+        </div>
+        <div className="grid gap-3 border-t border-white/15 bg-white/8 p-5 sm:grid-cols-3">
+          {familyStats.map(([label, value, color]) => (
+            <Meter key={label} label={String(label)} value={Number(value)} color={String(color)} dark />
+          ))}
+        </div>
       </div>
       <div className="rounded-lg border border-[#ded8c7] bg-white p-5">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#f47b20]">Active child</p>
-        <h3 className="mt-2 text-3xl font-black">{child?.name ?? "Add a child"}</h3>
+        <div className="flex items-center gap-4">
+          <ProfilePhoto label={child?.name ?? "Kid"} initial={childLook.initial} colors={childLook.colors} />
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-[#f47b20]">Active child</p>
+            <h3 className="text-3xl font-black">{child?.name ?? "Add a child"}</h3>
+          </div>
+        </div>
+        <div className="mt-5">
+          <div className="mb-2 flex justify-between text-sm font-black">
+            <span>Task progress</span>
+            <span>{taskProgress}%</span>
+          </div>
+          <div className="h-4 rounded-full bg-[#f0ead8]">
+            <div className="h-4 rounded-full bg-[#f47b20]" style={{ width: `${taskProgress}%` }} />
+          </div>
+        </div>
         <div className="mt-4 grid grid-cols-3 gap-2 text-center text-xs font-black">
           <span className="rounded-lg bg-[#ecf7f0] p-3">{child?.points ?? 0}<br />points</span>
-          <span className="rounded-lg bg-[#fff4d8] p-3">{child?.coins ?? 0}<br />coins</span>
+          <span className="rounded-lg bg-[#fff4d8] p-3">{approvedMissionCount}<br />approved</span>
           <span className="rounded-lg bg-[#f0edff] p-3">{pendingCount}<br />pending</span>
+        </div>
+        <div className="mt-4 grid gap-3">
+          <Meter label="Loving the app" value={childLook.love} color="#7c3aed" />
+          <Meter label="Happiness today" value={childLook.joy} color="#0f766e" />
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function FamilyPhotoStrip({ childProfiles, pets }: { childProfiles: Child[]; pets: Pet[] }) {
+  return (
+    <section className="rounded-lg border border-[#ded8c7] bg-white p-4">
+      <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
+        <div className="relative min-h-48 overflow-hidden rounded-lg bg-[linear-gradient(135deg,#ffe6a7,#b8f7d4_45%,#d8ccff)] p-5">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_18%,rgba(255,255,255,0.75),transparent_18%),radial-gradient(circle_at_82%_18%,rgba(255,255,255,0.55),transparent_16%),radial-gradient(circle_at_50%_78%,rgba(255,255,255,0.45),transparent_24%)]" />
+          <div className="relative">
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-[#7a4b12]">Family picture</p>
+            <h2 className="mt-2 max-w-md text-3xl font-black">A bright home base for everyone caring together.</h2>
+          </div>
+          <div className="absolute bottom-5 left-5 flex -space-x-3">
+            {childProfiles.map((child) => {
+              const look = getChildLook(child.id);
+              return <ProfilePhoto key={child.id} label={child.name} initial={look.initial} colors={look.colors} />;
+            })}
+            {pets.map((pet) => {
+              const look = getPetLook(pet.id);
+              return <ProfilePhoto key={pet.id} label={pet.name} initial={look.face} colors={look.colors} />;
+            })}
+          </div>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
+          {familyStats.map(([label, value, color]) => (
+            <div key={label} className="rounded-lg bg-[#f8f6ed] p-4">
+              <Meter label={String(label)} value={Number(value)} color={String(color)} />
+            </div>
+          ))}
         </div>
       </div>
     </section>
@@ -401,7 +510,10 @@ function MissionsPanel(props: {
               <div>
                 <div className="flex flex-wrap gap-2">
                   <span className="rounded-full bg-white px-3 py-1 text-xs font-black">{levelLabels[mission.difficulty]}</span>
-                  <span className="rounded-full bg-[#e7f4ef] px-3 py-1 text-xs font-black">{pet?.name ?? "Family"}</span>
+                  <span className="inline-flex items-center gap-2 rounded-full bg-[#e7f4ef] py-1 pl-1 pr-3 text-xs font-black">
+                    <ProfilePhoto label={pet?.name ?? "Family"} initial={getPetLook(pet?.id).face} colors={getPetLook(pet?.id).colors} size="xs" />
+                    {pet?.name ?? "Family"}
+                  </span>
                   <span className="rounded-full bg-[#fff4d8] px-3 py-1 text-xs font-black">+{mission.points} pts</span>
                 </div>
                 <h3 className="mt-3 text-xl font-black">{mission.title}</h3>
@@ -427,9 +539,18 @@ function PassportPanel({ pets }: { pets: Pet[] }) {
     <section className="grid gap-4 md:grid-cols-2">
       {pets.map((pet) => (
         <article key={pet.id} className="rounded-lg border border-[#ded8c7] bg-white p-5">
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-[#7a4b12]">Pet Passport</p>
-          <h2 className="mt-2 text-3xl font-black">{pet.name}</h2>
-          <p className="text-sm font-black text-[#0f766e]">{pet.species}</p>
+          <div className="flex items-center gap-4">
+            <ProfilePhoto label={pet.name} initial={getPetLook(pet.id).face} colors={getPetLook(pet.id).colors} size="lg" />
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-[#7a4b12]">{pet.name}&apos;s passport</p>
+              <h2 className="text-3xl font-black">{pet.name}</h2>
+              <p className="text-sm font-black text-[#0f766e]">{pet.species}</p>
+            </div>
+          </div>
+          <div className="mt-5 grid gap-3">
+            <Meter label={`${pet.name} happiness`} value={getPetLook(pet.id).happiness} color="#f47b20" />
+            <Meter label={`${pet.name} feeling loved`} value={getPetLook(pet.id).loved} color="#0f766e" />
+          </div>
           <dl className="mt-5 grid gap-3 text-sm">
             <div className="rounded-lg bg-[#f8f6ed] p-3"><dt className="font-black">Favorite food</dt><dd>{pet.favoriteFood}</dd></div>
             <div className="rounded-lg bg-[#f8f6ed] p-3"><dt className="font-black">Care notes</dt><dd>{pet.careNotes}</dd></div>
@@ -556,8 +677,16 @@ function GrowthPanel(props: {
         {props.childProfiles.map((child) => (
           <div key={child.id} className="rounded-lg bg-[#f8f6ed] p-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-xl font-black">{child.name}</h3>
+              <div className="flex items-center gap-3">
+                <ProfilePhoto label={child.name} initial={getChildLook(child.id).initial} colors={getChildLook(child.id).colors} />
+                <h3 className="text-xl font-black">{child.name}</h3>
+              </div>
               <span className="rounded-full bg-white px-3 py-1 text-xs font-black">{levelLabels[child.level]}</span>
+            </div>
+            <div className="mt-4 grid gap-3">
+              <Meter label="Task progress" value={Math.min(100, Math.round((child.points / 220) * 100))} color="#f47b20" />
+              <Meter label="Loving it" value={getChildLook(child.id).love} color="#7c3aed" />
+              <Meter label="Happiness" value={getChildLook(child.id).joy} color="#0f766e" />
             </div>
             <div className="mt-4 grid grid-cols-3 gap-2 text-center text-xs font-black">
               <span className="rounded-lg bg-white p-3">{child.points}<br />points</span>
@@ -579,4 +708,49 @@ function GrowthPanel(props: {
       </div>
     </section>
   );
+}
+
+function ProfilePhoto({
+  label,
+  initial,
+  colors,
+  size = "md",
+}: {
+  label: string;
+  initial: string;
+  colors: string;
+  size?: "xs" | "md" | "lg";
+}) {
+  const sizeClass = size === "lg" ? "size-24 text-4xl" : size === "xs" ? "size-7 text-xs" : "size-16 text-2xl";
+  return (
+    <div
+      aria-label={`${label} photo placeholder`}
+      className={`${sizeClass} grid shrink-0 place-items-center rounded-full border-4 border-white bg-gradient-to-br ${colors} font-black text-white shadow-md`}
+      title={`${label} photo`}
+    >
+      {initial}
+    </div>
+  );
+}
+
+function Meter({ label, value, color, dark = false }: { label: string; value: number; color: string; dark?: boolean }) {
+  return (
+    <div>
+      <div className={`mb-2 flex justify-between text-xs font-black ${dark ? "text-white" : "text-[#25352f]"}`}>
+        <span>{label}</span>
+        <span>{value}%</span>
+      </div>
+      <div className={`h-3 rounded-full ${dark ? "bg-white/20" : "bg-[#ece5d2]"}`}>
+        <div className="h-3 rounded-full" style={{ width: `${Math.min(100, value)}%`, backgroundColor: color }} />
+      </div>
+    </div>
+  );
+}
+
+function getChildLook(childId?: string) {
+  return childLooks[childId ?? ""] ?? { initial: "K", colors: "from-[#ffd166] via-[#f47b20] to-[#165a4b]", joy: 80, love: 80 };
+}
+
+function getPetLook(petId?: string) {
+  return petLooks[petId ?? ""] ?? { face: "P", colors: "from-[#ffd166] via-[#f47b20] to-[#165a4b]", happiness: 80, loved: 80 };
 }
