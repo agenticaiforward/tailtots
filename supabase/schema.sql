@@ -166,6 +166,37 @@ create table public.memory_moments (
   created_at timestamptz not null default now()
 );
 
+create table public.badge_awards (
+  id uuid primary key default gen_random_uuid(),
+  family_id uuid not null references public.families(id) on delete cascade,
+  child_id uuid not null references public.children(id) on delete cascade,
+  title text not null,
+  skill text not null check (skill in ('responsibility', 'empathy', 'teamwork', 'leadership', 'time')),
+  note text not null,
+  awarded_at timestamptz not null default now(),
+  awarded_by_parent_id uuid references public.parents(id) on delete set null
+);
+
+create table public.neighborhood_jobs (
+  id uuid primary key default gen_random_uuid(),
+  family_id uuid not null references public.families(id) on delete cascade,
+  title text not null,
+  neighbor_family_name text not null,
+  pet_name text not null,
+  scheduled_for text not null,
+  reward_cents integer not null default 0,
+  badge_title text not null default 'Trusted Helper',
+  assigned_child_ids uuid[] not null default '{}',
+  checklist text[] not null default '{}',
+  safety_note text not null,
+  status text not null default 'posted' check (status in ('posted', 'accepted', 'approved', 'completed', 'cancelled')),
+  accepted_by_child_id uuid references public.children(id) on delete set null,
+  task_id uuid references public.tasks(id) on delete set null,
+  created_by_parent_id uuid references public.parents(id) on delete set null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 insert into public.levels (key, label, sort_order, required_points, question_style)
 values
   ('easy', 'Easy', 1, 0, 'Simple yes/no care checks'),
@@ -183,6 +214,8 @@ create index task_completions_child_id_idx on public.task_completions(child_id);
 create index approvals_family_id_status_idx on public.approvals(family_id, status);
 create index kid_bank_transactions_child_id_idx on public.kid_bank_transactions(child_id);
 create index savings_goals_child_id_idx on public.savings_goals(child_id);
+create index badge_awards_family_id_child_id_idx on public.badge_awards(family_id, child_id);
+create index neighborhood_jobs_family_id_status_idx on public.neighborhood_jobs(family_id, status);
 
 alter table public.families enable row level security;
 alter table public.parents enable row level security;
@@ -199,6 +232,8 @@ alter table public.savings_goals enable row level security;
 alter table public.donations enable row level security;
 alter table public.approvals enable row level security;
 alter table public.memory_moments enable row level security;
+alter table public.badge_awards enable row level security;
+alter table public.neighborhood_jobs enable row level security;
 
 create or replace function public.current_parent_family_ids()
 returns setof uuid
@@ -237,3 +272,132 @@ create policy "Parents can manage approvals"
 on public.approvals for all
 using (family_id in (select public.current_parent_family_ids()))
 with check (family_id in (select public.current_parent_family_ids()));
+
+create policy "Parents can manage pet passports"
+on public.pet_passports for all
+using (pet_id in (select id from public.pets where family_id in (select public.current_parent_family_ids())))
+with check (pet_id in (select id from public.pets where family_id in (select public.current_parent_family_ids())));
+
+create policy "Parents can manage levels"
+on public.levels for select
+using (true);
+
+create policy "Parents can manage chores"
+on public.chores for all
+using (family_id in (select public.current_parent_family_ids()))
+with check (family_id in (select public.current_parent_family_ids()));
+
+create policy "Parents can manage task completions"
+on public.task_completions for all
+using (child_id in (select id from public.children where family_id in (select public.current_parent_family_ids())))
+with check (child_id in (select id from public.children where family_id in (select public.current_parent_family_ids())));
+
+create policy "Parents can manage rewards"
+on public.rewards for all
+using (family_id in (select public.current_parent_family_ids()))
+with check (family_id in (select public.current_parent_family_ids()));
+
+create policy "Parents can manage stickers"
+on public.stickers for all
+using (family_id is null or family_id in (select public.current_parent_family_ids()))
+with check (family_id is null or family_id in (select public.current_parent_family_ids()));
+
+create policy "Parents can manage kid bank transactions"
+on public.kid_bank_transactions for all
+using (child_id in (select id from public.children where family_id in (select public.current_parent_family_ids())))
+with check (child_id in (select id from public.children where family_id in (select public.current_parent_family_ids())));
+
+create policy "Parents can manage savings goals"
+on public.savings_goals for all
+using (child_id in (select id from public.children where family_id in (select public.current_parent_family_ids())))
+with check (child_id in (select id from public.children where family_id in (select public.current_parent_family_ids())));
+
+create policy "Parents can manage donations"
+on public.donations for all
+using (child_id in (select id from public.children where family_id in (select public.current_parent_family_ids())))
+with check (child_id in (select id from public.children where family_id in (select public.current_parent_family_ids())));
+
+create policy "Parents can manage memory moments"
+on public.memory_moments for all
+using (family_id in (select public.current_parent_family_ids()))
+with check (family_id in (select public.current_parent_family_ids()));
+
+create policy "Parents can manage badge awards"
+on public.badge_awards for all
+using (family_id in (select public.current_parent_family_ids()))
+with check (family_id in (select public.current_parent_family_ids()));
+
+create policy "Parents can manage neighborhood jobs"
+on public.neighborhood_jobs for all
+using (family_id in (select public.current_parent_family_ids()))
+with check (family_id in (select public.current_parent_family_ids()));
+
+create or replace function public.create_family_for_current_user(
+  family_name text,
+  parent_display_name text
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  new_family_id uuid;
+begin
+  if auth.uid() is null then
+    raise exception 'Authentication required';
+  end if;
+
+  insert into public.families (name)
+  values (coalesce(nullif(trim(family_name), ''), 'My Family'))
+  returning id into new_family_id;
+
+  insert into public.parents (family_id, auth_user_id, display_name, role)
+  values (new_family_id, auth.uid(), coalesce(nullif(trim(parent_display_name), ''), 'Parent'), 'owner');
+
+  return new_family_id;
+end;
+$$;
+
+create or replace function public.set_child_secret_code(
+  p_child_id uuid,
+  p_secret_code text
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if p_secret_code !~ '^[0-9]{4,8}$' then
+    raise exception 'Child code must be 4 to 8 digits';
+  end if;
+
+  update public.children
+  set secret_code_hash = crypt(p_secret_code, gen_salt('bf'))
+  where id = p_child_id
+    and family_id in (select public.current_parent_family_ids());
+
+  if not found then
+    raise exception 'Child not found or not allowed';
+  end if;
+end;
+$$;
+
+create or replace function public.verify_child_secret_code(
+  p_child_id uuid,
+  p_secret_code text
+)
+returns boolean
+language sql
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.children
+    where id = p_child_id
+      and family_id in (select public.current_parent_family_ids())
+      and secret_code_hash = crypt(p_secret_code, secret_code_hash)
+  );
+$$;

@@ -1,5 +1,5 @@
-import { PawPalApp } from "./components/PawPalApp";
+import { TailTotsApp } from "./components/TailTotsApp";
 
 export default function Home() {
-  return <PawPalApp />;
+  return <TailTotsApp />;
 }

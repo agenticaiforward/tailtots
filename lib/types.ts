@@ -6,6 +6,7 @@ export type ApprovalStatus = "pending" | "approved" | "rejected";
 export type Child = {
   id: string;
   name: string;
+  age: number;
   secretCode: string;
   photoUrl?: string;
   points: number;
@@ -32,6 +33,8 @@ export type Mission = {
   difficulty: LevelKey;
   points: number;
   coins: number;
+  allowanceDollars?: number;
+  assignedChildId?: string;
   petId?: string;
   question: string;
   status: ApprovalStatus;
@@ -45,6 +48,8 @@ export type BankTransaction = {
   category: BankCategory;
   amount: number;
   description: string;
+  activityId?: string;
+  goalId?: string;
   status: ApprovalStatus;
 };
 
@@ -55,6 +60,8 @@ export type SavingsGoal = {
   target: number;
   saved: number;
   type: "toy" | "pet_food" | "treats" | "donation" | "family_reward";
+  sharedWithTrustedFamilies?: boolean;
+  causeNote?: string;
 };
 
 export type MemoryMoment = {

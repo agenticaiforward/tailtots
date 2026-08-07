@@ -1,6 +1,5 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { RegisterServiceWorker } from "./register-sw";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -14,9 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "PawPal Quest | Family Pet Care MVP",
+  title: "TailTots | Family Pet Care",
   description:
-    "A mobile-first family PWA where kids use pet care missions, approvals, Kid Bank goals, and memory moments to grow responsibility and empathy.",
+    "A phone-first and smart-display-ready family PWA where kids use pet care missions, approvals, Kid Bank goals, reminders, badges, and neighborhood jobs to grow responsibility and empathy.",
   manifest: "/manifest.webmanifest",
   icons: {
     icon: "/favicon.svg",
@@ -25,9 +24,15 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "PawPal Quest",
+    title: "TailTots",
   },
+};
+
+export const viewport: Viewport = {
   themeColor: "#165a4b",
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
@@ -40,7 +45,6 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <RegisterServiceWorker />
         {children}
       </body>
     </html>

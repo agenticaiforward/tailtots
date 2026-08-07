@@ -1,0 +1,1 @@
+\i /tailtots-schema.sql
