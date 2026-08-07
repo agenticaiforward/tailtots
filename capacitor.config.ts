@@ -5,7 +5,7 @@ const config: CapacitorConfig = {
   appName: "TailTots",
   webDir: "dist/client",
   server: {
-    url: "https://pawpal-quest-kids.navin-nala-0658.chatgpt.site",
+    url: "https://tailtots.com",
     cleartext: false,
   },
   android: {

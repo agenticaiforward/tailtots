@@ -8,7 +8,9 @@ Mobile-first family PWA for pet care missions, kid profile switching, parent app
 - Tailwind CSS
 - PWA manifest and service worker
 - Supabase-ready PostgreSQL schema
-- Deployable through OpenAI Sites now, and portable to GitHub + Vercel
+- Production target: Cloudflare Pages on `tailtots.com`
+- Secure backend target: Supabase Auth + PostgreSQL
+- Temporary beta preview: OpenAI Sites
 
 ## Local Development
 
@@ -39,6 +41,7 @@ Secure backend foundations:
 - Kids switch profiles without passcodes so shared family devices stay easy to use.
 - `lib/secure-family-backend.ts` contains the typed client access layer for authenticated Supabase reads/writes.
 - `docs/SECURE_BACKEND.md` has the deployment and security checklist.
+- `docs/CLOUDFLARE_SUPABASE_DEPLOYMENT.md` has the production launch checklist.
 
 ## MVP Scope
 
