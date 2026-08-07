@@ -94,6 +94,7 @@ type PhotoCropDraft = {
 type PhotoCropTarget = Pick<PhotoCropDraft, "targetType" | "targetId" | "label" | "fit">;
 type PetKind = "dog" | "guinea" | "tortoise" | "fish" | "pet";
 type LifeSkillKey = "responsibility" | "empathy" | "teamwork" | "leadership" | "time";
+type TrustSignalKey = "parent_gate" | "age_fit" | "no_messaging" | "adult_nearby" | "private_child";
 
 type BadgeAward = {
   id: string;
@@ -116,6 +117,9 @@ type NeighborhoodJob = {
   visibleToKids: boolean;
   checklist: string[];
   safety: string;
+  minAge?: number;
+  skillFocus?: LifeSkillKey;
+  trustSignals?: TrustSignalKey[];
   status: "posted" | "accepted" | "approved" | "completed";
   acceptedBy?: string;
   missionId?: string;
@@ -230,6 +234,9 @@ const starterNeighborhoodJobs: NeighborhoodJob[] = [
     visibleToKids: true,
     checklist: ["Refill hay", "Check water bottle", "Send parent photo"],
     safety: "Parent stays nearby; no cage cleaning yet.",
+    minAge: 8,
+    skillFocus: "empathy",
+    trustSignals: ["parent_gate", "age_fit", "adult_nearby", "private_child"],
     status: "posted",
   },
   {
@@ -244,6 +251,9 @@ const starterNeighborhoodJobs: NeighborhoodJob[] = [
     visibleToKids: false,
     checklist: ["Look at water cup", "Check food level", "Tell parent if cage looks messy"],
     safety: "No handling the bird; adult opens cage only.",
+    minAge: 10,
+    skillFocus: "responsibility",
+    trustSignals: ["parent_gate", "age_fit", "no_messaging", "private_child"],
     status: "posted",
   },
 ];
@@ -343,6 +353,8 @@ export function TailTotsApp() {
   const activeApprovedMissionCount = activeChildMissions.filter((mission) => mission.status === "approved").length;
   const activeCompletedMissionCount = activeChildMissions.filter((mission) => mission.completedBy).length;
   const taskProgress = Math.round((activeCompletedMissionCount / Math.max(1, activeChildMissions.length)) * 100);
+  const fairnessSummary = useMemo(() => getFairnessSummary(missions, children), [children, missions]);
+  const familySkillSummary = useMemo(() => getFamilySkillSummary(badges, children), [badges, children]);
 
   const pendingApprovals = useMemo(
     () => [
@@ -729,6 +741,9 @@ export function TailTotsApp() {
         visibleToKids: false,
         checklist: ["Review the pet need", "Complete the parent-approved task", "Tell parent what you noticed"],
         safety: jobDraft.safety.trim() || "Parent confirms details first.",
+        minAge: Math.min(...children.map((child) => child.age)),
+        skillFocus: Number(jobDraft.rewardDollars) >= 8 ? "leadership" : "teamwork",
+        trustSignals: ["parent_gate", "age_fit", "no_messaging", "adult_nearby", "private_child"],
         status: "posted",
       },
       ...items,
@@ -766,7 +781,7 @@ export function TailTotsApp() {
           coins: job.rewardDollars > 0 ? 3 : 1,
           allowanceDollars: job.rewardDollars,
           assignedChildId: job.acceptedBy,
-          question: `${job.checklist.join(" / ")}. What did you notice about ${job.pet}?`,
+          question: `${job.checklist.join(" / ")}. What did you notice about ${job.pet}? Skill focus: ${getLifeSkillLabel(job.skillFocus ?? "teamwork")}.`,
           status: "pending",
         },
         ...items,
@@ -935,6 +950,7 @@ export function TailTotsApp() {
                 activeChild={activeChild}
                 missions={activeChildMissions}
                 pets={pets}
+                allChildren={children}
                 missionNote={missionNote}
                 setMissionNote={setMissionNote}
                 completeMission={completeMission}
@@ -950,6 +966,8 @@ export function TailTotsApp() {
               goals={goals}
               moments={moments}
               badges={badges}
+              fairnessSummary={fairnessSummary}
+              familySkillSummary={familySkillSummary}
               role={role}
               isParentUnlocked={isParentUnlocked}
               pendingCount={pendingApprovals.length}
@@ -977,6 +995,7 @@ export function TailTotsApp() {
               <MissionAssignmentPanel
                 missions={missions}
                 childProfiles={children}
+                badges={badges}
                 assignMission={assignMission}
                 autoBalanceMissions={autoBalanceMissions}
               />
@@ -1071,6 +1090,8 @@ function HomeHubPanel({
   goals,
   moments,
   badges,
+  fairnessSummary,
+  familySkillSummary,
   role,
   isParentUnlocked,
   pendingCount,
@@ -1083,6 +1104,8 @@ function HomeHubPanel({
   goals: SavingsGoal[];
   moments: MemoryMoment[];
   badges: BadgeAward[];
+  fairnessSummary: ReturnType<typeof getFairnessSummary>;
+  familySkillSummary: ReturnType<typeof getFamilySkillSummary>;
   role: Role;
   isParentUnlocked: boolean;
   pendingCount: number;
@@ -1143,6 +1166,18 @@ function HomeHubPanel({
                     <p className="mt-2 text-3xl font-black sm:text-4xl" style={{ color: String(color) }}>{value}</p>
                   </div>
                 ))}
+              </div>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <div className="rounded-lg bg-white/10 p-3">
+                  <p className="text-xs font-black uppercase text-white/70">Fairness engine</p>
+                  <p className="mt-2 text-lg font-black text-[#ffd166]">{fairnessSummary.label}</p>
+                  <p className="mt-1 text-sm font-bold text-white/70">{fairnessSummary.detail}</p>
+                </div>
+                <div className="rounded-lg bg-white/10 p-3">
+                  <p className="text-xs font-black uppercase text-white/70">Top value</p>
+                  <p className="mt-2 text-lg font-black text-[#5eead4]">{familySkillSummary.topLabel}</p>
+                  <p className="mt-1 text-sm font-bold text-white/70">{familySkillSummary.totalBadges} value badges tracked</p>
+                </div>
               </div>
             </div>
             <div className="grid place-items-center rounded-lg bg-white/10 p-5">
@@ -1478,7 +1513,13 @@ function saveFamilyState(state: SavedFamilyState) {
 }
 
 function normalizeNeighborhoodJob(job: NeighborhoodJob): NeighborhoodJob {
-  return { ...job, visibleToKids: job.visibleToKids === true };
+  return {
+    ...job,
+    visibleToKids: job.visibleToKids === true,
+    minAge: job.minAge ?? 4,
+    skillFocus: job.skillFocus ?? "teamwork",
+    trustSignals: job.trustSignals?.length ? job.trustSignals : ["parent_gate", "age_fit", "private_child"],
+  };
 }
 
 function normalizePetProfile(pet: Pet): Pet {
@@ -1745,6 +1786,7 @@ function MissionsPanel(props: {
   activeChild?: Child;
   missions: Mission[];
   pets: Pet[];
+  allChildren: Child[];
   missionNote: string;
   setMissionNote: (value: string) => void;
   completeMission: (missionId: string) => void;
@@ -1769,6 +1811,8 @@ function MissionsPanel(props: {
       <div className="mt-5 grid gap-3">
         {props.missions.map((mission) => {
           const pet = props.pets.find((item) => item.id === mission.petId);
+          const skill = getMissionLifeSkill(mission);
+          const assignedChild = props.allChildren.find((child) => child.id === mission.assignedChildId);
           return (
             <article key={mission.id} className="grid gap-4 rounded-lg border border-[#e8e1cf] bg-[#fbfaf4] p-4 lg:grid-cols-[1fr_auto] lg:items-center">
               <div>
@@ -1786,9 +1830,20 @@ function MissionsPanel(props: {
                   <span className="rounded-full bg-white px-3 py-1 text-xs font-black">
                     {mission.allowanceDollars ? `+$${mission.allowanceDollars}` : "No dollars"}
                   </span>
+                  <span className="rounded-full bg-[#f0edff] px-3 py-1 text-xs font-black text-[#5b21b6]">
+                    {getLifeSkillLabel(skill)}
+                  </span>
                 </div>
                 <h3 className="mt-3 text-xl font-black">{mission.title}</h3>
                 <p className="mt-1 text-sm font-semibold text-[#5f6a65]">{mission.question}</p>
+                <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                  <p className="rounded-lg bg-white p-3 text-xs font-black text-[#165a4b]">
+                    Why this is for you: {getKidMissionReason(mission, props.activeChild)}
+                  </p>
+                  <p className="rounded-lg bg-white p-3 text-xs font-black text-[#7a4b12]">
+                    Fairness note: {assignedChild ? `${assignedChild.name} owns this one task.` : "Parent can assign one owner so kids do not fight over it."}
+                  </p>
+                </div>
               </div>
               <button
                 onClick={() => props.completeMission(mission.id)}
@@ -2158,10 +2213,16 @@ function ApprovalsPanel(props: {
         )}
         {pendingMissions.map((mission) => (
           <article key={mission.id} className="flex flex-col justify-between gap-3 rounded-lg bg-[#f8f6ed] p-4 sm:flex-row sm:items-center">
-            <p className="font-semibold">
-              <b>{props.childProfiles.find((child) => child.id === mission.completedBy)?.name}</b> completed {mission.title}. Note: {mission.note}. Approval adds {mission.coins} reward coins
-              {mission.allowanceDollars ? ` and $${mission.allowanceDollars} allowance.` : " and no allowance dollars."}
-            </p>
+            <div>
+              <p className="font-semibold">
+                <b>{props.childProfiles.find((child) => child.id === mission.completedBy)?.name}</b> completed {mission.title}. Note: {mission.note}. Approval adds {mission.coins} reward coins
+                {mission.allowanceDollars ? ` and $${mission.allowanceDollars} allowance.` : " and no allowance dollars."}
+              </p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-[#5b21b6]">{getLifeSkillLabel(getMissionLifeSkill(mission))}</span>
+                <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-[#165a4b]">Parent approval creates value evidence</span>
+              </div>
+            </div>
             <div className="grid gap-2 sm:grid-cols-2">
               <button onClick={() => props.approveMission(mission.id)} className="min-h-11 rounded-lg bg-[#165a4b] px-5 py-2 text-sm font-black text-white">Approve</button>
               <button onClick={() => props.rejectMission(mission.id)} className="min-h-11 rounded-lg bg-white px-5 py-2 text-sm font-black text-[#7a2c2c]">Send back</button>
@@ -2185,6 +2246,7 @@ function ApprovalsPanel(props: {
 function MissionAssignmentPanel(props: {
   missions: Mission[];
   childProfiles: Child[];
+  badges: BadgeAward[];
   assignMission: (missionId: string, childId: string) => void;
   autoBalanceMissions: () => void;
 }) {
@@ -2198,6 +2260,7 @@ function MissionAssignmentPanel(props: {
   const lowest = sortedPoints[0];
   const highest = sortedPoints[sortedPoints.length - 1];
   const spread = highest && lowest ? highest.points - lowest.points : 0;
+  const familySkillSummary = getFamilySkillSummary(props.badges, props.childProfiles);
 
   return (
     <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
@@ -2213,6 +2276,23 @@ function MissionAssignmentPanel(props: {
         <span className="inline-flex min-h-11 items-center rounded-lg bg-[#eef2ff] px-4 py-2 text-sm font-black text-[#1d4ed8]">
           Harder tasks automatically carry more points
         </span>
+      </div>
+      <div className="mt-4 grid gap-3 lg:grid-cols-3">
+        <div className="rounded-lg bg-[#e7f4ef] p-4">
+          <p className="text-xs font-black uppercase tracking-[0.14em] text-[#165a4b]">Investor differentiator</p>
+          <p className="mt-2 text-lg font-black">Fairness, not first-click competition</p>
+          <p className="mt-1 text-sm font-bold text-[#4f625b]">Every task has one owner, age guidance, and point balancing across kids.</p>
+        </div>
+        <div className="rounded-lg bg-[#f0edff] p-4">
+          <p className="text-xs font-black uppercase tracking-[0.14em] text-[#5b21b6]">Values tracked</p>
+          <p className="mt-2 text-lg font-black">{familySkillSummary.topLabel}</p>
+          <p className="mt-1 text-sm font-bold text-[#5f4b8b]">Badges become parent-visible proof of growth, not just stickers.</p>
+        </div>
+        <div className="rounded-lg bg-[#fff4d8] p-4">
+          <p className="text-xs font-black uppercase tracking-[0.14em] text-[#7a4b12]">Current spread</p>
+          <p className="mt-2 text-lg font-black">{spread} planned points</p>
+          <p className="mt-1 text-sm font-bold text-[#6f5c31]">Keep kids near the same total while harder work still earns more.</p>
+        </div>
       </div>
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         {plannedPoints.map(({ child, points }) => (
@@ -2235,6 +2315,7 @@ function MissionAssignmentPanel(props: {
                 <span className="rounded-full bg-white px-3 py-1 text-xs font-black">{levelLabels[mission.difficulty]}</span>
                 <span className="rounded-full bg-[#eef2ff] px-3 py-1 text-xs font-black text-[#1d4ed8]">{difficultyAgeGuidance[mission.difficulty].label}</span>
                 <span className="rounded-full bg-[#fff4d8] px-3 py-1 text-xs font-black">+{mission.points} pts</span>
+                <span className="rounded-full bg-[#f0edff] px-3 py-1 text-xs font-black text-[#5b21b6]">{getLifeSkillLabel(getMissionLifeSkill(mission))}</span>
                 {mission.status === "approved" && <span className="rounded-full bg-[#e7f4ef] px-3 py-1 text-xs font-black text-[#165a4b]">Approved</span>}
               </div>
               <h3 className="mt-2 text-lg font-black">{mission.title}</h3>
@@ -2605,7 +2686,10 @@ function NeighborhoodPanel({
   toggleJobVisibility: (jobId: string) => void;
 }) {
   const sharedGoals = goals.filter((goal) => goal.sharedWithTrustedFamilies);
-  const visibleJobs = role === "parent" ? jobs : jobs.filter((job) => job.visibleToKids && activeChild && job.assignedChildIds.includes(activeChild.id));
+  const visibleJobs =
+    role === "parent"
+      ? jobs
+      : jobs.filter((job) => job.visibleToKids && activeChild && job.assignedChildIds.includes(activeChild.id) && activeChild.age >= (job.minAge ?? 0));
 
   return (
     <section className="space-y-4">
@@ -2655,6 +2739,7 @@ function NeighborhoodPanel({
         <div className="mt-4 grid gap-3">
           {visibleJobs.map((job) => {
             const acceptedChild = childProfiles.find((child) => child.id === job.acceptedBy);
+            const skill = job.skillFocus ?? "teamwork";
             return (
               <article key={job.id} className="rounded-lg bg-[#fff4d8] p-4">
                 <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
@@ -2663,6 +2748,10 @@ function NeighborhoodPanel({
                     <p className="mt-1 text-sm font-semibold text-[#5f6a65]">{job.family} - {job.pet} - {job.time}</p>
                     <p className="mt-1 text-sm font-black text-[#7a4b12]">{job.rewardDollars ? `$${job.rewardDollars} allowance` : job.badgeTitle}</p>
                     {acceptedChild && <p className="mt-1 text-xs font-black text-[#165a4b]">Accepted by {acceptedChild.name}</p>}
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-[#5b21b6]">{getLifeSkillLabel(skill)}</span>
+                      <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-[#1d4ed8]">Age {job.minAge ?? 4}+</span>
+                    </div>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-[#7a4b12]">{job.status}</span>
@@ -2682,6 +2771,13 @@ function NeighborhoodPanel({
                     <p className="text-xs font-black uppercase tracking-[0.14em] text-[#7a4b12]">Safety note</p>
                     <p className="mt-2 text-sm font-semibold text-[#25352f]">{job.safety}</p>
                   </div>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {(job.trustSignals ?? ["parent_gate", "private_child"]).map((signal) => (
+                    <span key={signal} className="rounded-full bg-white px-3 py-1 text-xs font-black text-[#165a4b]">
+                      {getTrustSignalLabel(signal)}
+                    </span>
+                  ))}
                 </div>
                 {role === "child" && job.status === "posted" && (
                   <button onClick={() => acceptJob(job.id)} className="mt-3 min-h-12 w-full rounded-lg bg-[#f47b20] px-4 py-2 text-sm font-black text-white">Accept with parent review</button>
@@ -3390,6 +3486,69 @@ function getMissionLifeSkill(mission: Mission): LifeSkillKey {
   if (mission.category === "money") return "leadership";
   if (mission.category === "chore") return "time";
   return "responsibility";
+}
+
+function getLifeSkillLabel(skill: LifeSkillKey) {
+  const labels: Record<LifeSkillKey, string> = {
+    responsibility: "Responsibility",
+    empathy: "Empathy",
+    teamwork: "Teamwork",
+    leadership: "Leadership",
+    time: "Time management",
+  };
+  return labels[skill];
+}
+
+function getTrustSignalLabel(signal: TrustSignalKey) {
+  const labels: Record<TrustSignalKey, string> = {
+    parent_gate: "Parent-gated",
+    age_fit: "Age-fit",
+    no_messaging: "No kid messaging",
+    adult_nearby: "Adult nearby",
+    private_child: "Child private",
+  };
+  return labels[signal];
+}
+
+function getKidMissionReason(mission: Mission, child?: Child) {
+  if (!child) return "A grown-up will choose the right helper.";
+  const ageCopy = isMissionAgeAppropriate(mission, child) ? "it fits your age" : "a grown-up will help because it is harder";
+  const skillCopy = getLifeSkillLabel(getMissionLifeSkill(mission)).toLowerCase();
+  return `${ageCopy}, it builds ${skillCopy}, and it keeps points fair with the family.`;
+}
+
+function getFairnessSummary(missions: Mission[], children: Child[]) {
+  const plannedPoints = children.map((child) => ({
+    child,
+    points: missions
+      .filter((mission) => mission.assignedChildId === child.id && mission.status !== "approved")
+      .reduce((sum, mission) => sum + mission.points, 0),
+  }));
+  const sorted = [...plannedPoints].sort((a, b) => a.points - b.points);
+  const lowest = sorted[0];
+  const highest = sorted[sorted.length - 1];
+  const spread = highest && lowest ? highest.points - lowest.points : 0;
+  return {
+    spread,
+    label: spread <= 8 ? "Balanced today" : "Needs balancing",
+    detail:
+      spread <= 8
+        ? "Kids are set up to finish with similar points."
+        : `${highest?.child.name ?? "One child"} has ${spread} more planned points than ${lowest?.child.name ?? "another child"}.`,
+  };
+}
+
+function getFamilySkillSummary(badges: BadgeAward[], children: Child[]) {
+  const counts = (["responsibility", "empathy", "teamwork", "leadership", "time"] as LifeSkillKey[]).map((skill) => ({
+    skill,
+    count: badges.filter((badge) => badge.skill === skill && children.some((child) => child.id === badge.childId)).length,
+  }));
+  const top = [...counts].sort((a, b) => b.count - a.count)[0];
+  return {
+    topSkill: top?.skill ?? "responsibility",
+    topLabel: top?.count ? getLifeSkillLabel(top.skill) : "First value badge ready",
+    totalBadges: counts.reduce((sum, item) => sum + item.count, 0),
+  };
 }
 
 function getBadgeTitle(skill: LifeSkillKey) {
