@@ -231,7 +231,7 @@ const starterNeighborhoodJobs: NeighborhoodJob[] = [
     rewardDollars: 4,
     badgeTitle: "Kind Neighbor",
     assignedChildIds: ["sahasra", "aarush"],
-    visibleToKids: true,
+    visibleToKids: false,
     checklist: ["Refill hay", "Check water bottle", "Send parent photo"],
     safety: "Parent stays nearby; no cage cleaning yet.",
     minAge: 8,
@@ -763,7 +763,13 @@ export function TailTotsApp() {
   }
 
   function toggleNeighborhoodJobVisibility(jobId: string) {
-    setNeighborhoodJobs((items) => items.map((job) => (job.id === jobId ? { ...job, visibleToKids: !job.visibleToKids } : job)));
+    setNeighborhoodJobs((items) =>
+      items.map((job) =>
+        job.id === jobId
+          ? { ...job, visibleToKids: !job.visibleToKids, status: job.status === "posted" ? "posted" : job.status }
+          : job,
+      ),
+    );
   }
 
   function approveNeighborhoodJob(jobId: string) {
@@ -2697,7 +2703,7 @@ function NeighborhoodPanel({
         <p className="text-xs font-black uppercase tracking-[0.18em] text-[#0f766e]">Neighborhood</p>
         <h2 className="mt-2 text-3xl font-black">Parent-led pet jobs and safe playdates</h2>
         <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-[#5f6a65]">
-          Parents post and approve every detail. Kids only see approved helper jobs, simple checklists, and rewards that teach responsibility, empathy, teamwork, leadership, and time management.
+          Parents post and approve every detail before kids can see anything. Kids only see parent-approved helper jobs, simple checklists, and rewards that teach responsibility, empathy, teamwork, leadership, and time management.
         </p>
       </div>
 
@@ -2719,7 +2725,7 @@ function NeighborhoodPanel({
         <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
           <p className="text-xs font-black uppercase tracking-[0.18em] text-[#f47b20]">Post a job</p>
           <h3 className="mt-2 text-2xl font-black">Create a parent-screened helper mission</h3>
-          <p className="mt-2 text-sm font-semibold text-[#5f6a65]">New jobs stay hidden from kids until a parent turns on visibility below.</p>
+          <p className="mt-2 text-sm font-semibold text-[#5f6a65]">New jobs stay hidden from kids until a parent explicitly approves them for kid view below.</p>
           <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             <input className="rounded-lg border border-[#ded8c7] px-3 py-3 text-sm font-semibold" value={jobDraft.title} onChange={(event) => setJobDraft({ ...jobDraft, title: event.target.value })} placeholder="Job title" />
             <input className="rounded-lg border border-[#ded8c7] px-3 py-3 text-sm font-semibold" value={jobDraft.family} onChange={(event) => setJobDraft({ ...jobDraft, family: event.target.value })} placeholder="Family" />
@@ -2756,7 +2762,7 @@ function NeighborhoodPanel({
                   <div className="flex flex-wrap gap-2">
                     <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-[#7a4b12]">{job.status}</span>
                     <span className={`rounded-full px-3 py-1 text-xs font-black ${job.visibleToKids ? "bg-[#e7f4ef] text-[#165a4b]" : "bg-white text-[#7a2c2c]"}`}>
-                      {job.visibleToKids ? "Visible to kids" : "Parent hidden"}
+                      {job.visibleToKids ? "Parent approved for kids" : "Hidden until parent approves"}
                     </span>
                   </div>
                 </div>
@@ -2791,7 +2797,7 @@ function NeighborhoodPanel({
                       onClick={() => toggleJobVisibility(job.id)}
                       className={`min-h-11 rounded-lg px-4 py-2 text-sm font-black ${job.visibleToKids ? "bg-white text-[#7a2c2c]" : "bg-[#2563eb] text-white"}`}
                     >
-                      {job.visibleToKids ? "Hide from kids" : "Show to kids"}
+                      {job.visibleToKids ? "Remove kid visibility" : "Approve for kids to see"}
                     </button>
                     <button onClick={() => approveJob(job.id)} disabled={job.status !== "accepted"} className="min-h-11 rounded-lg bg-[#165a4b] px-4 py-2 text-sm font-black text-white disabled:bg-[#b9b2a2]">Approve and create mission</button>
                     <p className="rounded-lg bg-white p-3 text-xs font-bold text-[#5f6a65]">Allowed kids: {job.assignedChildIds.map((id) => childProfiles.find((child) => child.id === id)?.name).filter(Boolean).join(", ")}</p>
