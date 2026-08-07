@@ -15,9 +15,6 @@
     "db:generate": "drizzle-kit generate"
   },
   "dependencies": {
-    "@capacitor/android": "^8.5.0",
-    "@capacitor/cli": "^8.5.0",
-    "@capacitor/core": "^8.5.0",
     "@supabase/supabase-js": "^2.110.0",
     "drizzle-orm": "0.45.2",
     "next": "16.2.6",
@@ -26,6 +23,9 @@
     "react-easy-crop": "^6.2.2"
   },
   "devDependencies": {
+    "@capacitor/android": "^8.5.0",
+    "@capacitor/cli": "^8.5.0",
+    "@capacitor/core": "^8.5.0",
     "@cloudflare/vite-plugin": "1.37.1",
     "@tailwindcss/postcss": "4.2.1",
     "@types/node": "22.19.19",
