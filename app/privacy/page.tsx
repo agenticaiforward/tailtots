@@ -9,9 +9,8 @@ export default function PrivacyPage() {
       <h2>Current beta data model</h2>
       <p>
         In this neighborhood beta, family activity is intended to be controlled
-        by a parent or guardian. Demo and household data may be stored in the
-        browser on the device unless a secure backend account is configured by
-        the family.
+        by a parent or guardian. Household data may be stored in the browser on
+        the device unless a secure backend account is configured by the family.
       </p>
       <h2>Children and guardians</h2>
       <p>

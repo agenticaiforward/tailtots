@@ -31,7 +31,7 @@ const difficultyAgeGuidance: Record<LevelKey, { minAge: number; label: string }>
 };
 
 const starterChildren: Child[] = [
-  { id: "sahasra", name: "Sahasra", age: 12, secretCode: "", points: 180, coins: 26, level: "medium", streakDays: 5 },
+  { id: "sahasra", name: "Sahasra", age: 6, secretCode: "", points: 180, coins: 26, level: "medium", streakDays: 5 },
   { id: "aarush", name: "Aarush", age: 8, secretCode: "", points: 72, coins: 14, level: "easy", streakDays: 2 },
 ];
 
@@ -377,7 +377,7 @@ export function TailTotsApp() {
         setFamilyName(savedState.familyName ?? "Nalajala Crew");
         setParentPasscode(defaultParentPasscode);
         setParents(savedState.parents);
-        setChildren(savedState.children.map((child) => ({ ...child, age: child.age ?? 8, secretCode: "" })));
+        setChildren(savedState.children.map(normalizeChildProfile));
         setPets(savedState.pets.map(normalizePetProfile));
         setGoals(savedState.goals?.length ? savedState.goals : starterGoals);
         setBadges(savedState.badges?.length ? savedState.badges : starterBadges);
@@ -860,7 +860,7 @@ export function TailTotsApp() {
                 </div>
               )}
               <div className="absolute left-4 top-4 rounded-full bg-white/90 px-3 py-1 text-[11px] font-black text-[#165a4b] shadow-sm">
-                {isSupabaseConfigured ? "Cloud connected" : "Demo mode"}
+                {isSupabaseConfigured ? "Cloud connected" : "Local device mode"}
               </div>
               <div className="absolute bottom-4 left-4 right-4 text-white">
                 <p className="text-xs font-black uppercase tracking-[0.16em] text-[#ffd166]">Household</p>
@@ -1488,7 +1488,12 @@ function loadSavedFamilyState() {
 function migrateSavedFamilyState(state: SavedFamilyState): SavedFamilyState {
   const hasOldDemoKids = state.children.some((child) => child.id === "maya" || child.id === "leo");
   const hasOldDemoPets = state.pets.some((pet) => pet.id === "luna" || pet.id === "mochi");
-  if (!hasOldDemoKids && !hasOldDemoPets) return state;
+  if (!hasOldDemoKids && !hasOldDemoPets) {
+    return {
+      ...state,
+      children: state.children.map(normalizeChildProfile),
+    };
+  }
 
   return {
     ...state,
@@ -1503,7 +1508,7 @@ function saveFamilyState(state: SavedFamilyState) {
   const safeState: SavedFamilyState = {
     ...state,
     parentPasscode: undefined,
-    children: state.children.map((child) => ({ ...child, age: child.age ?? 8, secretCode: "" })),
+    children: state.children.map(normalizeChildProfile),
     pets: state.pets.map(normalizePetProfile),
     neighborhoodJobs: state.neighborhoodJobs.map(normalizeNeighborhoodJob),
   };
@@ -1516,6 +1521,14 @@ function saveFamilyState(state: SavedFamilyState) {
       // Supabase storage will replace local image persistence later.
     }
   }
+}
+
+function normalizeChildProfile(child: Child): Child {
+  return {
+    ...child,
+    age: child.id === "sahasra" ? 6 : child.age ?? 8,
+    secretCode: "",
+  };
 }
 
 function normalizeNeighborhoodJob(job: NeighborhoodJob): NeighborhoodJob {
@@ -2285,7 +2298,7 @@ function MissionAssignmentPanel(props: {
       </div>
       <div className="mt-4 grid gap-3 lg:grid-cols-3">
         <div className="rounded-lg bg-[#e7f4ef] p-4">
-          <p className="text-xs font-black uppercase tracking-[0.14em] text-[#165a4b]">Investor differentiator</p>
+          <p className="text-xs font-black uppercase tracking-[0.14em] text-[#165a4b]">Fairness engine</p>
           <p className="mt-2 text-lg font-black">Fairness, not first-click competition</p>
           <p className="mt-1 text-sm font-bold text-[#4f625b]">Every task has one owner, age guidance, and point balancing across kids.</p>
         </div>
@@ -2358,7 +2371,7 @@ function EnterpriseReadinessPanel() {
 
   return (
     <section className="rounded-lg border border-[#ded8c7] bg-[#17231f] p-5 text-white shadow-sm">
-      <p className="text-xs font-black uppercase tracking-[0.18em] text-[#ffd166]">Investor-ready operating model</p>
+      <p className="text-xs font-black uppercase tracking-[0.18em] text-[#ffd166]">Family safety model</p>
       <h2 className="mt-2 text-2xl font-black sm:text-3xl">Parent-controlled, kid-simple, values-measurable</h2>
       <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         {checks.map(([title, body]) => (
@@ -3121,7 +3134,7 @@ function AIPanel() {
         <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2563eb]">AI tools</p>
         <h3 className="mt-2 text-2xl font-black">Parent-side helpers you can use now</h3>
         <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-[#5f6a65]">
-          These run as safe local templates in this demo. Later, the same panels can connect to OpenAI when API credits are available.
+          These run as safe parent-side templates. Later, the same panels can connect to approved AI services when the family enables them.
         </p>
 
         <div className="mt-5 grid gap-4 lg:grid-cols-2">

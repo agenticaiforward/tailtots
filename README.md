@@ -32,7 +32,7 @@ NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 ```
 
-The current app runs in demo mode when these keys are missing. Demo mode is for local/investor walkthroughs only. Do not use browser-only storage for real children or neighborhood jobs.
+When these keys are missing, the app runs in local device mode for early family testing. Do not use browser-only storage for real children or neighborhood jobs.
 
 Secure backend foundations:
 

@@ -49,7 +49,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=
 
 4. Add parent sign-in UI before public launch.
 5. Route all real data writes through `lib/secure-family-backend.ts`.
-6. Keep demo mode seeded and clearly labeled for investor demos only.
+6. Keep local device mode clearly labeled until secure accounts are enabled.
 7. Do not store real child codes, parent passcodes, precise addresses, or private notes in localStorage.
 8. Use Supabase Storage with private buckets for photos before allowing real uploads.
 
