@@ -825,7 +825,7 @@ export function TailTotsApp() {
                   }}
                   className={`min-h-10 rounded-full px-3 py-2 capitalize sm:min-h-11 sm:px-4 ${displayMode === item ? "bg-[#2563eb] text-white" : "text-[#53615b]"}`}
                 >
-                  {item === "hub" ? "Home" : "Phone"}
+                  {item === "hub" ? "Home Display" : "Phone App"}
                 </button>
               ))}
             </div>
@@ -845,8 +845,10 @@ export function TailTotsApp() {
         </div>
       </header>
 
-      <section className="mx-auto grid max-w-7xl gap-4 px-3 py-4 sm:px-5 md:gap-5 lg:grid-cols-[280px_1fr] xl:grid-cols-[300px_1fr]">
-        <aside className="min-w-0 space-y-3 lg:space-y-4">
+      <section className={`mx-auto grid max-w-7xl gap-4 px-3 py-4 sm:px-5 md:gap-5 ${
+        displayMode === "hub" ? "home-hub-shell" : "lg:grid-cols-[280px_1fr] xl:grid-cols-[300px_1fr]"
+      }`}>
+        <aside className={`min-w-0 space-y-3 lg:space-y-4 ${displayMode === "hub" ? "home-hub-sidebar" : ""}`}>
           <div className="overflow-hidden rounded-lg border border-[#ded8c7] bg-white shadow-sm">
             <div className="relative min-h-[220px] max-w-full overflow-hidden bg-[linear-gradient(135deg,#165a4b,#f47b20_58%,#2563eb)] sm:min-h-[280px] lg:min-h-[430px]">
               {familyPhotoUrl && <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${familyPhotoUrl})` }} />}
@@ -911,7 +913,7 @@ export function TailTotsApp() {
             />
           )}
 
-          {(role === "child" || isParentUnlocked) && (
+          {(role === "child" || isParentUnlocked) && displayMode === "phone" && (
           <nav className="grid grid-flow-col gap-2 overflow-x-auto pb-1 lg:grid-flow-row lg:overflow-visible lg:pb-0">
             {visibleTabs.map((tab) => (
               <button
@@ -938,7 +940,24 @@ export function TailTotsApp() {
               </p>
             </section>
           )}
-          {(role === "child" || isParentUnlocked) && (
+          {(role === "child" || isParentUnlocked) && displayMode === "hub" && (
+            <HomeHubPanel
+              activeChild={activeChild}
+              childProfiles={children}
+              pets={pets}
+              missions={role === "parent" ? missions : activeChildMissions}
+              goals={goals}
+              moments={moments}
+              badges={badges}
+              fairnessSummary={fairnessSummary}
+              familySkillSummary={familySkillSummary}
+              role={role}
+              isParentUnlocked={isParentUnlocked}
+              pendingCount={pendingApprovals.length}
+              setActiveTab={setActiveTab}
+            />
+          )}
+          {(role === "child" || isParentUnlocked) && displayMode === "phone" && (
           <>
           {visibleActiveTab === "missions" && (
             <>

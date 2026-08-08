@@ -112,6 +112,14 @@ button {
     radial-gradient(circle at 8% 70%, rgba(255, 209, 102, 0.28), transparent 24%);
 }
 
+.home-hub-shell {
+  max-width: 1440px;
+}
+
+.home-hub-sidebar nav {
+  display: none;
+}
+
 @media (min-width: 900px) and (orientation: landscape) {
   .home-hub-mode header {
     position: static;
@@ -119,6 +127,10 @@ button {
 
   .home-hub-mode {
     font-size: 18px;
+  }
+
+  .home-hub-sidebar {
+    display: none;
   }
 
   .home-hub-mode button,
