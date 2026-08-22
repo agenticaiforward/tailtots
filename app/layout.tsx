@@ -13,9 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "TailTots | Family Pet Care",
+  title: "TailTots | Pet Care Life Skills For Kids",
   description:
-    "A phone-first and smart-display-ready family PWA where kids use pet care missions, approvals, Kid Bank goals, reminders, badges, and neighborhood jobs to grow responsibility and empathy.",
+    "A parent-controlled family app that turns pet care, chores, Kid Bank rewards, safe neighborhood help, and shelter impact into real-world life skills for kids.",
   manifest: "/manifest.webmanifest",
   icons: {
     icon: "/favicon.svg",

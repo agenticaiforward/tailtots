@@ -1150,59 +1150,154 @@ export function TailTotsApp() {
 }
 
 function VisionLandingPanel({ isParentUnlocked, setActiveTab }: { isParentUnlocked: boolean; setActiveTab: (tab: string) => void }) {
-  const pillars = [
-    ["Life skills through chores", "Parents choose the value to teach, then TailTots turns it into age-fit pet care, family chores, and helper missions."],
-    ["Parent-approved neighborhood jobs", "Jobs stay hidden from kids until a parent approves visibility. Kids confirm interest, then parents make it final."],
-    ["Kid-safe joy", "Kids see their own schedule, pets, badges, quotes, and progress without comparison-heavy or grown-up screens."],
-    ["Phone plus tablet home mode", "Phone App is for each user. Tablet / Home is for the kitchen counter, iPad, Echo Show-style, or Nest-style family display."],
-    ["AI with guardrails", "Parents get chore ideas, fairness planning, and points balancing. Kids get bounded pet facts, care tips, and daily encouragement."],
-    ["Kid Bank rewards", "When a parent approves completed paid work, allowance lands in Kid Bank automatically with save, spend, and give choices."],
+  const proofPoints = [
+    ["Parent-controlled", "Jobs, rewards, AI, Kid Bank, and neighborhood visibility stay behind parent approval."],
+    ["Animal-centered", "Pets create a softer bridge into responsibility, empathy, calm, and confidence."],
+    ["Screen-to-real-life", "The app prompts children toward pet care, chores, saving, giving, and volunteering."],
+  ];
+  const storySteps = [
+    ["Choose a value", "A parent picks responsibility, empathy, teamwork, time habits, money basics, or leadership."],
+    ["Turn it into care", "TailTots suggests age-fit pet care, family chores, neighborhood help, or shelter kindness quests."],
+    ["Approve the path", "Kids only see what parents approve. They confirm interest before anything becomes final."],
+    ["Celebrate growth", "Completed work becomes badges, Kid Bank dollars, calendar rhythm, and a private kid portfolio."],
+  ];
+  const parentConcerns = [
+    ["Is this exploiting kids?", "No. Money is optional. The core is care, confidence, values, and parent-approved learning."],
+    ["Is this more screen time?", "TailTots uses the screen as a doorway back to pets, family routines, volunteering, and real-world action."],
+    ["Will kids feel judged?", "Kid views avoid grown-up admin, public rankings, and pressure. Progress is private and encouraging."],
+    ["Is AI safe?", "Kids get button-based, bounded suggestions. Parents get planning tools and approval controls."],
+  ];
+  const ecosystemCards = [
+    ["Families", "Chores, pet care, schedules, Kid Bank, badges, AI planning, and life-skill tracking."],
+    ["Neighborhoods", "Parent-approved playdates, helper jobs, availability links, and trusted family groups."],
+    ["Shelters", "Adoption learning, volunteer quests, donation drives, animal welfare badges, and sponsor campaigns."],
+  ];
+  const launchChecks = [
+    "Start with 5-10 families who care about pets, values, and safer screen habits.",
+    "Validate whether parents understand the promise in ten seconds.",
+    "Track completed missions, parent approvals, badges, Kid Bank activity, and weekly retention.",
   ];
 
   return (
-    <section className="space-y-4">
+    <section className="space-y-5">
       <div className="overflow-hidden rounded-lg border border-[#ded8c7] bg-[#17231f] text-white shadow-sm">
-        <div className="grid gap-6 p-5 sm:p-7 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
-          <div>
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-[#ffd166]">TailTots vision</p>
-            <h2 className="mt-3 max-w-3xl text-4xl font-black leading-tight sm:text-5xl">
-              Pet care, chores, and neighborhood help that teach real life skills.
+        <div className="grid gap-6 p-5 sm:p-7 xl:grid-cols-[1.05fr_0.95fr] xl:items-center">
+          <div className="min-w-0">
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-[#ffd166]">TailTots</p>
+            <h2 className="mt-3 max-w-4xl text-4xl font-black leading-tight sm:text-5xl xl:text-6xl">
+              Help kids grow through pets, chores, kindness, and community.
             </h2>
-            <p className="mt-4 max-w-2xl text-base font-semibold leading-7 text-white/82 sm:text-lg">
-              TailTots is a parent-controlled family app where kids learn responsibility, empathy, teamwork, time habits, and money basics by caring for pets and helping trusted neighbors.
+            <p className="mt-4 max-w-3xl text-base font-semibold leading-7 text-[#dce7e2] sm:text-lg">
+              A parent-controlled family app that turns everyday pet care into life skills, Kid Bank rewards, safe neighborhood help, and animal-welfare impact.
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
-              <button onClick={() => setActiveTab(isParentUnlocked ? "ai" : "vision")} className="min-h-12 rounded-lg bg-[#ffd166] px-5 py-3 text-sm font-black text-[#17231f]">
+              <button onClick={() => setActiveTab(isParentUnlocked ? "schedule" : "vision")} className="min-h-12 rounded-lg bg-[#ffd166] px-5 py-3 text-sm font-black text-[#17231f]">
+                See family calendar
+              </button>
+              <button onClick={() => setActiveTab(isParentUnlocked ? "ecosystem" : "vision")} className="min-h-12 rounded-lg border border-white/25 px-5 py-3 text-sm font-black text-white">
+                View ecosystem
+              </button>
+              <button onClick={() => setActiveTab(isParentUnlocked ? "ai" : "vision")} className="min-h-12 rounded-lg border border-white/25 px-5 py-3 text-sm font-black text-white">
                 AI chore planner
               </button>
-              <button onClick={() => setActiveTab(isParentUnlocked ? "approvals" : "vision")} className="min-h-12 rounded-lg border border-white/25 px-5 py-3 text-sm font-black text-white">
-                Parent approval flow
-              </button>
             </div>
+            <p className="mt-4 max-w-2xl text-sm font-bold leading-6 text-white/70">
+              Built for parents who want less passive screen time, more real care, safer AI-era habits, and kids who feel capable instead of judged.
+            </p>
           </div>
           <div className="grid gap-3 rounded-lg bg-white/10 p-4">
-            {[
-              ["Parent chooses", "Skill, safety, points, money, and visibility."],
-              ["Kid confirms", "Only approved jobs appear; the kid chooses to accept."],
-              ["Parent approves", "Completed work becomes points, badges, and Kid Bank dollars."],
-            ].map(([title, body]) => (
-              <article key={title} className="rounded-lg bg-white p-4 text-[#17231f]">
-                <p className="text-lg font-black">{title}</p>
-                <p className="mt-1 text-sm font-semibold leading-5 text-[#5f6a65]">{body}</p>
-              </article>
-            ))}
+            <div className="rounded-lg bg-white p-4 text-[#17231f]">
+              <p className="text-xs font-black uppercase tracking-[0.14em] text-[#0f766e]">First family flow</p>
+              <p className="mt-2 text-2xl font-black">Value to care to approval to reward to impact</p>
+              <p className="mt-2 text-sm font-semibold leading-5 text-[#5f6a65]">
+                TailTots is not another open feed. It is a structured, parent-led path from small real-world actions to character growth.
+              </p>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
+              {proofPoints.map(([title, body]) => (
+                <article key={title} className="rounded-lg bg-white/92 p-4 text-[#17231f]">
+                  <p className="text-base font-black">{title}</p>
+                  <p className="mt-1 text-sm font-semibold leading-5 text-[#5f6a65]">{body}</p>
+                </article>
+              ))}
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {pillars.map(([title, body]) => (
-          <article key={title} className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
-            <h3 className="text-xl font-black">{title}</h3>
-            <p className="mt-2 text-sm font-semibold leading-6 text-[#5f6a65]">{body}</p>
-          </article>
-        ))}
-      </div>
+      <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#0f766e]">How it works</p>
+        <h3 className="mt-2 text-3xl font-black">The app gives parents a gentle structure, then sends kids back into real life.</h3>
+        <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          {storySteps.map(([title, body], index) => (
+            <article key={title} className="rounded-lg bg-[#f8f6ed] p-4">
+              <p className="text-xs font-black uppercase tracking-[0.14em] text-[#7a4b12]">Step {index + 1}</p>
+              <p className="mt-2 text-lg font-black">{title}</p>
+              <p className="mt-2 text-sm font-semibold leading-5 text-[#5f6a65]">{body}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
+        <div className="rounded-lg border border-[#ded8c7] bg-[#e7f4ef] p-5 shadow-sm">
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-[#165a4b]">Why animals</p>
+          <h3 className="mt-2 text-3xl font-black">Animals can reach kids before lectures do.</h3>
+          <p className="mt-3 text-sm font-semibold leading-6 text-[#4f625b]">
+            For many children, including sensitive or special-needs kids, animals can bring calm, happiness, and connection. TailTots uses that bond as a bridge into responsibility, empathy, patience, and family routines.
+          </p>
+          <p className="mt-3 text-sm font-semibold leading-6 text-[#4f625b]">
+            The goal is a win-win: kids grow, pets receive better care, shelters gain support, and neighborhoods connect around something kind.
+          </p>
+        </div>
+        <div className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-[#7c3aed]">Parent trust</p>
+          <h3 className="mt-2 text-3xl font-black">The hard questions are answered upfront.</h3>
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            {parentConcerns.map(([title, body]) => (
+              <article key={title} className="rounded-lg bg-[#f0edff] p-4">
+                <p className="text-base font-black text-[#33245f]">{title}</p>
+                <p className="mt-2 text-sm font-semibold leading-5 text-[#5f6a65]">{body}</p>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2563eb]">The ecosystem</p>
+        <h3 className="mt-2 text-3xl font-black">Start as a family app. Grow into a trusted pet-care impact network.</h3>
+        <div className="mt-5 grid gap-3 md:grid-cols-3">
+          {ecosystemCards.map(([title, body]) => (
+            <article key={title} className="rounded-lg bg-[#eef2ff] p-4">
+              <p className="text-lg font-black">{title}</p>
+              <p className="mt-2 text-sm font-semibold leading-5 text-[#5f6a65]">{body}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="grid gap-4 xl:grid-cols-[1fr_0.82fr]">
+        <div className="rounded-lg border border-[#ded8c7] bg-[#fff4d8] p-5 shadow-sm">
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-[#7a4b12]">Launch plan</p>
+          <h3 className="mt-2 text-3xl font-black">Validate need before scaling the marketplace.</h3>
+          <div className="mt-4 grid gap-3">
+            {launchChecks.map((check) => (
+              <p key={check} className="rounded-lg bg-white p-4 text-sm font-black leading-5 text-[#5f4a24]">{check}</p>
+            ))}
+          </div>
+        </div>
+        <div className="rounded-lg border border-[#ded8c7] bg-[#17231f] p-5 text-white shadow-sm">
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-[#ffd166]">Early offer</p>
+          <h3 className="mt-2 text-3xl font-black">Free first month for founding families.</h3>
+          <p className="mt-3 text-sm font-semibold leading-6 text-[#dce7e2]">
+            Invite a small group of neighborhood families first. Learn what parents trust, what kids enjoy, and which animal-welfare moments create real impact.
+          </p>
+          <button onClick={() => setActiveTab(isParentUnlocked ? "neighborhood" : "vision")} className="mt-4 min-h-12 w-full rounded-lg bg-[#ffd166] px-5 py-3 text-sm font-black text-[#17231f]">
+            Build neighborhood beta
+          </button>
+        </div>
+      </section>
     </section>
   );
 }
