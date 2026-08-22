@@ -61,6 +61,10 @@ The soul should be:
 - family connection through shared routines
 - happiness through meaningful, grounded activity
 
+Animals are central to this philosophy because they can reach children in a softer and more natural way than lectures or pressure. For many children, including children with special needs, animal interaction can bring happiness, calmness, comfort, and a sense of connection. TailTots should use that bond carefully and respectfully as a bridge into responsibility, empathy, and character.
+
+For direct answers to parent concerns, trust, safety, screen time, AI, neighborhood jobs, and the risk of over-structuring childhood, see [PARENT_CONCERNS_AND_TRUST_PRINCIPLES.md](PARENT_CONCERNS_AND_TRUST_PRINCIPLES.md).
+
 ## Development Reminder
 
 Whenever TailTots is expanded, the team should ask:
@@ -74,4 +78,3 @@ Whenever TailTots is expanded, the team should ask:
 7. Does it help kids prepare for the AI future while staying deeply human?
 
 If the answer is no, the feature should be redesigned or removed.
-
