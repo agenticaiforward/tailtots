@@ -467,7 +467,7 @@ export function TailTotsApp() {
 
 
   function updateChild(childId: string, updates: Partial<Child>) {
-    setChildren((items) => items.map((child) => (child.id === childId ? { ...child, ...updates } : child)));
+    setChildren((items) => items.map((child) => (child.id === childId ? normalizeChildProfile({ ...child, ...updates }) : child)));
   }
 
   function updatePet(petId: string, updates: Partial<Pet>) {
@@ -1357,8 +1357,6 @@ function HomeHubPanel({
   const approvedCount = missions.filter((mission) => mission.status === "approved").length;
   const streakLeader = [...childProfiles].sort((a, b) => b.streakDays - a.streakDays)[0];
   const sharedGoals = goals.filter((goal) => goal.sharedWithTrustedFamilies).slice(0, 2);
-  const displayPet = pets[0];
-  const displayPetLook = getPetLook(displayPet?.id);
   const reminders = isParentView
     ? [
         `Review ${pendingCount} item${pendingCount === 1 ? "" : "s"} before rewards count.`,
@@ -1366,9 +1364,9 @@ function HomeHubPanel({
         "Choose which neighborhood jobs are visible before kids can accept them.",
       ]
     : [
-        `Ask TailTots: what does ${displayPet?.name ?? "our pet"} need next?`,
-        `Say: mark ${nextMissions[0]?.title ?? "water check"} done after a parent looks.`,
-        "Parent cue: review approvals before rewards count.",
+        `Next care idea: check what ${pets[0]?.name ?? "your pet"} needs first.`,
+        `${nextMissions[0]?.title ?? "Water check"} can be marked done after a parent looks.`,
+        "Rewards count after a grown-up review.",
       ];
   const visibleBadges = (isParentView ? badges : badges.filter((badge) => badge.childId === activeChild?.id)).slice(0, 4);
   const nextSchedule = scheduleItems.filter((item) => (isParentView ? true : item.childId === activeChild?.id)).slice(0, 3);
@@ -1395,7 +1393,7 @@ function HomeHubPanel({
               <p className="mt-4 max-w-2xl text-base font-semibold leading-7 text-white/82 sm:text-lg">
                 {isParentView
                   ? "Track approvals, assignment fairness, kid progress, pet care, and parent-gated neighborhood jobs from one place."
-                  : "A hands-free family view for phones, tablets, Echo Show-style displays, and Google Nest-style screens."}
+                  : "A family display view for tablets, Echo Show-style screens, Google Nest-style screens, and the kitchen counter."}
               </p>
               <div className="mt-6 grid gap-3 sm:grid-cols-3">
                 {[
@@ -1422,29 +1420,35 @@ function HomeHubPanel({
                 </div>
               </div>
             </div>
-            <div className="grid place-items-center rounded-lg bg-white/10 p-5">
-              {displayPet && (
-                <>
-                  <ProfilePhoto
-                    label={displayPet.name}
-                    initial={displayPetLook.face}
-                    colors={displayPetLook.colors}
-                    size="lg"
-                    variant="pet"
-                    petKind={displayPetLook.kind}
-                    photoUrl={displayPet.photoUrl}
-                  />
-                  <p className="mt-4 text-center text-2xl font-black">{displayPet.name}</p>
-                  <p className="mt-1 text-center text-sm font-bold text-white/70">{displayPet.species} care buddy</p>
-                </>
-              )}
+            <div className="rounded-lg bg-white/10 p-5">
+              <p className="text-center text-sm font-black uppercase tracking-[0.14em] text-[#ffd166]">Pet buddies</p>
+              <div className="mt-4 grid grid-cols-2 gap-4">
+                {pets.slice(0, 4).map((pet) => {
+                  const look = getPetLook(pet.id);
+                  return (
+                    <div key={pet.id} className="grid place-items-center rounded-lg bg-white/10 p-3">
+                      <ProfilePhoto
+                        label={pet.name}
+                        initial={look.face}
+                        colors={look.colors}
+                        size="md"
+                        variant="pet"
+                        petKind={look.kind}
+                        photoUrl={pet.photoUrl}
+                      />
+                      <p className="mt-2 max-w-full truncate text-center text-base font-black">{pet.name}</p>
+                      <p className="max-w-full truncate text-center text-xs font-bold text-white/70">{pet.species}</p>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </section>
 
         <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2563eb]">Voice and display</p>
-          <h3 className="mt-2 text-2xl font-black sm:text-3xl">{isParentView ? "Parent next steps" : "Kitchen counter commands"}</h3>
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2563eb]">Tablet home display</p>
+          <h3 className="mt-2 text-2xl font-black sm:text-3xl">{isParentView ? "Parent next steps" : "Kitchen counter view"}</h3>
           <div className="mt-4 grid gap-3">
             {reminders.map((reminder) => (
               <p key={reminder} className="rounded-lg bg-[#f8f6ed] p-4 text-base font-black leading-6 sm:text-lg sm:leading-7">{reminder}</p>
