@@ -48,6 +48,8 @@ Trusted family posts need -> parent approves visibility -> kid confirms interest
 
 Shelter posts learning or volunteer quest -> family participates -> child earns impact badge -> shelter gains adopters, volunteers, donations, and community awareness.
 
+This loop should be treated as a core win-win: children gain empathy and confidence, animals gain care and visibility, shelters and nonprofits gain support, and neighborhoods become more connected through shared animal welfare goals.
+
 ## Product Skeleton
 
 ### Family App
@@ -79,6 +81,7 @@ Shelter posts learning or volunteer quest -> family participates -> child earns 
 - Supervised volunteer opportunities.
 - Animal welfare badges.
 - Sponsor-backed impact campaigns.
+- Foster, adoption, and nonprofit support pathways that help families participate at the right level for their home.
 
 ### Kid Portfolio
 

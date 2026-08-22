@@ -63,6 +63,10 @@ The soul should be:
 
 Animals are central to this philosophy because they can reach children in a softer and more natural way than lectures or pressure. For many children, including children with special needs, animal interaction can bring happiness, calmness, comfort, and a sense of connection. TailTots should use that bond carefully and respectfully as a bridge into responsibility, empathy, and character.
 
+TailTots should also help animals. The vision is a win-win for children, families, animal shelters, nonprofits, neighborhoods, and pets. When children learn to care for animals, shelters can gain awareness, volunteers, donations, adoption interest, and long-term community support.
+
+The founder belief is that every child and home can benefit from a healthy relationship with animals when it is safe and realistic for the family. Pets can support mental health, connection, responsibility, and stronger neighborhoods. TailTots should not pressure every family to adopt, but it should make pet care, animal welfare, fostering, adoption learning, and shelter support easier to understand and participate in.
+
 For direct answers to parent concerns, trust, safety, screen time, AI, neighborhood jobs, and the risk of over-structuring childhood, see [PARENT_CONCERNS_AND_TRUST_PRINCIPLES.md](PARENT_CONCERNS_AND_TRUST_PRINCIPLES.md).
 
 ## Development Reminder

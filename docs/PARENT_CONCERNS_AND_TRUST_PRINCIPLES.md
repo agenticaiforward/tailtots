@@ -30,6 +30,12 @@ kids may resist lectures about values, chores, or discipline, but they may open 
 
 Pet care can become the bridge from interest to values.
 
+TailTots also recognizes that helping animals can help everyone around them. Animal shelters and nonprofits need adopters, volunteers, donors, foster families, education, and community awareness. Families need meaningful ways for children to learn empathy and responsibility. Neighborhoods need healthy points of connection.
+
+When done safely, animal care creates a win-win: children grow, animals receive care, shelters gain support, and communities become kinder.
+
+TailTots should encourage animal welfare and adoption learning without pressuring every family to own a pet. Some homes may adopt, some may foster, some may volunteer, some may donate, and some may simply learn how to treat animals with respect.
+
 ## Concern: Are We Turning Childhood Into Work?
 
 TailTots should not make childhood feel like employment.
@@ -123,4 +129,3 @@ The network should grow around trust and shared purpose, not only transactions.
 The best version of TailTots is a place where parents feel:
 
 I am not alone trying to raise a good human being.
-
