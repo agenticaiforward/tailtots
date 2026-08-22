@@ -818,14 +818,14 @@ export function TailTotsApp() {
               {(["phone", "hub"] as const).map((item) => (
                 <button
                   key={item}
-                  aria-label={`${item === "hub" ? "Home Hub" : "Phone"} display mode`}
+                  aria-label={`${item === "hub" ? "Tablet" : "Phone"} mode`}
                   onClick={() => {
                     setDisplayMode(item);
                     if (item === "hub") setActiveTab("hub");
                   }}
                   className={`min-h-10 rounded-full px-3 py-2 capitalize sm:min-h-11 sm:px-4 ${displayMode === item ? "bg-[#2563eb] text-white" : "text-[#53615b]"}`}
                 >
-                  {item === "hub" ? "Home Display" : "Phone App"}
+                  {item === "hub" ? "Tablet Mode" : "Phone Mode"}
                 </button>
               ))}
             </div>
