@@ -6,6 +6,8 @@ TailTots turns everyday pet care, family chores, and neighborhood help into a pa
 
 The long-term vision is not only a chore app or pet-care app. TailTots can become the child and family layer for pet responsibility, youth entrepreneurship, neighborhood trust, and animal welfare impact.
 
+The founder-parent philosophy behind this ecosystem is recorded in [FOUNDER_PARENT_PHILOSOPHY.md](FOUNDER_PARENT_PHILOSOPHY.md). Product and business decisions should be checked against that note so TailTots stays rooted in values, childhood joy, family support, healthy AI-era preparation, and community impact.
+
 ## Why This Can Be Bigger
 
 TailTots combines pieces that are usually separate:
