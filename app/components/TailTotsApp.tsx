@@ -271,8 +271,10 @@ const starterNeighborhoodJobs: NeighborhoodJob[] = [
 const starterScheduleItems: KidScheduleItem[] = [
   { id: "schedule-sahasra-1", childId: "sahasra", day: "Today", time: "7:30 AM", title: "RB breakfast check", kind: "pet", note: "Small pinch of food, then tell parent." },
   { id: "schedule-sahasra-2", childId: "sahasra", day: "Today", time: "5:45 PM", title: "Gentle pet moment", kind: "pet", note: "Notice one kind thing about Jack or Jamie." },
+  { id: "schedule-sahasra-3", childId: "sahasra", day: "Wednesday", time: "4:30 PM", title: "Drawing and quiet pet time", kind: "hobby", note: "Draw one pet care idea after homework." },
   { id: "schedule-aarush-1", childId: "aarush", day: "Today", time: "7:15 AM", title: "Jack food and water", kind: "pet", note: "Check hay, food, and water before school." },
   { id: "schedule-aarush-2", childId: "aarush", day: "Saturday", time: "10:00 AM", title: "Plant helper round", kind: "family", note: "Water plants with parent check." },
+  { id: "schedule-aarush-3", childId: "aarush", day: "Thursday", time: "5:00 PM", title: "Pet passport update", kind: "pet", note: "Add one observation about Captain or RB." },
 ];
 
 const childLooks: Record<string, { initial: string; colors: string; joy: number; love: number; hair: string }> = {
@@ -1221,6 +1223,13 @@ function SchedulePanel({
   const isParent = role === "parent";
   const visibleItems = scheduleItems.filter((item) => (isParent ? true : item.childId === activeChild?.id));
   const visibleMissions = missions.filter((mission) => (isParent ? true : !mission.assignedChildId || mission.assignedChildId === activeChild?.id)).slice(0, 4);
+  const familyAvailabilityLink = `tailtots.com/availability/${childProfiles.map((child) => child.name.toLowerCase()).join("-") || "family"}`;
+  const playdateWindows = [
+    ["Weekday calm visit", "Tuesday or Thursday, 4:30-6:00 PM", "Parent confirms address, pet temperament, and adult presence."],
+    ["Weekend pet hello", "Saturday, 10:00 AM-12:00 PM", "Good for supervised pet introductions or shared care learning."],
+    ["Shelter kindness block", "Sunday afternoon", "Parent-reviewed volunteer or donation activity with badge credit."],
+  ];
+  const calendarDays = ["Today", "Wednesday", "Thursday", "Saturday", "Sunday"];
 
   return (
     <section className="space-y-4">
@@ -1244,6 +1253,64 @@ function SchedulePanel({
           )}
         </div>
       </div>
+
+      <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
+        <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-[#7c3aed]">{isParent ? "Combined view" : "My week"}</p>
+            <h3 className="mt-2 text-2xl font-black">{isParent ? "All kids in one family calendar" : "Your own schedule"}</h3>
+          </div>
+          {isParent && <span className="rounded-lg bg-[#f0edff] px-4 py-2 text-sm font-black text-[#33245f]">Parent-only combined calendar</span>}
+        </div>
+        <div className="mt-4 grid gap-3 lg:grid-cols-5">
+          {calendarDays.map((day) => {
+            const dayItems = visibleItems.filter((item) => item.day === day);
+            return (
+              <article key={day} className="min-h-44 rounded-lg bg-[#f8f6ed] p-3">
+                <p className="text-sm font-black text-[#17231f]">{day}</p>
+                <div className="mt-3 grid gap-2">
+                  {(dayItems.length ? dayItems : [{ id: `${day}-empty`, time: "Open", title: "No scheduled item", note: "Free family time.", childId: activeChild?.id ?? "", day, kind: "family" as const }]).map((item) => {
+                    const child = childProfiles.find((profile) => profile.id === item.childId);
+                    return (
+                      <div key={item.id} className="rounded-lg bg-white p-3">
+                        <p className="text-xs font-black text-[#0f766e]">{item.time}</p>
+                        <p className="mt-1 text-sm font-black leading-5">{item.title}</p>
+                        {isParent && <p className="mt-1 text-xs font-bold text-[#5f6a65]">{child?.name ?? "Family"}</p>}
+                      </div>
+                    );
+                  })}
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      </section>
+
+      {isParent && (
+        <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2563eb]">Playdate availability</p>
+          <h3 className="mt-2 text-2xl font-black">Share safe times with a dynamic family link</h3>
+          <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-[#5f6a65]">
+            Parents can share availability without exposing child profiles, home address, or direct kid messaging. The other family requests a time, and the parent approves before kids see anything.
+          </p>
+          <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_0.8fr]">
+            <div className="rounded-lg bg-[#eef2ff] p-4">
+              <p className="text-xs font-black uppercase tracking-[0.14em] text-[#1d4ed8]">Share link preview</p>
+              <p className="mt-2 break-all rounded-lg bg-white p-3 text-sm font-black text-[#17231f]">{familyAvailabilityLink}</p>
+              <button className="mt-3 min-h-11 rounded-lg bg-[#2563eb] px-4 py-2 text-sm font-black text-white">Generate availability link</button>
+            </div>
+            <div className="grid gap-2">
+              {playdateWindows.map(([title, time, note]) => (
+                <article key={title} className="rounded-lg bg-[#e7f4ef] p-3">
+                  <p className="text-sm font-black">{title}</p>
+                  <p className="mt-1 text-xs font-bold text-[#165a4b]">{time}</p>
+                  <p className="mt-1 text-xs font-semibold leading-5 text-[#4f625b]">{note}</p>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       <div className="grid gap-4 lg:grid-cols-[1fr_0.9fr]">
         <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
@@ -3029,6 +3096,24 @@ function NeighborhoodPanel({
     role === "parent"
       ? jobs
       : jobs.filter((job) => job.visibleToKids && activeChild && job.assignedChildIds.includes(activeChild.id) && activeChild.age >= (job.minAge ?? 0));
+  const skillJobTemplates = [
+    ["Responsibility", "Morning pet check for a trusted neighbor", "Easy checklist, parent photo proof, 10-14 points"],
+    ["Empathy", "Make a comfort card for a newly adopted pet", "Kindness badge, no money needed"],
+    ["Teamwork", "Two-kid supply sorting task with parent", "Split points fairly, one shared family badge"],
+    ["Leadership", "Older kid teaches a younger kid safe pet observation", "Higher points, parent nearby"],
+  ];
+  const privacyRules = [
+    "Parents approve every job before it appears to kids.",
+    "Kids do not see addresses, phone numbers, or adult contact details.",
+    "Applications show parent names and family intent first, not public child profiles.",
+    "Completion proof goes to parents only before money, points, or badges are awarded.",
+  ];
+  const shelterPrograms = [
+    ["Shelter reading buddy", "Kids read calmly near adoptable pets while staff and parents supervise.", "Empathy badge"],
+    ["Donation helper", "Families collect towels, food, or toys and log the kindness mission.", "Community Kindness badge"],
+    ["Adoption learning day", "Parent-approved shelter visit teaches pet needs before adoption.", "Responsible Pet Friend badge"],
+    ["Junior volunteer quest", "Age-fit volunteer tasks from a partner shelter, always parent-confirmed.", "Helping Hands badge"],
+  ];
 
   return (
     <section className="space-y-4">
@@ -3069,6 +3154,26 @@ function NeighborhoodPanel({
           </div>
           <textarea className="mt-3 min-h-20 w-full rounded-lg border border-[#ded8c7] px-3 py-3 text-sm font-semibold" value={jobDraft.safety} onChange={(event) => setJobDraft({ ...jobDraft, safety: event.target.value })} placeholder="Safety note" />
           <button onClick={postJob} className="mt-3 min-h-12 rounded-lg bg-[#165a4b] px-5 py-3 text-sm font-black text-white">Save for parent review</button>
+        </section>
+      )}
+
+      {role === "parent" && (
+        <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-[#7c3aed]">Skill job builder</p>
+          <h3 className="mt-2 text-2xl font-black">Post a job around the life skill you want to teach</h3>
+          <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-[#5f6a65]">
+            Parents can start from a value, not just a task. TailTots can suggest checklist, points, money, and badge language before anything is visible to kids or neighbors.
+          </p>
+          <div className="mt-4 grid gap-3 lg:grid-cols-4">
+            {skillJobTemplates.map(([skill, title, detail]) => (
+              <article key={skill} className="rounded-lg bg-[#f0edff] p-4">
+                <p className="text-xs font-black uppercase tracking-[0.14em] text-[#5b21b6]">{skill}</p>
+                <p className="mt-2 text-base font-black leading-5">{title}</p>
+                <p className="mt-2 text-xs font-semibold leading-5 text-[#5f6a65]">{detail}</p>
+                <button className="mt-3 min-h-10 rounded-lg bg-white px-3 py-2 text-xs font-black text-[#33245f]">Use template</button>
+              </article>
+            ))}
+          </div>
         </section>
       )}
 
@@ -3140,6 +3245,33 @@ function NeighborhoodPanel({
             );
           })}
           {!visibleJobs.length && <p className="rounded-lg bg-[#f8f6ed] p-4 text-sm font-semibold text-[#5f6a65]">No parent-approved jobs are available yet.</p>}
+        </div>
+      </section>
+
+      <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#0f766e]">Privacy and trust</p>
+        <h3 className="mt-2 text-2xl font-black">{role === "parent" ? "Why families can safely apply for jobs" : "What kids do not see"}</h3>
+        <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          {privacyRules.map((rule) => (
+            <p key={rule} className="rounded-lg bg-[#e7f4ef] p-4 text-sm font-black leading-5 text-[#165a4b]">{rule}</p>
+          ))}
+        </div>
+      </section>
+
+      <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#f47b20]">Shelters and adoption</p>
+        <h3 className="mt-2 text-2xl font-black">Partner with shelters for adoption learning and volunteer badges</h3>
+        <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-[#5f6a65]">
+          TailTots can let animal shelters post parent-approved learning missions, adoption-readiness visits, donation drives, and supervised volunteer opportunities for families in the network.
+        </p>
+        <div className="mt-4 grid gap-3 lg:grid-cols-4">
+          {shelterPrograms.map(([title, detail, badge]) => (
+            <article key={title} className="rounded-lg bg-[#fff4d8] p-4">
+              <p className="text-base font-black leading-5">{title}</p>
+              <p className="mt-2 text-xs font-semibold leading-5 text-[#5f6a65]">{detail}</p>
+              <p className="mt-3 rounded-full bg-white px-3 py-1 text-xs font-black text-[#7a4b12]">{badge}</p>
+            </article>
+          ))}
         </div>
       </section>
 

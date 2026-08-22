@@ -18,6 +18,22 @@ export default function PrivacyPage() {
         choose which children can see jobs, accept tasks, earn points, receive
         badges, and request rewards.
       </p>
+      <h2>Neighborhood jobs and availability</h2>
+      <p>
+        Parent-approved availability links and neighborhood jobs should show
+        only the minimum information needed to coordinate safely. Children should
+        not see addresses, phone numbers, adult contact details, or unapproved
+        job requests. Parents should approve playdates, jobs, shelter activities,
+        volunteer opportunities, completion proof, rewards, and badges before
+        they appear in a child profile.
+      </p>
+      <h2>Shelters and volunteer partners</h2>
+      <p>
+        Shelter, adoption, and volunteer activities should be reviewed by a
+        parent or guardian before a child can participate. Partner opportunities
+        should be age-fit, supervised, and limited to the details parents need to
+        decide whether the activity is safe for their family.
+      </p>
       <h2>What TailTots avoids</h2>
       <p>
         TailTots should not collect precise location, sell child data, or show
