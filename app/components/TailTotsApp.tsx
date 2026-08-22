@@ -32,7 +32,7 @@ const difficultyAgeGuidance: Record<LevelKey, { minAge: number; label: string }>
 
 const starterChildren: Child[] = [
   { id: "sahasra", name: "Sahasra", age: 6, secretCode: "", points: 180, coins: 26, level: "medium", streakDays: 5 },
-  { id: "aarush", name: "Aarush", age: 8, secretCode: "", points: 72, coins: 14, level: "easy", streakDays: 2 },
+  { id: "aarush", name: "Aarush", age: 9, secretCode: "", points: 72, coins: 14, level: "easy", streakDays: 2 },
 ];
 
 const starterPets: Pet[] = [
@@ -125,6 +125,16 @@ type NeighborhoodJob = {
   missionId?: string;
 };
 
+type KidScheduleItem = {
+  id: string;
+  childId: string;
+  day: string;
+  time: string;
+  title: string;
+  kind: "pet" | "school" | "family" | "hobby";
+  note: string;
+};
+
 const starterParents: ParentProfile[] = [{ id: "parent-1", name: "Parent" }];
 
 const starterMissions: Mission[] = [
@@ -149,7 +159,7 @@ const starterMissions: Mission[] = [
     points: 18,
     coins: 3,
     allowanceDollars: 1,
-    assignedChildId: "sahasra",
+    assignedChildId: "aarush",
     petId: "jamie",
     question: "What did you notice that made Jamie more comfortable?",
     status: "pending",
@@ -181,26 +191,26 @@ const starterMissions: Mission[] = [
     status: "pending",
   },
   {
-    id: "mow-lawn",
-    title: "Mow front lawn with parent check",
+    id: "water-plants",
+    title: "Water front plants with parent check",
     category: "chore",
-    difficulty: "hard",
-    points: 24,
+    difficulty: "medium",
+    points: 18,
     coins: 4,
-    allowanceDollars: 8,
-    assignedChildId: "sahasra",
-    question: "Was the mower used safely and did a parent inspect the lawn?",
+    allowanceDollars: 3,
+    assignedChildId: "aarush",
+    question: "Were the plants watered gently and did a parent check the area?",
     status: "pending",
   },
   {
     id: "kind-note",
     title: "Kindness check-in",
     category: "kindness",
-    difficulty: "hard",
-    points: 22,
+    difficulty: "easy",
+    points: 12,
     coins: 0,
     allowanceDollars: 0,
-    assignedChildId: "aarush",
+    assignedChildId: "sahasra",
     question: "How did you know your pet felt safe or happy today?",
     status: "pending",
   },
@@ -258,6 +268,13 @@ const starterNeighborhoodJobs: NeighborhoodJob[] = [
   },
 ];
 
+const starterScheduleItems: KidScheduleItem[] = [
+  { id: "schedule-sahasra-1", childId: "sahasra", day: "Today", time: "7:30 AM", title: "RB breakfast check", kind: "pet", note: "Small pinch of food, then tell parent." },
+  { id: "schedule-sahasra-2", childId: "sahasra", day: "Today", time: "5:45 PM", title: "Gentle pet moment", kind: "pet", note: "Notice one kind thing about Jack or Jamie." },
+  { id: "schedule-aarush-1", childId: "aarush", day: "Today", time: "7:15 AM", title: "Jack food and water", kind: "pet", note: "Check hay, food, and water before school." },
+  { id: "schedule-aarush-2", childId: "aarush", day: "Saturday", time: "10:00 AM", title: "Plant helper round", kind: "family", note: "Water plants with parent check." },
+];
+
 const childLooks: Record<string, { initial: string; colors: string; joy: number; love: number; hair: string }> = {
   sahasra: { initial: "S", colors: "from-[#ffcf70] via-[#ff8a65] to-[#7c3aed]", joy: 92, love: 88, hair: "#4a2718" },
   aarush: { initial: "A", colors: "from-[#79d6ff] via-[#4ade80] to-[#2563eb]", joy: 78, love: 84, hair: "#1f2937" },
@@ -277,9 +294,12 @@ const familyStats = [
 ];
 
 const tabItems = [
+  { id: "vision", label: "Vision" },
   { id: "missions", label: "Today" },
+  { id: "schedule", label: "Schedule" },
   { id: "hub", label: "Home Hub" },
   { id: "pets", label: "Pet Passports" },
+  { id: "pet-helper", label: "Pet Helper" },
   { id: "bank", label: "Kid Bank" },
   { id: "approvals", label: "Parent Review" },
   { id: "setup", label: "Family Setup" },
@@ -288,8 +308,8 @@ const tabItems = [
   { id: "ai", label: "AI" },
 ];
 
-const kidTabIds = ["missions", "hub", "pets", "bank", "neighborhood", "growth"];
-const parentTabIds = ["approvals", "hub", "setup", "pets", "neighborhood", "growth", "ai"];
+const kidTabIds = ["missions", "schedule", "hub", "pets", "pet-helper", "bank", "neighborhood", "growth"];
+const parentTabIds = ["vision", "approvals", "schedule", "hub", "setup", "pets", "neighborhood", "growth", "ai"];
 const defaultParentPasscode = "4321";
 
 const savedFamilyStateKey = "tailtots-family-state-v1";
@@ -310,7 +330,7 @@ type SavedFamilyState = {
 
 export function TailTotsApp() {
   const [role, setRole] = useState<Role>("parent");
-  const [activeTab, setActiveTab] = useState("approvals");
+  const [activeTab, setActiveTab] = useState("vision");
   const [isParentUnlocked, setIsParentUnlocked] = useState(false);
   const [hasLoadedSavedState, setHasLoadedSavedState] = useState(false);
   const [familyName, setFamilyName] = useState("Nalajala Crew");
@@ -323,6 +343,7 @@ export function TailTotsApp() {
   const [goals, setGoals] = useState(starterGoals);
   const [badges, setBadges] = useState(starterBadges);
   const [neighborhoodJobs, setNeighborhoodJobs] = useState(starterNeighborhoodJobs);
+  const [scheduleItems] = useState(starterScheduleItems);
   const [moments, setMoments] = useState<MemoryMoment[]>([
     { id: "moment-1", childId: "sahasra", petId: "jack", mood: "proud", note: "Jack waited calmly while Sahasra filled the water bowl." },
   ]);
@@ -513,11 +534,12 @@ export function TailTotsApp() {
   }
 
   function openPhotoCropFromUrl(target: PhotoCropTarget, imageUrl: string) {
+    const isPerson = target.targetType === "parent" || target.targetType === "child";
     setPhotoCropDraft({
       ...target,
       imageUrl,
-      crop: { x: 0, y: 0 },
-      zoom: target.fit === "contain" ? 0.85 : 1,
+      crop: { x: 0, y: isPerson ? -12 : 0 },
+      zoom: target.fit === "contain" ? 0.85 : isPerson ? 1.45 : 1.05,
     });
   }
 
@@ -548,7 +570,7 @@ export function TailTotsApp() {
 
   function switchRole(nextRole: Role) {
     setRole(nextRole);
-    setActiveTab(nextRole === "parent" ? "approvals" : "missions");
+    setActiveTab(nextRole === "parent" ? "vision" : "missions");
     if (nextRole === "child") {
       setIsParentUnlocked(false);
       setParentCode("");
@@ -559,7 +581,7 @@ export function TailTotsApp() {
     if (parentCode.trim() !== parentPasscode.trim()) return;
     setIsParentUnlocked(true);
     setParentCode("");
-    setActiveTab("approvals");
+    setActiveTab("vision");
   }
 
   function completeMission(missionId: string) {
@@ -818,14 +840,14 @@ export function TailTotsApp() {
               {(["phone", "hub"] as const).map((item) => (
                 <button
                   key={item}
-                  aria-label={`${item === "hub" ? "Tablet" : "Phone"} mode`}
+                  aria-label={`${item === "hub" ? "Tablet and home display" : "Phone app"} mode`}
                   onClick={() => {
                     setDisplayMode(item);
                     if (item === "hub") setActiveTab("hub");
                   }}
                   className={`min-h-10 rounded-full px-3 py-2 capitalize sm:min-h-11 sm:px-4 ${displayMode === item ? "bg-[#2563eb] text-white" : "text-[#53615b]"}`}
                 >
-                  {item === "hub" ? "Tablet Mode" : "Phone Mode"}
+                  {item === "hub" ? "Tablet / Home" : "Phone App"}
                 </button>
               ))}
             </div>
@@ -931,12 +953,15 @@ export function TailTotsApp() {
         </aside>
 
         <div className="space-y-5">
+          {role === "parent" && visibleActiveTab === "vision" && (
+            <VisionLandingPanel isParentUnlocked={isParentUnlocked} setActiveTab={setActiveTab} />
+          )}
           {role === "parent" && !isParentUnlocked && (
             <section className="rounded-lg border border-[#ded8c7] bg-white p-6 shadow-sm">
               <p className="text-xs font-black uppercase tracking-[0.18em] text-[#165a4b]">Parent access</p>
               <h2 className="mt-2 text-3xl font-black">Grown-up tools are locked</h2>
               <p className="mt-2 max-w-xl text-sm font-semibold leading-6 text-[#5f6a65]">
-                Use the passcode panel on the left to review rewards, jobs, setup, and AI planning.
+                Use the passcode panel on the left to review rewards, jobs, setup, schedules, and AI planning.
               </p>
             </section>
           )}
@@ -955,6 +980,7 @@ export function TailTotsApp() {
               isParentUnlocked={isParentUnlocked}
               pendingCount={pendingApprovals.length}
               setActiveTab={setActiveTab}
+              scheduleItems={scheduleItems}
             />
           )}
           {(role === "child" || isParentUnlocked) && displayMode === "phone" && (
@@ -997,9 +1023,21 @@ export function TailTotsApp() {
               isParentUnlocked={isParentUnlocked}
               pendingCount={pendingApprovals.length}
               setActiveTab={setActiveTab}
+              scheduleItems={scheduleItems}
+            />
+          )}
+          {visibleActiveTab === "schedule" && (
+            <SchedulePanel
+              activeChild={activeChild}
+              childProfiles={children}
+              missions={role === "parent" ? missions : activeChildMissions}
+              scheduleItems={scheduleItems}
+              role={role}
+              setActiveChildId={role === "child" ? requestChildSwitch : setActiveChildId}
             />
           )}
           {visibleActiveTab === "pets" && <PassportPanel pets={pets} updatePetPhoto={role === "parent" ? updatePetPhoto : undefined} />}
+          {visibleActiveTab === "pet-helper" && <KidPetHelperPanel activeChild={activeChild} pets={pets} moments={moments} />}
           {visibleActiveTab === "bank" && (
             <BankPanel
               child={activeChild}
@@ -1087,7 +1125,7 @@ export function TailTotsApp() {
               toggleJobVisibility={toggleNeighborhoodJobVisibility}
             />
           )}
-          {visibleActiveTab === "ai" && <AIPanel />}
+          {visibleActiveTab === "ai" && <AIPanel childProfiles={children} missions={missions} />}
           </>
           )}
         </div>
@@ -1107,6 +1145,182 @@ export function TailTotsApp() {
   );
 }
 
+function VisionLandingPanel({ isParentUnlocked, setActiveTab }: { isParentUnlocked: boolean; setActiveTab: (tab: string) => void }) {
+  const pillars = [
+    ["Life skills through chores", "Parents choose the value to teach, then TailTots turns it into age-fit pet care, family chores, and helper missions."],
+    ["Parent-approved neighborhood jobs", "Jobs stay hidden from kids until a parent approves visibility. Kids confirm interest, then parents make it final."],
+    ["Kid-safe joy", "Kids see their own schedule, pets, badges, quotes, and progress without comparison-heavy or grown-up screens."],
+    ["Phone plus tablet home mode", "Phone App is for each user. Tablet / Home is for the kitchen counter, iPad, Echo Show-style, or Nest-style family display."],
+    ["AI with guardrails", "Parents get chore ideas, fairness planning, and points balancing. Kids get bounded pet facts, care tips, and daily encouragement."],
+    ["Kid Bank rewards", "When a parent approves completed paid work, allowance lands in Kid Bank automatically with save, spend, and give choices."],
+  ];
+
+  return (
+    <section className="space-y-4">
+      <div className="overflow-hidden rounded-lg border border-[#ded8c7] bg-[#17231f] text-white shadow-sm">
+        <div className="grid gap-6 p-5 sm:p-7 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-[#ffd166]">TailTots vision</p>
+            <h2 className="mt-3 max-w-3xl text-4xl font-black leading-tight sm:text-5xl">
+              Pet care, chores, and neighborhood help that teach real life skills.
+            </h2>
+            <p className="mt-4 max-w-2xl text-base font-semibold leading-7 text-white/82 sm:text-lg">
+              TailTots is a parent-controlled family app where kids learn responsibility, empathy, teamwork, time habits, and money basics by caring for pets and helping trusted neighbors.
+            </p>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <button onClick={() => setActiveTab(isParentUnlocked ? "ai" : "vision")} className="min-h-12 rounded-lg bg-[#ffd166] px-5 py-3 text-sm font-black text-[#17231f]">
+                AI chore planner
+              </button>
+              <button onClick={() => setActiveTab(isParentUnlocked ? "approvals" : "vision")} className="min-h-12 rounded-lg border border-white/25 px-5 py-3 text-sm font-black text-white">
+                Parent approval flow
+              </button>
+            </div>
+          </div>
+          <div className="grid gap-3 rounded-lg bg-white/10 p-4">
+            {[
+              ["Parent chooses", "Skill, safety, points, money, and visibility."],
+              ["Kid confirms", "Only approved jobs appear; the kid chooses to accept."],
+              ["Parent approves", "Completed work becomes points, badges, and Kid Bank dollars."],
+            ].map(([title, body]) => (
+              <article key={title} className="rounded-lg bg-white p-4 text-[#17231f]">
+                <p className="text-lg font-black">{title}</p>
+                <p className="mt-1 text-sm font-semibold leading-5 text-[#5f6a65]">{body}</p>
+              </article>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {pillars.map(([title, body]) => (
+          <article key={title} className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
+            <h3 className="text-xl font-black">{title}</h3>
+            <p className="mt-2 text-sm font-semibold leading-6 text-[#5f6a65]">{body}</p>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function SchedulePanel({
+  activeChild,
+  childProfiles,
+  missions,
+  scheduleItems,
+  role,
+  setActiveChildId,
+}: {
+  activeChild?: Child;
+  childProfiles: Child[];
+  missions: Mission[];
+  scheduleItems: KidScheduleItem[];
+  role: Role;
+  setActiveChildId: (childId: string) => void;
+}) {
+  const isParent = role === "parent";
+  const visibleItems = scheduleItems.filter((item) => (isParent ? true : item.childId === activeChild?.id));
+  const visibleMissions = missions.filter((mission) => (isParent ? true : !mission.assignedChildId || mission.assignedChildId === activeChild?.id)).slice(0, 4);
+
+  return (
+    <section className="space-y-4">
+      <div className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
+        <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-[#0f766e]">{isParent ? "Family calendar" : `${activeChild?.name ?? "Kid"} calendar`}</p>
+            <h2 className="mt-2 text-3xl font-black">{isParent ? "Schedules without kid pressure" : "Your day, nice and simple"}</h2>
+            <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-[#5f6a65]">
+              {isParent ? "Parents can review the rhythm for each child without showing private parent controls in kid mode." : "See what is next, what pet needs care, and what can wait for a grown-up."}
+            </p>
+          </div>
+          {isParent && (
+            <div className="flex flex-wrap gap-2">
+              {childProfiles.map((child) => (
+                <button key={child.id} onClick={() => setActiveChildId(child.id)} className="min-h-10 rounded-lg border border-[#ded8c7] px-3 py-2 text-sm font-black">
+                  {child.name}, {child.age}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-[1fr_0.9fr]">
+        <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2563eb]">Schedule</p>
+          <div className="mt-4 grid gap-3">
+            {visibleItems.map((item) => {
+              const child = childProfiles.find((profile) => profile.id === item.childId);
+              return (
+                <article key={item.id} className="grid gap-3 rounded-lg bg-[#f8f6ed] p-4 sm:grid-cols-[110px_1fr]">
+                  <div className="rounded-lg bg-white p-3 text-sm font-black text-[#165a4b]">
+                    <span className="block">{item.day}</span>
+                    <span className="block text-[#5f6a65]">{item.time}</span>
+                  </div>
+                  <div>
+                    <p className="text-lg font-black">{item.title}</p>
+                    <p className="mt-1 text-sm font-semibold leading-5 text-[#5f6a65]">{item.note}</p>
+                    {isParent && <p className="mt-2 text-xs font-black text-[#0f766e]">{child?.name ?? "Kid"}</p>}
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        </section>
+
+        <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-[#f47b20]">Today missions</p>
+          <div className="mt-4 grid gap-3">
+            {visibleMissions.map((mission) => (
+              <article key={mission.id} className="rounded-lg bg-[#fff4d8] p-4">
+                <p className="text-lg font-black">{mission.title}</p>
+                <p className="mt-1 text-sm font-semibold leading-5 text-[#5f6a65]">{mission.question}</p>
+                <p className="mt-2 text-xs font-black text-[#7a4b12]">+{mission.points} points after parent approval</p>
+              </article>
+            ))}
+          </div>
+        </section>
+      </div>
+    </section>
+  );
+}
+
+function KidPetHelperPanel({ activeChild, pets, moments }: { activeChild?: Child; pets: Pet[]; moments: MemoryMoment[] }) {
+  const pet = pets[0];
+  const petName = pet?.name ?? "your pet";
+  const helperCards = [
+    ["Daily quote", "Small care done every day becomes a big kind habit."],
+    ["Pet fact", `${petName} feels safer when food, water, sound, and handling stay calm and predictable.`],
+    ["Try today", `Look closely at ${petName} for ten quiet seconds, then tell a parent one thing you noticed.`],
+    ["Hobby spark", "Draw your pet's dream home, build a paper maze, or write a tiny care story."],
+  ];
+  const recentMoment = moments.find((moment) => moment.childId === activeChild?.id);
+
+  return (
+    <section className="space-y-4">
+      <div className="rounded-lg border border-[#ded8c7] bg-[#e7f4ef] p-5 shadow-sm">
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#165a4b]">Kid-safe AI helper</p>
+        <h2 className="mt-2 text-3xl font-black">{activeChild?.name ?? "Kid"}, ask about pets without grown-up screens</h2>
+        <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-[#4f625b]">
+          These are guided prompts, not open chat. They help kids learn pet care, curiosity, and kindness without judging them.
+        </p>
+      </div>
+      <div className="grid gap-4 md:grid-cols-2">
+        {helperCards.map(([title, body]) => (
+          <article key={title} className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
+            <h3 className="text-xl font-black">{title}</h3>
+            <p className="mt-2 text-sm font-semibold leading-6 text-[#5f6a65]">{body}</p>
+          </article>
+        ))}
+      </div>
+      <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#7c3aed]">Your care memory</p>
+        <p className="mt-3 text-lg font-black">{recentMoment?.note ?? "Complete a care mission and your kind pet moment can show here."}</p>
+      </section>
+    </section>
+  );
+}
+
 function HomeHubPanel({
   activeChild,
   childProfiles,
@@ -1121,6 +1335,7 @@ function HomeHubPanel({
   isParentUnlocked,
   pendingCount,
   setActiveTab,
+  scheduleItems,
 }: {
   activeChild?: Child;
   childProfiles: Child[];
@@ -1135,6 +1350,7 @@ function HomeHubPanel({
   isParentUnlocked: boolean;
   pendingCount: number;
   setActiveTab: (tab: string) => void;
+  scheduleItems: KidScheduleItem[];
 }) {
   const isParentView = role === "parent" && isParentUnlocked;
   const nextMissions = missions.filter((mission) => mission.status === "pending" && !mission.completedBy).slice(0, 4);
@@ -1155,6 +1371,7 @@ function HomeHubPanel({
         "Parent cue: review approvals before rewards count.",
       ];
   const visibleBadges = (isParentView ? badges : badges.filter((badge) => badge.childId === activeChild?.id)).slice(0, 4);
+  const nextSchedule = scheduleItems.filter((item) => (isParentView ? true : item.childId === activeChild?.id)).slice(0, 3);
   const lifeSkillBadges = [
     { title: "Responsibility", detail: "Daily care rhythm", color: "bg-[#e7f4ef] text-[#0f513f]" },
     { title: "Kindness", detail: "Gentle pet moments", color: "bg-[#ffe5f0] text-[#8f1d4f]" },
@@ -1289,6 +1506,31 @@ function HomeHubPanel({
           </div>
         </section>
       </div>
+
+      <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
+        <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-[#0f766e]">Kid calendar</p>
+            <h3 className="mt-2 text-2xl font-black sm:text-3xl">{isParentView ? "Family schedule snapshot" : "What is next for you"}</h3>
+          </div>
+          <button onClick={() => setActiveTab("schedule")} className="min-h-11 rounded-lg border border-[#b7d9cc] px-4 py-2 text-sm font-black text-[#165a4b]">
+            Open schedule
+          </button>
+        </div>
+        <div className="mt-4 grid gap-3 lg:grid-cols-3">
+          {(nextSchedule.length ? nextSchedule : [{ id: "empty-schedule", day: "Today", time: "Any time", title: "No scheduled items", note: "Enjoy a calm day.", childId: activeChild?.id ?? "", kind: "family" as const }]).map((item) => {
+            const child = childProfiles.find((profile) => profile.id === item.childId);
+            return (
+              <article key={item.id} className="rounded-lg bg-[#f8f6ed] p-4">
+                <p className="text-xs font-black uppercase tracking-[0.14em] text-[#5f6a65]">{item.day} - {item.time}</p>
+                <p className="mt-2 text-lg font-black">{item.title}</p>
+                <p className="mt-1 text-sm font-semibold leading-5 text-[#5f6a65]">{item.note}</p>
+                {isParentView && <p className="mt-2 text-xs font-black text-[#165a4b]">{child?.name ?? "Kid"}</p>}
+              </article>
+            );
+          })}
+        </div>
+      </section>
 
       <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
         <p className="text-xs font-black uppercase tracking-[0.18em] text-[#0f766e]">Neighborhood favorite</p>
@@ -1545,7 +1787,7 @@ function saveFamilyState(state: SavedFamilyState) {
 function normalizeChildProfile(child: Child): Child {
   return {
     ...child,
-    age: child.id === "sahasra" ? 6 : child.age ?? 8,
+    age: child.id === "sahasra" ? 6 : child.id === "aarush" ? 9 : child.age ?? 8,
     secretCode: "",
   };
 }
@@ -1592,7 +1834,10 @@ function PhotoCropModal({
   const maxZoom = draft.fit === "contain" ? 3.2 : 3.6;
   const zoomStep = draft.fit === "contain" ? 0.1 : 0.12;
   const updateZoom = (zoom: number) => setDraft({ ...draft, zoom: Math.min(maxZoom, Math.max(minZoom, zoom)) });
-  const resetCrop = () => setDraft({ ...draft, crop: { x: 0, y: 0 }, zoom: draft.fit === "contain" ? 0.85 : 1, croppedAreaPixels: undefined });
+  const resetCrop = () => {
+    const isPerson = draft.targetType === "parent" || draft.targetType === "child";
+    setDraft({ ...draft, crop: { x: 0, y: isPerson ? -12 : 0 }, zoom: draft.fit === "contain" ? 0.85 : isPerson ? 1.45 : 1.05, croppedAreaPixels: undefined });
+  };
 
   useEffect(() => {
     let isActive = true;
@@ -1613,9 +1858,9 @@ function PhotoCropModal({
       <section className="w-full max-w-4xl rounded-lg bg-white p-5 shadow-2xl">
         <div className="flex items-start justify-between gap-4 border-b border-[#ded8c7] pb-4">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-[#f47b20]">Profile photo crop</p>
-            <h2 className="mt-2 text-3xl font-black">Place {draft.label} correctly</h2>
-            <p className="mt-2 text-sm font-semibold text-[#5f6a65]">Drag the photo into the circle, pinch or zoom, then save.</p>
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-[#f47b20]">Head-focused profile crop</p>
+            <h2 className="mt-2 text-3xl font-black">Fit {draft.label}&apos;s face into the character</h2>
+            <p className="mt-2 text-sm font-semibold text-[#5f6a65]">People photos start zoomed toward the head, ears, and hair so background stays out of the animated profile.</p>
           </div>
           <button onClick={close} className="rounded-lg border border-[#ded8c7] px-4 py-2 text-sm font-black">Close</button>
         </div>
@@ -2742,9 +2987,9 @@ function NeighborhoodPanel({
       <div className="grid gap-3 rounded-lg border border-[#ded8c7] bg-[#e7f4ef] p-4 sm:grid-cols-2 xl:grid-cols-4 sm:p-5">
         {[
           "Parent posts job",
-          "Child accepts with their profile",
-          "Parent approves and creates mission",
-          "Parent approves completion and awards rewards",
+          "Parent approves visibility for kids",
+          "Kid confirms with their profile",
+          "Parent makes it final and rewards after completion",
         ].map((step, index) => (
           <div key={step} className="rounded-lg bg-white p-4">
             <p className="text-xs font-black uppercase tracking-[0.16em] text-[#165a4b]">Step {index + 1}</p>
@@ -2773,7 +3018,7 @@ function NeighborhoodPanel({
 
       <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
         <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2563eb]">{role === "parent" ? "Job pipeline" : "Jobs for you"}</p>
-        <h3 className="mt-2 text-2xl font-black">{role === "parent" ? "Acceptances waiting for parent approval" : "Accept a job, then wait for grown-up approval"}</h3>
+        <h3 className="mt-2 text-2xl font-black">{role === "parent" ? "Kid confirmations waiting for final approval" : "Confirm a job, then wait for grown-up approval"}</h3>
         <div className="mt-4 grid gap-3">
           {visibleJobs.map((job) => {
             const acceptedChild = childProfiles.find((child) => child.id === job.acceptedBy);
@@ -2818,10 +3063,10 @@ function NeighborhoodPanel({
                   ))}
                 </div>
                 {role === "child" && job.status === "posted" && (
-                  <button onClick={() => acceptJob(job.id)} className="mt-3 min-h-12 w-full rounded-lg bg-[#f47b20] px-4 py-2 text-sm font-black text-white">Accept with parent review</button>
+                  <button onClick={() => acceptJob(job.id)} className="mt-3 min-h-12 w-full rounded-lg bg-[#f47b20] px-4 py-2 text-sm font-black text-white">Confirm I want this job</button>
                 )}
                 {role === "child" && job.status !== "posted" && (
-                  <p className="mt-3 rounded-lg bg-white p-3 text-sm font-black text-[#5f6a65]">{job.status === "accepted" ? "Waiting for grown-up approval." : job.status === "approved" ? "Added to Today as a mission." : "Completed and closed."}</p>
+                  <p className="mt-3 rounded-lg bg-white p-3 text-sm font-black text-[#5f6a65]">{job.status === "accepted" ? "Waiting for a parent to make it final." : job.status === "approved" ? "Added to Today. Money goes to Kid Bank after parent approves completion." : "Completed and paid if this job had allowance."}</p>
                 )}
                 {role === "parent" && (
                   <div className="mt-3 grid gap-2 sm:grid-cols-[auto_auto_1fr]">
@@ -2831,7 +3076,7 @@ function NeighborhoodPanel({
                     >
                       {job.visibleToKids ? "Remove kid visibility" : "Approve for kids to see"}
                     </button>
-                    <button onClick={() => approveJob(job.id)} disabled={job.status !== "accepted"} className="min-h-11 rounded-lg bg-[#165a4b] px-4 py-2 text-sm font-black text-white disabled:bg-[#b9b2a2]">Approve and create mission</button>
+                    <button onClick={() => approveJob(job.id)} disabled={job.status !== "accepted"} className="min-h-11 rounded-lg bg-[#165a4b] px-4 py-2 text-sm font-black text-white disabled:bg-[#b9b2a2]">Make final and add to Today</button>
                     <p className="rounded-lg bg-white p-3 text-xs font-bold text-[#5f6a65]">Allowed kids: {job.assignedChildIds.map((id) => childProfiles.find((child) => child.id === id)?.name).filter(Boolean).join(", ")}</p>
                   </div>
                 )}
@@ -3082,7 +3327,7 @@ function LegacyNeighborhoodPanel({ goals, childProfiles }: { goals: SavingsGoal[
 
 void LegacyNeighborhoodPanel;
 
-function AIPanel() {
+function AIPanel({ childProfiles, missions }: { childProfiles: Child[]; missions: Mission[] }) {
   const currentUses = [
     ["Local parent tools", "TailTots now has template-powered helpers for missions, care checklists, memories, summaries, journals, and insights."],
     ["Ready for OpenAI later", "These panels can be connected to the OpenAI API when billing credits are available."],
@@ -3094,8 +3339,12 @@ function AIPanel() {
     vetNotes: "Handle gently. Watch water bottle level. No loud noises near cage.",
     memoryNote: "Aarush remembered RB's food before school and checked the water.",
     photoMoment: "Captain basking after fresh greens",
+    lifeSkill: "responsibility",
+    choreGoal: "Teach responsibility through morning pet care and one family helper task",
   });
   const smartMissions = buildSmartMissions(aiDraft.petType, aiDraft.routine);
+  const lifeSkillMissions = buildLifeSkillChores(aiDraft.lifeSkill, aiDraft.choreGoal, childProfiles);
+  const fairnessPlan = buildFairnessPlan(missions, childProfiles);
   const coachChecklist = buildCareChecklist(aiDraft.vetNotes);
   const memoryMoment = buildMemoryMoment(aiDraft.memoryNote);
   const passportSummary = buildPassportSummary(aiDraft.petType, aiDraft.petAge, aiDraft.routine, aiDraft.vetNotes);
@@ -3157,6 +3406,31 @@ function AIPanel() {
         </p>
 
         <div className="mt-5 grid gap-4 lg:grid-cols-2">
+          <section className="rounded-lg bg-[#eef2ff] p-4">
+            <h4 className="text-lg font-black">Life Skill Chore Planner</h4>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <select className="rounded-lg border border-[#c8d2f0] px-3 py-3 text-sm font-semibold" value={aiDraft.lifeSkill} onChange={(event) => setAiDraft({ ...aiDraft, lifeSkill: event.target.value })}>
+                <option value="responsibility">Responsibility</option>
+                <option value="empathy">Empathy</option>
+                <option value="teamwork">Teamwork</option>
+                <option value="leadership">Leadership</option>
+                <option value="time">Time habits</option>
+              </select>
+              <input className="rounded-lg border border-[#c8d2f0] px-3 py-3 text-sm font-semibold" value={aiDraft.choreGoal} onChange={(event) => setAiDraft({ ...aiDraft, choreGoal: event.target.value })} placeholder="What value should chores teach?" />
+            </div>
+            <div className="mt-3 grid gap-2">
+              {lifeSkillMissions.map((mission) => <p key={mission} className="rounded-lg bg-white p-3 text-sm font-semibold leading-5">{mission}</p>)}
+            </div>
+          </section>
+
+          <section className="rounded-lg bg-[#e7f4ef] p-4">
+            <h4 className="text-lg font-black">Fair Chore Distributor</h4>
+            <p className="mt-2 text-sm font-semibold leading-5 text-[#4f625b]">Harder work earns more points, but the weekly plan aims for similar totals if everyone completes their assigned chores.</p>
+            <div className="mt-3 grid gap-2">
+              {fairnessPlan.map((line) => <p key={line} className="rounded-lg bg-white p-3 text-sm font-semibold leading-5">{line}</p>)}
+            </div>
+          </section>
+
           <section className="rounded-lg bg-[#f8f6ed] p-4">
             <h4 className="text-lg font-black">Smart Mission Generator</h4>
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
@@ -3223,6 +3497,37 @@ function buildSmartMissions(petType: string, routine: string) {
   const routineParts = routine.split(",").map((part) => part.trim()).filter(Boolean).slice(0, 3);
   const baseParts = routineParts.length ? routineParts : ["fresh food", "clean water", "comfort check"];
   return baseParts.map((part, index) => `${index + 1}. ${pet} mission: ${part}. Kid step: do it, notice one thing, then ask parent to approve.`);
+}
+
+function buildLifeSkillChores(skill: string, goal: string, childProfiles: Child[]) {
+  const label = getLifeSkillLabel((skill as LifeSkillKey) || "responsibility");
+  const sortedKids = [...childProfiles].sort((a, b) => a.age - b.age);
+  const younger = sortedKids[0];
+  const older = sortedKids[sortedKids.length - 1];
+  const purpose = goal.trim() || `Teach ${label.toLowerCase()} through simple care routines`;
+  return [
+    `${younger?.name ?? "Younger child"}: easy mission, 10-12 points. Notice one pet need and tell a parent. Purpose: ${purpose}.`,
+    `${older?.name ?? "Older child"}: medium mission, 16-20 points. Complete a care checklist and help reset supplies.`,
+    "Parent rule: reward effort and completion, not speed. If one child gets harder work, add enough points so weekly totals stay close.",
+    "Kid-facing wording: show helpful next steps and badges, not rankings or judgment.",
+  ];
+}
+
+function buildFairnessPlan(missions: Mission[], childProfiles: Child[]) {
+  if (!childProfiles.length) return ["Add children first so TailTots can balance tasks."];
+  const totals = childProfiles.map((child) => {
+    const assigned = missions.filter((mission) => mission.assignedChildId === child.id && mission.status !== "approved");
+    return {
+      child,
+      points: assigned.reduce((sum, mission) => sum + mission.points, 0),
+      count: assigned.length,
+    };
+  });
+  const max = Math.max(...totals.map((item) => item.points), 0);
+  return totals.map(({ child, points, count }) => {
+    const gap = max - points;
+    return `${child.name}, age ${child.age}: ${count} open task${count === 1 ? "" : "s"}, ${points} planned points${gap ? `, add about ${gap} points or one easier helper task to balance` : ", balanced for this plan"}.`;
+  });
 }
 
 function buildCareChecklist(notes: string) {
