@@ -360,7 +360,6 @@ export function TailTotsApp() {
   const [familyPhotoUrl, setFamilyPhotoUrl] = useState<string | undefined>();
   const [photoCropDraft, setPhotoCropDraft] = useState<PhotoCropDraft | undefined>();
   const [pendingPhotoCropQueue, setPendingPhotoCropQueue] = useState<PhotoCropTarget[]>([]);
-  const [displayMode, setDisplayMode] = useState<"phone" | "hub">("phone");
   const [jobDraft, setJobDraft] = useState({
     title: "Pet sitting helper",
     family: "Neighbor family",
@@ -423,10 +422,7 @@ export function TailTotsApp() {
       const requestedTab = new URLSearchParams(window.location.search).get("tab");
       if (!requestedTab || !tabItems.some((tab) => tab.id === requestedTab)) return;
       setActiveTab(requestedTab);
-      if (requestedTab === "hub") {
-        setDisplayMode("hub");
-        setRole("child");
-      }
+      if (requestedTab === "hub") setRole("child");
     });
   }, []);
 
@@ -822,7 +818,7 @@ export function TailTotsApp() {
   }
 
   return (
-    <main className={`tailtots-app min-h-screen bg-[#f7f6f0] text-[#17231f] ${displayMode === "hub" ? "home-hub-mode" : ""}`}>
+    <main className="tailtots-app min-h-screen bg-[#f7f6f0] text-[#17231f]">
       <header className="sticky top-0 z-20 border-b border-[#ded8c7] bg-white/95 backdrop-blur">
         <div className="mx-auto flex max-w-7xl flex-col gap-3 px-3 py-2 sm:flex-row sm:items-center sm:justify-between sm:px-5 sm:py-3">
           <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto sm:gap-3">
@@ -838,21 +834,6 @@ export function TailTotsApp() {
           <div className="flex w-full flex-wrap justify-start gap-2 sm:w-auto sm:shrink-0 sm:justify-end">
             <div className="hidden min-h-11 items-center rounded-full border border-[#d9d0bb] bg-white px-4 text-xs font-black text-[#25352f] md:flex">
               {operatorLabel}
-            </div>
-            <div className="flex rounded-full border border-[#d9d0bb] bg-[#f8f6ed] p-1 text-xs font-black">
-              {(["phone", "hub"] as const).map((item) => (
-                <button
-                  key={item}
-                  aria-label={`${item === "hub" ? "Tablet and home display" : "Phone app"} mode`}
-                  onClick={() => {
-                    setDisplayMode(item);
-                    if (item === "hub") setActiveTab("hub");
-                  }}
-                  className={`min-h-10 rounded-full px-3 py-2 capitalize sm:min-h-11 sm:px-4 ${displayMode === item ? "bg-[#2563eb] text-white" : "text-[#53615b]"}`}
-                >
-                  {item === "hub" ? "Tablet / Home" : "Phone App"}
-                </button>
-              ))}
             </div>
             <div className="flex rounded-full border border-[#d9d0bb] bg-[#f8f6ed] p-1 text-xs font-black">
               {(["parent", "child"] as Role[]).map((item) => (
@@ -871,9 +852,9 @@ export function TailTotsApp() {
       </header>
 
       <section className={`mx-auto grid max-w-7xl gap-4 px-3 py-4 sm:px-5 md:gap-5 ${
-        displayMode === "hub" ? "home-hub-shell" : "lg:grid-cols-[280px_1fr] xl:grid-cols-[300px_1fr]"
+        role === "parent" && visibleActiveTab === "vision" ? "grid-cols-1" : "lg:grid-cols-[280px_1fr] xl:grid-cols-[300px_1fr]"
       }`}>
-        <aside className={`min-w-0 space-y-3 lg:space-y-4 ${displayMode === "hub" ? "home-hub-sidebar" : ""}`}>
+        <aside className={`min-w-0 space-y-3 lg:space-y-4 ${role === "parent" && visibleActiveTab === "vision" ? "hidden" : ""}`}>
           <div className="overflow-hidden rounded-lg border border-[#ded8c7] bg-white shadow-sm">
             <div className="relative min-h-[220px] max-w-full overflow-hidden bg-[linear-gradient(135deg,#165a4b,#f47b20_58%,#2563eb)] sm:min-h-[280px] lg:min-h-[430px]">
               {familyPhotoUrl && <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${familyPhotoUrl})` }} />}
@@ -938,7 +919,7 @@ export function TailTotsApp() {
             />
           )}
 
-          {(role === "child" || isParentUnlocked) && displayMode === "phone" && (
+          {(role === "child" || isParentUnlocked) && (
           <nav className="grid grid-flow-col gap-2 overflow-x-auto pb-1 lg:grid-flow-row lg:overflow-visible lg:pb-0">
             {visibleTabs.map((tab) => (
               <button
@@ -957,7 +938,17 @@ export function TailTotsApp() {
 
         <div className="space-y-5">
           {role === "parent" && visibleActiveTab === "vision" && (
-            <VisionLandingPanel isParentUnlocked={isParentUnlocked} setActiveTab={setActiveTab} />
+            <VisionLandingPanel
+              isParentUnlocked={isParentUnlocked}
+              parentCode={parentCode}
+              setParentCode={setParentCode}
+              parentLogin={parentLogin}
+              setActiveTab={setActiveTab}
+              openKidDemo={() => {
+                setRole("child");
+                setActiveTab("missions");
+              }}
+            />
           )}
           {role === "parent" && !isParentUnlocked && (
             <section className="rounded-lg border border-[#ded8c7] bg-white p-6 shadow-sm">
@@ -968,7 +959,7 @@ export function TailTotsApp() {
               </p>
             </section>
           )}
-          {(role === "child" || isParentUnlocked) && displayMode === "hub" && (
+          {(role === "child" || isParentUnlocked) && visibleActiveTab === "hub" && (
             <HomeHubPanel
               activeChild={activeChild}
               childProfiles={children}
@@ -986,7 +977,7 @@ export function TailTotsApp() {
               scheduleItems={scheduleItems}
             />
           )}
-          {(role === "child" || isParentUnlocked) && displayMode === "phone" && (
+          {(role === "child" || isParentUnlocked) && visibleActiveTab !== "hub" && (
           <>
           {visibleActiveTab === "missions" && (
             <>
@@ -1010,24 +1001,6 @@ export function TailTotsApp() {
                 completeMission={completeMission}
               />
             </>
-          )}
-          {visibleActiveTab === "hub" && (
-              <HomeHubPanel
-                activeChild={activeChild}
-                childProfiles={children}
-                pets={pets}
-              missions={role === "parent" ? missions : activeChildMissions}
-              goals={goals}
-              moments={moments}
-              badges={badges}
-              fairnessSummary={fairnessSummary}
-              familySkillSummary={familySkillSummary}
-              role={role}
-              isParentUnlocked={isParentUnlocked}
-              pendingCount={pendingApprovals.length}
-              setActiveTab={setActiveTab}
-              scheduleItems={scheduleItems}
-            />
           )}
           {visibleActiveTab === "schedule" && (
             <SchedulePanel
@@ -1149,153 +1122,222 @@ export function TailTotsApp() {
   );
 }
 
-function VisionLandingPanel({ isParentUnlocked, setActiveTab }: { isParentUnlocked: boolean; setActiveTab: (tab: string) => void }) {
-  const proofPoints = [
-    ["Parent-controlled", "Jobs, rewards, AI, Kid Bank, and neighborhood visibility stay behind parent approval."],
-    ["Animal-centered", "Pets create a softer bridge into responsibility, empathy, calm, and confidence."],
-    ["Screen-to-real-life", "The app prompts children toward pet care, chores, saving, giving, and volunteering."],
-  ];
-  const storySteps = [
-    ["Choose a value", "A parent picks responsibility, empathy, teamwork, time habits, money basics, or leadership."],
-    ["Turn it into care", "TailTots suggests age-fit pet care, family chores, neighborhood help, or shelter kindness quests."],
-    ["Approve the path", "Kids only see what parents approve. They confirm interest before anything becomes final."],
-    ["Celebrate growth", "Completed work becomes badges, Kid Bank dollars, calendar rhythm, and a private kid portfolio."],
-  ];
-  const parentConcerns = [
-    ["Is this exploiting kids?", "No. Money is optional. The core is care, confidence, values, and parent-approved learning."],
-    ["Is this more screen time?", "TailTots uses the screen as a doorway back to pets, family routines, volunteering, and real-world action."],
-    ["Will kids feel judged?", "Kid views avoid grown-up admin, public rankings, and pressure. Progress is private and encouraging."],
-    ["Is AI safe?", "Kids get button-based, bounded suggestions. Parents get planning tools and approval controls."],
-  ];
-  const ecosystemCards = [
-    ["Families", "Chores, pet care, schedules, Kid Bank, badges, AI planning, and life-skill tracking."],
-    ["Neighborhoods", "Parent-approved playdates, helper jobs, availability links, and trusted family groups."],
-    ["Shelters", "Adoption learning, volunteer quests, donation drives, animal welfare badges, and sponsor campaigns."],
-  ];
-  const launchChecks = [
-    "Start with 5-10 families who care about pets, values, and safer screen habits.",
-    "Validate whether parents understand the promise in ten seconds.",
-    "Track completed missions, parent approvals, badges, Kid Bank activity, and weekly retention.",
+function VisionLandingPanel({
+  isParentUnlocked,
+  parentCode,
+  setParentCode,
+  parentLogin,
+  setActiveTab,
+  openKidDemo,
+}: {
+  isParentUnlocked: boolean;
+  parentCode: string;
+  setParentCode: (value: string) => void;
+  parentLogin: () => void;
+  setActiveTab: (tab: string) => void;
+  openKidDemo: () => void;
+}) {
+  const [showParentSignIn, setShowParentSignIn] = useState(false);
+  const careLoop = [
+    ["1", "Parent chooses", "A value, skill, or care need"],
+    ["2", "TailTots suggests", "An age-fit real-world mission"],
+    ["3", "Kid completes", "With a simple, positive guide"],
+    ["4", "Parent celebrates", "Approval, points, badges, or Kid Bank"],
   ];
 
   return (
     <section className="space-y-5">
       <div className="overflow-hidden rounded-lg border border-[#ded8c7] bg-[#17231f] text-white shadow-sm">
-        <div className="grid gap-6 p-5 sm:p-7 xl:grid-cols-[1.05fr_0.95fr] xl:items-center">
+        <div className="grid gap-7 p-5 sm:p-7 lg:grid-cols-[0.9fr_1.1fr] lg:items-center xl:p-9">
           <div className="min-w-0">
             <p className="text-xs font-black uppercase tracking-[0.18em] text-[#ffd166]">TailTots</p>
-            <h2 className="mt-3 max-w-4xl text-4xl font-black leading-tight sm:text-5xl xl:text-6xl">
-              Help kids grow through pets, chores, kindness, and community.
+            <h2 className="mt-3 max-w-3xl text-4xl font-black leading-tight sm:text-5xl xl:text-6xl">
+              Pet care that grows capable, kind kids.
             </h2>
-            <p className="mt-4 max-w-3xl text-base font-semibold leading-7 text-[#dce7e2] sm:text-lg">
-              A parent-controlled family app that turns everyday pet care into life skills, Kid Bank rewards, safe neighborhood help, and animal-welfare impact.
+            <p className="mt-4 max-w-2xl text-base font-semibold leading-7 text-[#dce7e2] sm:text-lg">
+              Parents guide the values. Kids enjoy the missions. Pets, families, and communities feel the difference.
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
-              <button onClick={() => setActiveTab(isParentUnlocked ? "schedule" : "vision")} className="min-h-12 rounded-lg bg-[#ffd166] px-5 py-3 text-sm font-black text-[#17231f]">
-                See family calendar
+              <button onClick={openKidDemo} className="min-h-12 rounded-lg bg-[#ffd166] px-5 py-3 text-sm font-black text-[#17231f]">
+                Try the kid demo
               </button>
-              <button onClick={() => setActiveTab(isParentUnlocked ? "ecosystem" : "vision")} className="min-h-12 rounded-lg border border-white/25 px-5 py-3 text-sm font-black text-white">
-                View ecosystem
-              </button>
-              <button onClick={() => setActiveTab(isParentUnlocked ? "ai" : "vision")} className="min-h-12 rounded-lg border border-white/25 px-5 py-3 text-sm font-black text-white">
-                AI chore planner
+              <button
+                onClick={() => (isParentUnlocked ? setActiveTab("approvals") : setShowParentSignIn((value) => !value))}
+                className="min-h-12 rounded-lg border border-white/30 px-5 py-3 text-sm font-black text-white"
+              >
+                {isParentUnlocked ? "Open parent dashboard" : "Parent access"}
               </button>
             </div>
-            <p className="mt-4 max-w-2xl text-sm font-bold leading-6 text-white/70">
-              Built for parents who want less passive screen time, more real care, safer AI-era habits, and kids who feel capable instead of judged.
-            </p>
-          </div>
-          <div className="grid gap-3 rounded-lg bg-white/10 p-4">
-            <div className="rounded-lg bg-white p-4 text-[#17231f]">
-              <p className="text-xs font-black uppercase tracking-[0.14em] text-[#0f766e]">First family flow</p>
-              <p className="mt-2 text-2xl font-black">Value to care to approval to reward to impact</p>
-              <p className="mt-2 text-sm font-semibold leading-5 text-[#5f6a65]">
-                TailTots is not another open feed. It is a structured, parent-led path from small real-world actions to character growth.
-              </p>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
-              {proofPoints.map(([title, body]) => (
-                <article key={title} className="rounded-lg bg-white/92 p-4 text-[#17231f]">
-                  <p className="text-base font-black">{title}</p>
-                  <p className="mt-1 text-sm font-semibold leading-5 text-[#5f6a65]">{body}</p>
-                </article>
+            <div className="mt-5 flex flex-wrap gap-2 text-xs font-black text-[#dce7e2]">
+              {['Parent approved', 'Private by design', 'Guided kid AI'].map((label) => (
+                <span key={label} className="rounded-full border border-white/20 bg-white/10 px-3 py-2">{label}</span>
               ))}
+            </div>
+            {showParentSignIn && !isParentUnlocked && (
+              <div className="mt-5 max-w-md rounded-lg bg-white p-3 text-[#17231f]">
+                <label className="text-xs font-black uppercase tracking-[0.14em] text-[#165a4b]" htmlFor="landing-parent-code">Parent passcode</label>
+                <div className="mt-2 flex gap-2">
+                  <input
+                    id="landing-parent-code"
+                    value={parentCode}
+                    onChange={(event) => setParentCode(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") parentLogin();
+                    }}
+                    className="min-w-0 flex-1 rounded-lg border border-[#b8cfc6] px-3 py-2 text-sm font-bold"
+                    inputMode="numeric"
+                    type="password"
+                    placeholder="Enter code"
+                  />
+                  <button onClick={parentLogin} className="min-h-11 rounded-lg bg-[#165a4b] px-4 py-2 text-sm font-black text-white">Unlock</button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="grid gap-3 rounded-lg bg-white/10 p-3 sm:p-4">
+            <div className="rounded-lg bg-white p-4 text-[#17231f] shadow-sm">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.14em] text-[#2563eb]">Parent planner</p>
+                  <p className="mt-1 text-lg font-black">Teach responsibility</p>
+                </div>
+                <span className="rounded-full bg-[#e7f4ef] px-3 py-1 text-xs font-black text-[#165a4b]">AI suggested</span>
+              </div>
+              <div className="mt-3 rounded-lg bg-[#f8f6ed] p-3">
+                <p className="font-black">Refresh the pet water bowl</p>
+                <div className="mt-2 flex flex-wrap gap-2 text-xs font-bold text-[#5f6a65]">
+                  <span className="rounded-full bg-white px-2 py-1">Age 6+</span>
+                  <span className="rounded-full bg-white px-2 py-1">Easy</span>
+                  <span className="rounded-full bg-white px-2 py-1">8 points</span>
+                </div>
+              </div>
+              <div className="mt-3 flex items-center justify-between gap-3 rounded-lg bg-[#e7f4ef] px-3 py-2">
+                <span className="text-sm font-black text-[#165a4b]">Approved for kid view</span>
+                <span aria-hidden="true" className="grid size-7 place-items-center rounded-full bg-[#165a4b] text-sm font-black text-white">OK</span>
+              </div>
+            </div>
+
+            <div className="rounded-lg bg-[#fff4d8] p-4 text-[#17231f] shadow-sm">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.14em] text-[#7a4b12]">Kid view</p>
+                  <p className="mt-1 text-lg font-black">Today&apos;s care mission</p>
+                </div>
+                <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-[#7a4b12]">4:00 PM</span>
+              </div>
+              <p className="mt-3 rounded-lg bg-white p-3 text-sm font-bold">Fill the bowl, check the water is clean, and notice how your pet responds.</p>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <button onClick={openKidDemo} className="min-h-11 rounded-lg bg-[#17231f] px-3 py-2 text-xs font-black text-white">Start mission</button>
+                <button onClick={openKidDemo} className="min-h-11 rounded-lg border border-[#d9c48f] bg-white px-3 py-2 text-xs font-black text-[#5f4a24]">Ask Pet Helper</button>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#0f766e]">How it works</p>
-        <h3 className="mt-2 text-3xl font-black">The app gives parents a gentle structure, then sends kids back into real life.</h3>
-        <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          {storySteps.map(([title, body], index) => (
-            <article key={title} className="rounded-lg bg-[#f8f6ed] p-4">
-              <p className="text-xs font-black uppercase tracking-[0.14em] text-[#7a4b12]">Step {index + 1}</p>
-              <p className="mt-2 text-lg font-black">{title}</p>
-              <p className="mt-2 text-sm font-semibold leading-5 text-[#5f6a65]">{body}</p>
+      <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm sm:p-6">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-[#0f766e]">How it works</p>
+            <h3 className="mt-2 text-2xl font-black sm:text-3xl">One caring action at a time.</h3>
+          </div>
+          <p className="max-w-md text-sm font-semibold leading-5 text-[#5f6a65]">The screen gives direction, then gets out of the way.</p>
+        </div>
+        <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {careLoop.map(([number, title, body]) => (
+            <article key={number} className="flex gap-3 rounded-lg bg-[#f8f6ed] p-4">
+              <span className="grid size-9 shrink-0 place-items-center rounded-full bg-[#165a4b] text-sm font-black text-white">{number}</span>
+              <div className="min-w-0">
+                <p className="font-black">{title}</p>
+                <p className="mt-1 text-sm font-semibold leading-5 text-[#5f6a65]">{body}</p>
+              </div>
             </article>
           ))}
         </div>
       </section>
 
-      <section className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
-        <div className="rounded-lg border border-[#ded8c7] bg-[#e7f4ef] p-5 shadow-sm">
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-[#165a4b]">Why animals</p>
-          <h3 className="mt-2 text-3xl font-black">Animals can reach kids before lectures do.</h3>
-          <p className="mt-3 text-sm font-semibold leading-6 text-[#4f625b]">
-            For many children, including sensitive or special-needs kids, animals can bring calm, happiness, and connection. TailTots uses that bond as a bridge into responsibility, empathy, patience, and family routines.
-          </p>
-          <p className="mt-3 text-sm font-semibold leading-6 text-[#4f625b]">
-            The goal is a win-win: kids grow, pets receive better care, shelters gain support, and neighborhoods connect around something kind.
-          </p>
-        </div>
-        <div className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-[#7c3aed]">Parent trust</p>
-          <h3 className="mt-2 text-3xl font-black">The hard questions are answered upfront.</h3>
-          <div className="mt-4 grid gap-3 md:grid-cols-2">
-            {parentConcerns.map(([title, body]) => (
-              <article key={title} className="rounded-lg bg-[#f0edff] p-4">
-                <p className="text-base font-black text-[#33245f]">{title}</p>
-                <p className="mt-2 text-sm font-semibold leading-5 text-[#5f6a65]">{body}</p>
-              </article>
+      <section className="grid gap-4 lg:grid-cols-2">
+        <article className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.16em] text-[#2563eb]">Family calendar</p>
+              <h3 className="mt-1 text-xl font-black">Everyone knows what is next.</h3>
+            </div>
+            <span className="rounded-full bg-[#eef2ff] px-3 py-1 text-xs font-black text-[#2563eb]">This week</span>
+          </div>
+          <div className="mt-4 grid gap-2">
+            {[["Mon", "Pet breakfast", "Kid schedule"], ["Wed", "Shelter kindness quest", "Family"], ["Sat", "Playdate window", "Parent shared"]].map(([day, item, scope]) => (
+              <div key={item} className="grid grid-cols-[44px_1fr_auto] items-center gap-3 rounded-lg bg-[#f8f6ed] p-3">
+                <span className="text-xs font-black text-[#165a4b]">{day}</span>
+                <span className="min-w-0 text-sm font-black">{item}</span>
+                <span className="text-right text-[11px] font-bold text-[#69736f]">{scope}</span>
+              </div>
             ))}
           </div>
-        </div>
-      </section>
+        </article>
 
-      <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2563eb]">The ecosystem</p>
-        <h3 className="mt-2 text-3xl font-black">Start as a family app. Grow into a trusted pet-care impact network.</h3>
-        <div className="mt-5 grid gap-3 md:grid-cols-3">
-          {ecosystemCards.map(([title, body]) => (
-            <article key={title} className="rounded-lg bg-[#eef2ff] p-4">
-              <p className="text-lg font-black">{title}</p>
-              <p className="mt-2 text-sm font-semibold leading-5 text-[#5f6a65]">{body}</p>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section className="grid gap-4 xl:grid-cols-[1fr_0.82fr]">
-        <div className="rounded-lg border border-[#ded8c7] bg-[#fff4d8] p-5 shadow-sm">
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-[#7a4b12]">Launch plan</p>
-          <h3 className="mt-2 text-3xl font-black">Validate need before scaling the marketplace.</h3>
-          <div className="mt-4 grid gap-3">
-            {launchChecks.map((check) => (
-              <p key={check} className="rounded-lg bg-white p-4 text-sm font-black leading-5 text-[#5f4a24]">{check}</p>
+        <article className="rounded-lg border border-[#ded8c7] bg-[#e7f4ef] p-5 shadow-sm">
+          <p className="text-xs font-black uppercase tracking-[0.16em] text-[#165a4b]">Kid Bank</p>
+          <div className="mt-2 flex items-end justify-between gap-3">
+            <div>
+              <p className="text-3xl font-black">$14.00</p>
+              <p className="text-sm font-semibold text-[#4f625b]">Released only after parent approval</p>
+            </div>
+            <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-[#165a4b]">+ $2 earned</span>
+          </div>
+          <div className="mt-5 grid grid-cols-3 gap-2 text-center">
+            {[["Save", "$8"], ["Spend", "$4"], ["Give", "$2"]].map(([label, value]) => (
+              <div key={label} className="rounded-lg bg-white p-3">
+                <p className="text-lg font-black">{value}</p>
+                <p className="text-xs font-bold text-[#5f6a65]">{label}</p>
+              </div>
             ))}
           </div>
-        </div>
-        <div className="rounded-lg border border-[#ded8c7] bg-[#17231f] p-5 text-white shadow-sm">
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-[#ffd166]">Early offer</p>
-          <h3 className="mt-2 text-3xl font-black">Free first month for founding families.</h3>
-          <p className="mt-3 text-sm font-semibold leading-6 text-[#dce7e2]">
-            Invite a small group of neighborhood families first. Learn what parents trust, what kids enjoy, and which animal-welfare moments create real impact.
-          </p>
-          <button onClick={() => setActiveTab(isParentUnlocked ? "neighborhood" : "vision")} className="mt-4 min-h-12 w-full rounded-lg bg-[#ffd166] px-5 py-3 text-sm font-black text-[#17231f]">
-            Build neighborhood beta
-          </button>
+        </article>
+
+        <article className="rounded-lg border border-[#ded8c7] bg-[#fff4d8] p-5 shadow-sm">
+          <p className="text-xs font-black uppercase tracking-[0.16em] text-[#7a4b12]">Neighborhood help</p>
+          <h3 className="mt-1 text-xl font-black">The safety gates are visible.</h3>
+          <div className="mt-4 rounded-lg bg-white p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="font-black">Help prepare a pet adoption kit</p>
+                <p className="mt-1 text-xs font-bold text-[#69736f]">Trusted family group</p>
+              </div>
+              <span className="rounded-full bg-[#e7f4ef] px-3 py-1 text-xs font-black text-[#165a4b]">Age fit</span>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2 text-xs font-black">
+              <span className="rounded-full bg-[#eef2ff] px-3 py-1 text-[#2563eb]">Parent approved</span>
+              <span className="rounded-full bg-[#f0edff] px-3 py-1 text-[#6d3ed1]">No child messaging</span>
+              <span className="rounded-full bg-[#f8f6ed] px-3 py-1 text-[#5f4a24]">Adult nearby</span>
+            </div>
+          </div>
+        </article>
+
+        <article className="rounded-lg border border-[#ded8c7] bg-[#eef2ff] p-5 shadow-sm">
+          <p className="text-xs font-black uppercase tracking-[0.16em] text-[#6d3ed1]">Pet Helper</p>
+          <h3 className="mt-1 text-xl font-black">Guided questions, useful answers.</h3>
+          <div className="mt-4 grid gap-2 sm:grid-cols-2">
+            {['Why is my pet hiding?', 'How can I make playtime calmer?', 'What should I notice today?', 'Tell me a pet-care fact'].map((question) => (
+              <button key={question} onClick={openKidDemo} className="min-h-12 rounded-lg bg-white px-3 py-3 text-left text-sm font-black text-[#33245f] shadow-sm">{question}</button>
+            ))}
+          </div>
+        </article>
+      </section>
+
+      <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm sm:p-6">
+        <div className="grid gap-5 lg:grid-cols-[1fr_auto] lg:items-center">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-[#165a4b]">Built around trust</p>
+            <h3 className="mt-2 text-2xl font-black sm:text-3xl">Kids see encouragement. Parents keep control.</h3>
+            <div className="mt-4 flex flex-wrap gap-2 text-xs font-black text-[#4f625b]">
+              {['Private progress', 'No public rankings', 'No open kid chat', 'Parent-approved jobs and rewards', 'Age-aware missions', 'Animal welfare impact'].map((item) => (
+                <span key={item} className="rounded-full bg-[#f8f6ed] px-3 py-2">{item}</span>
+              ))}
+            </div>
+          </div>
+          <button onClick={openKidDemo} className="min-h-12 rounded-lg bg-[#165a4b] px-6 py-3 text-sm font-black text-white">Explore the app</button>
         </div>
       </section>
     </section>
