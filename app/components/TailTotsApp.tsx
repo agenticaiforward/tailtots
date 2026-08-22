@@ -1155,7 +1155,7 @@ function VisionLandingPanel({
               Pet care that grows capable, kind kids.
             </h2>
             <p className="mt-4 max-w-2xl text-base font-semibold leading-7 text-[#dce7e2] sm:text-lg">
-              Parents guide the values. Kids enjoy the missions. Pets, families, and communities feel the difference.
+              Turn daily reminders into routines kids can own, with pet-centered missions you approve and they can feel proud of.
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
               <button onClick={openKidDemo} className="min-h-12 rounded-lg bg-[#ffd166] px-5 py-3 text-sm font-black text-[#17231f]">
@@ -1235,6 +1235,24 @@ function VisionLandingPanel({
           </div>
         </div>
       </div>
+
+      <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm sm:p-6">
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#f47b20]">Sound familiar?</p>
+        <h3 className="mt-2 max-w-3xl text-2xl font-black sm:text-3xl">You want to guide your child without turning family life into constant reminders.</h3>
+        <div className="mt-5 grid gap-3 md:grid-cols-3">
+          {[
+            ["Every chore needs another reminder", "TailTots makes the next small action clear and lets kids build a routine they recognize as their own."],
+            ["Screen time rarely leads anywhere", "Each visit points back to pet care, family responsibility, saving, giving, or safe community participation."],
+            ["Rewards can become unfair or stressful", "Age-fit missions balance effort and points privately, without public rankings or comparing siblings."],
+          ].map(([challenge, outcome]) => (
+            <article key={challenge} className="rounded-lg bg-[#f8f6ed] p-4">
+              <p className="text-base font-black text-[#7a4b12]">{challenge}</p>
+              <div className="my-3 h-1 w-10 rounded-full bg-[#ffd166]" />
+              <p className="text-sm font-semibold leading-5 text-[#4f625b]">{outcome}</p>
+            </article>
+          ))}
+        </div>
+      </section>
 
       <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm sm:p-6">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">

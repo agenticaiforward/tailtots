@@ -1,6 +1,28 @@
 # TailTots Website Conversion And Launch Plan
 
-This document records the premium website framework used for the TailTots landing experience.
+Internal working document. This content is for the founder and product team, not public website copy.
+
+This document records the premium website framework, iteration backlog, conversion learning, and launch instructions for TailTots.
+
+## Public Site Boundary
+
+The public landing page must speak to customers, not instruct the founder.
+
+Public content should show:
+
+- Challenges parents already feel: repeated reminders, passive screen time, sibling fairness, safety, money habits, and uncertainty about teaching life skills.
+- The experience families receive: parent-approved missions, simple kid views, private progress, a combined family calendar, Kid Bank, guided pet help, and visible neighborhood safety gates.
+- Outcomes customers value: calmer routines, capable children, better pet care, less pressure, stronger values, and safer community participation.
+- Working product previews and clear demo actions instead of long strategy explanations.
+
+Keep private in project documentation:
+
+- Launch sequencing, beta size, experiments, and validation thresholds.
+- Revenue hypotheses, marketplace timing, pricing tests, and investor language.
+- Internal roadmap phases, partner strategy, competitive positioning, and stop/change criteria.
+- Founder prompts, build instructions, technical plans, and unfinished feature notes.
+
+Before publishing any landing-page revision, ask: "Does this help a parent recognize their problem, see the product working, and understand the relief it offers?" If the wording instead tells the team what to build or test, move it into this document.
 
 ## Premium Site Blueprint
 
@@ -28,11 +50,11 @@ Visual identity:
 
 Hero promise:
 
-Help kids grow through pets, chores, kindness, and community.
+Pet care that grows capable, kind kids.
 
 Subhead:
 
-A parent-controlled family app that turns everyday pet care into life skills, Kid Bank rewards, safe neighborhood help, and animal-welfare impact.
+Turn daily reminders into routines kids can own, with pet-centered missions parents approve and children can feel proud of.
 
 Above-the-fold proof:
 
@@ -42,12 +64,11 @@ Above-the-fold proof:
 
 Primary action:
 
-See family calendar.
+Try the kid demo.
 
-Secondary actions:
+Secondary action:
 
-- View ecosystem.
-- AI chore planner.
+- Parent access.
 
 ## Motion System
 
@@ -83,8 +104,8 @@ The page should answer objections as the visitor scrolls:
 4. Is this safe?
 5. Is this more screen time?
 6. Is this exploiting kids?
-7. How does it become a business and impact network?
-8. What should an early family do next?
+7. What will using it feel like for our family?
+8. What can we try now?
 
 Words to use:
 
@@ -96,7 +117,7 @@ Words to use:
 - Life skills
 - Safe neighborhood help
 - Private progress
-- Founding families
+- Family routines
 
 Words to avoid as primary framing:
 
@@ -118,8 +139,8 @@ Current implementation:
 
 Responsive requirements:
 
-- Phone App mode must support individual parent and child use.
-- Tablet / Home mode must support kitchen-counter, iPad, Echo Show-style, and Nest-style displays.
+- The interface must respond automatically across phones, tablets, laptops, kitchen-counter displays, Echo Show-style screens, and Nest-style screens.
+- Home Hub remains an app feature; customers should not have to choose a device mode.
 - Landing content must not overlap or break on mobile.
 - Buttons must remain tappable and clear.
 
@@ -139,7 +160,7 @@ Questions to test with parents:
 - Do they feel it helps values without over-structuring childhood?
 - Do they see animals as the emotional bridge?
 - Do they trust that kids are not exposed publicly?
-- Do they understand the first month offer?
+- Can they see the main functionality without reading long explanations?
 - Would they invite one neighbor or shelter contact?
 
 Top fixes to prioritize after feedback:
