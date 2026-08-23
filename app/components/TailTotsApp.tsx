@@ -580,7 +580,7 @@ export function TailTotsApp() {
     if (parentCode.trim() !== parentPasscode.trim()) return;
     setIsParentUnlocked(true);
     setParentCode("");
-    setActiveTab("vision");
+    setActiveTab("approvals");
   }
 
   function completeMission(missionId: string) {
