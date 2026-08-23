@@ -1162,41 +1162,85 @@ function VisionLandingPanel({
   const echoSlides = [
     {
       step: "1",
-      title: "Today's mission appears",
-      prompt: "Hi Sahasra. Jack needs fresh water.",
-      action: "Tap Start",
-      detail: "Big readable cards make the next pet-care step clear from across the room.",
+      title: "Mission Mode",
+      eyebrow: "Kid home screen",
+      prompt: "Hi Sahasra. Jack needs fresh water and a comfort check.",
+      action: "Start mission",
+      detail: "A child sees one parent-approved mission with big steps, clear timing, and no distracting feed.",
       badge: "Parent approved",
+      panelTitle: "Fresh water mission",
+      panelItems: ["Fill the bottle", "Check the bowl", "Notice how Jack responds"],
+      footerStats: ["8 points", "Responsibility", "4:00 PM"],
       bg: "#fff4d8",
       color: "#7a4b12",
     },
     {
       step: "2",
-      title: "Kid follows simple steps",
-      prompt: "Fill the bowl. Check that the water looks clean.",
-      action: "Next step",
-      detail: "The screen guides one action at a time so kids can stay focused and independent.",
-      badge: "Age 6+",
+      title: "Guided Pet Helper",
+      eyebrow: "Safe AI support",
+      prompt: "Why is Jamie hiding? Let's look for quiet, food, water, and comfort.",
+      action: "Ask helper",
+      detail: "Guided AI supports pet-care learning without becoming open-ended kid chat.",
+      badge: "No open chat",
+      panelTitle: "Pet Helper answer",
+      panelItems: ["Use a calm voice", "Check food and water", "Ask a parent before handling"],
+      footerStats: ["Age-aware", "Kindness", "Parent rules"],
       bg: "#e7f4ef",
       color: "#165a4b",
     },
     {
       step: "3",
-      title: "TailTots asks what they noticed",
-      prompt: "What did Jack do when you brought fresh water?",
-      action: "Answer",
-      detail: "Reflection turns a chore into empathy, observation, and real learning.",
-      badge: "Kindness check",
+      title: "Kid Bank",
+      eyebrow: "Earn, save, give",
+      prompt: "You earned $2 after parent approval. Where should it go?",
+      action: "Choose split",
+      detail: "Money choices become part of the life-skills loop, not just a chore payout.",
+      badge: "Parent released",
+      panelTitle: "Today's split",
+      panelItems: ["Save $1 for pet tunnel", "Give 50¢ to animal shelter", "Spend 50¢ later"],
+      footerStats: ["Save", "Spend", "Give"],
       bg: "#eef2ff",
       color: "#2563eb",
     },
     {
       step: "4",
-      title: "Parent celebrates progress",
-      prompt: "Mission complete. Ask a parent to approve.",
-      action: "Done",
-      detail: "Kids finish with a clear win while rewards and sharing stay parent controlled.",
-      badge: "Badge ready",
+      title: "Parent Approval",
+      eyebrow: "Trust gate",
+      prompt: "Mission complete. Ask a parent to approve points, money, and badge.",
+      action: "Ask parent",
+      detail: "Kids can operate the flow, but adults still control rewards, sharing, and jobs.",
+      badge: "Approval needed",
+      panelTitle: "Waiting for parent",
+      panelItems: ["Review mission note", "Approve $2 Kid Bank", "Award Kind Heart badge"],
+      footerStats: ["Private", "No rankings", "Parent control"],
+      bg: "#eef2ff",
+      color: "#2563eb",
+    },
+    {
+      step: "5",
+      title: "Shelter Kindness",
+      eyebrow: "Community mission",
+      prompt: "This weekend: help build an adoption kit with your family.",
+      action: "View quest",
+      detail: "TailTots expands from family pet care into supervised kindness and animal welfare.",
+      badge: "Family quest",
+      panelTitle: "Shelter impact",
+      panelItems: ["Pack towels", "Make a kind note", "Donate saved give-money"],
+      footerStats: ["Shelter", "Giving", "Teamwork"],
+      bg: "#fde8df",
+      color: "#b44421",
+    },
+    {
+      step: "6",
+      title: "Growth Story",
+      eyebrow: "Life-skills portfolio",
+      prompt: "Aarush earned On-Time Helper for remembering RB before school.",
+      action: "Celebrate",
+      detail: "Each screen helps build a private record of responsibility, empathy, leadership, and confidence.",
+      badge: "Badge earned",
+      panelTitle: "Growth log",
+      panelItems: ["Responsibility streak: 5 days", "Empathy note saved", "Leadership badge ready"],
+      footerStats: ["Skills", "Moments", "Confidence"],
       bg: "#f0edff",
       color: "#6d3ed1",
     },
@@ -1358,9 +1402,9 @@ function VisionLandingPanel({
         <div className="grid gap-6 p-5 sm:p-6 lg:grid-cols-[0.85fr_1.15fr] lg:items-center">
           <div className="min-w-0">
             <p className="text-xs font-black uppercase tracking-[0.18em] text-[#ffd166]">Voice and kitchen-counter friendly</p>
-            <h3 className="mt-2 text-2xl font-black sm:text-3xl">A taste of TailTots on an Amazon Echo Show.</h3>
+            <h3 className="mt-2 text-2xl font-black sm:text-3xl">A richer TailTots flow inside an Echo Show-style screen.</h3>
             <p className="mt-3 text-sm font-semibold leading-6 text-[#dce7e2]">
-              Kids can see one mission at a time, tap through simple steps, and ask for parent approval when they are done.
+              The display can move from pet-care missions to guided help, Kid Bank, parent approval, shelter kindness, and growth badges.
             </p>
             <div className="mt-5 grid gap-2">
               {echoSlides.map((slide, index) => (
@@ -1377,35 +1421,44 @@ function VisionLandingPanel({
           </div>
 
           <div className="relative mx-auto w-full max-w-2xl">
-            <div className="overflow-hidden rounded-lg border border-white/15 bg-white/10 p-2 shadow-2xl">
-              <Image
-                src="/echo-show-tailtots.png"
-                alt="Amazon Echo Show style smart display showing a TailTots fresh water mission for kids"
-                width={1536}
-                height={1024}
-                className="h-auto w-full rounded-lg object-cover"
-                priority={false}
-              />
-            </div>
-
-            <div className="mt-4 rounded-lg border border-white/15 bg-[#111816] p-4 shadow-2xl sm:p-5" aria-label="Clickable TailTots Echo Show screen slideshow">
-              <div className="overflow-hidden rounded-lg bg-[#f8f6ed] p-4 text-[#17231f] sm:p-5">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-xs font-black uppercase tracking-[0.14em]" style={{ color: activeEchoSlide.color }}>Click-through screen preview</p>
-                    <h4 className="mt-1 text-xl font-black sm:text-2xl">{activeEchoSlide.title}</h4>
+            <div className="mx-auto rounded-[2rem] border border-white/15 bg-[#0f1513] p-3 shadow-2xl sm:p-5" aria-label="Echo Show style TailTots slideshow">
+              <div className="overflow-hidden rounded-[1.35rem] bg-[#f8f6ed] p-4 text-[#17231f] ring-1 ring-black/20 sm:p-5">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-xs font-black uppercase tracking-[0.14em]" style={{ color: activeEchoSlide.color }}>{activeEchoSlide.eyebrow}</p>
+                    <h4 className="mt-1 text-2xl font-black sm:text-3xl">{activeEchoSlide.title}</h4>
                   </div>
-                  <span className="rounded-full px-3 py-1 text-xs font-black" style={{ backgroundColor: activeEchoSlide.bg, color: activeEchoSlide.color }}>
+                  <span className="shrink-0 rounded-full px-3 py-1 text-xs font-black" style={{ backgroundColor: activeEchoSlide.bg, color: activeEchoSlide.color }}>
                     {activeEchoSlide.badge}
                   </span>
                 </div>
 
-                <div className="mt-4 rounded-lg p-4" style={{ backgroundColor: activeEchoSlide.bg }}>
-                  <div className="flex items-center gap-3">
-                    <ProfilePhoto label="Jack" initial="J" colors={petLooks.jack.colors} size="xs" variant="pet" petKind="guinea" />
-                    <p className="min-w-0 text-lg font-black leading-6" style={{ color: activeEchoSlide.color }}>
+                <div className="mt-4 grid gap-3 lg:grid-cols-[0.75fr_1.25fr]">
+                  <div className="rounded-lg bg-white p-3 shadow-sm">
+                    <ProfilePhoto label="TailTots pet" initial="J" colors={petLooks.jack.colors} size="lg" variant="pet" petKind="guinea" />
+                    <p className="mt-2 text-center text-xs font-black uppercase tracking-[0.12em] text-[#69736f]">Jack and Jamie</p>
+                    <div className="mt-3 grid grid-cols-3 gap-1 text-center text-[11px] font-black text-[#4f625b]">
+                      {activeEchoSlide.footerStats.map((stat) => (
+                        <span key={stat} className="rounded-lg bg-[#f8f6ed] px-2 py-2">{stat}</span>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="rounded-lg p-4" style={{ backgroundColor: activeEchoSlide.bg }}>
+                    <p className="text-lg font-black leading-6" style={{ color: activeEchoSlide.color }}>
                       {activeEchoSlide.prompt}
                     </p>
+                    <div className="mt-4 rounded-lg bg-white/80 p-3">
+                      <p className="text-sm font-black text-[#17231f]">{activeEchoSlide.panelTitle}</p>
+                      <div className="mt-3 grid gap-2">
+                        {activeEchoSlide.panelItems.map((item, index) => (
+                          <div key={item} className="flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-sm font-bold text-[#4f625b]">
+                            <span className="grid size-6 shrink-0 place-items-center rounded-full text-xs font-black text-white" style={{ backgroundColor: activeEchoSlide.color }}>{index + 1}</span>
+                            <span>{item}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 </div>
 
@@ -1417,7 +1470,7 @@ function VisionLandingPanel({
                 </div>
 
                 <div className="mt-4 flex items-center justify-between gap-3 rounded-lg bg-white px-3 py-2">
-                  <span className="text-xs font-black text-[#69736f]">Tap the button to preview the kid flow</span>
+                  <span className="text-xs font-black text-[#69736f]">Click through the Echo screen concept</span>
                   <div className="flex gap-1">
                     {echoSlides.map((slide, index) => (
                       <span key={slide.step} className={`h-2 w-5 rounded-full ${echoSlideIndex === index ? "bg-[#165a4b]" : "bg-[#ded8c7]"}`} />
@@ -1425,7 +1478,9 @@ function VisionLandingPanel({
                   </div>
                 </div>
               </div>
+              <div className="mx-auto mt-3 h-2 w-24 rounded-full bg-white/20" />
             </div>
+            <div className="mx-auto h-5 w-56 rounded-b-[2rem] bg-[#0a0f0d] shadow-xl" />
           </div>
         </div>
       </section>
