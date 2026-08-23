@@ -822,7 +822,7 @@ export function TailTotsApp() {
       <header className="sticky top-0 z-20 border-b border-[#ded8c7] bg-white/95 backdrop-blur">
         <div className="mx-auto flex max-w-7xl flex-col gap-3 px-3 py-2 sm:flex-row sm:items-center sm:justify-between sm:px-5 sm:py-3">
           <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto sm:gap-3">
-            <Image src="/tailtots-logo.png" alt="TailTots logo" width={84} height={59} className="h-12 w-auto shrink-0 rounded-lg object-contain sm:h-14" priority />
+            <img src="/tailtots-logo.png" alt="TailTots logo" className="h-12 w-auto shrink-0 rounded-lg object-contain sm:h-14" />
             <div className="min-w-0">
               <h1 className="text-lg font-black leading-tight sm:text-xl">TailTots</h1>
               <p className="hidden text-xs font-bold text-[#69736f] sm:block">Real-world life skills for kids.</p>
