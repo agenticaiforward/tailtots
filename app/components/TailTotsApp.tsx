@@ -822,7 +822,7 @@ export function TailTotsApp() {
       <header className="sticky top-0 z-20 border-b border-[#ded8c7] bg-white/95 backdrop-blur">
         <div className="mx-auto flex max-w-7xl flex-col gap-3 px-3 py-2 sm:flex-row sm:items-center sm:justify-between sm:px-5 sm:py-3">
           <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto sm:gap-3">
-            <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-[#165a4b] text-lg font-black text-white sm:size-12 sm:text-xl">T</span>
+            <Image src="/tailtots-logo.png" alt="TailTots logo" width={84} height={59} className="h-12 w-auto shrink-0 rounded-lg object-contain sm:h-14" priority />
             <div className="min-w-0">
               <h1 className="text-lg font-black leading-tight sm:text-xl">TailTots</h1>
               <p className="hidden text-xs font-bold text-[#69736f] sm:block">Real-world life skills for kids.</p>
@@ -1257,11 +1257,7 @@ function VisionLandingPanel({
       <div className="overflow-hidden rounded-lg border border-[#ded8c7] bg-[#f7fbff] text-[#17231f] shadow-sm">
         <div className="grid min-h-[calc(100vh-7rem)] gap-7 p-5 sm:p-7 lg:grid-cols-[0.82fr_1.18fr] lg:items-center xl:p-10">
           <div className="min-w-0">
-            <div className="inline-flex items-center gap-2 rounded-full border border-[#c9d8f8] bg-white px-4 py-2 text-xs font-black text-[#1f3b7a] shadow-sm">
-              <span className="grid size-7 place-items-center rounded-full bg-[#17231f] text-white">a</span>
-              Real-world life skills for kids
-            </div>
-            <h2 className="mt-5 max-w-3xl text-4xl font-black leading-tight text-[#111b4f] sm:text-5xl xl:text-6xl">
+            <h2 className="max-w-3xl text-4xl font-black leading-tight text-[#111b4f] sm:text-5xl xl:text-6xl">
               Turn everyday moments into life lessons.
             </h2>
             <p className="mt-4 max-w-2xl text-base font-semibold leading-7 text-[#31405f] sm:text-lg">
