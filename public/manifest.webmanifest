@@ -1,7 +1,7 @@
 {
   "name": "TailTots",
   "short_name": "TailTots",
-  "description": "Pet care missions, reminders, badges, Kid Bank goals, parent approvals, and neighborhood pet jobs for families.",
+  "description": "Real-world life skills for kids, powered by pets, chores, kindness, money skills, and community.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

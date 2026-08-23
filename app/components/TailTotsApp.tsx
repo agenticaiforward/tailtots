@@ -825,7 +825,7 @@ export function TailTotsApp() {
             <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-[#165a4b] text-lg font-black text-white sm:size-12 sm:text-xl">T</span>
             <div className="min-w-0">
               <h1 className="text-lg font-black leading-tight sm:text-xl">TailTots</h1>
-              <p className="hidden text-xs font-bold text-[#69736f] sm:block">Pet care missions for growing kids.</p>
+              <p className="hidden text-xs font-bold text-[#69736f] sm:block">Real-world life skills for kids.</p>
               <p className="mt-1 inline-flex max-w-full items-center rounded-full bg-[#fff4d8] px-2 py-1 text-[11px] font-black leading-4 text-[#7a4b12] sm:hidden">
                 <span className="truncate">{operatorLabel}</span>
               </p>
@@ -1146,12 +1146,11 @@ function VisionLandingPanel({
     ["4", "Growth gets celebrated", "Parents approve progress, badges, Kid Bank choices, and next steps."],
   ];
   const lifeSkills = [
-    ["Pet Care", "Learn consistency and responsibility through everyday animal needs.", "#e7f4ef", "#165a4b"],
-    ["Empathy", "Notice comfort, feelings, body language, and gentle ways to help.", "#fff4d8", "#7a4b12"],
-    ["Teamwork", "Share care routines with family, trusted friends, and neighbors.", "#eef2ff", "#2563eb"],
-    ["Money Skills", "Earn, save, spend, and give with parent-approved Kid Bank choices.", "#f8f6ed", "#5f4a24"],
-    ["Community", "Support shelters, local animals, and kindness missions with family guidance.", "#fde8df", "#b44421"],
-    ["Leadership", "Take ownership, make decisions, and build confidence over time.", "#f0edff", "#6d3ed1"],
+    ["🐾 Responsibility", "Build habits by caring for pets, belongings, and everyday tasks.", "#e7f4ef", "#165a4b"],
+    ["❤️ Kindness & Empathy", "Learn to care for animals, family, friends, and the community.", "#fff4d8", "#7a4b12"],
+    ["💰 Money Skills", "Earn parent-approved rewards, save, spend, or give.", "#eef2ff", "#2563eb"],
+    ["🤝 Teamwork & Leadership", "Complete missions together and learn to take ownership.", "#f8f6ed", "#5f4a24"],
+    ["🌎 Community", "Turn kindness into action through shelters, volunteering, and local activities.", "#fde8df", "#b44421"],
   ];
   const trustCards = [
     ["Private by design", "Progress stays inside the family unless parents choose otherwise."],
@@ -1260,20 +1259,23 @@ function VisionLandingPanel({
           <div className="min-w-0">
             <div className="inline-flex items-center gap-2 rounded-full border border-[#c9d8f8] bg-white px-4 py-2 text-xs font-black text-[#1f3b7a] shadow-sm">
               <span className="grid size-7 place-items-center rounded-full bg-[#17231f] text-white">a</span>
-              Voice + screen assistant for pet-care life skills
+              Real-world life skills for kids
             </div>
             <h2 className="mt-5 max-w-3xl text-4xl font-black leading-tight text-[#111b4f] sm:text-5xl xl:text-6xl">
-              TailTots helps kids grow through pets, kindness, money, and community.
+              Turn everyday moments into life lessons.
             </h2>
             <p className="mt-4 max-w-2xl text-base font-semibold leading-7 text-[#31405f] sm:text-lg">
-              Kids can start missions by voice, follow big screen steps, learn about animals, earn parent-approved rewards, save or give money, and build a private life-skills story.
+              TailTots helps kids grow through real-world responsibility, from caring for pets and helping at home to kindness, money skills, and community activities. Parents turn everyday responsibilities into fun, guided missions kids can take ownership of.
+            </p>
+            <p className="mt-4 max-w-2xl text-sm font-black text-[#111b4f]">
+              🐾 Pet Care · 🏠 Home Chores · ❤️ Kindness · 💰 Money Skills · 🌎 Community
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
               <button onClick={() => setEchoSlideIndex((echoSlideIndex + 1) % echoSlides.length)} className="min-h-12 rounded-lg bg-[#6d3ed1] px-5 py-3 text-sm font-black text-white shadow-sm">
-                See Echo screen in action
+                See How TailTots Works
               </button>
-              <button onClick={openKidDemo} className="min-h-12 rounded-lg bg-[#ffd166] px-5 py-3 text-sm font-black text-[#17231f]">
-                Try the kid demo
+              <button onClick={() => document.getElementById("kid-founders")?.scrollIntoView({ behavior: "smooth", block: "start" })} className="min-h-12 rounded-lg bg-[#ffd166] px-5 py-3 text-sm font-black text-[#17231f]">
+                Meet the Kid Founders
               </button>
               <button
                 onClick={() => (isParentUnlocked ? setActiveTab("approvals") : setShowParentSignIn((value) => !value))}
@@ -1388,37 +1390,28 @@ function VisionLandingPanel({
             </div>
             <div className="mx-auto h-5 w-64 rounded-b-[2rem] bg-[#0a0f0d] shadow-xl" />
             <div className="mx-auto mt-4 rounded-lg border border-[#dce6f8] bg-white/90 p-4 shadow-sm">
-              <p className="text-center text-sm font-black text-[#111b4f]">Pet care to empathy to money skills to community kindness to leadership</p>
+              <p className="text-center text-lg font-black text-[#111b4f]">Kids can hear it. See it. Do it.</p>
+              <p className="text-center text-sm font-black text-[#111b4f]">"Alexa, open TailTots." to Choose Mission to Follow Steps to Complete to Earn to Save or Give</p>
             </div>
           </div>
         </div>
       </div>
 
       <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm sm:p-6">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#f47b20]">Sound familiar?</p>
-        <h3 className="mt-2 max-w-3xl text-2xl font-black sm:text-3xl">TailTots turns "Go feed the pet" into something your child can own.</h3>
-        <div className="mt-5 grid gap-3 md:grid-cols-3">
-          {[
-            ["Did you feed the pet?", "Daily reminders become clear missions kids can recognize, repeat, and feel proud to finish."],
-            ["Screens should build real-world skills", "Each visit points kids back to pet care, empathy, family responsibility, saving, giving, or safe community participation."],
-            ["Chores should mean more than money", "Rewards connect effort to kindness, ownership, and private progress instead of public comparison."],
-          ].map(([challenge, outcome]) => (
-            <article key={challenge} className="rounded-lg bg-[#f8f6ed] p-4">
-              <p className="text-base font-black text-[#7a4b12]">{challenge}</p>
-              <div className="my-3 h-1 w-10 rounded-full bg-[#ffd166]" />
-              <p className="text-sm font-semibold leading-5 text-[#4f625b]">{outcome}</p>
-            </article>
-          ))}
-        </div>
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#f47b20]">What TailTots becomes</p>
+        <h3 className="mt-2 max-w-3xl text-2xl font-black sm:text-3xl">More than chores. A child&apos;s journey toward independence.</h3>
+        <p className="mt-4 max-w-4xl text-base font-semibold leading-7 text-[#4f625b]">
+          Parents choose what matters: pet care, chores, helping others, saving money, or giving back. TailTots turns those responsibilities into age-appropriate missions that kids can start by voice, follow step-by-step on a screen, and complete independently.
+        </p>
       </section>
 
       <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm sm:p-6">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-[#0f766e]">The bigger idea</p>
-            <h3 className="mt-2 text-2xl font-black sm:text-3xl">Pet care becomes life skills.</h3>
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-[#0f766e]">Life-skills engine</p>
+            <h3 className="mt-2 text-2xl font-black sm:text-3xl">Every mission helps kids grow.</h3>
           </div>
-          <p className="max-w-md text-sm font-semibold leading-5 text-[#5f6a65]">One simple mental model: kids become responsible, kind, and capable by completing real-world animal-care missions.</p>
+          <p className="max-w-md text-sm font-semibold leading-5 text-[#5f6a65]">Powered by pets, chores, kindness, and community.</p>
         </div>
         <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {lifeSkills.map(([title, body, bg, color]) => (
@@ -1430,13 +1423,21 @@ function VisionLandingPanel({
         </div>
       </section>
 
+      <section className="rounded-lg border border-[#ded8c7] bg-[#fff4d8] p-5 shadow-sm sm:p-6">
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#7a4b12]">Where it starts</p>
+        <h3 className="mt-2 max-w-3xl text-2xl font-black sm:text-3xl">Pets are where it starts. Life skills are where it goes.</h3>
+        <p className="mt-4 max-w-4xl text-base font-semibold leading-7 text-[#5f4a24]">
+          TailTots begins with something kids naturally love: animals. But it grows with them. As families use TailTots, parents can add new responsibilities, experiences, and goals that help children become more confident, capable, and caring.
+        </p>
+      </section>
+
       <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm sm:p-6">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.18em] text-[#0f766e]">How it works</p>
-            <h3 className="mt-2 text-2xl font-black sm:text-3xl">One caring action at a time.</h3>
+            <h3 className="mt-2 text-2xl font-black sm:text-3xl">Kids can hear it. See it. Do it.</h3>
           </div>
-          <p className="max-w-md text-sm font-semibold leading-5 text-[#5f6a65]">The screen gives direction, then gets out of the way.</p>
+          <p className="max-w-md text-sm font-semibold leading-5 text-[#5f6a65]">Kids can start TailTots missions by voice and follow simple, step-by-step guidance on a big screen, making everyday responsibilities feel like an adventure.</p>
         </div>
         <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {careLoop.map(([number, title, body]) => (
@@ -1558,7 +1559,7 @@ function VisionLandingPanel({
             <p className="text-xs font-black uppercase tracking-[0.18em] text-[#165a4b]">Start the first mission</p>
             <h3 className="mt-2 text-2xl font-black sm:text-3xl">Created by kids. Built for families. Designed to help kids grow.</h3>
             <div className="mt-4 flex flex-wrap gap-2 text-xs font-black text-[#4f625b]">
-              {['Pet care', 'Life skills', 'Money habits', 'Community kindness', 'Animal welfare', 'Parent control'].map((item) => (
+              {['Real-world life skills', 'Pets', 'Chores', 'Kindness', 'Community', 'Parent control'].map((item) => (
                 <span key={item} className="rounded-full bg-[#f8f6ed] px-3 py-2">{item}</span>
               ))}
             </div>
