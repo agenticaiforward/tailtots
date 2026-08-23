@@ -1138,6 +1138,7 @@ function VisionLandingPanel({
   openKidDemo: () => void;
 }) {
   const [showParentSignIn, setShowParentSignIn] = useState(false);
+  const [echoSlideIndex, setEchoSlideIndex] = useState(0);
   const careLoop = [
     ["1", "Parents choose the goal", "Pick the pet-care habit, life skill, reward, or giving purpose."],
     ["2", "Kids get a mission", "TailTots turns it into an age-fit action they can understand."],
@@ -1158,6 +1159,49 @@ function VisionLandingPanel({
     ["Guided AI", "Helpful prompts support care and learning without becoming an open chat."],
     ["No open kid chat", "No stranger messaging, public rankings, or uncontrolled rewards."],
   ];
+  const echoSlides = [
+    {
+      step: "1",
+      title: "Today's mission appears",
+      prompt: "Hi Sahasra. Jack needs fresh water.",
+      action: "Tap Start",
+      detail: "Big readable cards make the next pet-care step clear from across the room.",
+      badge: "Parent approved",
+      bg: "#fff4d8",
+      color: "#7a4b12",
+    },
+    {
+      step: "2",
+      title: "Kid follows simple steps",
+      prompt: "Fill the bowl. Check that the water looks clean.",
+      action: "Next step",
+      detail: "The screen guides one action at a time so kids can stay focused and independent.",
+      badge: "Age 6+",
+      bg: "#e7f4ef",
+      color: "#165a4b",
+    },
+    {
+      step: "3",
+      title: "TailTots asks what they noticed",
+      prompt: "What did Jack do when you brought fresh water?",
+      action: "Answer",
+      detail: "Reflection turns a chore into empathy, observation, and real learning.",
+      badge: "Kindness check",
+      bg: "#eef2ff",
+      color: "#2563eb",
+    },
+    {
+      step: "4",
+      title: "Parent celebrates progress",
+      prompt: "Mission complete. Ask a parent to approve.",
+      action: "Done",
+      detail: "Kids finish with a clear win while rewards and sharing stay parent controlled.",
+      badge: "Badge ready",
+      bg: "#f0edff",
+      color: "#6d3ed1",
+    },
+  ];
+  const activeEchoSlide = echoSlides[echoSlideIndex];
 
   return (
     <section className="space-y-5">
@@ -1307,6 +1351,73 @@ function VisionLandingPanel({
               </div>
             </article>
           ))}
+        </div>
+      </section>
+
+      <section className="overflow-hidden rounded-lg border border-[#ded8c7] bg-[#17231f] text-white shadow-sm">
+        <div className="grid gap-6 p-5 sm:p-6 lg:grid-cols-[0.85fr_1.15fr] lg:items-center">
+          <div className="min-w-0">
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-[#ffd166]">Voice and kitchen-counter friendly</p>
+            <h3 className="mt-2 text-2xl font-black sm:text-3xl">A taste of TailTots on an Amazon Echo Show.</h3>
+            <p className="mt-3 text-sm font-semibold leading-6 text-[#dce7e2]">
+              Kids can see one mission at a time, tap through simple steps, and ask for parent approval when they are done.
+            </p>
+            <div className="mt-5 grid gap-2">
+              {echoSlides.map((slide, index) => (
+                <button
+                  key={slide.title}
+                  onClick={() => setEchoSlideIndex(index)}
+                  className={`min-h-12 rounded-lg px-4 py-3 text-left text-sm font-black transition ${echoSlideIndex === index ? "bg-[#ffd166] text-[#17231f]" : "bg-white/10 text-white hover:bg-white/15"}`}
+                  aria-pressed={echoSlideIndex === index}
+                >
+                  Step {slide.step}: {slide.title}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="relative mx-auto w-full max-w-2xl">
+            <div className="mx-auto rounded-[2rem] border border-white/15 bg-[#111816] p-4 shadow-2xl sm:p-5" aria-label="Amazon Echo Show style TailTots slideshow">
+              <div className="overflow-hidden rounded-[1.25rem] bg-[#f8f6ed] p-4 text-[#17231f] sm:p-5">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-[0.14em]" style={{ color: activeEchoSlide.color }}>TailTots mission</p>
+                    <h4 className="mt-1 text-xl font-black sm:text-2xl">{activeEchoSlide.title}</h4>
+                  </div>
+                  <span className="rounded-full px-3 py-1 text-xs font-black" style={{ backgroundColor: activeEchoSlide.bg, color: activeEchoSlide.color }}>
+                    {activeEchoSlide.badge}
+                  </span>
+                </div>
+
+                <div className="mt-4 rounded-lg p-4" style={{ backgroundColor: activeEchoSlide.bg }}>
+                  <div className="flex items-center gap-3">
+                    <ProfilePhoto label="Jack" initial="J" colors={petLooks.jack.colors} size="xs" variant="pet" petKind="guinea" />
+                    <p className="min-w-0 text-lg font-black leading-6" style={{ color: activeEchoSlide.color }}>
+                      {activeEchoSlide.prompt}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto] sm:items-center">
+                  <p className="text-sm font-semibold leading-5 text-[#4f625b]">{activeEchoSlide.detail}</p>
+                  <button onClick={() => setEchoSlideIndex((echoSlideIndex + 1) % echoSlides.length)} className="min-h-12 rounded-lg bg-[#165a4b] px-5 py-3 text-sm font-black text-white">
+                    {activeEchoSlide.action}
+                  </button>
+                </div>
+
+                <div className="mt-4 flex items-center justify-between gap-3 rounded-lg bg-white px-3 py-2">
+                  <span className="text-xs font-black text-[#69736f]">Tap the button to preview the kid flow</span>
+                  <div className="flex gap-1">
+                    {echoSlides.map((slide, index) => (
+                      <span key={slide.step} className={`h-2 w-5 rounded-full ${echoSlideIndex === index ? "bg-[#165a4b]" : "bg-[#ded8c7]"}`} />
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <div className="mx-auto mt-3 h-2 w-24 rounded-full bg-white/20" />
+            </div>
+            <div className="mx-auto h-5 w-48 rounded-b-[2rem] bg-[#0d1210] shadow-xl" />
+          </div>
         </div>
       </section>
 
