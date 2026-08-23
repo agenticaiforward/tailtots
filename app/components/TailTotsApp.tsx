@@ -891,7 +891,7 @@ export function TailTotsApp() {
           {role === "parent" && !isParentUnlocked && (
             <div className="rounded-lg border border-[#ded8c7] bg-[#e7f4ef] p-4">
               <p className="text-sm font-black">Parent passcode</p>
-              <p className="mt-1 text-xs font-semibold text-[#5f6a65]">Enter the grown-up code to review, edit profiles, and manage setup.</p>
+              <p className="mt-1 text-xs font-semibold text-[#5f6a65]">Parent screens are locked for the demo. Enter <span className="font-black text-[#17231f]">4321</span> to review approvals, edit profiles, manage setup, and control rewards.</p>
               <div className="mt-3 flex gap-2">
                 <input
                   value={parentCode}
@@ -1161,9 +1161,9 @@ function VisionLandingPanel({
   ];
   const petPhotos = [
     ["Dog", "https://images.unsplash.com/photo-1552053831-71594a27632d?auto=format&fit=crop&w=240&q=80"],
-    ["Guinea pig", "https://images.unsplash.com/photo-1585110396000-c9ffd4e4b308?auto=format&fit=crop&w=240&q=80"],
+    ["Rabbit", "https://images.unsplash.com/photo-1585110396000-c9ffd4e4b308?auto=format&fit=crop&w=240&q=80"],
     ["Cat", "https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?auto=format&fit=crop&w=240&q=80"],
-    ["Family pet", "https://images.unsplash.com/photo-1548199973-03cce0bbc87b?auto=format&fit=crop&w=240&q=80"],
+    ["Tortoise", "https://images.unsplash.com/photo-1437622368342-7a3d73a34c8f?auto=format&fit=crop&w=240&q=80"],
   ];
   const echoSlides = [
     {
@@ -1279,7 +1279,7 @@ function VisionLandingPanel({
                 onClick={() => (isParentUnlocked ? setActiveTab("approvals") : setShowParentSignIn((value) => !value))}
                 className="min-h-12 rounded-lg border border-[#c9d8f8] bg-white px-5 py-3 text-sm font-black text-[#1f3b7a]"
               >
-                {isParentUnlocked ? "Open parent dashboard" : "Parent access"}
+                {isParentUnlocked ? "Open parent dashboard" : "Parent access (code 4321)"}
               </button>
             </div>
             <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -1298,6 +1298,7 @@ function VisionLandingPanel({
             {showParentSignIn && !isParentUnlocked && (
               <div className="mt-5 max-w-md rounded-lg bg-white p-3 text-[#17231f] shadow-sm">
                 <label className="text-xs font-black uppercase tracking-[0.14em] text-[#165a4b]" htmlFor="landing-parent-code">Parent passcode</label>
+                <p className="mt-1 text-xs font-bold text-[#5f6a65]">Demo parent screens are protected. Enter <span className="font-black text-[#17231f]">4321</span> to unlock approvals, setup, rewards, and parent controls.</p>
                 <div className="mt-2 flex gap-2">
                   <input
                     id="landing-parent-code"
@@ -1309,7 +1310,7 @@ function VisionLandingPanel({
                     className="min-w-0 flex-1 rounded-lg border border-[#b8cfc6] px-3 py-2 text-sm font-bold"
                     inputMode="numeric"
                     type="password"
-                    placeholder="Enter code"
+                    placeholder="4321"
                   />
                   <button onClick={parentLogin} className="min-h-11 rounded-lg bg-[#165a4b] px-4 py-2 text-sm font-black text-white">Unlock</button>
                 </div>
