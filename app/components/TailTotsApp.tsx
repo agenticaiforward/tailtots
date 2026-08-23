@@ -1287,21 +1287,8 @@ function VisionLandingPanel({
                 Parent screens are locked for safety. For this demo, press <span className="font-black text-[#17231f]">Unlock parent demo</span> and enter <span className="font-black text-[#17231f]">4321</span>.
               </div>
             )}
-            <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-              {petPhotos.map(([label, src]) => (
-                <div key={label} className="rounded-lg bg-white p-2 shadow-sm">
-                  <img src={src} alt={`${label} pet`} className="aspect-square w-full rounded-lg object-cover" />
-                  <p className="mt-2 text-center text-[11px] font-black uppercase tracking-[0.12em] text-[#4f625b]">{label}</p>
-                </div>
-              ))}
-            </div>
-            <div className="mt-5 flex flex-wrap gap-2 text-xs font-black text-[#31405f]">
-              {['Parent approved', 'Guided AI', 'Kid Bank', 'Shelter kindness', 'Growth badges', 'No open kid chat'].map((label) => (
-                <span key={label} className="rounded-full border border-[#dce6f8] bg-white px-3 py-2">{label}</span>
-              ))}
-            </div>
             {showParentSignIn && !isParentUnlocked && (
-              <div className="mt-5 max-w-md rounded-lg bg-white p-3 text-[#17231f] shadow-sm">
+              <div className="mt-4 max-w-md rounded-lg bg-white p-3 text-[#17231f] shadow-sm">
                 <label className="text-xs font-black uppercase tracking-[0.14em] text-[#165a4b]" htmlFor="landing-parent-code">Parent passcode</label>
                 <p className="mt-1 text-xs font-bold text-[#5f6a65]">Demo parent screens are protected. Enter <span className="font-black text-[#17231f]">4321</span> to unlock approvals, setup, rewards, and parent controls.</p>
                 <div className="mt-2 flex gap-2">
@@ -1321,6 +1308,19 @@ function VisionLandingPanel({
                 </div>
               </div>
             )}
+            <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+              {petPhotos.map(([label, src]) => (
+                <div key={label} className="rounded-lg bg-white p-2 shadow-sm">
+                  <img src={src} alt={`${label} pet`} className="aspect-square w-full rounded-lg object-cover" />
+                  <p className="mt-2 text-center text-[11px] font-black uppercase tracking-[0.12em] text-[#4f625b]">{label}</p>
+                </div>
+              ))}
+            </div>
+            <div className="mt-5 flex flex-wrap gap-2 text-xs font-black text-[#31405f]">
+              {['Parent approved', 'Guided AI', 'Kid Bank', 'Shelter kindness', 'Growth badges', 'No open kid chat'].map((label) => (
+                <span key={label} className="rounded-full border border-[#dce6f8] bg-white px-3 py-2">{label}</span>
+              ))}
+            </div>
           </div>
 
           <div className="relative mx-auto w-full max-w-3xl">
