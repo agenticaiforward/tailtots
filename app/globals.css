@@ -74,11 +74,22 @@ button {
 
 .tailtots-app p,
 .tailtots-app li,
-.tailtots-app label,
-.tailtots-app span {
+.tailtots-app label {
   text-wrap: pretty;
   overflow-wrap: break-word;
   word-break: normal;
+}
+
+.tailtots-app span {
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+.tailtots-app .label-nowrap {
+  overflow-wrap: normal;
+  text-wrap: nowrap;
+  white-space: nowrap;
+  word-break: keep-all;
 }
 
 .tailtots-app button,

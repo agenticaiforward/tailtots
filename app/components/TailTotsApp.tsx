@@ -1267,9 +1267,11 @@ function VisionLandingPanel({
             <p className="mt-4 max-w-2xl text-base font-semibold leading-7 text-[#31405f] sm:text-lg">
               TailTots helps kids grow through real-world responsibility, from caring for pets and helping at home to kindness, money skills, and community activities. Parents turn everyday responsibilities into fun, guided missions kids can take ownership of.
             </p>
-            <p className="mt-4 max-w-2xl text-sm font-black text-[#111b4f]">
-              🐾 Pet Care · 🏠 Home Chores · ❤️ Kindness · 💰 Money Skills · 🌎 Community
-            </p>
+            <div className="mt-4 flex max-w-2xl flex-wrap gap-x-2 gap-y-1 text-sm font-black text-[#111b4f]">
+              {["🐾 Pet Care", "🏠 Home Chores", "❤️ Kindness", "💰 Money Skills", "🌎 Community"].map((item, index) => (
+                <span key={item} className="label-nowrap">{item}{index < 4 ? " ·" : ""}</span>
+              ))}
+            </div>
             <div className="mt-6 flex flex-wrap gap-3">
               <button onClick={() => setEchoSlideIndex((echoSlideIndex + 1) % echoSlides.length)} className="min-h-12 rounded-lg bg-[#6d3ed1] px-5 py-3 text-sm font-black text-white shadow-sm">
                 See How TailTots Works
@@ -1345,9 +1347,9 @@ function VisionLandingPanel({
                   <div className="rounded-lg bg-white p-3 shadow-sm">
                     <ProfilePhoto label="TailTots pet" initial="J" colors={petLooks.jack.colors} size="lg" variant="pet" petKind="guinea" />
                     <p className="mt-2 text-center text-xs font-black uppercase tracking-[0.12em] text-[#69736f]">Jack and Jamie</p>
-                    <div className="mt-3 grid grid-cols-3 gap-1 text-center text-[11px] font-black text-[#4f625b]">
+                    <div className="mt-3 grid grid-cols-3 gap-1 text-center text-[9px] font-black leading-tight text-[#4f625b] sm:text-[10px]">
                       {activeEchoSlide.footerStats.map((stat) => (
-                        <span key={stat} className="rounded-lg bg-[#f8f6ed] px-2 py-2">{stat}</span>
+                        <span key={stat} className="label-nowrap rounded-lg bg-[#f8f6ed] px-1 py-2">{stat}</span>
                       ))}
                     </div>
                   </div>
