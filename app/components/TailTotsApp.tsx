@@ -953,9 +953,9 @@ export function TailTotsApp() {
           {role === "parent" && !isParentUnlocked && (
             <section className="rounded-lg border border-[#ded8c7] bg-white p-6 shadow-sm">
               <p className="text-xs font-black uppercase tracking-[0.18em] text-[#165a4b]">Parent access</p>
-              <h2 className="mt-2 text-3xl font-black">Grown-up tools are locked</h2>
+              <h2 className="mt-2 text-3xl font-black">Enter 4321 to open the parent demo</h2>
               <p className="mt-2 max-w-xl text-sm font-semibold leading-6 text-[#5f6a65]">
-                Use the passcode panel on the left to review rewards, jobs, setup, schedules, and AI planning.
+                Parent tools stay locked until a grown-up enters the demo passcode. Use <span className="font-black text-[#17231f]">4321</span> in the parent passcode box to review approvals, jobs, setup, schedules, rewards, and AI planning.
               </p>
             </section>
           )}
@@ -1163,7 +1163,7 @@ function VisionLandingPanel({
     ["Dog", "https://images.unsplash.com/photo-1552053831-71594a27632d?auto=format&fit=crop&w=240&q=80"],
     ["Rabbit", "https://images.unsplash.com/photo-1585110396000-c9ffd4e4b308?auto=format&fit=crop&w=240&q=80"],
     ["Cat", "https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?auto=format&fit=crop&w=240&q=80"],
-    ["Tortoise", "https://images.unsplash.com/photo-1437622368342-7a3d73a34c8f?auto=format&fit=crop&w=240&q=80"],
+    ["Fish", "https://images.unsplash.com/photo-1522069169874-c58ec4b76be5?auto=format&fit=crop&w=240&q=80"],
   ];
   const echoSlides = [
     {
@@ -1279,9 +1279,14 @@ function VisionLandingPanel({
                 onClick={() => (isParentUnlocked ? setActiveTab("approvals") : setShowParentSignIn((value) => !value))}
                 className="min-h-12 rounded-lg border border-[#c9d8f8] bg-white px-5 py-3 text-sm font-black text-[#1f3b7a]"
               >
-                {isParentUnlocked ? "Open parent dashboard" : "Parent access (code 4321)"}
+                {isParentUnlocked ? "Open parent dashboard" : "Unlock parent demo"}
               </button>
             </div>
+            {!isParentUnlocked && (
+              <div className="mt-4 max-w-md rounded-lg border border-[#dce6f8] bg-white p-3 text-sm font-bold text-[#31405f] shadow-sm">
+                Parent screens are locked for safety. For this demo, press <span className="font-black text-[#17231f]">Unlock parent demo</span> and enter <span className="font-black text-[#17231f]">4321</span>.
+              </div>
+            )}
             <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
               {petPhotos.map(([label, src]) => (
                 <div key={label} className="rounded-lg bg-white p-2 shadow-sm">
