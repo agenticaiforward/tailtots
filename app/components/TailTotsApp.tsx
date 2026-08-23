@@ -1274,8 +1274,8 @@ function VisionLandingPanel({
               <button onClick={() => setEchoSlideIndex((echoSlideIndex + 1) % echoSlides.length)} className="min-h-12 rounded-lg bg-[#6d3ed1] px-5 py-3 text-sm font-black text-white shadow-sm">
                 See How TailTots Works
               </button>
-              <button onClick={() => document.getElementById("kid-founders")?.scrollIntoView({ behavior: "smooth", block: "start" })} className="min-h-12 rounded-lg bg-[#ffd166] px-5 py-3 text-sm font-black text-[#17231f]">
-                Meet the Kid Founders
+              <button onClick={openKidDemo} className="min-h-12 rounded-lg bg-[#ffd166] px-5 py-3 text-sm font-black text-[#17231f]">
+                Try the kid demo
               </button>
               <button
                 onClick={() => (isParentUnlocked ? setActiveTab("approvals") : setShowParentSignIn((value) => !value))}
