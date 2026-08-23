@@ -1377,11 +1377,22 @@ function VisionLandingPanel({
           </div>
 
           <div className="relative mx-auto w-full max-w-2xl">
-            <div className="mx-auto rounded-[2rem] border border-white/15 bg-[#111816] p-4 shadow-2xl sm:p-5" aria-label="Amazon Echo Show style TailTots slideshow">
-              <div className="overflow-hidden rounded-[1.25rem] bg-[#f8f6ed] p-4 text-[#17231f] sm:p-5">
+            <div className="overflow-hidden rounded-lg border border-white/15 bg-white/10 p-2 shadow-2xl">
+              <Image
+                src="/echo-show-tailtots.png"
+                alt="Amazon Echo Show style smart display showing a TailTots fresh water mission for kids"
+                width={1536}
+                height={1024}
+                className="h-auto w-full rounded-lg object-cover"
+                priority={false}
+              />
+            </div>
+
+            <div className="mt-4 rounded-lg border border-white/15 bg-[#111816] p-4 shadow-2xl sm:p-5" aria-label="Clickable TailTots Echo Show screen slideshow">
+              <div className="overflow-hidden rounded-lg bg-[#f8f6ed] p-4 text-[#17231f] sm:p-5">
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <p className="text-xs font-black uppercase tracking-[0.14em]" style={{ color: activeEchoSlide.color }}>TailTots mission</p>
+                    <p className="text-xs font-black uppercase tracking-[0.14em]" style={{ color: activeEchoSlide.color }}>Click-through screen preview</p>
                     <h4 className="mt-1 text-xl font-black sm:text-2xl">{activeEchoSlide.title}</h4>
                   </div>
                   <span className="rounded-full px-3 py-1 text-xs font-black" style={{ backgroundColor: activeEchoSlide.bg, color: activeEchoSlide.color }}>
@@ -1414,9 +1425,7 @@ function VisionLandingPanel({
                   </div>
                 </div>
               </div>
-              <div className="mx-auto mt-3 h-2 w-24 rounded-full bg-white/20" />
             </div>
-            <div className="mx-auto h-5 w-48 rounded-b-[2rem] bg-[#0d1210] shadow-xl" />
           </div>
         </div>
       </section>
