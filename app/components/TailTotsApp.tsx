@@ -1475,7 +1475,7 @@ function VisionLandingPanel({
         source: "vision-landing",
       });
       setLaunchInterestStatus("saved");
-      setLaunchInterestMessage(result.mode === "cloud" ? "You're on the TailTots family launch list." : "Saved locally for this demo. Connect Supabase to collect live launch signups.");
+      setLaunchInterestMessage(result.mode === "cloud" ? "You're on the TailTots family launch list." : "Saved for this demo.");
       setLaunchInterest((draft) => ({ ...draft, email: "" }));
     } catch (error) {
       setLaunchInterestStatus("error");
@@ -3580,7 +3580,7 @@ function FamilySetupPanel(props: {
             </p>
           </div>
           <div className={`rounded-lg px-4 py-3 text-sm font-black ${props.cloudAccountEmail ? "bg-[#e7f4ef] text-[#165a4b]" : "bg-[#fff4d8] text-[#7a4b12]"}`}>
-            {props.cloudAccountEmail ? `Signed in: ${props.cloudAccountEmail}` : isSupabaseConfigured ? "Ready for account sign in" : "Connect Supabase for cloud accounts"}
+            {props.cloudAccountEmail ? `Signed in: ${props.cloudAccountEmail}` : isSupabaseConfigured ? "Ready for account sign in" : "Account setup"}
           </div>
         </div>
 

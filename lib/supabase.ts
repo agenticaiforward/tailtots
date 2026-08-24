@@ -1,12 +1,17 @@
 import { createClient } from "@supabase/supabase-js";
 
+const importMetaEnv =
+  typeof import.meta !== "undefined"
+    ? (import.meta.env as Record<string, string | undefined>)
+    : ({} as Record<string, string | undefined>);
+
 const runtimeEnv =
   typeof process !== "undefined"
     ? process.env
     : ({} as Record<string, string | undefined>);
 
-const supabaseUrl = runtimeEnv.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = runtimeEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabaseUrl = importMetaEnv.NEXT_PUBLIC_SUPABASE_URL ?? runtimeEnv.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = importMetaEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? runtimeEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
 
@@ -49,7 +54,7 @@ export async function submitLaunchInterest(input: LaunchInterestInput) {
 }
 
 export async function signUpParentAccount(email: string, password: string) {
-  if (!supabase) throw new Error("Supabase is not configured yet.");
+  if (!supabase) throw new Error("Parent accounts are being prepared. Please try the demo for now.");
   const { data, error } = await supabase.auth.signUp({
     email: email.trim().toLowerCase(),
     password,
@@ -59,7 +64,7 @@ export async function signUpParentAccount(email: string, password: string) {
 }
 
 export async function signInParentAccount(email: string, password: string) {
-  if (!supabase) throw new Error("Supabase is not configured yet.");
+  if (!supabase) throw new Error("Parent accounts are being prepared. Please try the demo for now.");
   const { data, error } = await supabase.auth.signInWithPassword({
     email: email.trim().toLowerCase(),
     password,
@@ -69,13 +74,13 @@ export async function signInParentAccount(email: string, password: string) {
 }
 
 export async function signOutParentAccount() {
-  if (!supabase) throw new Error("Supabase is not configured yet.");
+  if (!supabase) throw new Error("Parent accounts are being prepared. Please try the demo for now.");
   const { error } = await supabase.auth.signOut();
   if (error) throw error;
 }
 
 export async function saveFamilyAccountSnapshot(snapshot: unknown) {
-  if (!supabase) throw new Error("Supabase is not configured yet.");
+  if (!supabase) throw new Error("Parent accounts are being prepared. Please try the demo for now.");
   const { data: userData, error: userError } = await supabase.auth.getUser();
   if (userError) throw userError;
   if (!userData.user) throw new Error("Sign in before saving this family account.");
@@ -89,7 +94,7 @@ export async function saveFamilyAccountSnapshot(snapshot: unknown) {
 }
 
 export async function loadFamilyAccountSnapshot<TSnapshot>() {
-  if (!supabase) throw new Error("Supabase is not configured yet.");
+  if (!supabase) throw new Error("Parent accounts are being prepared. Please try the demo for now.");
   const { data: userData, error: userError } = await supabase.auth.getUser();
   if (userError) throw userError;
   if (!userData.user) throw new Error("Sign in before loading this family account.");

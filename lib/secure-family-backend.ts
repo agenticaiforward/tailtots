@@ -93,7 +93,7 @@ export type BackendFamilyBundle = {
 
 function requireSupabase() {
   if (!supabase) {
-    throw new Error("Supabase is not configured. Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.");
+    throw new Error("Parent accounts are being prepared. Please try the demo for now.");
   }
   return supabase;
 }
