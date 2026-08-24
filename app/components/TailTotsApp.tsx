@@ -424,6 +424,7 @@ export function TailTotsApp() {
     [role],
   );
   const visibleActiveTab = visibleTabs.some((tab) => tab.id === activeTab) ? activeTab : visibleTabs[0]?.id;
+  const isRouteChooser = role === "parent" && visibleActiveTab === "vision";
   const operatorLabel = role === "parent" ? "Parent operating" : `${activeChild?.name ?? "Kid"} operating`;
 
   useEffect(() => {
@@ -518,6 +519,12 @@ export function TailTotsApp() {
     setActiveTab("setup");
   }
 
+  function openRouteChooser() {
+    setRole("parent");
+    setIsParentUnlocked(true);
+    setActiveTab("vision");
+  }
+
   function startBlankRealFamilySetup(parentEmail?: string) {
     applyFamilySnapshot({
       ...blankRealFamilyState,
@@ -535,6 +542,11 @@ export function TailTotsApp() {
     setRole("parent");
     setIsParentUnlocked(true);
     setActiveTab("approvals");
+  }
+
+  function openKidDemo() {
+    setRole("child");
+    setActiveTab("missions");
   }
 
   async function createParentAccount() {
@@ -1009,11 +1021,14 @@ export function TailTotsApp() {
             <div className="min-w-0">
               <h1 className="text-lg font-black leading-tight sm:text-xl">TailTots</h1>
               <p className="hidden text-xs font-bold text-[#69736f] sm:block">Real-world life skills for kids.</p>
-              <p className="mt-1 inline-flex max-w-full items-center rounded-full bg-[#fff4d8] px-2 py-1 text-[11px] font-black leading-4 text-[#7a4b12] sm:hidden">
-                <span className="truncate">{operatorLabel}</span>
-              </p>
+              {!isRouteChooser && (
+                <p className="mt-1 inline-flex max-w-full items-center rounded-full bg-[#fff4d8] px-2 py-1 text-[11px] font-black leading-4 text-[#7a4b12] sm:hidden">
+                  <span className="truncate">{operatorLabel}</span>
+                </p>
+              )}
             </div>
           </div>
+          {!isRouteChooser && (
           <div className="flex w-full flex-wrap justify-start gap-2 sm:w-auto sm:shrink-0 sm:justify-end">
             <div className="hidden min-h-11 items-center rounded-full border border-[#d9d0bb] bg-white px-4 text-xs font-black text-[#25352f] md:flex">
               {operatorLabel}
@@ -1031,13 +1046,33 @@ export function TailTotsApp() {
               ))}
             </div>
           </div>
+          )}
         </div>
       </header>
 
+      {!isRouteChooser && (
+        <div className="border-b border-[#ded8c7] bg-[#fffdf7]">
+          <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-2 px-3 py-2 sm:px-5">
+            <button onClick={openRouteChooser} className="min-h-10 rounded-lg border border-[#d9d0bb] bg-white px-3 py-2 text-xs font-black text-[#25352f]">
+              Route chooser
+            </button>
+            <button onClick={openKidDemo} className="min-h-10 rounded-lg bg-[#ffd166] px-3 py-2 text-xs font-black text-[#17231f]">
+              Demo kid
+            </button>
+            <button onClick={openParentDemo} className="min-h-10 rounded-lg border border-[#dce6f8] bg-[#f7fbff] px-3 py-2 text-xs font-black text-[#1f3b7a]">
+              Demo parent
+            </button>
+            <button onClick={openRealFamilySetup} className="min-h-10 rounded-lg bg-[#165a4b] px-3 py-2 text-xs font-black text-white">
+              Real account
+            </button>
+          </div>
+        </div>
+      )}
+
       <section className={`mx-auto grid max-w-7xl gap-4 px-3 py-4 sm:px-5 md:gap-5 ${
-        role === "parent" && visibleActiveTab === "vision" ? "grid-cols-1" : "lg:grid-cols-[280px_1fr] xl:grid-cols-[300px_1fr]"
+        isRouteChooser ? "grid-cols-1" : "lg:grid-cols-[280px_1fr] xl:grid-cols-[300px_1fr]"
       }`}>
-        <aside className={`min-w-0 space-y-3 lg:space-y-4 ${role === "parent" && visibleActiveTab === "vision" ? "hidden" : ""}`}>
+        <aside className={`min-w-0 space-y-3 lg:space-y-4 ${isRouteChooser ? "hidden" : ""}`}>
           <div className="overflow-hidden rounded-lg border border-[#ded8c7] bg-white shadow-sm">
             <div className="relative min-h-[220px] max-w-full overflow-hidden bg-[linear-gradient(135deg,#165a4b,#f47b20_58%,#2563eb)] sm:min-h-[280px] lg:min-h-[430px]">
               {familyPhotoUrl && <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${familyPhotoUrl})` }} />}
@@ -1110,10 +1145,7 @@ export function TailTotsApp() {
               createParentAccount={createParentAccount}
               signInParentAccount={signInParentAccountFromForm}
               openRealFamilySetup={openRealFamilySetup}
-              openKidDemo={() => {
-                setRole("child");
-                setActiveTab("missions");
-              }}
+              openKidDemo={openKidDemo}
             />
           )}
           {(role === "child" || isParentUnlocked) && visibleActiveTab === "hub" && (
@@ -1554,12 +1586,7 @@ function VisionLandingPanel({
                 </div>
               </article>
               <article className="rounded-lg border-2 border-[#165a4b] bg-[#f7fffb] p-4 shadow-sm">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="text-xs font-black uppercase tracking-[0.14em] text-[#165a4b]">Route 2 - Real app mode</p>
-                  <span className={`rounded-lg px-3 py-1 text-[11px] font-black ${cloudAccountEmail ? "bg-[#e7f4ef] text-[#165a4b]" : "bg-[#fff4d8] text-[#7a4b12]"}`}>
-                    {cloudAccountEmail ? "Signed in" : isSupabaseConfigured ? "Accounts ready" : "Needs Supabase"}
-                  </span>
-                </div>
+                <p className="text-xs font-black uppercase tracking-[0.14em] text-[#165a4b]">Route 2 - Real app mode</p>
                 <h3 className="mt-2 text-2xl font-black text-[#17231f]">Sign up and start your family</h3>
                 <p className="mt-2 text-sm font-semibold leading-5 text-[#5f6a65]">
                   Create or sign in to a parent account, then customize kids, pets, goals, photos, points, and Kid Bank.
@@ -1677,9 +1704,9 @@ function VisionLandingPanel({
 
       <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm sm:p-6">
         <p className="text-xs font-black uppercase tracking-[0.18em] text-[#f47b20]">What TailTots becomes</p>
-        <h3 className="mt-2 max-w-3xl text-2xl font-black sm:text-3xl">More than chores. A child&apos;s journey toward independence.</h3>
-        <p className="mt-4 max-w-4xl text-base font-semibold leading-7 text-[#4f625b]">
-          Parents choose what matters: pet care, chores, helping others, saving money, or giving back. TailTots turns those responsibilities into age-appropriate missions that kids can start by voice, follow step-by-step on a screen, and complete independently.
+        <h3 className="mt-2 max-w-3xl text-2xl font-black sm:text-3xl">Real responsibilities, kid-sized missions.</h3>
+        <p className="mt-4 max-w-3xl text-base font-semibold leading-7 text-[#4f625b]">
+          Pet care starts the habit. Chores, kindness, money skills, and community goals grow from there.
         </p>
       </section>
 
@@ -1699,14 +1726,6 @@ function VisionLandingPanel({
             </article>
           ))}
         </div>
-      </section>
-
-      <section className="rounded-lg border border-[#ded8c7] bg-[#fff4d8] p-5 shadow-sm sm:p-6">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#7a4b12]">The bigger path</p>
-        <h3 className="mt-2 max-w-3xl text-2xl font-black sm:text-3xl">Pet care opens the door to real independence.</h3>
-        <p className="mt-4 max-w-4xl text-base font-semibold leading-7 text-[#5f4a24]">
-          Families can add chores, kindness missions, savings goals, rewards, and community activities as kids are ready.
-        </p>
       </section>
 
       <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm sm:p-6">
