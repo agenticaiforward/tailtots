@@ -1,5 +1,5 @@
 import vinext from "vinext";
-import { defineConfig } from "vite";
+import { defineConfig, loadEnv } from "vite";
 import { cloudflare } from "@cloudflare/vite-plugin";
 import hostingConfig from "./.openai/hosting.json";
 import { sites } from "./build/sites-vite-plugin";
@@ -31,21 +31,29 @@ const localBindingConfig = {
     : [],
 };
 
-export default defineConfig({
-  server: {
-    host: "0.0.0.0",
-    port: 3001,
-    strictPort: true,
-    hmr: {
-      overlay: false,
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), "");
+
+  return {
+    define: {
+      "process.env.NEXT_PUBLIC_SUPABASE_URL": JSON.stringify(env.NEXT_PUBLIC_SUPABASE_URL ?? ""),
+      "process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY": JSON.stringify(env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? ""),
     },
-  },
-  plugins: [
-    vinext(),
-    sites(),
-    cloudflare({
-      viteEnvironment: { name: "rsc", childEnvironments: ["ssr"] },
-      config: localBindingConfig,
-    }),
-  ],
+    server: {
+      host: "0.0.0.0",
+      port: 3001,
+      strictPort: true,
+      hmr: {
+        overlay: false,
+      },
+    },
+    plugins: [
+      vinext(),
+      sites(),
+      cloudflare({
+        viteEnvironment: { name: "rsc", childEnvironments: ["ssr"] },
+        config: localBindingConfig,
+      }),
+    ],
+  };
 });
