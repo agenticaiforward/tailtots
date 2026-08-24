@@ -1134,8 +1134,6 @@ export function TailTotsApp() {
         <div className="space-y-5">
           {role === "parent" && visibleActiveTab === "vision" && (
             <VisionLandingPanel
-              isParentUnlocked={isParentUnlocked}
-              setActiveTab={setActiveTab}
               openParentDemo={openParentDemo}
               accountDraft={accountDraft}
               setAccountDraft={setAccountDraft}
@@ -1322,8 +1320,6 @@ export function TailTotsApp() {
 }
 
 function VisionLandingPanel({
-  isParentUnlocked,
-  setActiveTab,
   openParentDemo,
   accountDraft,
   setAccountDraft,
@@ -1335,8 +1331,6 @@ function VisionLandingPanel({
   openRealFamilySetup,
   openKidDemo,
 }: {
-  isParentUnlocked: boolean;
-  setActiveTab: (tab: string) => void;
   openParentDemo: () => void;
   accountDraft: { email: string; password: string };
   setAccountDraft: (value: { email: string; password: string }) => void;
@@ -1502,15 +1496,6 @@ function VisionLandingPanel({
             <div className="mt-6 flex flex-wrap gap-3">
               <button onClick={() => setEchoSlideIndex((echoSlideIndex + 1) % echoSlides.length)} className="min-h-12 rounded-lg bg-[#6d3ed1] px-5 py-3 text-sm font-black text-white shadow-sm">
                 See How TailTots Works
-              </button>
-              <button onClick={() => document.getElementById("landing-real-parent-email")?.focus()} className="min-h-12 rounded-lg bg-[#165a4b] px-5 py-3 text-sm font-black text-white shadow-sm">
-                Real App: Sign up
-              </button>
-              <button
-                onClick={() => (isParentUnlocked ? setActiveTab("approvals") : openParentDemo())}
-                className="min-h-12 rounded-lg border border-[#c9d8f8] bg-white px-5 py-3 text-sm font-black text-[#1f3b7a]"
-              >
-                {isParentUnlocked ? "Open parent dashboard" : "Demo: Parent route"}
               </button>
             </div>
             <div className="mt-5 max-w-2xl rounded-lg border border-[#c9d8f8] bg-white p-4 shadow-sm">
