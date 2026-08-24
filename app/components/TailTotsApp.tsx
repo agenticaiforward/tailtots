@@ -1702,10 +1702,10 @@ function VisionLandingPanel({
       </section>
 
       <section className="rounded-lg border border-[#ded8c7] bg-[#fff4d8] p-5 shadow-sm sm:p-6">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#7a4b12]">Where it starts</p>
-        <h3 className="mt-2 max-w-3xl text-2xl font-black sm:text-3xl">Pets are where it starts. Life skills are where it goes.</h3>
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#7a4b12]">The bigger path</p>
+        <h3 className="mt-2 max-w-3xl text-2xl font-black sm:text-3xl">Pet care opens the door to real independence.</h3>
         <p className="mt-4 max-w-4xl text-base font-semibold leading-7 text-[#5f4a24]">
-          TailTots begins with something kids naturally love: animals. But it grows with them. As families use TailTots, parents can add new responsibilities, experiences, and goals that help children become more confident, capable, and caring.
+          Families can add chores, kindness missions, savings goals, rewards, and community activities as kids are ready.
         </p>
       </section>
 
@@ -1732,13 +1732,13 @@ function VisionLandingPanel({
 
       <section className="grid gap-4 lg:grid-cols-[0.85fr_1.15fr]">
         <article className="rounded-lg border border-[#ded8c7] bg-[#fff4d8] p-5 shadow-sm sm:p-6">
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-[#7a4b12]">Young founders</p>
-          <h3 className="mt-2 text-2xl font-black sm:text-3xl">Started from a kid-sized question.</h3>
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-[#7a4b12]">Kids founders</p>
+          <h3 className="mt-2 text-2xl font-black sm:text-3xl">Founded by kids. Built for kids.</h3>
           <p className="mt-3 text-sm font-semibold leading-6 text-[#5f4a24]">
-            TailTots started with a simple question from Aarush and Sahasra: how can kids learn responsibility while having fun caring for animals?
+            TailTots began with Aarush and Sahasra and a simple idea: what if everyday responsibilities could become something kids actually want to do?
           </p>
           <p className="mt-3 text-sm font-semibold leading-6 text-[#5f4a24]">
-            What began as a kids&apos; idea is becoming a family platform for meaningful life skills, parent-guided independence, and kindness toward animals.
+            That idea grew from caring for animals into a bigger vision - helping kids build responsibility, kindness, confidence, money skills, and independence through real-world experiences.
           </p>
         </article>
 
@@ -1835,7 +1835,10 @@ function VisionLandingPanel({
         <div className="grid gap-5 lg:grid-cols-[1fr_auto] lg:items-center">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.18em] text-[#165a4b]">Start the first mission</p>
-            <h3 className="mt-2 text-2xl font-black sm:text-3xl">Created by kids. Built for families. Designed to help kids grow.</h3>
+            <h3 className="mt-2 text-2xl font-black sm:text-3xl">Founded by kids. Built for kids.</h3>
+            <p className="mt-3 max-w-3xl text-sm font-semibold leading-6 text-[#4f625b]">
+              TailTots helps kids build responsibility, kindness, confidence, money skills, and independence through real-world experiences.
+            </p>
             <div className="mt-4 flex flex-wrap gap-2 text-xs font-black text-[#4f625b]">
               {['Real-world life skills', 'Pets', 'Chores', 'Kindness', 'Community', 'Parent control'].map((item) => (
                 <span key={item} className="rounded-full bg-[#f8f6ed] px-3 py-2">{item}</span>
