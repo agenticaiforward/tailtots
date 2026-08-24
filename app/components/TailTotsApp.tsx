@@ -1054,7 +1054,7 @@ export function TailTotsApp() {
         <div className="border-b border-[#ded8c7] bg-[#fffdf7]">
           <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-2 px-3 py-2 sm:px-5">
             <button onClick={openRouteChooser} className="min-h-10 rounded-lg border border-[#d9d0bb] bg-white px-3 py-2 text-xs font-black text-[#25352f]">
-              Route chooser
+              Home
             </button>
             <button onClick={openKidDemo} className="min-h-10 rounded-lg bg-[#ffd166] px-3 py-2 text-xs font-black text-[#17231f]">
               Demo kid
