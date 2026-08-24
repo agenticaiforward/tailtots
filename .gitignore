@@ -39,3 +39,6 @@ next-env.d.ts
 /dist/
 /.wrangler/
 /tmp/
+/android.partial-backup-*/
+/.jdk/
+/android/local.properties

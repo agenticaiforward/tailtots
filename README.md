@@ -21,6 +21,9 @@ npm run dev
 
 ## Supabase Setup
 
+Free backend path: use Supabase Free for parent sign up, sign in, launch interest,
+and family account storage. See `docs/FREE_SUPABASE_SETUP.md`.
+
 1. Create a Supabase project.
 2. Open the SQL editor.
 3. Run `supabase/schema.sql`.
@@ -30,6 +33,12 @@ npm run dev
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
+```
+
+Verify the live backend connection:
+
+```bash
+npm run supabase:check
 ```
 
 When these keys are missing, the app runs in local device mode for early family testing. Do not use browser-only storage for real children or neighborhood jobs.

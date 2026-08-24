@@ -8,9 +8,26 @@
   "scripts": {
     "dev": "vinext dev",
     "build": "vinext build",
+    "mobile:web:build": "vite build --config vite.mobile.config.ts",
     "start": "vinext start",
-    "lint": "eslint . --ignore-pattern dist --ignore-pattern .next --ignore-pattern android",
-    "db:generate": "drizzle-kit generate"
+    "lint": "eslint . --ignore-pattern dist --ignore-pattern .next --ignore-pattern android --ignore-pattern android.partial-backup-*",
+    "db:generate": "drizzle-kit generate",
+    "mobile:sync": "npm run build && cap sync",
+    "android:sync": "npm run mobile:web:build && cap sync android",
+    "android:open": "cap open android",
+    "android:build:debug": "npm run android:sync && cd android && gradlew.bat assembleDebug",
+    "android:build:release": "npm run android:sync && cd android && gradlew.bat bundleRelease",
+    "amazon:sync": "npm run android:sync",
+    "amazon:build:debug": "npm run android:build:debug",
+    "amazon:build:release": "npm run android:build:release",
+    "ios:sync": "npm run build && cap sync ios",
+    "ios:open": "cap open ios",
+    "alexa:validate": "node apps/alexa/validate-skill.mjs",
+    "supabase:apply-schema": "node scripts/apply-supabase-schema.mjs",
+    "supabase:check": "node scripts/check-supabase-ready.mjs",
+    "verify:first-three": "node scripts/verify-first-three-apps.mjs",
+    "test:first-three": "npm run build && npm run lint && npm run android:sync && npm run verify:first-three",
+    "build:all-apps": "npm run build && npm run alexa:validate"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.110.0",
@@ -21,6 +38,10 @@
     "react-easy-crop": "^6.2.2"
   },
   "devDependencies": {
+    "@capacitor/android": "^8.0.0",
+    "@capacitor/cli": "^8.0.0",
+    "@capacitor/core": "^8.0.0",
+    "@capacitor/ios": "^8.0.0",
     "@cloudflare/vite-plugin": "1.37.1",
     "@tailwindcss/postcss": "4.2.1",
     "@types/node": "22.19.19",
@@ -31,6 +52,7 @@
     "drizzle-kit": "0.31.10",
     "eslint": "9.39.4",
     "eslint-config-next": "16.2.6",
+    "pg": "^8.23.0",
     "react-server-dom-webpack": "19.2.6",
     "tailwindcss": "4.2.1",
     "typescript": "5.9.3",

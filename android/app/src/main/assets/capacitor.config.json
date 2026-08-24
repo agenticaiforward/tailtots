@@ -1,12 +1,11 @@
 {
 	"appId": "com.tailtots.family",
 	"appName": "TailTots",
-	"webDir": "dist/client",
-	"server": {
-		"url": "https://pawpal-quest-kids.navin-nala-0658.chatgpt.site",
-		"cleartext": false
-	},
+	"webDir": "dist/mobile",
 	"android": {
 		"allowMixedContent": false
+	},
+	"ios": {
+		"contentInset": "automatic"
 	}
 }

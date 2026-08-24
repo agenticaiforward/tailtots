@@ -1,4 +1,4 @@
-create extension if not exists pgcrypto;
+create extension if not exists pgcrypto with schema extensions;
 
 create table public.families (
   id uuid primary key default gen_random_uuid(),
@@ -197,6 +197,23 @@ create table public.neighborhood_jobs (
   updated_at timestamptz not null default now()
 );
 
+create table public.launch_interest_signups (
+  id uuid primary key default gen_random_uuid(),
+  email text not null,
+  city text,
+  source text not null default 'tailtots-app',
+  created_at timestamptz not null default now(),
+  constraint launch_interest_signups_email_format check (email ~* '^[^@\s]+@[^@\s]+\.[^@\s]+$')
+);
+
+create table public.family_account_snapshots (
+  id uuid primary key default gen_random_uuid(),
+  auth_user_id uuid not null unique,
+  snapshot jsonb not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 insert into public.levels (key, label, sort_order, required_points, question_style)
 values
   ('easy', 'Easy', 1, 0, 'Simple yes/no care checks'),
@@ -216,6 +233,9 @@ create index kid_bank_transactions_child_id_idx on public.kid_bank_transactions(
 create index savings_goals_child_id_idx on public.savings_goals(child_id);
 create index badge_awards_family_id_child_id_idx on public.badge_awards(family_id, child_id);
 create index neighborhood_jobs_family_id_status_idx on public.neighborhood_jobs(family_id, status);
+create index launch_interest_signups_created_at_idx on public.launch_interest_signups(created_at desc);
+create unique index launch_interest_signups_email_source_idx on public.launch_interest_signups(lower(email), source);
+create index family_account_snapshots_updated_at_idx on public.family_account_snapshots(updated_at desc);
 
 alter table public.families enable row level security;
 alter table public.parents enable row level security;
@@ -234,6 +254,8 @@ alter table public.approvals enable row level security;
 alter table public.memory_moments enable row level security;
 alter table public.badge_awards enable row level security;
 alter table public.neighborhood_jobs enable row level security;
+alter table public.launch_interest_signups enable row level security;
+alter table public.family_account_snapshots enable row level security;
 
 create or replace function public.current_parent_family_ids()
 returns setof uuid
@@ -332,6 +354,15 @@ on public.neighborhood_jobs for all
 using (family_id in (select public.current_parent_family_ids()))
 with check (family_id in (select public.current_parent_family_ids()));
 
+create policy "Anyone can join the TailTots launch list"
+on public.launch_interest_signups for insert
+with check (true);
+
+create policy "Parents can manage their family account snapshot"
+on public.family_account_snapshots for all
+using (auth_user_id = auth.uid())
+with check (auth_user_id = auth.uid());
+
 create or replace function public.create_family_for_current_user(
   family_name text,
   parent_display_name text
@@ -374,7 +405,7 @@ begin
   end if;
 
   update public.children
-  set secret_code_hash = crypt(p_secret_code, gen_salt('bf'))
+  set secret_code_hash = extensions.crypt(p_secret_code, extensions.gen_salt('bf'))
   where id = p_child_id
     and family_id in (select public.current_parent_family_ids());
 
@@ -398,6 +429,6 @@ as $$
     from public.children
     where id = p_child_id
       and family_id in (select public.current_parent_family_ids())
-      and secret_code_hash = crypt(p_secret_code, secret_code_hash)
+      and secret_code_hash = extensions.crypt(p_secret_code, secret_code_hash)
   );
 $$;

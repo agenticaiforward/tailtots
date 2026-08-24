@@ -31,8 +31,7 @@ where.exe adb
 
 ```powershell
 npm install
-npm run build
-npx cap sync android
+npm run amazon:sync
 ```
 
 ## Build for Amazon
@@ -42,8 +41,7 @@ submissions. Prefer AAB for release unless Amazon testing shows a Fire-device
 specific issue.
 
 ```powershell
-cd android
-.\gradlew.bat bundleRelease
+npm run amazon:build:release
 ```
 
 The release bundle will be created under:

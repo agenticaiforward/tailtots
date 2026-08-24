@@ -1,0 +1,40 @@
+{
+  "interactionModel": {
+    "languageModel": {
+      "invocationName": "tail tots",
+      "intents": [
+        {
+          "name": "GetTodayMissionsIntent",
+          "samples": [
+            "what's next",
+            "what are today's missions",
+            "tell me the pet missions",
+            "what should we do now"
+          ]
+        },
+        {
+          "name": "PetCheckIntent",
+          "samples": [
+            "check the pets",
+            "start a pet check",
+            "help us check our pets",
+            "what do the pets need"
+          ]
+        },
+        {
+          "name": "AMAZON.HelpIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.CancelIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.StopIntent",
+          "samples": []
+        }
+      ],
+      "types": []
+    }
+  }
+}

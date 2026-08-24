@@ -3,7 +3,16 @@
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Cropper, { type Area } from "react-easy-crop";
-import { isSupabaseConfigured } from "@/lib/supabase";
+import {
+  isSupabaseConfigured,
+  loadFamilyAccountSnapshot,
+  saveFamilyAccountSnapshot,
+  signInParentAccount,
+  signOutParentAccount,
+  signUpParentAccount,
+  submitLaunchInterest,
+  supabase,
+} from "@/lib/supabase";
 import type {
   BankCategory,
   BankTransaction,
@@ -226,6 +235,10 @@ const starterTransactions: BankTransaction[] = [
   { id: "tx-2", childId: "aarush", category: "save", amount: 2, description: "Save $2 for Fish tank plant", goalId: "goal-2", status: "pending" },
 ];
 
+const starterMoments: MemoryMoment[] = [
+  { id: "moment-1", childId: "sahasra", petId: "jack", mood: "proud", note: "Jack waited calmly while Sahasra filled the water bowl." },
+];
+
 const starterBadges: BadgeAward[] = [
   { id: "badge-1", childId: "sahasra", title: "Gentle Hands", skill: "empathy", note: "Stayed calm and gentle during Jack's water refill.", awardedAt: "Today" },
   { id: "badge-2", childId: "aarush", title: "On-Time Helper", skill: "time", note: "Remembered RB's breakfast before school.", awardedAt: "Today" },
@@ -324,17 +337,36 @@ type SavedFamilyState = {
   parents: ParentProfile[];
   children: Child[];
   pets: Pet[];
+  missions?: Mission[];
+  transactions?: BankTransaction[];
   goals?: SavingsGoal[];
   badges?: BadgeAward[];
   neighborhoodJobs?: NeighborhoodJob[];
+  moments?: MemoryMoment[];
   familyPhotoUrl?: string;
   activeChildId?: string;
+};
+
+const blankRealFamilyState: SavedFamilyState = {
+  familyName: "My Family",
+  parentPasscode: defaultParentPasscode,
+  parents: [{ id: "parent-1", name: "Parent" }],
+  children: [],
+  pets: [],
+  missions: [],
+  transactions: [],
+  goals: [],
+  badges: [],
+  neighborhoodJobs: [],
+  moments: [],
+  familyPhotoUrl: undefined,
+  activeChildId: "",
 };
 
 export function TailTotsApp() {
   const [role, setRole] = useState<Role>("parent");
   const [activeTab, setActiveTab] = useState("vision");
-  const [isParentUnlocked, setIsParentUnlocked] = useState(false);
+  const [isParentUnlocked, setIsParentUnlocked] = useState(true);
   const [hasLoadedSavedState, setHasLoadedSavedState] = useState(false);
   const [familyName, setFamilyName] = useState("Nalajala Crew");
   const [parentPasscode, setParentPasscode] = useState(defaultParentPasscode);
@@ -347,11 +379,8 @@ export function TailTotsApp() {
   const [badges, setBadges] = useState(starterBadges);
   const [neighborhoodJobs, setNeighborhoodJobs] = useState(starterNeighborhoodJobs);
   const [scheduleItems] = useState(starterScheduleItems);
-  const [moments, setMoments] = useState<MemoryMoment[]>([
-    { id: "moment-1", childId: "sahasra", petId: "jack", mood: "proud", note: "Jack waited calmly while Sahasra filled the water bowl." },
-  ]);
+  const [moments, setMoments] = useState<MemoryMoment[]>(starterMoments);
   const [activeChildId, setActiveChildId] = useState(starterChildren[0]?.id ?? "");
-  const [parentCode, setParentCode] = useState("");
   const [missionNote, setMissionNote] = useState("");
   const [newChild, setNewChild] = useState({ name: "", age: "8" });
   const [newPet, setNewPet] = useState({ name: "", species: "", food: "" });
@@ -369,6 +398,10 @@ export function TailTotsApp() {
     badgeTitle: "Trusted Helper",
     safety: "Parent confirms address and stays reachable.",
   });
+  const [cloudAccountEmail, setCloudAccountEmail] = useState("");
+  const [accountDraft, setAccountDraft] = useState({ email: "", password: "" });
+  const [accountStatus, setAccountStatus] = useState<"idle" | "saving" | "loading" | "error" | "saved">("idle");
+  const [accountMessage, setAccountMessage] = useState("");
 
   const activeChild = children.find((child) => child.id === activeChildId) ?? children[0];
   const activePet = pets[0];
@@ -391,7 +424,7 @@ export function TailTotsApp() {
     [role],
   );
   const visibleActiveTab = visibleTabs.some((tab) => tab.id === activeTab) ? activeTab : visibleTabs[0]?.id;
-  const operatorLabel = role === "parent" ? (isParentUnlocked ? "Parent operating" : "Parent locked") : `${activeChild?.name ?? "Kid"} operating`;
+  const operatorLabel = role === "parent" ? "Parent operating" : `${activeChild?.name ?? "Kid"} operating`;
 
   useEffect(() => {
     queueMicrotask(() => {
@@ -402,20 +435,39 @@ export function TailTotsApp() {
         setParents(savedState.parents);
         setChildren(savedState.children.map(normalizeChildProfile));
         setPets(savedState.pets.map(normalizePetProfile));
-        setGoals(savedState.goals?.length ? savedState.goals : starterGoals);
-        setBadges(savedState.badges?.length ? savedState.badges : starterBadges);
-        setNeighborhoodJobs(savedState.neighborhoodJobs?.length ? savedState.neighborhoodJobs.map(normalizeNeighborhoodJob) : starterNeighborhoodJobs);
+        setMissions(savedState.missions ?? starterMissions);
+        setTransactions(savedState.transactions ?? starterTransactions);
+        setGoals(savedState.goals ?? starterGoals);
+        setBadges(savedState.badges ?? starterBadges);
+        setNeighborhoodJobs(savedState.neighborhoodJobs ? savedState.neighborhoodJobs.map(normalizeNeighborhoodJob) : starterNeighborhoodJobs);
+        setMoments(savedState.moments ?? starterMoments);
         setFamilyPhotoUrl(savedState.familyPhotoUrl);
-        setActiveChildId(savedState.activeChildId ?? savedState.children[0]?.id ?? "");
+        setActiveChildId(savedState.activeChildId ?? savedState.children?.[0]?.id ?? "");
       }
       setHasLoadedSavedState(true);
     });
   }, []);
 
   useEffect(() => {
+    if (!supabase) return;
+    let isMounted = true;
+    supabase.auth.getSession().then(({ data }) => {
+      if (!isMounted) return;
+      setCloudAccountEmail(data.session?.user.email ?? "");
+    });
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setCloudAccountEmail(session?.user.email ?? "");
+    });
+    return () => {
+      isMounted = false;
+      listener.subscription.unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
     if (!hasLoadedSavedState) return;
-    saveFamilyState({ familyName, parentPasscode, parents, children, pets, goals, badges, neighborhoodJobs, familyPhotoUrl, activeChildId });
-  }, [activeChildId, badges, children, familyName, familyPhotoUrl, goals, hasLoadedSavedState, neighborhoodJobs, parentPasscode, parents, pets]);
+    saveFamilyState({ familyName, parentPasscode, parents, children, pets, missions, transactions, goals, badges, neighborhoodJobs, moments, familyPhotoUrl, activeChildId });
+  }, [activeChildId, badges, children, familyName, familyPhotoUrl, goals, hasLoadedSavedState, missions, moments, neighborhoodJobs, parentPasscode, parents, pets, transactions]);
 
   useEffect(() => {
     queueMicrotask(() => {
@@ -425,6 +477,147 @@ export function TailTotsApp() {
       if (requestedTab === "hub") setRole("child");
     });
   }, []);
+
+  function getCurrentFamilySnapshot(): SavedFamilyState {
+    return {
+      familyName,
+      parentPasscode,
+      parents,
+      children,
+      pets,
+      missions,
+      transactions,
+      goals,
+      badges,
+      neighborhoodJobs,
+      moments,
+      familyPhotoUrl,
+      activeChildId,
+    };
+  }
+
+  function applyFamilySnapshot(snapshot: SavedFamilyState) {
+    setFamilyName(snapshot.familyName ?? "My Family");
+    setParentPasscode(snapshot.parentPasscode ?? defaultParentPasscode);
+    setParents(snapshot.parents ?? starterParents);
+    setChildren(snapshot.children ? snapshot.children.map(normalizeChildProfile) : starterChildren);
+    setPets(snapshot.pets ? snapshot.pets.map(normalizePetProfile) : starterPets);
+    setMissions(snapshot.missions ?? starterMissions);
+    setTransactions(snapshot.transactions ?? starterTransactions);
+    setGoals(snapshot.goals ?? starterGoals);
+    setBadges(snapshot.badges ?? starterBadges);
+    setNeighborhoodJobs(snapshot.neighborhoodJobs ? snapshot.neighborhoodJobs.map(normalizeNeighborhoodJob) : starterNeighborhoodJobs);
+    setMoments(snapshot.moments ?? starterMoments);
+    setFamilyPhotoUrl(snapshot.familyPhotoUrl);
+    setActiveChildId(snapshot.activeChildId ?? snapshot.children?.[0]?.id ?? (snapshot.children ? "" : starterChildren[0]?.id ?? ""));
+  }
+
+  function openRealFamilySetup() {
+    setRole("parent");
+    setIsParentUnlocked(true);
+    setActiveTab("setup");
+  }
+
+  function startBlankRealFamilySetup(parentEmail?: string) {
+    applyFamilySnapshot({
+      ...blankRealFamilyState,
+      parents: [{ id: "parent-1", name: parentEmail ? parentEmail.split("@")[0] || "Parent" : "Parent" }],
+    });
+    setNewChild({ name: "", age: "8" });
+    setNewPet({ name: "", species: "", food: "" });
+    setNewGoal({ title: "", target: "25" });
+    setMomentDraft("A kind moment with our pet was...");
+    setFamilyPhotoUrl(undefined);
+    openRealFamilySetup();
+  }
+
+  function openParentDemo() {
+    setRole("parent");
+    setIsParentUnlocked(true);
+    setActiveTab("approvals");
+  }
+
+  async function createParentAccount() {
+    setAccountStatus("loading");
+    setAccountMessage("");
+    try {
+      await signUpParentAccount(accountDraft.email, accountDraft.password);
+      setAccountStatus("saved");
+      setAccountMessage("Parent account created. Start by adding this family's household, kids, and pets.");
+      startBlankRealFamilySetup(accountDraft.email);
+    } catch (error) {
+      setAccountStatus("error");
+      setAccountMessage(error instanceof Error ? error.message : "Could not create the parent account.");
+    }
+  }
+
+  async function signInParentAccountFromForm() {
+    setAccountStatus("loading");
+    setAccountMessage("");
+    try {
+      const user = await signInParentAccount(accountDraft.email, accountDraft.password);
+      setCloudAccountEmail(user?.email ?? accountDraft.email);
+      const snapshot = await loadFamilyAccountSnapshot<SavedFamilyState>();
+      if (snapshot) {
+        applyFamilySnapshot(snapshot);
+        setAccountMessage("Signed in and loaded this family's TailTots account.");
+        openRealFamilySetup();
+      } else {
+        setAccountMessage("Signed in. Start by adding this family's household, kids, and pets.");
+        startBlankRealFamilySetup(user?.email ?? accountDraft.email);
+      }
+      setAccountStatus("saved");
+    } catch (error) {
+      setAccountStatus("error");
+      setAccountMessage(error instanceof Error ? error.message : "Could not sign in.");
+    }
+  }
+
+  async function saveCurrentFamilyAccount() {
+    setAccountStatus("saving");
+    setAccountMessage("");
+    try {
+      await saveFamilyAccountSnapshot(getCurrentFamilySnapshot());
+      setAccountStatus("saved");
+      setAccountMessage("Saved this family's profiles, photos, goals, points, Kid Bank, and parent settings to the account.");
+    } catch (error) {
+      setAccountStatus("error");
+      setAccountMessage(error instanceof Error ? error.message : "Could not save this family account.");
+    }
+  }
+
+  async function loadCurrentFamilyAccount() {
+    setAccountStatus("loading");
+    setAccountMessage("");
+    try {
+      const snapshot = await loadFamilyAccountSnapshot<SavedFamilyState>();
+      if (!snapshot) {
+        setAccountStatus("saved");
+        setAccountMessage("No saved cloud family setup yet.");
+        return;
+      }
+      applyFamilySnapshot(snapshot);
+      setAccountStatus("saved");
+      setAccountMessage("Loaded this family's cloud account.");
+    } catch (error) {
+      setAccountStatus("error");
+      setAccountMessage(error instanceof Error ? error.message : "Could not load this family account.");
+    }
+  }
+
+  async function signOutParentAccountFromApp() {
+    setAccountStatus("loading");
+    setAccountMessage("");
+    try {
+      await signOutParentAccount();
+      setCloudAccountEmail("");
+      setAccountStatus("idle");
+      setAccountMessage("Signed out. This device still keeps the local demo copy.");
+    } catch (error) {
+      setAccountStatus("error");
+      setAccountMessage(error instanceof Error ? error.message : "Could not sign out.");
+    }
+  }
 
   function addChild() {
     if (!newChild.name.trim()) return;
@@ -570,17 +763,7 @@ export function TailTotsApp() {
   function switchRole(nextRole: Role) {
     setRole(nextRole);
     setActiveTab(nextRole === "parent" ? "vision" : "missions");
-    if (nextRole === "child") {
-      setIsParentUnlocked(false);
-      setParentCode("");
-    }
-  }
-
-  function parentLogin() {
-    if (parentCode.trim() !== parentPasscode.trim()) return;
-    setIsParentUnlocked(true);
-    setParentCode("");
-    setActiveTab("approvals");
+    if (nextRole === "parent") setIsParentUnlocked(true);
   }
 
   function completeMission(missionId: string) {
@@ -888,29 +1071,6 @@ export function TailTotsApp() {
             </div>
           </div>
 
-          {role === "parent" && !isParentUnlocked && (
-            <div className="rounded-lg border border-[#ded8c7] bg-[#e7f4ef] p-4">
-              <p className="text-sm font-black">Parent passcode</p>
-              <p className="mt-1 text-xs font-semibold text-[#5f6a65]">Parent screens are locked for the demo. Enter <span className="font-black text-[#17231f]">4321</span> to review approvals, edit profiles, manage setup, and control rewards.</p>
-              <div className="mt-3 flex gap-2">
-                <input
-                  value={parentCode}
-                  onChange={(event) => setParentCode(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") parentLogin();
-                  }}
-                  className="min-w-0 flex-1 rounded-lg border border-[#b8cfc6] px-3 py-2 text-sm font-bold"
-                  inputMode="numeric"
-                  type="password"
-                  placeholder="4321"
-                />
-                <button onClick={parentLogin} className="min-h-11 rounded-lg bg-[#165a4b] px-5 py-2 text-sm font-black text-white">
-                  Unlock
-                </button>
-              </div>
-            </div>
-          )}
-
           {role === "child" && (
             <ChildProfileSwitcher
               activeChild={activeChild}
@@ -940,24 +1100,21 @@ export function TailTotsApp() {
           {role === "parent" && visibleActiveTab === "vision" && (
             <VisionLandingPanel
               isParentUnlocked={isParentUnlocked}
-              parentCode={parentCode}
-              setParentCode={setParentCode}
-              parentLogin={parentLogin}
               setActiveTab={setActiveTab}
+              openParentDemo={openParentDemo}
+              accountDraft={accountDraft}
+              setAccountDraft={setAccountDraft}
+              accountStatus={accountStatus}
+              accountMessage={accountMessage}
+              cloudAccountEmail={cloudAccountEmail}
+              createParentAccount={createParentAccount}
+              signInParentAccount={signInParentAccountFromForm}
+              openRealFamilySetup={openRealFamilySetup}
               openKidDemo={() => {
                 setRole("child");
                 setActiveTab("missions");
               }}
             />
-          )}
-          {role === "parent" && !isParentUnlocked && (
-            <section className="rounded-lg border border-[#ded8c7] bg-white p-6 shadow-sm">
-              <p className="text-xs font-black uppercase tracking-[0.18em] text-[#165a4b]">Parent access</p>
-              <h2 className="mt-2 text-3xl font-black">Enter 4321 to open the parent demo</h2>
-              <p className="mt-2 max-w-xl text-sm font-semibold leading-6 text-[#5f6a65]">
-                Parent tools stay locked until a grown-up enters the demo passcode. Use <span className="font-black text-[#17231f]">4321</span> in the parent passcode box to review approvals, jobs, setup, schedules, rewards, and AI planning.
-              </p>
-            </section>
           )}
           {(role === "child" || isParentUnlocked) && visibleActiveTab === "hub" && (
             <HomeHubPanel
@@ -1051,6 +1208,16 @@ export function TailTotsApp() {
           )}
           {visibleActiveTab === "setup" && (
             <FamilySetupPanel
+              cloudAccountEmail={cloudAccountEmail}
+              accountDraft={accountDraft}
+              setAccountDraft={setAccountDraft}
+              accountStatus={accountStatus}
+              accountMessage={accountMessage}
+              createParentAccount={createParentAccount}
+              signInParentAccount={signInParentAccountFromForm}
+              signOutParentAccount={signOutParentAccountFromApp}
+              saveCurrentFamilyAccount={saveCurrentFamilyAccount}
+              loadCurrentFamilyAccount={loadCurrentFamilyAccount}
               familyName={familyName}
               setFamilyName={setFamilyName}
               parents={parents}
@@ -1124,21 +1291,35 @@ export function TailTotsApp() {
 
 function VisionLandingPanel({
   isParentUnlocked,
-  parentCode,
-  setParentCode,
-  parentLogin,
   setActiveTab,
+  openParentDemo,
+  accountDraft,
+  setAccountDraft,
+  accountStatus,
+  accountMessage,
+  cloudAccountEmail,
+  createParentAccount,
+  signInParentAccount,
+  openRealFamilySetup,
   openKidDemo,
 }: {
   isParentUnlocked: boolean;
-  parentCode: string;
-  setParentCode: (value: string) => void;
-  parentLogin: () => void;
   setActiveTab: (tab: string) => void;
+  openParentDemo: () => void;
+  accountDraft: { email: string; password: string };
+  setAccountDraft: (value: { email: string; password: string }) => void;
+  accountStatus: "idle" | "saving" | "loading" | "error" | "saved";
+  accountMessage: string;
+  cloudAccountEmail: string;
+  createParentAccount: () => void;
+  signInParentAccount: () => void;
+  openRealFamilySetup: () => void;
   openKidDemo: () => void;
 }) {
-  const [showParentSignIn, setShowParentSignIn] = useState(false);
   const [echoSlideIndex, setEchoSlideIndex] = useState(0);
+  const [launchInterest, setLaunchInterest] = useState({ email: "", city: "" });
+  const [launchInterestStatus, setLaunchInterestStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [launchInterestMessage, setLaunchInterestMessage] = useState("");
   const careLoop = [
     ["1", "Parents choose the goal", "Pick the pet-care habit, life skill, reward, or giving purpose."],
     ["2", "Kids get a mission", "TailTots turns it into an age-fit action they can understand."],
@@ -1158,11 +1339,11 @@ function VisionLandingPanel({
     ["Guided AI", "Helpful prompts support care and learning without becoming an open chat."],
     ["No open kid chat", "No stranger messaging, public rankings, or uncontrolled rewards."],
   ];
-  const petPhotos = [
-    ["Dog", "https://images.unsplash.com/photo-1552053831-71594a27632d?auto=format&fit=crop&w=240&q=80"],
-    ["Rabbit", "https://images.unsplash.com/photo-1585110396000-c9ffd4e4b308?auto=format&fit=crop&w=240&q=80"],
-    ["Cat", "https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?auto=format&fit=crop&w=240&q=80"],
-    ["Fish", "https://images.unsplash.com/photo-1522069169874-c58ec4b76be5?auto=format&fit=crop&w=240&q=80"],
+  const kidsPetPhotos = [
+    ["Kid + dog", "https://images.unsplash.com/photo-1528301725143-1ba694832e77?auto=format&fit=crop&w=720&q=80"],
+    ["Kid + rabbit", "https://assets.moargut.com/moargut/2025/12/BAP_3958_RA_2021-1366x2048.jpg"],
+    ["Kid + cat", "https://images.unsplash.com/photo-1740679953723-64630527299d?auto=format&fit=crop&w=720&q=80"],
+    ["Kid + guinea pig", "https://c.nau.ch/i/LxxZQq/900/kontakt-tiere.jpg"],
   ];
   const echoSlides = [
     {
@@ -1252,15 +1433,33 @@ function VisionLandingPanel({
   ];
   const activeEchoSlide = echoSlides[echoSlideIndex];
 
+  async function joinLaunchList() {
+    setLaunchInterestStatus("saving");
+    setLaunchInterestMessage("");
+    try {
+      const result = await submitLaunchInterest({
+        email: launchInterest.email,
+        city: launchInterest.city,
+        source: "vision-landing",
+      });
+      setLaunchInterestStatus("saved");
+      setLaunchInterestMessage(result.mode === "cloud" ? "You're on the TailTots family launch list." : "Saved locally for this demo. Connect Supabase to collect live launch signups.");
+      setLaunchInterest((draft) => ({ ...draft, email: "" }));
+    } catch (error) {
+      setLaunchInterestStatus("error");
+      setLaunchInterestMessage(error instanceof Error ? error.message : "Could not save this signup yet.");
+    }
+  }
+
   return (
     <section className="space-y-5">
       <div className="overflow-hidden rounded-lg border border-[#ded8c7] bg-[#f7fbff] text-[#17231f] shadow-sm">
-        <div className="grid min-h-[calc(100vh-7rem)] gap-7 p-5 sm:p-7 lg:grid-cols-[0.82fr_1.18fr] lg:items-center xl:p-10">
+        <div className="grid min-h-[calc(100vh-7rem)] gap-6 p-5 sm:p-7 lg:grid-cols-[0.78fr_1.22fr] lg:items-start xl:p-8">
           <div className="min-w-0">
-            <h2 className="max-w-3xl text-4xl font-black leading-tight text-[#111b4f] sm:text-5xl xl:text-6xl">
+            <h2 className="max-w-3xl text-4xl font-black leading-tight text-[#111b4f] sm:text-5xl xl:text-[4rem]">
               Turn everyday moments into life lessons.
             </h2>
-            <p className="mt-4 max-w-2xl text-base font-semibold leading-7 text-[#31405f] sm:text-lg">
+            <p className="mt-4 max-w-2xl text-base font-semibold leading-7 text-[#31405f]">
               TailTots helps kids grow through real-world responsibility, from caring for pets and helping at home to kindness, money skills, and community activities. Parents turn everyday responsibilities into fun, guided missions kids can take ownership of.
             </p>
             <div className="mt-4 flex max-w-2xl flex-wrap gap-x-2 gap-y-1 text-sm font-black text-[#111b4f]">
@@ -1272,49 +1471,63 @@ function VisionLandingPanel({
               <button onClick={() => setEchoSlideIndex((echoSlideIndex + 1) % echoSlides.length)} className="min-h-12 rounded-lg bg-[#6d3ed1] px-5 py-3 text-sm font-black text-white shadow-sm">
                 See How TailTots Works
               </button>
-              <button onClick={openKidDemo} className="min-h-12 rounded-lg bg-[#ffd166] px-5 py-3 text-sm font-black text-[#17231f]">
-                Try the kid demo
+              <button onClick={() => document.getElementById("landing-real-parent-email")?.focus()} className="min-h-12 rounded-lg bg-[#165a4b] px-5 py-3 text-sm font-black text-white shadow-sm">
+                Real App: Sign up
               </button>
               <button
-                onClick={() => (isParentUnlocked ? setActiveTab("approvals") : setShowParentSignIn((value) => !value))}
+                onClick={() => (isParentUnlocked ? setActiveTab("approvals") : openParentDemo())}
                 className="min-h-12 rounded-lg border border-[#c9d8f8] bg-white px-5 py-3 text-sm font-black text-[#1f3b7a]"
               >
-                {isParentUnlocked ? "Open parent dashboard" : "Unlock parent demo"}
+                {isParentUnlocked ? "Open parent dashboard" : "Demo: Parent route"}
               </button>
             </div>
-            {!isParentUnlocked && (
-              <div className="mt-4 max-w-md rounded-lg border border-[#dce6f8] bg-white p-3 text-sm font-bold text-[#31405f] shadow-sm">
-                Parent screens are locked for safety. For this demo, press <span className="font-black text-[#17231f]">Unlock parent demo</span> and enter <span className="font-black text-[#17231f]">4321</span>.
+            <div className="mt-5 max-w-2xl rounded-lg border border-[#c9d8f8] bg-white p-4 shadow-sm">
+              <p className="text-xs font-black uppercase tracking-[0.14em] text-[#165a4b]">Updates, discounts, and rewards</p>
+              <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                <input
+                  value={launchInterest.email}
+                  onChange={(event) => setLaunchInterest((draft) => ({ ...draft, email: event.target.value }))}
+                  className="min-h-11 rounded-lg border border-[#c9d8f8] px-3 text-sm font-bold"
+                  inputMode="email"
+                  placeholder="Parent email"
+                  type="email"
+                />
+                <input
+                  value={launchInterest.city}
+                  onChange={(event) => setLaunchInterest((draft) => ({ ...draft, city: event.target.value }))}
+                  className="min-h-11 rounded-lg border border-[#c9d8f8] px-3 text-sm font-bold"
+                  placeholder="City"
+                />
               </div>
-            )}
-            {showParentSignIn && !isParentUnlocked && (
-              <div className="mt-4 max-w-md rounded-lg bg-white p-3 text-[#17231f] shadow-sm">
-                <label className="text-xs font-black uppercase tracking-[0.14em] text-[#165a4b]" htmlFor="landing-parent-code">Parent passcode</label>
-                <p className="mt-1 text-xs font-bold text-[#5f6a65]">Demo parent screens are protected. Enter <span className="font-black text-[#17231f]">4321</span> to unlock approvals, setup, rewards, and parent controls.</p>
-                <div className="mt-2 flex gap-2">
-                  <input
-                    id="landing-parent-code"
-                    value={parentCode}
-                    onChange={(event) => setParentCode(event.target.value)}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter") parentLogin();
-                    }}
-                    className="min-w-0 flex-1 rounded-lg border border-[#b8cfc6] px-3 py-2 text-sm font-bold"
-                    inputMode="numeric"
-                    type="password"
-                    placeholder="4321"
-                  />
-                  <button onClick={parentLogin} className="min-h-11 rounded-lg bg-[#165a4b] px-4 py-2 text-sm font-black text-white">Unlock</button>
+              <div className="mt-3 flex flex-wrap items-center gap-3">
+                <button
+                  onClick={joinLaunchList}
+                  disabled={launchInterestStatus === "saving"}
+                  className="min-h-11 rounded-lg bg-[#165a4b] px-4 py-2 text-sm font-black text-white disabled:opacity-60"
+                >
+                  {launchInterestStatus === "saving" ? "Saving..." : "Keep me updated"}
+                </button>
+                {launchInterestMessage && (
+                  <p className={`text-sm font-bold ${launchInterestStatus === "error" ? "text-[#b44421]" : "text-[#165a4b]"}`}>
+                    {launchInterestMessage}
+                  </p>
+                )}
+              </div>
+            </div>
+            <div className="mt-6 rounded-lg border border-[#ded8c7] bg-white p-3 shadow-sm">
+              <div className="flex flex-wrap items-end justify-between gap-2">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.14em] text-[#6d3ed1]">Kids and their pets</p>
+                  <p className="mt-1 text-sm font-bold text-[#5f6a65]">TailTots is built around the everyday bond kids have with dogs, cats, rabbits, guinea pigs, and the pets they learn to care for.</p>
                 </div>
               </div>
-            )}
-            <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-              {petPhotos.map(([label, src]) => (
-                <div key={label} className="rounded-lg bg-white p-2 shadow-sm">
-                  <img src={src} alt={`${label} pet`} className="aspect-square w-full rounded-lg object-cover" />
-                  <p className="mt-2 text-center text-[11px] font-black uppercase tracking-[0.12em] text-[#4f625b]">{label}</p>
-                </div>
-              ))}
+              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {kidsPetPhotos.map(([label, src]) => (
+                  <div key={label} className="group overflow-hidden rounded-lg bg-[#f8f6ed] shadow-sm">
+                    <img src={src} alt={`${label} using TailTots`} className="aspect-[4/3] w-full object-cover transition duration-300 group-hover:scale-[1.03]" loading="lazy" />
+                  </div>
+                ))}
+              </div>
             </div>
             <div className="mt-5 flex flex-wrap gap-2 text-xs font-black text-[#31405f]">
               {['Parent approved', 'Guided AI', 'Kid Bank', 'Shelter kindness', 'Growth badges', 'No open kid chat'].map((label) => (
@@ -1323,11 +1536,78 @@ function VisionLandingPanel({
             </div>
           </div>
 
-          <div className="relative mx-auto w-full max-w-3xl">
-            <div className="absolute right-4 top-4 z-10 rounded-lg bg-white px-4 py-3 text-sm font-black text-[#111b4f] shadow-lg">
-              "Alexa, open TailTots."
+          <div className="relative mx-auto w-full max-w-4xl space-y-4">
+            <div className="grid gap-3 xl:grid-cols-[0.9fr_1.1fr]">
+              <article className="rounded-lg border-2 border-[#ded8c7] bg-white p-4 shadow-sm">
+                <p className="text-xs font-black uppercase tracking-[0.14em] text-[#6d3ed1]">Route 1 - Demo mode</p>
+                <h3 className="mt-2 text-2xl font-black text-[#17231f]">Explore with sample data</h3>
+                <p className="mt-2 text-sm font-semibold leading-5 text-[#5f6a65]">
+                  Use the sample family to test kid missions, parent approvals, points, Kid Bank, pets, and badges.
+                </p>
+                <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
+                  <button onClick={openKidDemo} className="min-h-12 rounded-lg bg-[#ffd166] px-4 py-2 text-sm font-black text-[#17231f]">
+                    Demo: Kid route
+                  </button>
+                  <button onClick={openParentDemo} className="min-h-12 rounded-lg border border-[#dce6f8] bg-[#f7fbff] px-4 py-2 text-sm font-black text-[#1f3b7a]">
+                    Demo: Parent route
+                  </button>
+                </div>
+              </article>
+              <article className="rounded-lg border-2 border-[#165a4b] bg-[#f7fffb] p-4 shadow-sm">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-xs font-black uppercase tracking-[0.14em] text-[#165a4b]">Route 2 - Real app mode</p>
+                  <span className={`rounded-lg px-3 py-1 text-[11px] font-black ${cloudAccountEmail ? "bg-[#e7f4ef] text-[#165a4b]" : "bg-[#fff4d8] text-[#7a4b12]"}`}>
+                    {cloudAccountEmail ? "Signed in" : isSupabaseConfigured ? "Accounts ready" : "Needs Supabase"}
+                  </span>
+                </div>
+                <h3 className="mt-2 text-2xl font-black text-[#17231f]">Sign up and start your family</h3>
+                <p className="mt-2 text-sm font-semibold leading-5 text-[#5f6a65]">
+                  Create or sign in to a parent account, then customize kids, pets, goals, photos, points, and Kid Bank.
+                </p>
+                {!cloudAccountEmail && (
+                  <div className="mt-4 grid gap-2">
+                    <input
+                      id="landing-real-parent-email"
+                      value={accountDraft.email}
+                      onChange={(event) => setAccountDraft({ ...accountDraft, email: event.target.value })}
+                      className="min-h-11 rounded-lg border border-[#b8cfc6] bg-white px-3 text-sm font-bold"
+                      inputMode="email"
+                      placeholder="Parent email"
+                      type="email"
+                    />
+                    <input
+                      value={accountDraft.password}
+                      onChange={(event) => setAccountDraft({ ...accountDraft, password: event.target.value })}
+                      className="min-h-11 rounded-lg border border-[#b8cfc6] bg-white px-3 text-sm font-bold"
+                      placeholder="Password"
+                      type="password"
+                    />
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      <button onClick={createParentAccount} disabled={accountStatus === "loading"} className="min-h-11 rounded-lg bg-[#165a4b] px-4 py-2 text-sm font-black text-white disabled:opacity-60">
+                        Create account
+                      </button>
+                      <button onClick={signInParentAccount} disabled={accountStatus === "loading"} className="min-h-11 rounded-lg border border-[#b8cfc6] bg-white px-4 py-2 text-sm font-black text-[#165a4b] disabled:opacity-60">
+                        Sign in
+                      </button>
+                    </div>
+                  </div>
+                )}
+                {cloudAccountEmail && (
+                  <button onClick={openRealFamilySetup} className="mt-4 min-h-11 rounded-lg bg-[#165a4b] px-4 py-2 text-sm font-black text-white">
+                    Open family setup
+                  </button>
+                )}
+                {accountMessage && (
+                  <p className={`mt-3 text-sm font-bold ${accountStatus === "error" ? "text-[#b44421]" : "text-[#165a4b]"}`}>
+                    {accountMessage}
+                  </p>
+                )}
+              </article>
             </div>
-            <div className="mx-auto rounded-[2.25rem] border border-black/10 bg-[#0f1513] p-3 shadow-2xl sm:p-5" aria-label="Echo Show style TailTots slideshow">
+            <div className="relative mx-auto rounded-[2.25rem] border border-black/10 bg-[#0f1513] p-3 shadow-2xl sm:p-5" aria-label="Echo Show style TailTots slideshow">
+              <div className="absolute right-4 top-4 z-10 rounded-lg bg-white px-4 py-3 text-sm font-black text-[#111b4f] shadow-lg">
+                &quot;Alexa, open TailTots.&quot;
+              </div>
               <div className="overflow-hidden rounded-[1.45rem] bg-[#f8f6ed] p-4 text-[#17231f] ring-1 ring-black/20 sm:p-5">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
@@ -1389,7 +1669,7 @@ function VisionLandingPanel({
             <div className="mx-auto h-5 w-64 rounded-b-[2rem] bg-[#0a0f0d] shadow-xl" />
             <div className="mx-auto mt-4 rounded-lg border border-[#dce6f8] bg-white/90 p-4 shadow-sm">
               <p className="text-center text-lg font-black text-[#111b4f]">Kids can hear it. See it. Do it.</p>
-              <p className="text-center text-sm font-black text-[#111b4f]">"Alexa, open TailTots." to Choose Mission to Follow Steps to Complete to Earn to Save or Give</p>
+              <p className="text-center text-sm font-black text-[#111b4f]">&quot;Alexa, open TailTots.&quot; to Choose Mission to Follow Steps to Complete to Earn to Save or Give</p>
             </div>
           </div>
         </div>
@@ -3232,6 +3512,16 @@ function EnterpriseReadinessPanel() {
 }
 
 function FamilySetupPanel(props: {
+  cloudAccountEmail: string;
+  accountDraft: { email: string; password: string };
+  setAccountDraft: (value: { email: string; password: string }) => void;
+  accountStatus: "idle" | "saving" | "loading" | "error" | "saved";
+  accountMessage: string;
+  createParentAccount: () => void;
+  signInParentAccount: () => void;
+  signOutParentAccount: () => void;
+  saveCurrentFamilyAccount: () => void;
+  loadCurrentFamilyAccount: () => void;
   familyName: string;
   setFamilyName: (value: string) => void;
   parents: ParentProfile[];
@@ -3258,6 +3548,67 @@ function FamilySetupPanel(props: {
 }) {
   return (
     <section className="space-y-4">
+      <div className="rounded-lg border border-[#c9d8f8] bg-white p-5 shadow-sm">
+        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-[#165a4b]">Parent account</p>
+            <h2 className="mt-2 text-3xl font-black">Save this family setup</h2>
+            <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-[#5f6a65]">
+              A signed-in parent account can keep this family&apos;s profiles, family photos, kids, pets, goals, points, coins, Kid Bank, badges, and parent settings together.
+            </p>
+          </div>
+          <div className={`rounded-lg px-4 py-3 text-sm font-black ${props.cloudAccountEmail ? "bg-[#e7f4ef] text-[#165a4b]" : "bg-[#fff4d8] text-[#7a4b12]"}`}>
+            {props.cloudAccountEmail ? `Signed in: ${props.cloudAccountEmail}` : isSupabaseConfigured ? "Ready for account sign in" : "Connect Supabase for cloud accounts"}
+          </div>
+        </div>
+
+        {!props.cloudAccountEmail && (
+          <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_1fr_auto_auto]">
+            <input
+              value={props.accountDraft.email}
+              onChange={(event) => props.setAccountDraft({ ...props.accountDraft, email: event.target.value })}
+              className="min-h-12 rounded-lg border border-[#c9d8f8] px-4 py-3 font-semibold"
+              inputMode="email"
+              placeholder="Parent email"
+              type="email"
+            />
+            <input
+              value={props.accountDraft.password}
+              onChange={(event) => props.setAccountDraft({ ...props.accountDraft, password: event.target.value })}
+              className="min-h-12 rounded-lg border border-[#c9d8f8] px-4 py-3 font-semibold"
+              placeholder="Password"
+              type="password"
+            />
+            <button onClick={props.createParentAccount} disabled={props.accountStatus === "loading"} className="min-h-12 rounded-lg bg-[#165a4b] px-5 py-3 text-sm font-black text-white disabled:opacity-60">
+              Create account
+            </button>
+            <button onClick={props.signInParentAccount} disabled={props.accountStatus === "loading"} className="min-h-12 rounded-lg border border-[#c9d8f8] bg-white px-5 py-3 text-sm font-black text-[#1f3b7a] disabled:opacity-60">
+              Sign in
+            </button>
+          </div>
+        )}
+
+        {props.cloudAccountEmail && (
+          <div className="mt-4 flex flex-wrap gap-3">
+            <button onClick={props.saveCurrentFamilyAccount} disabled={props.accountStatus === "saving"} className="min-h-12 rounded-lg bg-[#165a4b] px-5 py-3 text-sm font-black text-white disabled:opacity-60">
+              {props.accountStatus === "saving" ? "Saving..." : "Save family account"}
+            </button>
+            <button onClick={props.loadCurrentFamilyAccount} disabled={props.accountStatus === "loading"} className="min-h-12 rounded-lg border border-[#c9d8f8] bg-white px-5 py-3 text-sm font-black text-[#1f3b7a] disabled:opacity-60">
+              Load account
+            </button>
+            <button onClick={props.signOutParentAccount} disabled={props.accountStatus === "loading"} className="min-h-12 rounded-lg border border-[#ded8c7] bg-[#f8f6ed] px-5 py-3 text-sm font-black text-[#5f4a24] disabled:opacity-60">
+              Sign out
+            </button>
+          </div>
+        )}
+
+        {props.accountMessage && (
+          <p className={`mt-3 text-sm font-bold ${props.accountStatus === "error" ? "text-[#b44421]" : "text-[#165a4b]"}`}>
+            {props.accountMessage}
+          </p>
+        )}
+      </div>
+
       <div className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
         <p className="text-xs font-black uppercase tracking-[0.18em] text-[#f47b20]">Family setup</p>
         <h2 className="mt-2 text-3xl font-black">Household, kids, and pets</h2>

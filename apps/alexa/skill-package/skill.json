@@ -1,0 +1,50 @@
+{
+  "manifest": {
+    "publishingInformation": {
+      "locales": {
+        "en-US": {
+          "name": "TailTots",
+          "summary": "Family pet care reminders and kid-friendly mission check-ins.",
+          "description": "TailTots helps families hear today's pet care missions, check pet routines, and keep kids engaged with parent-guided responsibility habits.",
+          "examplePhrases": [
+            "Alexa, open TailTots",
+            "Alexa, ask TailTots what's next",
+            "Alexa, ask TailTots for today's pet missions"
+          ],
+          "keywords": [
+            "pet care",
+            "family",
+            "kids",
+            "chores",
+            "responsibility"
+          ]
+        }
+      },
+      "isAvailableWorldwide": true,
+      "testingInstructions": "Open the skill and ask for today's missions. The MVP uses a safe demo mission list until account linking is added.",
+      "category": "KIDS",
+      "distributionCountries": []
+    },
+    "apis": {
+      "custom": {
+        "endpoint": {
+          "uri": "arn:aws:lambda:us-east-1:000000000000:function:tailtots-alexa-skill"
+        }
+      }
+    },
+    "manifestVersion": "1.0",
+    "privacyAndCompliance": {
+      "allowsPurchases": false,
+      "usesPersonalInfo": false,
+      "isChildDirected": true,
+      "isExportCompliant": true,
+      "containsAds": false,
+      "locales": {
+        "en-US": {
+          "privacyPolicyUrl": "https://pawpal-quest-kids.navin-nala-0658.chatgpt.site/privacy",
+          "termsOfUseUrl": "https://pawpal-quest-kids.navin-nala-0658.chatgpt.site/terms"
+        }
+      }
+    }
+  }
+}
