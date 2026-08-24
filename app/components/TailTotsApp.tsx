@@ -1475,7 +1475,7 @@ function VisionLandingPanel({
         source: "vision-landing",
       });
       setLaunchInterestStatus("saved");
-      setLaunchInterestMessage(result.mode === "cloud" ? "You're on the TailTots family launch list." : "Saved for this demo.");
+      setLaunchInterestMessage(result.mode === "cloud" ? "You're on the TailTots family launch list." : "Thanks - you're on the TailTots update list.");
       setLaunchInterest((draft) => ({ ...draft, email: "" }));
     } catch (error) {
       setLaunchInterestStatus("error");
