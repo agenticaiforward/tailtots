@@ -402,6 +402,7 @@ export function TailTotsApp() {
   const [accountDraft, setAccountDraft] = useState({ email: "", password: "" });
   const [accountStatus, setAccountStatus] = useState<"idle" | "saving" | "loading" | "error" | "saved">("idle");
   const [accountMessage, setAccountMessage] = useState("");
+  const [appMode, setAppMode] = useState<"demo" | "real">("demo");
 
   const activeChild = children.find((child) => child.id === activeChildId) ?? children[0];
   const activePet = pets[0];
@@ -514,6 +515,7 @@ export function TailTotsApp() {
   }
 
   function openRealFamilySetup() {
+    setAppMode("real");
     setRole("parent");
     setIsParentUnlocked(true);
     setActiveTab("setup");
@@ -525,7 +527,26 @@ export function TailTotsApp() {
     setActiveTab("vision");
   }
 
+  function loadDemoFamily() {
+    setAppMode("demo");
+    applyFamilySnapshot({
+      familyName: "Nalajala Crew",
+      parentPasscode: defaultParentPasscode,
+      parents: starterParents,
+      children: starterChildren,
+      pets: starterPets,
+      missions: starterMissions,
+      transactions: starterTransactions,
+      goals: starterGoals,
+      badges: starterBadges,
+      neighborhoodJobs: starterNeighborhoodJobs,
+      moments: starterMoments,
+      activeChildId: starterChildren[0]?.id ?? "",
+    });
+  }
+
   function startBlankRealFamilySetup(parentEmail?: string) {
+    setAppMode("real");
     applyFamilySnapshot({
       ...blankRealFamilyState,
       parents: [{ id: "parent-1", name: parentEmail ? parentEmail.split("@")[0] || "Parent" : "Parent" }],
@@ -539,12 +560,14 @@ export function TailTotsApp() {
   }
 
   function openParentDemo() {
+    loadDemoFamily();
     setRole("parent");
     setIsParentUnlocked(true);
     setActiveTab("approvals");
   }
 
   function openKidDemo() {
+    loadDemoFamily();
     setRole("child");
     setActiveTab("missions");
   }
@@ -1053,6 +1076,9 @@ export function TailTotsApp() {
       {!isRouteChooser && (
         <div className="border-b border-[#ded8c7] bg-[#fffdf7]">
           <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-2 px-3 py-2 sm:px-5">
+            <span className={`min-h-10 rounded-lg px-3 py-2 text-xs font-black ${appMode === "real" ? "bg-[#e7f4ef] text-[#165a4b]" : "bg-[#fff4d8] text-[#7a4b12]"}`}>
+              {appMode === "real" ? "Using your family account" : "Viewing demo family"}
+            </span>
             <button onClick={openRouteChooser} className="min-h-10 rounded-lg border border-[#d9d0bb] bg-white px-3 py-2 text-xs font-black text-[#25352f]">
               Home
             </button>
@@ -1086,7 +1112,7 @@ export function TailTotsApp() {
                 </div>
               )}
               <div className="absolute left-4 top-4 rounded-full bg-white/90 px-3 py-1 text-[11px] font-black text-[#165a4b] shadow-sm">
-                {isSupabaseConfigured ? "Cloud connected" : "Local device mode"}
+                {appMode === "real" ? "Your family" : "Demo family"}
               </div>
               <div className="absolute bottom-4 left-4 right-4 text-white">
                 <p className="text-xs font-black uppercase tracking-[0.16em] text-[#ffd166]">Household</p>
@@ -3553,8 +3579,40 @@ function FamilySetupPanel(props: {
   parentPasscode: string;
   setParentPasscode: (value: string) => void;
 }) {
+  const setupSteps = [
+    ["Parent account", Boolean(props.cloudAccountEmail), props.cloudAccountEmail ? "Signed in" : "Create or sign in"],
+    ["Household", Boolean(props.familyName.trim()), props.familyName.trim() || "Name your family"],
+    ["Kids", props.childProfiles.length > 0, `${props.childProfiles.length} added`],
+    ["Pets", props.pets.length > 0, `${props.pets.length} added`],
+    ["First goals", true, "Use Today and Kid Bank next"],
+  ] as const;
+  const completedSteps = setupSteps.filter(([, done]) => done).length;
+
   return (
     <section className="space-y-4">
+      <div className="rounded-lg border border-[#ded8c7] bg-[#fffdf7] p-5 shadow-sm">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-[#f47b20]">Real family setup</p>
+            <h2 className="mt-2 text-2xl font-black sm:text-3xl">Start simple. Add the family pieces first.</h2>
+            <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-[#5f6a65]">
+              Set up the parent account, household, kids, and pets. TailTots can grow into goals, rewards, and Kid Bank after the first mission.
+            </p>
+          </div>
+          <div className="rounded-lg bg-[#165a4b] px-4 py-3 text-sm font-black text-white">
+            {completedSteps} of {setupSteps.length} ready
+          </div>
+        </div>
+        <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
+          {setupSteps.map(([label, done, detail]) => (
+            <div key={label} className={`rounded-lg border p-3 ${done ? "border-[#b8cfc6] bg-[#e7f4ef]" : "border-[#ded8c7] bg-white"}`}>
+              <p className="text-sm font-black text-[#17231f]">{label}</p>
+              <p className={`mt-1 text-xs font-bold ${done ? "text-[#165a4b]" : "text-[#7a4b12]"}`}>{detail}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
       <div className="rounded-lg border border-[#c9d8f8] bg-white p-5 shadow-sm">
         <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
           <div>
