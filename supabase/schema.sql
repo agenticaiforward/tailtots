@@ -238,6 +238,7 @@ create unique index launch_interest_signups_email_source_idx on public.launch_in
 create index family_account_snapshots_updated_at_idx on public.family_account_snapshots(updated_at desc);
 
 alter table public.families enable row level security;
+alter table public.levels enable row level security;
 alter table public.parents enable row level security;
 alter table public.children enable row level security;
 alter table public.pets enable row level security;
