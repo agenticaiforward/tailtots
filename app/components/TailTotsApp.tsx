@@ -519,12 +519,14 @@ export function TailTotsApp() {
     setRole("parent");
     setIsParentUnlocked(true);
     setActiveTab("setup");
+    requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "smooth" }));
   }
 
   function openRouteChooser() {
     setRole("parent");
     setIsParentUnlocked(true);
     setActiveTab("vision");
+    requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "smooth" }));
   }
 
   function loadDemoFamily() {
@@ -564,12 +566,15 @@ export function TailTotsApp() {
     setRole("parent");
     setIsParentUnlocked(true);
     setActiveTab("approvals");
+    requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "smooth" }));
   }
 
   function openKidDemo() {
     loadDemoFamily();
     setRole("child");
+    setActiveChildId(starterChildren[0]?.id ?? "");
     setActiveTab("missions");
+    requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "smooth" }));
   }
 
   async function createParentAccount() {
@@ -797,8 +802,10 @@ export function TailTotsApp() {
 
   function switchRole(nextRole: Role) {
     setRole(nextRole);
-    setActiveTab(nextRole === "parent" ? "vision" : "missions");
+    setActiveTab(nextRole === "parent" ? "hub" : "missions");
     if (nextRole === "parent") setIsParentUnlocked(true);
+    if (nextRole === "child" && !activeChildId) setActiveChildId(children[0]?.id ?? starterChildren[0]?.id ?? "");
+    requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "smooth" }));
   }
 
   function completeMission(missionId: string) {
@@ -1076,20 +1083,17 @@ export function TailTotsApp() {
       {!isRouteChooser && (
         <div className="border-b border-[#ded8c7] bg-[#fffdf7]">
           <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-2 px-3 py-2 sm:px-5">
-            <span className={`min-h-10 rounded-lg px-3 py-2 text-xs font-black ${appMode === "real" ? "bg-[#e7f4ef] text-[#165a4b]" : "bg-[#fff4d8] text-[#7a4b12]"}`}>
-              {appMode === "real" ? "Using your family account" : "Viewing demo family"}
-            </span>
             <button onClick={openRouteChooser} className="min-h-10 rounded-lg border border-[#d9d0bb] bg-white px-3 py-2 text-xs font-black text-[#25352f]">
-              Home
+              Start page
             </button>
-            <button onClick={openKidDemo} className="min-h-10 rounded-lg bg-[#ffd166] px-3 py-2 text-xs font-black text-[#17231f]">
-              Demo kid
+            <button onClick={() => switchRole("child")} className="min-h-10 rounded-lg bg-[#ffd166] px-3 py-2 text-xs font-black text-[#17231f]">
+              Kid view
             </button>
-            <button onClick={openParentDemo} className="min-h-10 rounded-lg border border-[#dce6f8] bg-[#f7fbff] px-3 py-2 text-xs font-black text-[#1f3b7a]">
-              Demo parent
+            <button onClick={() => switchRole("parent")} className="min-h-10 rounded-lg border border-[#dce6f8] bg-[#f7fbff] px-3 py-2 text-xs font-black text-[#1f3b7a]">
+              Parent view
             </button>
             <button onClick={openRealFamilySetup} className="min-h-10 rounded-lg bg-[#165a4b] px-3 py-2 text-xs font-black text-white">
-              Real account
+              Family setup
             </button>
           </div>
         </div>
@@ -1636,7 +1640,7 @@ function VisionLandingPanel({
               </article>
               <article id="landing-real-app" className="rounded-lg border-2 border-[#165a4b] bg-[#f7fffb] p-4 shadow-sm">
                 <p className="text-xs font-black uppercase tracking-[0.14em] text-[#165a4b]">Route 2 - Real app mode</p>
-                <h3 className="mt-2 text-2xl font-black text-[#17231f]">Sign up and start your family</h3>
+                <h3 className="mt-2 text-2xl font-black text-[#17231f]">Get your free family account</h3>
                 <p className="mt-2 text-sm font-semibold leading-5 text-[#5f6a65]">
                   Create or sign in to a parent account, then customize kids, pets, goals, photos, points, and Kid Bank.
                 </p>
@@ -1667,6 +1671,11 @@ function VisionLandingPanel({
                       </button>
                     </div>
                   </div>
+                )}
+                {!cloudAccountEmail && (
+                  <button onClick={() => scrollToLandingSection("landing-updates")} className="mt-3 min-h-11 w-full rounded-lg border border-[#b8cfc6] bg-white px-4 py-2 text-sm font-black text-[#165a4b]">
+                    Join launch updates
+                  </button>
                 )}
                 {cloudAccountEmail && (
                   <button onClick={openRealFamilySetup} className="mt-4 min-h-11 rounded-lg bg-[#165a4b] px-4 py-2 text-sm font-black text-white">
@@ -1755,12 +1764,12 @@ function VisionLandingPanel({
       </div>
 
       <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm sm:p-6">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div className="max-w-4xl">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.18em] text-[#0f766e]">Life-skills engine</p>
             <h3 className="mt-2 text-2xl font-black sm:text-3xl">Every mission helps kids grow.</h3>
           </div>
-          <p className="max-w-md text-sm font-semibold leading-5 text-[#5f6a65]">Start with pet care, then grow into home, money, kindness, and community habits.</p>
+          <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-[#5f6a65]">Start with pet care, then grow into home, money, kindness, and community habits.</p>
         </div>
         <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {lifeSkills.map(([title, body, bg, color]) => (
@@ -1773,12 +1782,12 @@ function VisionLandingPanel({
       </section>
 
       <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm sm:p-6">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div className="max-w-4xl">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.18em] text-[#0f766e]">How it works</p>
             <h3 className="mt-2 text-2xl font-black sm:text-3xl">Kids can hear it. See it. Do it.</h3>
           </div>
-          <p className="max-w-md text-sm font-semibold leading-5 text-[#5f6a65]">A parent chooses the goal. TailTots turns it into clear kid steps, then waits for parent approval.</p>
+          <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-[#5f6a65]">A parent chooses the goal. TailTots turns it into clear kid steps, then waits for parent approval.</p>
         </div>
         <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {careLoop.map(([number, title, body]) => (
@@ -1888,7 +1897,7 @@ function VisionLandingPanel({
           </p>
           <div className="mt-4 grid gap-2 sm:grid-cols-2">
             {['Why is my pet hiding?', 'How can I make playtime calmer?', 'What should I notice today?', 'Tell me a pet-care fact'].map((question) => (
-              <button key={question} onClick={openKidDemo} className="min-h-12 rounded-lg bg-white px-3 py-3 text-left text-sm font-black text-[#33245f] shadow-sm">{question}</button>
+              <div key={question} className="min-h-12 rounded-lg bg-white px-3 py-3 text-left text-sm font-black text-[#33245f] shadow-sm">{question}</div>
             ))}
           </div>
         </article>
