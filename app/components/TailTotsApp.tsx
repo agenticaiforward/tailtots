@@ -1369,6 +1369,7 @@ function VisionLandingPanel({
   openKidDemo: () => void;
 }) {
   const [echoSlideIndex, setEchoSlideIndex] = useState(0);
+  const [showBackToTop, setShowBackToTop] = useState(false);
   const [launchInterest, setLaunchInterest] = useState({ email: "", city: "" });
   const [launchInterestStatus, setLaunchInterestStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [launchInterestMessage, setLaunchInterestMessage] = useState("");
@@ -1485,6 +1486,13 @@ function VisionLandingPanel({
   ];
   const activeEchoSlide = echoSlides[echoSlideIndex];
 
+  useEffect(() => {
+    const updateBackToTop = () => setShowBackToTop(window.scrollY > 520);
+    updateBackToTop();
+    window.addEventListener("scroll", updateBackToTop, { passive: true });
+    return () => window.removeEventListener("scroll", updateBackToTop);
+  }, []);
+
   async function joinLaunchList() {
     setLaunchInterestStatus("saving");
     setLaunchInterestMessage("");
@@ -1513,25 +1521,15 @@ function VisionLandingPanel({
 
   return (
     <section className="space-y-5">
-      <nav className="sticky top-[92px] z-30 -mx-2 rounded-lg border border-[#ded8c7] bg-white/95 px-2 py-2 shadow-sm backdrop-blur sm:mx-0" aria-label="TailTots page shortcuts">
-        <div className="flex gap-2 overflow-x-auto">
-          {[
-            ["Start Here", "landing-home"],
-            ["Try Sample Family", "landing-demo"],
-            ["Create Your Family", "landing-real-app"],
-            ["Kid Tabletop Demo", "landing-how-it-works"],
-            ["Join Updates", "landing-updates"],
-          ].map(([label, sectionId]) => (
-            <button
-              key={sectionId}
-              onClick={() => scrollToLandingSection(sectionId)}
-              className="min-h-10 shrink-0 rounded-lg border border-[#dce6f8] bg-[#f7fbff] px-4 py-2 text-sm font-black text-[#111b4f] hover:border-[#165a4b] hover:bg-[#e7f4ef]"
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      </nav>
+      {showBackToTop && (
+        <button
+          onClick={() => scrollToLandingSection("landing-home")}
+          className="fixed bottom-5 right-5 z-40 min-h-11 rounded-full bg-[#165a4b] px-4 py-2 text-sm font-black text-white shadow-lg ring-1 ring-white/50"
+          aria-label="Back to top"
+        >
+          Top
+        </button>
+      )}
 
       <div id="landing-home" className="scroll-mt-36 overflow-hidden rounded-lg border border-[#ded8c7] bg-[#f7fbff] text-[#17231f] shadow-sm">
         <div className="grid gap-5 p-5 sm:p-6 lg:grid-cols-[0.82fr_1.18fr] lg:items-start xl:p-7">
@@ -1757,20 +1755,12 @@ function VisionLandingPanel({
       </div>
 
       <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm sm:p-6">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#f47b20]">What TailTots becomes</p>
-        <h3 className="mt-2 max-w-3xl text-2xl font-black sm:text-3xl">Real responsibilities, kid-sized missions.</h3>
-        <p className="mt-4 max-w-3xl text-base font-semibold leading-7 text-[#4f625b]">
-          Pet care starts the habit. Chores, kindness, money skills, and community goals grow from there.
-        </p>
-      </section>
-
-      <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm sm:p-6">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.18em] text-[#0f766e]">Life-skills engine</p>
             <h3 className="mt-2 text-2xl font-black sm:text-3xl">Every mission helps kids grow.</h3>
           </div>
-          <p className="max-w-md text-sm font-semibold leading-5 text-[#5f6a65]">Powered by pets, chores, kindness, and community.</p>
+          <p className="max-w-md text-sm font-semibold leading-5 text-[#5f6a65]">Start with pet care, then grow into home, money, kindness, and community habits.</p>
         </div>
         <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {lifeSkills.map(([title, body, bg, color]) => (
@@ -1788,7 +1778,7 @@ function VisionLandingPanel({
             <p className="text-xs font-black uppercase tracking-[0.18em] text-[#0f766e]">How it works</p>
             <h3 className="mt-2 text-2xl font-black sm:text-3xl">Kids can hear it. See it. Do it.</h3>
           </div>
-          <p className="max-w-md text-sm font-semibold leading-5 text-[#5f6a65]">Kids can start TailTots missions by voice and follow simple, step-by-step guidance on a big screen, making everyday responsibilities feel like an adventure.</p>
+          <p className="max-w-md text-sm font-semibold leading-5 text-[#5f6a65]">A parent chooses the goal. TailTots turns it into clear kid steps, then waits for parent approval.</p>
         </div>
         <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {careLoop.map(([number, title, body]) => (
