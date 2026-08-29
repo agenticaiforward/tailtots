@@ -1506,31 +1506,31 @@ function VisionLandingPanel({
   return (
     <section className="space-y-5">
       <div className="overflow-hidden rounded-lg border border-[#ded8c7] bg-[#f7fbff] text-[#17231f] shadow-sm">
-        <div className="grid min-h-[calc(100vh-7rem)] gap-6 p-5 sm:p-7 lg:grid-cols-[0.78fr_1.22fr] lg:items-start xl:p-8">
+        <div className="grid gap-5 p-5 sm:p-6 lg:grid-cols-[0.82fr_1.18fr] lg:items-start xl:p-7">
           <div className="min-w-0">
-            <h2 className="max-w-3xl text-4xl font-black leading-tight text-[#111b4f] sm:text-5xl xl:text-[4rem]">
+            <h2 className="max-w-3xl text-4xl font-black leading-[1.05] text-[#111b4f] sm:text-5xl xl:text-[3.35rem]">
               Grow into the world - with parents by their side.
             </h2>
-            <p className="mt-4 max-w-2xl text-base font-semibold leading-7 text-[#31405f]">
+            <p className="mt-4 max-w-2xl text-[15px] font-semibold leading-6 text-[#31405f] sm:text-base sm:leading-7">
               TailTots is a parent-guided real-world development platform where kids learn to care, connect, earn, and create through real-life experiences.
             </p>
-            <p className="mt-3 max-w-2xl text-base font-semibold leading-7 text-[#31405f]">
+            <p className="mt-2 max-w-2xl text-[15px] font-semibold leading-6 text-[#31405f] sm:text-base sm:leading-7">
               From caring for pets and helping at home to making friends, serving the community, managing money, and exploring entrepreneurship, kids take ownership while parents stay connected and in control.
             </p>
-            <div className="mt-4 flex max-w-2xl flex-wrap gap-x-2 gap-y-1 text-sm font-black text-[#111b4f]">
+            <div className="mt-3 flex max-w-2xl flex-wrap gap-x-2 gap-y-1 text-sm font-black text-[#111b4f]">
               {["Care", "Connect", "Earn", "Contribute", "Create"].map((item, index) => (
                 <span key={item} className="label-nowrap">{item}{index < 4 ? " ·" : ""}</span>
               ))}
             </div>
-            <p className="mt-5 max-w-2xl text-lg font-black leading-7 text-[#111b4f]">
+            <p className="mt-4 max-w-2xl text-base font-black leading-6 text-[#111b4f] sm:text-lg sm:leading-7">
               Don&apos;t wait until kids enter social media to teach them how to navigate the social world.
             </p>
-            <div className="mt-6 flex flex-wrap gap-3">
+            <div className="mt-4 flex flex-wrap gap-3">
               <button onClick={() => setEchoSlideIndex((echoSlideIndex + 1) % echoSlides.length)} className="min-h-12 rounded-lg bg-[#6d3ed1] px-5 py-3 text-sm font-black text-white shadow-sm">
                 See How TailTots Works
               </button>
             </div>
-            <div className="mt-5 max-w-2xl rounded-lg border border-[#c9d8f8] bg-white p-4 shadow-sm">
+            <div className="mt-4 max-w-2xl rounded-lg border border-[#c9d8f8] bg-white p-4 shadow-sm">
               <p className="text-xs font-black uppercase tracking-[0.14em] text-[#165a4b]">Updates, discounts, and rewards</p>
               <div className="mt-3 grid gap-2 sm:grid-cols-2">
                 <input
@@ -1563,7 +1563,7 @@ function VisionLandingPanel({
                 )}
               </div>
             </div>
-            <div className="mt-6 rounded-lg border border-[#ded8c7] bg-white p-3 shadow-sm">
+            <div className="mt-4 rounded-lg border border-[#ded8c7] bg-white p-3 shadow-sm">
               <div className="flex flex-wrap items-end justify-between gap-2">
                 <div>
                   <p className="text-xs font-black uppercase tracking-[0.14em] text-[#6d3ed1]">Kids and their pets</p>
@@ -1573,12 +1573,12 @@ function VisionLandingPanel({
               <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
                 {kidsPetPhotos.map(([label, src]) => (
                   <div key={label} className="group overflow-hidden rounded-lg bg-[#f8f6ed] shadow-sm">
-                    <img src={src} alt={`${label} using TailTots`} className="aspect-[4/3] w-full object-cover transition duration-300 group-hover:scale-[1.03]" loading="lazy" />
+                    <img src={src} alt={`${label} using TailTots`} className="aspect-[16/10] w-full object-cover transition duration-300 group-hover:scale-[1.03]" loading="lazy" />
                   </div>
                 ))}
               </div>
             </div>
-            <div className="mt-5 flex flex-wrap gap-2 text-xs font-black text-[#31405f]">
+            <div className="mt-4 flex flex-wrap gap-2 text-xs font-black text-[#31405f]">
               {['Parent approved', 'Guided AI', 'Kid Bank', 'Shelter kindness', 'Growth badges', 'No open kid chat'].map((label) => (
                 <span key={label} className="rounded-full border border-[#dce6f8] bg-white px-3 py-2">{label}</span>
               ))}
