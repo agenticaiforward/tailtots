@@ -326,7 +326,7 @@ const tabItems = [
 ];
 
 const kidTabIds = ["missions", "schedule", "hub", "pets", "pet-helper", "bank", "neighborhood", "growth"];
-const parentTabIds = ["vision", "approvals", "schedule", "hub", "setup", "pets", "neighborhood", "growth", "ai", "ecosystem"];
+const parentTabIds = ["vision", "approvals", "schedule", "hub", "pets", "neighborhood", "growth", "ai", "ecosystem"];
 const defaultParentPasscode = "4321";
 
 const savedFamilyStateKey = "tailtots-family-state-v1";
@@ -528,6 +528,20 @@ export function TailTotsApp() {
     setIsParentUnlocked(true);
     setActiveTab("vision");
     requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "smooth" }));
+  }
+
+  function openContactSection() {
+    setRole("parent");
+    setIsParentUnlocked(true);
+    setActiveTab("vision");
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const target = document.getElementById("landing-contact");
+        if (!target) return;
+        const targetTop = target.getBoundingClientRect().top + window.scrollY - 120;
+        window.scrollTo({ top: Math.max(0, targetTop), behavior: "smooth" });
+      });
+    });
   }
 
   function loadDemoFamily() {
@@ -1087,8 +1101,8 @@ export function TailTotsApp() {
             <button onClick={openRouteChooser} className="min-h-10 rounded-lg border border-[#d9d0bb] bg-white px-3 py-2 text-xs font-black text-[#25352f]">
               Start page
             </button>
-            <button onClick={openRealFamilySetup} className="min-h-10 rounded-lg bg-[#165a4b] px-3 py-2 text-xs font-black text-white">
-              Family setup
+            <button onClick={openContactSection} className="min-h-10 rounded-lg bg-[#165a4b] px-3 py-2 text-xs font-black text-white">
+              Contact us
             </button>
           </div>
         </div>
@@ -1122,8 +1136,8 @@ export function TailTotsApp() {
                     Family photo
                   <input className="sr-only" type="file" accept="image/*" onChange={(event) => updateFamilyPhoto(event.target.files?.[0])} />
                   </label>
-                  <button onClick={() => setActiveTab("setup")} className="min-h-11 rounded-lg bg-[#17231f]/90 px-4 py-2 text-xs font-black text-white shadow-sm">
-                    Profiles
+                  <button onClick={() => setActiveTab("pets")} className="min-h-11 rounded-lg bg-[#17231f]/90 px-4 py-2 text-xs font-black text-white shadow-sm">
+                    Pets
                   </button>
                 </div>
                 )}
@@ -1160,14 +1174,6 @@ export function TailTotsApp() {
           {role === "parent" && visibleActiveTab === "vision" && (
             <VisionLandingPanel
               openParentDemo={openParentDemo}
-              accountDraft={accountDraft}
-              setAccountDraft={setAccountDraft}
-              accountStatus={accountStatus}
-              accountMessage={accountMessage}
-              cloudAccountEmail={cloudAccountEmail}
-              createParentAccount={createParentAccount}
-              signInParentAccount={signInParentAccountFromForm}
-              openRealFamilySetup={openRealFamilySetup}
               openKidDemo={openKidDemo}
             />
           )}
@@ -1346,25 +1352,9 @@ export function TailTotsApp() {
 
 function VisionLandingPanel({
   openParentDemo,
-  accountDraft,
-  setAccountDraft,
-  accountStatus,
-  accountMessage,
-  cloudAccountEmail,
-  createParentAccount,
-  signInParentAccount,
-  openRealFamilySetup,
   openKidDemo,
 }: {
   openParentDemo: () => void;
-  accountDraft: { email: string; password: string };
-  setAccountDraft: (value: { email: string; password: string }) => void;
-  accountStatus: "idle" | "saving" | "loading" | "error" | "saved";
-  accountMessage: string;
-  cloudAccountEmail: string;
-  createParentAccount: () => void;
-  signInParentAccount: () => void;
-  openRealFamilySetup: () => void;
   openKidDemo: () => void;
 }) {
   const [echoSlideIndex, setEchoSlideIndex] = useState(0);
@@ -1581,39 +1571,9 @@ function VisionLandingPanel({
               <button onClick={() => scrollToLandingSection("landing-how-it-works")} className="min-h-12 rounded-lg border border-[#dce6f8] bg-white px-5 py-3 text-sm font-black text-[#111b4f] shadow-sm">
                 See Kid Tabletop Demo
               </button>
-            </div>
-            <div id="landing-updates" className="mt-4 max-w-2xl scroll-mt-36 rounded-lg border border-[#c9d8f8] bg-white p-4 shadow-sm">
-              <p className="text-xs font-black uppercase tracking-[0.14em] text-[#165a4b]">Updates, discounts, and rewards</p>
-              <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                <input
-                  value={launchInterest.email}
-                  onChange={(event) => setLaunchInterest((draft) => ({ ...draft, email: event.target.value }))}
-                  className="min-h-11 rounded-lg border border-[#c9d8f8] px-3 text-sm font-bold"
-                  inputMode="email"
-                  placeholder="Parent email"
-                  type="email"
-                />
-                <input
-                  value={launchInterest.city}
-                  onChange={(event) => setLaunchInterest((draft) => ({ ...draft, city: event.target.value }))}
-                  className="min-h-11 rounded-lg border border-[#c9d8f8] px-3 text-sm font-bold"
-                  placeholder="City"
-                />
-              </div>
-              <div className="mt-3 flex flex-wrap items-center gap-3">
-                <button
-                  onClick={joinLaunchList}
-                  disabled={launchInterestStatus === "saving"}
-                  className="min-h-11 rounded-lg bg-[#165a4b] px-4 py-2 text-sm font-black text-white disabled:opacity-60"
-                >
-                  {launchInterestStatus === "saving" ? "Saving..." : "Keep me updated"}
-                </button>
-                {launchInterestMessage && (
-                  <p className={`text-sm font-bold ${launchInterestStatus === "error" ? "text-[#b44421]" : "text-[#165a4b]"}`}>
-                    {launchInterestMessage}
-                  </p>
-                )}
-              </div>
+              <button onClick={() => scrollToLandingSection("landing-contact")} className="min-h-12 rounded-lg border border-[#d9d0bb] bg-white px-5 py-3 text-sm font-black text-[#25352f] shadow-sm">
+                Contact us
+              </button>
             </div>
             <div className="mt-4 rounded-lg border border-[#ded8c7] bg-white p-3 shadow-sm">
               <div className="flex flex-wrap items-end justify-between gap-2">
@@ -1640,7 +1600,7 @@ function VisionLandingPanel({
             <div className="relative mx-auto w-full max-w-4xl space-y-4">
             <div className="grid gap-3 xl:grid-cols-[0.9fr_1.1fr]">
               <article id="landing-demo" className="rounded-lg border-2 border-[#ded8c7] bg-white p-4 shadow-sm">
-                <p className="text-xs font-black uppercase tracking-[0.14em] text-[#6d3ed1]">Route 1 - Demo mode</p>
+                <p className="text-xs font-black uppercase tracking-[0.14em] text-[#6d3ed1]">Demo</p>
                 <h3 className="mt-2 text-2xl font-black text-[#17231f]">Explore with sample data</h3>
                 <p className="mt-2 text-sm font-semibold leading-5 text-[#5f6a65]">
                   Use the sample family to test kid missions, parent approvals, points, Kid Bank, pets, and badges.
@@ -1655,52 +1615,32 @@ function VisionLandingPanel({
                 </div>
               </article>
               <article id="landing-real-app" className="rounded-lg border-2 border-[#165a4b] bg-[#f7fffb] p-4 shadow-sm">
-                <p className="text-xs font-black uppercase tracking-[0.14em] text-[#165a4b]">Route 2 - Real app mode</p>
-                <h3 className="mt-2 text-2xl font-black text-[#17231f]">Get your free family account</h3>
+                <h3 className="text-2xl font-black text-[#17231f]">Join the family launch list</h3>
                 <p className="mt-2 text-sm font-semibold leading-5 text-[#5f6a65]">
-                  Create or sign in to a parent account, then customize kids, pets, goals, photos, points, and Kid Bank.
+                  Be first to hear when free family accounts are ready, plus early rewards and launch updates.
                 </p>
-                {!cloudAccountEmail && (
-                  <div className="mt-4 grid gap-2">
-                    <input
-                      id="landing-real-parent-email"
-                      value={accountDraft.email}
-                      onChange={(event) => setAccountDraft({ ...accountDraft, email: event.target.value })}
-                      className="min-h-11 rounded-lg border border-[#b8cfc6] bg-white px-3 text-sm font-bold"
-                      inputMode="email"
-                      placeholder="Parent email"
-                      type="email"
-                    />
-                    <input
-                      value={accountDraft.password}
-                      onChange={(event) => setAccountDraft({ ...accountDraft, password: event.target.value })}
-                      className="min-h-11 rounded-lg border border-[#b8cfc6] bg-white px-3 text-sm font-bold"
-                      placeholder="Password"
-                      type="password"
-                    />
-                    <div className="grid gap-2 sm:grid-cols-2">
-                      <button onClick={createParentAccount} disabled={accountStatus === "loading"} className="min-h-11 rounded-lg bg-[#165a4b] px-4 py-2 text-sm font-black text-white disabled:opacity-60">
-                        Create account
-                      </button>
-                      <button onClick={signInParentAccount} disabled={accountStatus === "loading"} className="min-h-11 rounded-lg border border-[#b8cfc6] bg-white px-4 py-2 text-sm font-black text-[#165a4b] disabled:opacity-60">
-                        Sign in
-                      </button>
-                    </div>
-                  </div>
-                )}
-                {!cloudAccountEmail && (
-                  <button onClick={() => scrollToLandingSection("landing-updates")} className="mt-3 min-h-11 w-full rounded-lg border border-[#b8cfc6] bg-white px-4 py-2 text-sm font-black text-[#165a4b]">
-                    Join launch updates
+                <div className="mt-4 grid gap-2">
+                  <input
+                    value={launchInterest.email}
+                    onChange={(event) => setLaunchInterest((draft) => ({ ...draft, email: event.target.value }))}
+                    className="min-h-11 rounded-lg border border-[#b8cfc6] bg-white px-3 text-sm font-bold"
+                    inputMode="email"
+                    placeholder="Parent email"
+                    type="email"
+                  />
+                  <input
+                    value={launchInterest.city}
+                    onChange={(event) => setLaunchInterest((draft) => ({ ...draft, city: event.target.value }))}
+                    className="min-h-11 rounded-lg border border-[#b8cfc6] bg-white px-3 text-sm font-bold"
+                    placeholder="City"
+                  />
+                  <button onClick={joinLaunchList} disabled={launchInterestStatus === "saving"} className="min-h-11 rounded-lg bg-[#165a4b] px-4 py-2 text-sm font-black text-white disabled:opacity-60">
+                    {launchInterestStatus === "saving" ? "Saving..." : "Join launch updates"}
                   </button>
-                )}
-                {cloudAccountEmail && (
-                  <button onClick={openRealFamilySetup} className="mt-4 min-h-11 rounded-lg bg-[#165a4b] px-4 py-2 text-sm font-black text-white">
-                    Open family setup
-                  </button>
-                )}
-                {accountMessage && (
-                  <p className={`mt-3 text-sm font-bold ${accountStatus === "error" ? "text-[#b44421]" : "text-[#165a4b]"}`}>
-                    {accountMessage}
+                </div>
+                {launchInterestMessage && (
+                  <p className={`mt-3 text-sm font-bold ${launchInterestStatus === "error" ? "text-[#b44421]" : "text-[#165a4b]"}`}>
+                    {launchInterestMessage}
                   </p>
                 )}
               </article>
@@ -1937,7 +1877,7 @@ function VisionLandingPanel({
         </div>
       </section>
 
-      <section className="rounded-lg border border-[#ded8c7] bg-[#f7fbff] p-5 shadow-sm sm:p-6">
+      <section id="landing-contact" className="scroll-mt-36 rounded-lg border border-[#ded8c7] bg-[#f7fbff] p-5 shadow-sm sm:p-6">
         <div className="grid gap-5 lg:grid-cols-[0.85fr_1.15fr]">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.18em] text-[#165a4b]">Contact TailTots</p>
