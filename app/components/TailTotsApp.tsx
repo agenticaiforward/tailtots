@@ -1504,7 +1504,11 @@ function VisionLandingPanel({
   }
 
   const scrollToLandingSection = (sectionId: string) => {
-    document.getElementById(sectionId)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    const target = document.getElementById(sectionId);
+    if (!target) return;
+    const fixedHeaderOffset = 150;
+    const targetTop = target.getBoundingClientRect().top + window.scrollY - fixedHeaderOffset;
+    window.scrollTo({ top: Math.max(0, targetTop), behavior: "smooth" });
   };
 
   return (
@@ -1512,11 +1516,11 @@ function VisionLandingPanel({
       <nav className="sticky top-[92px] z-30 -mx-2 rounded-lg border border-[#ded8c7] bg-white/95 px-2 py-2 shadow-sm backdrop-blur sm:mx-0" aria-label="TailTots page shortcuts">
         <div className="flex gap-2 overflow-x-auto">
           {[
-            ["Home", "landing-home"],
-            ["Demo", "landing-demo"],
-            ["Real App", "landing-real-app"],
-            ["How It Works", "landing-how-it-works"],
-            ["Updates", "landing-updates"],
+            ["Start Here", "landing-home"],
+            ["Try Sample Family", "landing-demo"],
+            ["Create Your Family", "landing-real-app"],
+            ["Kid Tabletop Demo", "landing-how-it-works"],
+            ["Join Updates", "landing-updates"],
           ].map(([label, sectionId]) => (
             <button
               key={sectionId}
@@ -1551,13 +1555,13 @@ function VisionLandingPanel({
             </p>
             <div className="mt-4 flex flex-wrap gap-3">
               <button onClick={() => scrollToLandingSection("landing-demo")} className="min-h-12 rounded-lg bg-[#ffd166] px-5 py-3 text-sm font-black text-[#17231f] shadow-sm">
-                Try Demo
+                Try Sample Family
               </button>
               <button onClick={() => scrollToLandingSection("landing-real-app")} className="min-h-12 rounded-lg bg-[#165a4b] px-5 py-3 text-sm font-black text-white shadow-sm">
-                Create Family Account
+                Create Your Family
               </button>
               <button onClick={() => scrollToLandingSection("landing-how-it-works")} className="min-h-12 rounded-lg border border-[#dce6f8] bg-white px-5 py-3 text-sm font-black text-[#111b4f] shadow-sm">
-                See How It Works
+                See Kid Tabletop Demo
               </button>
             </div>
             <div id="landing-updates" className="mt-4 max-w-2xl scroll-mt-36 rounded-lg border border-[#c9d8f8] bg-white p-4 shadow-sm">
@@ -1617,7 +1621,7 @@ function VisionLandingPanel({
 
             <div className="relative mx-auto w-full max-w-4xl space-y-4">
             <div className="grid gap-3 xl:grid-cols-[0.9fr_1.1fr]">
-              <article id="landing-demo" className="scroll-mt-36 rounded-lg border-2 border-[#ded8c7] bg-white p-4 shadow-sm">
+              <article id="landing-demo" className="rounded-lg border-2 border-[#ded8c7] bg-white p-4 shadow-sm">
                 <p className="text-xs font-black uppercase tracking-[0.14em] text-[#6d3ed1]">Route 1 - Demo mode</p>
                 <h3 className="mt-2 text-2xl font-black text-[#17231f]">Explore with sample data</h3>
                 <p className="mt-2 text-sm font-semibold leading-5 text-[#5f6a65]">
@@ -1632,7 +1636,7 @@ function VisionLandingPanel({
                   </button>
                 </div>
               </article>
-              <article id="landing-real-app" className="scroll-mt-36 rounded-lg border-2 border-[#165a4b] bg-[#f7fffb] p-4 shadow-sm">
+              <article id="landing-real-app" className="rounded-lg border-2 border-[#165a4b] bg-[#f7fffb] p-4 shadow-sm">
                 <p className="text-xs font-black uppercase tracking-[0.14em] text-[#165a4b]">Route 2 - Real app mode</p>
                 <h3 className="mt-2 text-2xl font-black text-[#17231f]">Sign up and start your family</h3>
                 <p className="mt-2 text-sm font-semibold leading-5 text-[#5f6a65]">
@@ -1678,7 +1682,7 @@ function VisionLandingPanel({
                 )}
               </article>
             </div>
-            <div id="landing-how-it-works" className="relative mx-auto scroll-mt-36 rounded-[2rem] border border-black/10 bg-[#0f1513] p-3 shadow-2xl sm:p-5" aria-label="Tabletop smart display TailTots slideshow">
+            <div id="landing-how-it-works" className="relative mx-auto rounded-[2rem] border border-black/10 bg-[#0f1513] p-3 shadow-2xl sm:p-5" aria-label="Tabletop smart display TailTots slideshow">
               <div className="absolute left-5 top-4 z-10 rounded-lg bg-[#ffd166] px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-[#17231f] shadow-lg">
                 Kid tabletop screen
               </div>
