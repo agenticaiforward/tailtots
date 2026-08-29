@@ -10,6 +10,7 @@ import {
   signInParentAccount,
   signOutParentAccount,
   signUpParentAccount,
+  submitFeedback,
   submitLaunchInterest,
   supabase,
 } from "@/lib/supabase";
@@ -1086,12 +1087,6 @@ export function TailTotsApp() {
             <button onClick={openRouteChooser} className="min-h-10 rounded-lg border border-[#d9d0bb] bg-white px-3 py-2 text-xs font-black text-[#25352f]">
               Start page
             </button>
-            <button onClick={() => switchRole("child")} className="min-h-10 rounded-lg bg-[#ffd166] px-3 py-2 text-xs font-black text-[#17231f]">
-              Kid view
-            </button>
-            <button onClick={() => switchRole("parent")} className="min-h-10 rounded-lg border border-[#dce6f8] bg-[#f7fbff] px-3 py-2 text-xs font-black text-[#1f3b7a]">
-              Parent view
-            </button>
             <button onClick={openRealFamilySetup} className="min-h-10 rounded-lg bg-[#165a4b] px-3 py-2 text-xs font-black text-white">
               Family setup
             </button>
@@ -1377,6 +1372,9 @@ function VisionLandingPanel({
   const [launchInterest, setLaunchInterest] = useState({ email: "", city: "" });
   const [launchInterestStatus, setLaunchInterestStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [launchInterestMessage, setLaunchInterestMessage] = useState("");
+  const [feedbackDraft, setFeedbackDraft] = useState({ email: "", message: "" });
+  const [feedbackStatus, setFeedbackStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [feedbackMessage, setFeedbackMessage] = useState("");
   const careLoop = [
     ["1", "Parents choose the goal", "Pick the pet-care habit, life skill, reward, or giving purpose."],
     ["2", "Kids get a mission", "TailTots turns it into an age-fit action they can understand."],
@@ -1512,6 +1510,24 @@ function VisionLandingPanel({
     } catch (error) {
       setLaunchInterestStatus("error");
       setLaunchInterestMessage(error instanceof Error ? error.message : "Could not save this signup yet.");
+    }
+  }
+
+  async function sendWebsiteFeedback() {
+    setFeedbackStatus("saving");
+    setFeedbackMessage("");
+    try {
+      const result = await submitFeedback({
+        email: feedbackDraft.email,
+        message: feedbackDraft.message,
+        source: "vision-contact",
+      });
+      setFeedbackStatus("saved");
+      setFeedbackMessage(result.mode === "cloud" ? "Thanks - your note reached TailTots." : "Thanks - your note was saved on this device.");
+      setFeedbackDraft({ email: "", message: "" });
+    } catch (error) {
+      setFeedbackStatus("error");
+      setFeedbackMessage(error instanceof Error ? error.message : "Could not send this note yet.");
     }
   }
 
@@ -1918,6 +1934,56 @@ function VisionLandingPanel({
             </div>
           </div>
           <button onClick={openKidDemo} className="min-h-12 rounded-lg bg-[#165a4b] px-6 py-3 text-sm font-black text-white">Explore the app</button>
+        </div>
+      </section>
+
+      <section className="rounded-lg border border-[#ded8c7] bg-[#f7fbff] p-5 shadow-sm sm:p-6">
+        <div className="grid gap-5 lg:grid-cols-[0.85fr_1.15fr]">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-[#165a4b]">Contact TailTots</p>
+            <h3 className="mt-2 text-2xl font-black sm:text-3xl">Questions, feedback, or partnership ideas?</h3>
+            <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-[#4f625b]">
+              Send a note here or email <a className="font-black text-[#165a4b] underline decoration-[#ffd166] decoration-2 underline-offset-4" href="mailto:hello@tailtots.com">hello@tailtots.com</a>. A product email keeps TailTots professional while protecting your personal inbox.
+            </p>
+          </div>
+          <div className="rounded-lg border border-[#c9d8f8] bg-white p-4 shadow-sm">
+            <div className="grid gap-2 sm:grid-cols-2">
+              <input
+                value={feedbackDraft.email}
+                onChange={(event) => setFeedbackDraft((draft) => ({ ...draft, email: event.target.value }))}
+                className="min-h-11 rounded-lg border border-[#c9d8f8] px-3 text-sm font-bold"
+                inputMode="email"
+                placeholder="Your email, optional"
+                type="email"
+              />
+              <input
+                className="min-h-11 rounded-lg border border-[#c9d8f8] px-3 text-sm font-bold"
+                value="TailTots website feedback"
+                readOnly
+                aria-label="Feedback topic"
+              />
+            </div>
+            <textarea
+              value={feedbackDraft.message}
+              onChange={(event) => setFeedbackDraft((draft) => ({ ...draft, message: event.target.value }))}
+              className="mt-2 min-h-28 w-full rounded-lg border border-[#c9d8f8] px-3 py-3 text-sm font-bold"
+              placeholder="Ask a question, share feedback, or tell us what would make TailTots useful for your family."
+            />
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              <button
+                onClick={sendWebsiteFeedback}
+                disabled={feedbackStatus === "saving"}
+                className="min-h-11 rounded-lg bg-[#165a4b] px-4 py-2 text-sm font-black text-white disabled:opacity-60"
+              >
+                {feedbackStatus === "saving" ? "Sending..." : "Send feedback"}
+              </button>
+              {feedbackMessage && (
+                <p className={`text-sm font-bold ${feedbackStatus === "error" ? "text-[#b44421]" : "text-[#165a4b]"}`}>
+                  {feedbackMessage}
+                </p>
+              )}
+            </div>
+          </div>
         </div>
       </section>
     </section>

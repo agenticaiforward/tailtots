@@ -206,6 +206,16 @@ create table public.launch_interest_signups (
   constraint launch_interest_signups_email_format check (email ~* '^[^@\s]+@[^@\s]+\.[^@\s]+$')
 );
 
+create table public.website_feedback (
+  id uuid primary key default gen_random_uuid(),
+  email text,
+  message text not null,
+  source text not null default 'tailtots-website',
+  created_at timestamptz not null default now(),
+  constraint website_feedback_email_format check (email is null or email ~* '^[^@\s]+@[^@\s]+\.[^@\s]+$'),
+  constraint website_feedback_message_length check (char_length(trim(message)) >= 8)
+);
+
 create table public.family_account_snapshots (
   id uuid primary key default gen_random_uuid(),
   auth_user_id uuid not null unique,
@@ -235,6 +245,7 @@ create index badge_awards_family_id_child_id_idx on public.badge_awards(family_i
 create index neighborhood_jobs_family_id_status_idx on public.neighborhood_jobs(family_id, status);
 create index launch_interest_signups_created_at_idx on public.launch_interest_signups(created_at desc);
 create unique index launch_interest_signups_email_source_idx on public.launch_interest_signups(lower(email), source);
+create index website_feedback_created_at_idx on public.website_feedback(created_at desc);
 create index family_account_snapshots_updated_at_idx on public.family_account_snapshots(updated_at desc);
 
 alter table public.families enable row level security;
@@ -256,6 +267,7 @@ alter table public.memory_moments enable row level security;
 alter table public.badge_awards enable row level security;
 alter table public.neighborhood_jobs enable row level security;
 alter table public.launch_interest_signups enable row level security;
+alter table public.website_feedback enable row level security;
 alter table public.family_account_snapshots enable row level security;
 
 create or replace function public.current_parent_family_ids()
@@ -357,6 +369,10 @@ with check (family_id in (select public.current_parent_family_ids()));
 
 create policy "Anyone can join the TailTots launch list"
 on public.launch_interest_signups for insert
+with check (true);
+
+create policy "Anyone can send TailTots website feedback"
+on public.website_feedback for insert
 with check (true);
 
 create policy "Parents can manage their family account snapshot"

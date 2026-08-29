@@ -30,6 +30,12 @@ export type LaunchInterestInput = {
   source?: string;
 };
 
+export type FeedbackInput = {
+  email?: string;
+  message: string;
+  source?: string;
+};
+
 export async function submitLaunchInterest(input: LaunchInterestInput) {
   const normalizedEmail = input.email.trim().toLowerCase();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
@@ -49,6 +55,34 @@ export async function submitLaunchInterest(input: LaunchInterestInput) {
   }
 
   const { error } = await supabase.from("launch_interest_signups").insert(payload);
+  if (error) throw error;
+  return { mode: "cloud" as const };
+}
+
+export async function submitFeedback(input: FeedbackInput) {
+  const normalizedEmail = input.email?.trim().toLowerCase() || null;
+  const normalizedMessage = input.message.trim();
+
+  if (normalizedEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+    throw new Error("Enter a valid email address, or leave email blank.");
+  }
+  if (normalizedMessage.length < 8) {
+    throw new Error("Write a short question or feedback note first.");
+  }
+
+  const payload = {
+    email: normalizedEmail,
+    message: normalizedMessage,
+    source: input.source ?? "tailtots-website",
+  };
+
+  if (!supabase) {
+    const saved = JSON.parse(localStorage.getItem("tailtots-feedback") ?? "[]") as typeof payload[];
+    localStorage.setItem("tailtots-feedback", JSON.stringify([payload, ...saved].slice(0, 50)));
+    return { mode: "local" as const };
+  }
+
+  const { error } = await supabase.from("website_feedback").insert(payload);
   if (error) throw error;
   return { mode: "cloud" as const };
 }
