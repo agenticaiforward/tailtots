@@ -13,9 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "TailTots | Real-World Life Skills For Kids",
+  title: "TailTots | Parent-Guided Real-World Development For Kids",
   description:
-    "A parent-controlled family app that turns pets, chores, kindness, money skills, and community activities into real-world life skills for kids.",
+    "A parent-guided real-world development platform where kids learn to care, connect, earn, contribute, and create through real-life experiences.",
   manifest: "/manifest.webmanifest",
   icons: {
     icon: "/favicon.svg",

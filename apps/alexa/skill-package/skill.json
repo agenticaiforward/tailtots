@@ -4,19 +4,21 @@
       "locales": {
         "en-US": {
           "name": "TailTots",
-          "summary": "Family pet care reminders and kid-friendly mission check-ins.",
-          "description": "TailTots helps families hear today's pet care missions, check pet routines, and keep kids engaged with parent-guided responsibility habits.",
+          "summary": "Parent-guided real-world missions for kids and families.",
+          "description": "TailTots helps kids learn to care, connect, earn, contribute, and create through real-life experiences while parents stay connected and in control.",
           "examplePhrases": [
             "Alexa, open TailTots",
             "Alexa, ask TailTots what's next",
-            "Alexa, ask TailTots for today's pet missions"
+            "Alexa, ask TailTots for today's missions"
           ],
           "keywords": [
             "pet care",
             "family",
             "kids",
             "chores",
-            "responsibility"
+            "responsibility",
+            "money skills",
+            "community"
           ]
         }
       },

@@ -78,16 +78,20 @@ machine secrets only.
 
 Short description:
 
-TailTots helps families teach kids pet care, responsibility, kindness, and money
-habits through parent-approved missions, badges, rewards, and neighborhood jobs.
+TailTots helps kids care, connect, earn, contribute, and create through
+parent-guided real-world missions.
 
 Long description:
 
-TailTots is a family pet-care app built for children, parents, and trusted
-neighbors. Kids complete age-appropriate pet care missions, earn points, unlock
-badges, and learn values like empathy, follow-through, fairness, and helpfulness.
-Parents control child profiles, approve work, assign or hide jobs, balance tasks
-across multiple children, and manage rewards from one simple dashboard.
+TailTots is a parent-guided real-world development platform built for kids,
+families, and trusted communities. Kids complete age-appropriate missions,
+earn points, unlock badges, manage Kid Bank goals, contribute to community
+needs, and learn values like responsibility, empathy, follow-through,
+fairness, and helpfulness.
+
+Parents control child profiles, approve work, guide connections, assign or hide
+jobs, balance tasks across multiple children, and manage rewards from one
+simple dashboard.
 
 TailTots works well on phones, tablets, and kitchen counter displays so families
 can use it where pet care actually happens.

@@ -1043,7 +1043,7 @@ export function TailTotsApp() {
             <img src="/tailtots-logo.png" alt="TailTots logo" className="h-12 w-auto shrink-0 rounded-lg object-contain sm:h-14" />
             <div className="min-w-0">
               <h1 className="text-lg font-black leading-tight sm:text-xl">TailTots</h1>
-              <p className="hidden text-xs font-bold text-[#69736f] sm:block">Real-world life skills for kids.</p>
+              <p className="hidden text-xs font-bold text-[#69736f] sm:block">Parent-guided real-world growth.</p>
               {!isRouteChooser && (
                 <p className="mt-1 inline-flex max-w-full items-center rounded-full bg-[#fff4d8] px-2 py-1 text-[11px] font-black leading-4 text-[#7a4b12] sm:hidden">
                   <span className="truncate">{operatorLabel}</span>
@@ -1509,16 +1509,22 @@ function VisionLandingPanel({
         <div className="grid min-h-[calc(100vh-7rem)] gap-6 p-5 sm:p-7 lg:grid-cols-[0.78fr_1.22fr] lg:items-start xl:p-8">
           <div className="min-w-0">
             <h2 className="max-w-3xl text-4xl font-black leading-tight text-[#111b4f] sm:text-5xl xl:text-[4rem]">
-              Turn everyday moments into life lessons.
+              Grow into the world - with parents by their side.
             </h2>
             <p className="mt-4 max-w-2xl text-base font-semibold leading-7 text-[#31405f]">
-              TailTots helps kids grow through real-world responsibility, from caring for pets and helping at home to kindness, money skills, and community activities. Parents turn everyday responsibilities into fun, guided missions kids can take ownership of.
+              TailTots is a parent-guided real-world development platform where kids learn to care, connect, earn, and create through real-life experiences.
+            </p>
+            <p className="mt-3 max-w-2xl text-base font-semibold leading-7 text-[#31405f]">
+              From caring for pets and helping at home to making friends, serving the community, managing money, and exploring entrepreneurship, kids take ownership while parents stay connected and in control.
             </p>
             <div className="mt-4 flex max-w-2xl flex-wrap gap-x-2 gap-y-1 text-sm font-black text-[#111b4f]">
-              {["🐾 Pet Care", "🏠 Home Chores", "❤️ Kindness", "💰 Money Skills", "🌎 Community"].map((item, index) => (
+              {["Care", "Connect", "Earn", "Contribute", "Create"].map((item, index) => (
                 <span key={item} className="label-nowrap">{item}{index < 4 ? " ·" : ""}</span>
               ))}
             </div>
+            <p className="mt-5 max-w-2xl text-lg font-black leading-7 text-[#111b4f]">
+              Don&apos;t wait until kids enter social media to teach them how to navigate the social world.
+            </p>
             <div className="mt-6 flex flex-wrap gap-3">
               <button onClick={() => setEchoSlideIndex((echoSlideIndex + 1) % echoSlides.length)} className="min-h-12 rounded-lg bg-[#6d3ed1] px-5 py-3 text-sm font-black text-white shadow-sm">
                 See How TailTots Works
@@ -1870,7 +1876,7 @@ function VisionLandingPanel({
               TailTots helps kids build responsibility, kindness, confidence, money skills, and independence through real-world experiences.
             </p>
             <div className="mt-4 flex flex-wrap gap-2 text-xs font-black text-[#4f625b]">
-              {['Real-world life skills', 'Pets', 'Chores', 'Kindness', 'Community', 'Parent control'].map((item) => (
+              {['Care', 'Connect', 'Earn', 'Contribute', 'Create', 'Parent control'].map((item) => (
                 <span key={item} className="rounded-full bg-[#f8f6ed] px-3 py-2">{item}</span>
               ))}
             </div>

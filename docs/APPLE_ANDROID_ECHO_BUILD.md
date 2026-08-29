@@ -63,8 +63,8 @@ npm run alexa:validate
 The included custom skill supports:
 
 - Launching TailTots
-- Asking for today's missions
-- Starting a pet check
+- Asking for today's care, earning, and contribution missions
+- Starting a parent-guided real-world mission
 
 Before production submission, replace the placeholder Lambda ARN in
 `apps/alexa/skill-package/skill.json` with the deployed Lambda ARN and connect

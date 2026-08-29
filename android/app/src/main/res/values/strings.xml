@@ -1,6 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
     <string name="app_name">TailTots</string>
+    <string name="app_description">Parent-guided real-world development where kids learn to care, connect, earn, contribute, and create.</string>
     <string name="title_activity_main">TailTots</string>
     <string name="package_name">com.tailtots.family</string>
     <string name="custom_url_scheme">com.tailtots.family</string>

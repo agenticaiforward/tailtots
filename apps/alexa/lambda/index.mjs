@@ -1,7 +1,7 @@
 const demoMissions = [
   "Check food and water with a grown-up nearby.",
-  "Look for one comfort clue: calm body, clean space, or fresh hay.",
-  "Tell a parent what you noticed so they can approve the mission.",
+  "Help at home, then tell a parent what you finished.",
+  "Choose one way to earn, save, contribute, or create today.",
 ];
 
 export async function handler(event) {
@@ -9,11 +9,11 @@ export async function handler(event) {
   const intentName = request.intent?.name;
 
   if (request.type === "LaunchRequest") {
-    return speak("Welcome to TailTots. You can ask what's next, or start a pet check.");
+    return speak("Welcome to TailTots. Kids grow into the world with parents by their side. You can ask what's next, or start today's mission.");
   }
 
   if (intentName === "GetTodayMissionsIntent") {
-    return speak(`Today's TailTots missions are: ${demoMissions.join(" ")}`);
+    return speak(`Today's TailTots missions help kids care, connect, earn, contribute, and create. ${demoMissions.join(" ")}`);
   }
 
   if (intentName === "PetCheckIntent") {

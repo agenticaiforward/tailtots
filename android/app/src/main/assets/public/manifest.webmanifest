@@ -1,7 +1,7 @@
 {
   "name": "TailTots",
   "short_name": "TailTots",
-  "description": "Real-world life skills for kids, powered by pets, chores, kindness, money skills, and community.",
+  "description": "A parent-guided real-world development platform where kids learn to care, connect, earn, contribute, and create.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
@@ -21,14 +21,14 @@
     {
       "name": "Today",
       "short_name": "Today",
-      "description": "Open the daily pet care mission board.",
+      "description": "Open today's care, earning, and contribution missions.",
       "url": "/?tab=missions",
       "icons": [{ "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml" }]
     },
     {
       "name": "Home Hub",
       "short_name": "Hub",
-      "description": "Open the smart display family care board.",
+      "description": "Open the family growth and real-world mission hub.",
       "url": "/?tab=hub",
       "icons": [{ "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml" }]
     }
