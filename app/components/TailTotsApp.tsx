@@ -1503,13 +1503,37 @@ function VisionLandingPanel({
     }
   }
 
+  const scrollToLandingSection = (sectionId: string) => {
+    document.getElementById(sectionId)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
   return (
     <section className="space-y-5">
-      <div className="overflow-hidden rounded-lg border border-[#ded8c7] bg-[#f7fbff] text-[#17231f] shadow-sm">
+      <nav className="sticky top-[92px] z-30 -mx-2 rounded-lg border border-[#ded8c7] bg-white/95 px-2 py-2 shadow-sm backdrop-blur sm:mx-0" aria-label="TailTots page shortcuts">
+        <div className="flex gap-2 overflow-x-auto">
+          {[
+            ["Home", "landing-home"],
+            ["Demo", "landing-demo"],
+            ["Real App", "landing-real-app"],
+            ["How It Works", "landing-how-it-works"],
+            ["Updates", "landing-updates"],
+          ].map(([label, sectionId]) => (
+            <button
+              key={sectionId}
+              onClick={() => scrollToLandingSection(sectionId)}
+              className="min-h-10 shrink-0 rounded-lg border border-[#dce6f8] bg-[#f7fbff] px-4 py-2 text-sm font-black text-[#111b4f] hover:border-[#165a4b] hover:bg-[#e7f4ef]"
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </nav>
+
+      <div id="landing-home" className="scroll-mt-36 overflow-hidden rounded-lg border border-[#ded8c7] bg-[#f7fbff] text-[#17231f] shadow-sm">
         <div className="grid gap-5 p-5 sm:p-6 lg:grid-cols-[0.82fr_1.18fr] lg:items-start xl:p-7">
           <div className="min-w-0">
             <h2 className="max-w-3xl text-4xl font-black leading-[1.05] text-[#111b4f] sm:text-5xl xl:text-[3.35rem]">
-              Grow into the world - with parents by their side.
+              Grow into the real world with parents by their side.
             </h2>
             <p className="mt-4 max-w-2xl text-[15px] font-semibold leading-6 text-[#31405f] sm:text-base sm:leading-7">
               TailTots is a parent-guided real-world development platform where kids learn to care, connect, earn, and create through real-life experiences.
@@ -1526,11 +1550,17 @@ function VisionLandingPanel({
               Don&apos;t wait until kids enter social media to teach them how to navigate the social world.
             </p>
             <div className="mt-4 flex flex-wrap gap-3">
-              <button onClick={() => setEchoSlideIndex((echoSlideIndex + 1) % echoSlides.length)} className="min-h-12 rounded-lg bg-[#6d3ed1] px-5 py-3 text-sm font-black text-white shadow-sm">
-                See How TailTots Works
+              <button onClick={() => scrollToLandingSection("landing-demo")} className="min-h-12 rounded-lg bg-[#ffd166] px-5 py-3 text-sm font-black text-[#17231f] shadow-sm">
+                Try Demo
+              </button>
+              <button onClick={() => scrollToLandingSection("landing-real-app")} className="min-h-12 rounded-lg bg-[#165a4b] px-5 py-3 text-sm font-black text-white shadow-sm">
+                Create Family Account
+              </button>
+              <button onClick={() => scrollToLandingSection("landing-how-it-works")} className="min-h-12 rounded-lg border border-[#dce6f8] bg-white px-5 py-3 text-sm font-black text-[#111b4f] shadow-sm">
+                See How It Works
               </button>
             </div>
-            <div className="mt-4 max-w-2xl rounded-lg border border-[#c9d8f8] bg-white p-4 shadow-sm">
+            <div id="landing-updates" className="mt-4 max-w-2xl scroll-mt-36 rounded-lg border border-[#c9d8f8] bg-white p-4 shadow-sm">
               <p className="text-xs font-black uppercase tracking-[0.14em] text-[#165a4b]">Updates, discounts, and rewards</p>
               <div className="mt-3 grid gap-2 sm:grid-cols-2">
                 <input
@@ -1585,9 +1615,9 @@ function VisionLandingPanel({
             </div>
           </div>
 
-          <div className="relative mx-auto w-full max-w-4xl space-y-4">
+            <div className="relative mx-auto w-full max-w-4xl space-y-4">
             <div className="grid gap-3 xl:grid-cols-[0.9fr_1.1fr]">
-              <article className="rounded-lg border-2 border-[#ded8c7] bg-white p-4 shadow-sm">
+              <article id="landing-demo" className="scroll-mt-36 rounded-lg border-2 border-[#ded8c7] bg-white p-4 shadow-sm">
                 <p className="text-xs font-black uppercase tracking-[0.14em] text-[#6d3ed1]">Route 1 - Demo mode</p>
                 <h3 className="mt-2 text-2xl font-black text-[#17231f]">Explore with sample data</h3>
                 <p className="mt-2 text-sm font-semibold leading-5 text-[#5f6a65]">
@@ -1602,7 +1632,7 @@ function VisionLandingPanel({
                   </button>
                 </div>
               </article>
-              <article className="rounded-lg border-2 border-[#165a4b] bg-[#f7fffb] p-4 shadow-sm">
+              <article id="landing-real-app" className="scroll-mt-36 rounded-lg border-2 border-[#165a4b] bg-[#f7fffb] p-4 shadow-sm">
                 <p className="text-xs font-black uppercase tracking-[0.14em] text-[#165a4b]">Route 2 - Real app mode</p>
                 <h3 className="mt-2 text-2xl font-black text-[#17231f]">Sign up and start your family</h3>
                 <p className="mt-2 text-sm font-semibold leading-5 text-[#5f6a65]">
@@ -1648,11 +1678,14 @@ function VisionLandingPanel({
                 )}
               </article>
             </div>
-            <div className="relative mx-auto rounded-[2.25rem] border border-black/10 bg-[#0f1513] p-3 shadow-2xl sm:p-5" aria-label="Echo Show style TailTots slideshow">
+            <div id="landing-how-it-works" className="relative mx-auto scroll-mt-36 rounded-[2rem] border border-black/10 bg-[#0f1513] p-3 shadow-2xl sm:p-5" aria-label="Tabletop smart display TailTots slideshow">
+              <div className="absolute left-5 top-4 z-10 rounded-lg bg-[#ffd166] px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-[#17231f] shadow-lg">
+                Kid tabletop screen
+              </div>
               <div className="absolute right-4 top-4 z-10 rounded-lg bg-white px-4 py-3 text-sm font-black text-[#111b4f] shadow-lg">
                 &quot;Alexa, open TailTots.&quot;
               </div>
-              <div className="overflow-hidden rounded-[1.45rem] bg-[#f8f6ed] p-4 text-[#17231f] ring-1 ring-black/20 sm:p-5">
+              <div className="overflow-hidden rounded-[1.2rem] bg-[#f8f6ed] p-4 pt-16 text-[#17231f] ring-1 ring-black/20 sm:p-5 sm:pt-16">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="text-xs font-black uppercase tracking-[0.14em]" style={{ color: activeEchoSlide.color }}>{activeEchoSlide.eyebrow}</p>
@@ -1663,7 +1696,7 @@ function VisionLandingPanel({
                   </span>
                 </div>
 
-                <div className="mt-4 grid gap-3 lg:grid-cols-[0.72fr_1.28fr]">
+                <div className="mt-4 grid gap-3 lg:grid-cols-[0.58fr_1.42fr]">
                   <div className="rounded-lg bg-white p-3 shadow-sm">
                     <ProfilePhoto label="TailTots pet" initial="J" colors={petLooks.jack.colors} size="lg" variant="pet" petKind="guinea" />
                     <p className="mt-2 text-center text-xs font-black uppercase tracking-[0.12em] text-[#69736f]">Jack and Jamie</p>
@@ -1712,8 +1745,8 @@ function VisionLandingPanel({
             </div>
             <div className="mx-auto h-5 w-64 rounded-b-[2rem] bg-[#0a0f0d] shadow-xl" />
             <div className="mx-auto mt-4 rounded-lg border border-[#dce6f8] bg-white/90 p-4 shadow-sm">
-              <p className="text-center text-lg font-black text-[#111b4f]">Kids can hear it. See it. Do it.</p>
-              <p className="text-center text-sm font-black text-[#111b4f]">&quot;Alexa, open TailTots.&quot; to Choose Mission to Follow Steps to Complete to Earn to Save or Give</p>
+              <p className="text-center text-lg font-black text-[#111b4f]">Parent phone for setup. Kid tabletop screen for missions.</p>
+              <p className="text-center text-sm font-black text-[#111b4f]">Voice starts the mission, the counter screen shows each step, and parents stay in control.</p>
             </div>
           </div>
         </div>
