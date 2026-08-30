@@ -1561,20 +1561,6 @@ function VisionLandingPanel({
             <p className="mt-4 max-w-2xl text-base font-black leading-6 text-[#111b4f] sm:text-lg sm:leading-7">
               Don&apos;t wait until kids enter social media to teach them how to navigate the social world.
             </p>
-            <div className="mt-4 grid gap-2 sm:flex sm:flex-wrap sm:gap-3">
-              <button onClick={() => scrollToLandingSection("landing-demo")} className="min-h-12 w-full rounded-lg bg-[#ffd166] px-5 py-3 text-sm font-black text-[#17231f] shadow-sm sm:w-auto">
-                Try Sample Family
-              </button>
-              <button onClick={() => scrollToLandingSection("landing-real-app")} className="min-h-12 w-full rounded-lg bg-[#165a4b] px-5 py-3 text-sm font-black text-white shadow-sm sm:w-auto">
-                Create Your Family
-              </button>
-              <button onClick={() => scrollToLandingSection("landing-how-it-works")} className="min-h-12 w-full rounded-lg border border-[#dce6f8] bg-white px-5 py-3 text-sm font-black text-[#111b4f] shadow-sm sm:w-auto">
-                See Kid Tabletop Demo
-              </button>
-              <button onClick={() => scrollToLandingSection("landing-contact")} className="min-h-12 w-full rounded-lg border border-[#d9d0bb] bg-white px-5 py-3 text-sm font-black text-[#25352f] shadow-sm sm:w-auto">
-                Contact us
-              </button>
-            </div>
             <div className="mt-4 rounded-lg border border-[#ded8c7] bg-white p-3 shadow-sm">
               <div className="flex flex-wrap items-end justify-between gap-2">
                 <div>
