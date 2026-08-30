@@ -1708,8 +1708,7 @@ function VisionLandingPanel({
       <section className="rounded-lg border border-[#ded8c7] bg-white p-4 shadow-sm sm:p-6">
         <div className="max-w-4xl">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-[#0f766e]">Life-skills engine</p>
-            <h3 className="mt-2 text-2xl font-black sm:text-3xl">Every mission helps kids grow.</h3>
+            <h3 className="text-2xl font-black sm:text-3xl">Every mission helps kids grow.</h3>
           </div>
           <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-[#5f6a65]">Start with pet care, then grow into home, money, kindness, and community habits.</p>
         </div>
@@ -1726,8 +1725,7 @@ function VisionLandingPanel({
       <section className="rounded-lg border border-[#ded8c7] bg-white p-4 shadow-sm sm:p-6">
         <div className="max-w-4xl">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-[#0f766e]">How it works</p>
-            <h3 className="mt-2 text-2xl font-black sm:text-3xl">Kids can hear it. See it. Do it.</h3>
+            <h3 className="text-2xl font-black sm:text-3xl">Kids can hear it. See it. Do it.</h3>
           </div>
           <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-[#5f6a65]">A parent chooses the goal. TailTots turns it into clear kid steps, then waits for parent approval.</p>
         </div>
@@ -1746,8 +1744,7 @@ function VisionLandingPanel({
 
       <section className="grid gap-4 lg:grid-cols-[0.85fr_1.15fr]">
         <article className="rounded-lg border border-[#ded8c7] bg-[#fff4d8] p-4 shadow-sm sm:p-6">
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-[#7a4b12]">Kids founders</p>
-          <h3 className="mt-2 text-2xl font-black sm:text-3xl">Founded by kids. Built for kids.</h3>
+          <h3 className="text-2xl font-black sm:text-3xl">Founded by kids. Built for kids.</h3>
           <p className="mt-3 text-sm font-semibold leading-6 text-[#5f4a24]">
             TailTots began with Aarush and Sahasra and a simple idea: what if everyday responsibilities could become something kids actually want to do?
           </p>
@@ -1757,8 +1754,7 @@ function VisionLandingPanel({
         </article>
 
         <article className="rounded-lg border border-[#ded8c7] bg-white p-4 shadow-sm sm:p-6">
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-[#165a4b]">Trust belongs near the top</p>
-          <h3 className="mt-2 text-2xl font-black sm:text-3xl">Safe learning, with parents always in control.</h3>
+          <h3 className="text-2xl font-black sm:text-3xl">Safe learning, with parents always in control.</h3>
           <div className="mt-5 grid gap-3 sm:grid-cols-2">
             {trustCards.map(([title, body]) => (
               <div key={title} className="rounded-lg bg-[#f8f6ed] p-4">
@@ -1774,8 +1770,7 @@ function VisionLandingPanel({
         <article className="rounded-lg border border-[#ded8c7] bg-white p-4 shadow-sm sm:p-5">
           <div className="grid gap-2 sm:flex sm:items-center sm:justify-between sm:gap-3">
             <div>
-              <p className="text-xs font-black uppercase tracking-[0.16em] text-[#2563eb]">Family calendar</p>
-              <h3 className="mt-1 text-xl font-black">Everyone knows what is next.</h3>
+              <h3 className="text-xl font-black">Everyone knows what is next.</h3>
             </div>
             <span className="w-fit rounded-full bg-[#eef2ff] px-3 py-1 text-xs font-black text-[#2563eb]">This week</span>
           </div>
@@ -1791,7 +1786,6 @@ function VisionLandingPanel({
         </article>
 
         <article className="rounded-lg border border-[#ded8c7] bg-[#e7f4ef] p-4 shadow-sm sm:p-5">
-          <p className="text-xs font-black uppercase tracking-[0.16em] text-[#165a4b]">Kid Bank</p>
           <div className="mt-2 flex items-end justify-between gap-3">
             <div>
               <p className="text-3xl font-black">$14.00</p>
@@ -1810,8 +1804,7 @@ function VisionLandingPanel({
         </article>
 
         <article className="rounded-lg border border-[#ded8c7] bg-[#fff4d8] p-4 shadow-sm sm:p-5">
-          <p className="text-xs font-black uppercase tracking-[0.16em] text-[#7a4b12]">Community kindness</p>
-          <h3 className="mt-1 text-xl font-black">Kindness does not stop at the front door.</h3>
+          <h3 className="text-xl font-black">Kindness does not stop at the front door.</h3>
           <p className="mt-2 text-sm font-semibold leading-5 text-[#5f4a24]">
             TailTots can connect families with parent-approved ways to care, learn, and give back through shelters, animal welfare groups, and trusted local missions.
           </p>
@@ -1832,8 +1825,7 @@ function VisionLandingPanel({
         </article>
 
         <article className="rounded-lg border border-[#ded8c7] bg-[#eef2ff] p-4 shadow-sm sm:p-5">
-          <p className="text-xs font-black uppercase tracking-[0.16em] text-[#6d3ed1]">Guided support</p>
-          <h3 className="mt-1 text-xl font-black">AI helps quietly underneath the mission.</h3>
+          <h3 className="text-xl font-black">AI helps quietly underneath the mission.</h3>
           <p className="mt-2 text-sm font-semibold leading-5 text-[#33245f]">
             Kids get simple, age-aware care prompts while parents control setup, approvals, and what becomes visible.
           </p>
@@ -1848,8 +1840,7 @@ function VisionLandingPanel({
       <section className="rounded-lg border border-[#ded8c7] bg-white p-4 shadow-sm sm:p-6">
         <div className="grid gap-5 lg:grid-cols-[1fr_auto] lg:items-center">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-[#165a4b]">Start the first mission</p>
-            <h3 className="mt-2 text-2xl font-black sm:text-3xl">Founded by kids. Built for kids.</h3>
+            <h3 className="text-2xl font-black sm:text-3xl">Founded by kids. Built for kids.</h3>
             <p className="mt-3 max-w-3xl text-sm font-semibold leading-6 text-[#4f625b]">
               TailTots helps kids build responsibility, kindness, confidence, money skills, and independence through real-world experiences.
             </p>
@@ -1866,8 +1857,7 @@ function VisionLandingPanel({
       <section id="landing-contact" className="scroll-mt-36 rounded-lg border border-[#ded8c7] bg-[#f7fbff] p-4 shadow-sm sm:p-6">
         <div className="grid gap-5 lg:grid-cols-[0.85fr_1.15fr]">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-[#165a4b]">Contact TailTots</p>
-            <h3 className="mt-2 text-2xl font-black sm:text-3xl">Questions, feedback, or partnership ideas?</h3>
+            <h3 className="text-2xl font-black sm:text-3xl">Questions, feedback, or partnership ideas?</h3>
             <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-[#4f625b]">
               Send a note here or email <a className="font-black text-[#165a4b] underline decoration-[#ffd166] decoration-2 underline-offset-4" href="mailto:hello@tailtots.com">hello@tailtots.com</a>. A product email keeps TailTots professional while protecting your personal inbox.
             </p>
