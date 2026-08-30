@@ -1155,7 +1155,7 @@ export function TailTotsApp() {
 
           {(role === "child" || isParentUnlocked) && (
           <nav className="grid grid-flow-col gap-2 overflow-x-auto pb-1 lg:grid-flow-row lg:overflow-visible lg:pb-0">
-            {visibleTabs.map((tab) => (
+            {visibleTabs.filter((tab) => tab.id !== "vision").map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
@@ -1541,7 +1541,7 @@ function VisionLandingPanel({
         </button>
       )}
 
-      <div id="landing-home" className="scroll-mt-36 overflow-hidden rounded-lg border border-[#ded8c7] bg-[#f7fbff] text-[#17231f] shadow-sm">
+      <div id="landing-home" className="-mx-3 scroll-mt-36 overflow-hidden border-y border-[#ded8c7] bg-[#f7fbff] text-[#17231f] shadow-sm sm:mx-0 sm:rounded-lg sm:border">
         <div className="grid gap-4 p-4 sm:p-6 lg:grid-cols-[0.82fr_1.18fr] lg:items-start lg:gap-5 xl:p-7">
           <div className="min-w-0">
             <h2 className="max-w-3xl text-[2.35rem] font-black leading-[1.02] text-[#111b4f] sm:text-5xl xl:text-[3.35rem]">
@@ -1705,7 +1705,7 @@ function VisionLandingPanel({
         </div>
       </div>
 
-      <section className="rounded-lg border border-[#ded8c7] bg-white p-4 shadow-sm sm:p-6">
+      <section className="-mx-3 border-y border-[#ded8c7] bg-white p-4 shadow-sm sm:mx-0 sm:rounded-lg sm:border sm:p-6">
         <div className="max-w-4xl">
           <div>
             <h3 className="text-2xl font-black sm:text-3xl">Every mission helps kids grow.</h3>
@@ -1722,7 +1722,7 @@ function VisionLandingPanel({
         </div>
       </section>
 
-      <section className="rounded-lg border border-[#ded8c7] bg-white p-4 shadow-sm sm:p-6">
+      <section className="-mx-3 border-y border-[#ded8c7] bg-white p-4 shadow-sm sm:mx-0 sm:rounded-lg sm:border sm:p-6">
         <div className="max-w-4xl">
           <div>
             <h3 className="text-2xl font-black sm:text-3xl">Kids can hear it. See it. Do it.</h3>
@@ -1743,7 +1743,7 @@ function VisionLandingPanel({
       </section>
 
       <section className="grid gap-4 lg:grid-cols-[0.85fr_1.15fr]">
-        <article className="rounded-lg border border-[#ded8c7] bg-[#fff4d8] p-4 shadow-sm sm:p-6">
+        <article className="-mx-3 border-y border-[#ded8c7] bg-[#fff4d8] p-4 shadow-sm sm:mx-0 sm:rounded-lg sm:border sm:p-6">
           <h3 className="text-2xl font-black sm:text-3xl">Founded by kids. Built for kids.</h3>
           <p className="mt-3 text-sm font-semibold leading-6 text-[#5f4a24]">
             TailTots began with Aarush and Sahasra and a simple idea: what if everyday responsibilities could become something kids actually want to do?
@@ -1753,7 +1753,7 @@ function VisionLandingPanel({
           </p>
         </article>
 
-        <article className="rounded-lg border border-[#ded8c7] bg-white p-4 shadow-sm sm:p-6">
+        <article className="-mx-3 border-y border-[#ded8c7] bg-white p-4 shadow-sm sm:mx-0 sm:rounded-lg sm:border sm:p-6">
           <h3 className="text-2xl font-black sm:text-3xl">Safe learning, with parents always in control.</h3>
           <div className="mt-5 grid gap-3 sm:grid-cols-2">
             {trustCards.map(([title, body]) => (
@@ -1767,7 +1767,7 @@ function VisionLandingPanel({
       </section>
 
       <section className="grid gap-4 lg:grid-cols-2">
-        <article className="rounded-lg border border-[#ded8c7] bg-white p-4 shadow-sm sm:p-5">
+        <article className="-mx-3 border-y border-[#ded8c7] bg-white p-4 shadow-sm sm:mx-0 sm:rounded-lg sm:border sm:p-5">
           <div className="grid gap-2 sm:flex sm:items-center sm:justify-between sm:gap-3">
             <div>
               <h3 className="text-xl font-black">Everyone knows what is next.</h3>
@@ -1785,7 +1785,7 @@ function VisionLandingPanel({
           </div>
         </article>
 
-        <article className="rounded-lg border border-[#ded8c7] bg-[#e7f4ef] p-4 shadow-sm sm:p-5">
+        <article className="-mx-3 border-y border-[#ded8c7] bg-[#e7f4ef] p-4 shadow-sm sm:mx-0 sm:rounded-lg sm:border sm:p-5">
           <div className="mt-2 flex items-end justify-between gap-3">
             <div>
               <p className="text-3xl font-black">$14.00</p>
@@ -1803,7 +1803,7 @@ function VisionLandingPanel({
           </div>
         </article>
 
-        <article className="rounded-lg border border-[#ded8c7] bg-[#fff4d8] p-4 shadow-sm sm:p-5">
+        <article className="-mx-3 border-y border-[#ded8c7] bg-[#fff4d8] p-4 shadow-sm sm:mx-0 sm:rounded-lg sm:border sm:p-5">
           <h3 className="text-xl font-black">Kindness does not stop at the front door.</h3>
           <p className="mt-2 text-sm font-semibold leading-5 text-[#5f4a24]">
             TailTots can connect families with parent-approved ways to care, learn, and give back through shelters, animal welfare groups, and trusted local missions.
@@ -1824,7 +1824,7 @@ function VisionLandingPanel({
           </div>
         </article>
 
-        <article className="rounded-lg border border-[#ded8c7] bg-[#eef2ff] p-4 shadow-sm sm:p-5">
+        <article className="-mx-3 border-y border-[#ded8c7] bg-[#eef2ff] p-4 shadow-sm sm:mx-0 sm:rounded-lg sm:border sm:p-5">
           <h3 className="text-xl font-black">AI helps quietly underneath the mission.</h3>
           <p className="mt-2 text-sm font-semibold leading-5 text-[#33245f]">
             Kids get simple, age-aware care prompts while parents control setup, approvals, and what becomes visible.
@@ -1837,7 +1837,7 @@ function VisionLandingPanel({
         </article>
       </section>
 
-      <section className="rounded-lg border border-[#ded8c7] bg-white p-4 shadow-sm sm:p-6">
+      <section className="-mx-3 border-y border-[#ded8c7] bg-white p-4 shadow-sm sm:mx-0 sm:rounded-lg sm:border sm:p-6">
         <div className="grid gap-5 lg:grid-cols-[1fr_auto] lg:items-center">
           <div>
             <h3 className="text-2xl font-black sm:text-3xl">Founded by kids. Built for kids.</h3>
@@ -1854,7 +1854,7 @@ function VisionLandingPanel({
         </div>
       </section>
 
-      <section id="landing-contact" className="scroll-mt-36 rounded-lg border border-[#ded8c7] bg-[#f7fbff] p-4 shadow-sm sm:p-6">
+      <section id="landing-contact" className="-mx-3 scroll-mt-36 border-y border-[#ded8c7] bg-[#f7fbff] p-4 shadow-sm sm:mx-0 sm:rounded-lg sm:border sm:p-6">
         <div className="grid gap-5 lg:grid-cols-[0.85fr_1.15fr]">
           <div>
             <h3 className="text-2xl font-black sm:text-3xl">Questions, feedback, or partnership ideas?</h3>
