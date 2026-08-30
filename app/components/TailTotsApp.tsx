@@ -1542,9 +1542,9 @@ function VisionLandingPanel({
       )}
 
       <div id="landing-home" className="scroll-mt-36 overflow-hidden rounded-lg border border-[#ded8c7] bg-[#f7fbff] text-[#17231f] shadow-sm">
-        <div className="grid gap-5 p-5 sm:p-6 lg:grid-cols-[0.82fr_1.18fr] lg:items-start xl:p-7">
+        <div className="grid gap-4 p-4 sm:p-6 lg:grid-cols-[0.82fr_1.18fr] lg:items-start lg:gap-5 xl:p-7">
           <div className="min-w-0">
-            <h2 className="max-w-3xl text-4xl font-black leading-[1.05] text-[#111b4f] sm:text-5xl xl:text-[3.35rem]">
+            <h2 className="max-w-3xl text-[2.35rem] font-black leading-[1.02] text-[#111b4f] sm:text-5xl xl:text-[3.35rem]">
               Grow into the real world with parents by their side.
             </h2>
             <p className="mt-4 max-w-2xl text-[15px] font-semibold leading-6 text-[#31405f] sm:text-base sm:leading-7">
@@ -1561,17 +1561,17 @@ function VisionLandingPanel({
             <p className="mt-4 max-w-2xl text-base font-black leading-6 text-[#111b4f] sm:text-lg sm:leading-7">
               Don&apos;t wait until kids enter social media to teach them how to navigate the social world.
             </p>
-            <div className="mt-4 flex flex-wrap gap-3">
-              <button onClick={() => scrollToLandingSection("landing-demo")} className="min-h-12 rounded-lg bg-[#ffd166] px-5 py-3 text-sm font-black text-[#17231f] shadow-sm">
+            <div className="mt-4 grid gap-2 sm:flex sm:flex-wrap sm:gap-3">
+              <button onClick={() => scrollToLandingSection("landing-demo")} className="min-h-12 w-full rounded-lg bg-[#ffd166] px-5 py-3 text-sm font-black text-[#17231f] shadow-sm sm:w-auto">
                 Try Sample Family
               </button>
-              <button onClick={() => scrollToLandingSection("landing-real-app")} className="min-h-12 rounded-lg bg-[#165a4b] px-5 py-3 text-sm font-black text-white shadow-sm">
+              <button onClick={() => scrollToLandingSection("landing-real-app")} className="min-h-12 w-full rounded-lg bg-[#165a4b] px-5 py-3 text-sm font-black text-white shadow-sm sm:w-auto">
                 Create Your Family
               </button>
-              <button onClick={() => scrollToLandingSection("landing-how-it-works")} className="min-h-12 rounded-lg border border-[#dce6f8] bg-white px-5 py-3 text-sm font-black text-[#111b4f] shadow-sm">
+              <button onClick={() => scrollToLandingSection("landing-how-it-works")} className="min-h-12 w-full rounded-lg border border-[#dce6f8] bg-white px-5 py-3 text-sm font-black text-[#111b4f] shadow-sm sm:w-auto">
                 See Kid Tabletop Demo
               </button>
-              <button onClick={() => scrollToLandingSection("landing-contact")} className="min-h-12 rounded-lg border border-[#d9d0bb] bg-white px-5 py-3 text-sm font-black text-[#25352f] shadow-sm">
+              <button onClick={() => scrollToLandingSection("landing-contact")} className="min-h-12 w-full rounded-lg border border-[#d9d0bb] bg-white px-5 py-3 text-sm font-black text-[#25352f] shadow-sm sm:w-auto">
                 Contact us
               </button>
             </div>
@@ -1585,7 +1585,7 @@ function VisionLandingPanel({
               <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
                 {kidsPetPhotos.map(([label, src]) => (
                   <div key={label} className="group overflow-hidden rounded-lg bg-[#f8f6ed] shadow-sm">
-                    <img src={src} alt={`${label} using TailTots`} className="aspect-[16/10] w-full object-cover transition duration-300 group-hover:scale-[1.03]" loading="lazy" />
+                    <img src={src} alt={`${label} using TailTots`} className="aspect-[4/3] w-full object-cover transition duration-300 group-hover:scale-[1.03] sm:aspect-[16/10]" loading="lazy" />
                   </div>
                 ))}
               </div>
@@ -1597,9 +1597,9 @@ function VisionLandingPanel({
             </div>
           </div>
 
-            <div className="relative mx-auto w-full max-w-4xl space-y-4">
+          <div className="relative mx-auto w-full max-w-4xl space-y-4">
             <div className="grid gap-3 xl:grid-cols-[0.9fr_1.1fr]">
-              <article id="landing-demo" className="rounded-lg border-2 border-[#ded8c7] bg-white p-4 shadow-sm">
+              <article id="landing-demo" className="rounded-lg border border-[#ded8c7] bg-white p-4 shadow-sm sm:border-2">
                 <p className="text-xs font-black uppercase tracking-[0.14em] text-[#6d3ed1]">Demo</p>
                 <h3 className="mt-2 text-2xl font-black text-[#17231f]">Explore with sample data</h3>
                 <p className="mt-2 text-sm font-semibold leading-5 text-[#5f6a65]">
@@ -1614,7 +1614,7 @@ function VisionLandingPanel({
                   </button>
                 </div>
               </article>
-              <article id="landing-real-app" className="rounded-lg border-2 border-[#165a4b] bg-[#f7fffb] p-4 shadow-sm">
+              <article id="landing-real-app" className="rounded-lg border border-[#165a4b] bg-[#f7fffb] p-4 shadow-sm sm:border-2">
                 <h3 className="text-2xl font-black text-[#17231f]">Join the family launch list</h3>
                 <p className="mt-2 text-sm font-semibold leading-5 text-[#5f6a65]">
                   Be first to hear when free family accounts are ready, plus early rewards and launch updates.
@@ -1645,20 +1645,20 @@ function VisionLandingPanel({
                 )}
               </article>
             </div>
-            <div id="landing-how-it-works" className="relative mx-auto rounded-[2rem] border border-black/10 bg-[#0f1513] p-3 shadow-2xl sm:p-5" aria-label="Tabletop smart display TailTots slideshow">
-              <div className="absolute left-5 top-4 z-10 rounded-lg bg-[#ffd166] px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-[#17231f] shadow-lg">
+            <div id="landing-how-it-works" className="relative mx-auto rounded-2xl border border-black/10 bg-[#0f1513] p-2 shadow-2xl sm:rounded-[2rem] sm:p-5" aria-label="Tabletop smart display TailTots slideshow">
+              <div className="absolute left-4 top-3 z-10 rounded-lg bg-[#ffd166] px-3 py-2 text-[10px] font-black uppercase tracking-[0.1em] text-[#17231f] shadow-lg sm:left-5 sm:top-4 sm:text-xs">
                 Kid tabletop screen
               </div>
-              <div className="absolute right-4 top-4 z-10 rounded-lg bg-white px-4 py-3 text-sm font-black text-[#111b4f] shadow-lg">
+              <div className="absolute right-3 top-14 z-10 rounded-lg bg-white px-3 py-2 text-xs font-black text-[#111b4f] shadow-lg sm:right-4 sm:top-4 sm:px-4 sm:py-3 sm:text-sm">
                 &quot;Alexa, open TailTots.&quot;
               </div>
-              <div className="overflow-hidden rounded-[1.2rem] bg-[#f8f6ed] p-4 pt-16 text-[#17231f] ring-1 ring-black/20 sm:p-5 sm:pt-16">
-                <div className="flex items-start justify-between gap-3">
+              <div className="overflow-hidden rounded-xl bg-[#f8f6ed] p-3 pt-24 text-[#17231f] ring-1 ring-black/20 sm:rounded-[1.2rem] sm:p-5 sm:pt-16">
+                <div className="grid gap-2 sm:flex sm:items-start sm:justify-between sm:gap-3">
                   <div className="min-w-0">
                     <p className="text-xs font-black uppercase tracking-[0.14em]" style={{ color: activeEchoSlide.color }}>{activeEchoSlide.eyebrow}</p>
-                    <h4 className="mt-1 text-2xl font-black sm:text-3xl">{activeEchoSlide.title}</h4>
+                    <h4 className="mt-1 text-2xl font-black leading-tight sm:text-3xl">{activeEchoSlide.title}</h4>
                   </div>
-                  <span className="shrink-0 rounded-full px-3 py-1 text-xs font-black" style={{ backgroundColor: activeEchoSlide.bg, color: activeEchoSlide.color }}>
+                  <span className="w-fit shrink-0 rounded-full px-3 py-1 text-xs font-black" style={{ backgroundColor: activeEchoSlide.bg, color: activeEchoSlide.color }}>
                     {activeEchoSlide.badge}
                   </span>
                 </div>
@@ -1719,7 +1719,7 @@ function VisionLandingPanel({
         </div>
       </div>
 
-      <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm sm:p-6">
+      <section className="rounded-lg border border-[#ded8c7] bg-white p-4 shadow-sm sm:p-6">
         <div className="max-w-4xl">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.18em] text-[#0f766e]">Life-skills engine</p>
@@ -1737,7 +1737,7 @@ function VisionLandingPanel({
         </div>
       </section>
 
-      <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm sm:p-6">
+      <section className="rounded-lg border border-[#ded8c7] bg-white p-4 shadow-sm sm:p-6">
         <div className="max-w-4xl">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.18em] text-[#0f766e]">How it works</p>
@@ -1759,7 +1759,7 @@ function VisionLandingPanel({
       </section>
 
       <section className="grid gap-4 lg:grid-cols-[0.85fr_1.15fr]">
-        <article className="rounded-lg border border-[#ded8c7] bg-[#fff4d8] p-5 shadow-sm sm:p-6">
+        <article className="rounded-lg border border-[#ded8c7] bg-[#fff4d8] p-4 shadow-sm sm:p-6">
           <p className="text-xs font-black uppercase tracking-[0.18em] text-[#7a4b12]">Kids founders</p>
           <h3 className="mt-2 text-2xl font-black sm:text-3xl">Founded by kids. Built for kids.</h3>
           <p className="mt-3 text-sm font-semibold leading-6 text-[#5f4a24]">
@@ -1770,7 +1770,7 @@ function VisionLandingPanel({
           </p>
         </article>
 
-        <article className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm sm:p-6">
+        <article className="rounded-lg border border-[#ded8c7] bg-white p-4 shadow-sm sm:p-6">
           <p className="text-xs font-black uppercase tracking-[0.18em] text-[#165a4b]">Trust belongs near the top</p>
           <h3 className="mt-2 text-2xl font-black sm:text-3xl">Safe learning, with parents always in control.</h3>
           <div className="mt-5 grid gap-3 sm:grid-cols-2">
@@ -1785,26 +1785,26 @@ function VisionLandingPanel({
       </section>
 
       <section className="grid gap-4 lg:grid-cols-2">
-        <article className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
-          <div className="flex items-center justify-between gap-3">
+        <article className="rounded-lg border border-[#ded8c7] bg-white p-4 shadow-sm sm:p-5">
+          <div className="grid gap-2 sm:flex sm:items-center sm:justify-between sm:gap-3">
             <div>
               <p className="text-xs font-black uppercase tracking-[0.16em] text-[#2563eb]">Family calendar</p>
               <h3 className="mt-1 text-xl font-black">Everyone knows what is next.</h3>
             </div>
-            <span className="rounded-full bg-[#eef2ff] px-3 py-1 text-xs font-black text-[#2563eb]">This week</span>
+            <span className="w-fit rounded-full bg-[#eef2ff] px-3 py-1 text-xs font-black text-[#2563eb]">This week</span>
           </div>
           <div className="mt-4 grid gap-2">
             {[["Mon", "Pet breakfast", "Kid schedule"], ["Wed", "Shelter kindness quest", "Family"], ["Sat", "Playdate window", "Parent shared"]].map(([day, item, scope]) => (
-              <div key={item} className="grid grid-cols-[44px_1fr_auto] items-center gap-3 rounded-lg bg-[#f8f6ed] p-3">
+              <div key={item} className="grid grid-cols-[40px_1fr] gap-2 rounded-lg bg-[#f8f6ed] p-3 sm:grid-cols-[44px_1fr_auto] sm:items-center sm:gap-3">
                 <span className="text-xs font-black text-[#165a4b]">{day}</span>
                 <span className="min-w-0 text-sm font-black">{item}</span>
-                <span className="text-right text-[11px] font-bold text-[#69736f]">{scope}</span>
+                <span className="col-start-2 text-[11px] font-bold text-[#69736f] sm:col-start-auto sm:text-right">{scope}</span>
               </div>
             ))}
           </div>
         </article>
 
-        <article className="rounded-lg border border-[#ded8c7] bg-[#e7f4ef] p-5 shadow-sm">
+        <article className="rounded-lg border border-[#ded8c7] bg-[#e7f4ef] p-4 shadow-sm sm:p-5">
           <p className="text-xs font-black uppercase tracking-[0.16em] text-[#165a4b]">Kid Bank</p>
           <div className="mt-2 flex items-end justify-between gap-3">
             <div>
@@ -1823,7 +1823,7 @@ function VisionLandingPanel({
           </div>
         </article>
 
-        <article className="rounded-lg border border-[#ded8c7] bg-[#fff4d8] p-5 shadow-sm">
+        <article className="rounded-lg border border-[#ded8c7] bg-[#fff4d8] p-4 shadow-sm sm:p-5">
           <p className="text-xs font-black uppercase tracking-[0.16em] text-[#7a4b12]">Community kindness</p>
           <h3 className="mt-1 text-xl font-black">Kindness does not stop at the front door.</h3>
           <p className="mt-2 text-sm font-semibold leading-5 text-[#5f4a24]">
@@ -1845,7 +1845,7 @@ function VisionLandingPanel({
           </div>
         </article>
 
-        <article className="rounded-lg border border-[#ded8c7] bg-[#eef2ff] p-5 shadow-sm">
+        <article className="rounded-lg border border-[#ded8c7] bg-[#eef2ff] p-4 shadow-sm sm:p-5">
           <p className="text-xs font-black uppercase tracking-[0.16em] text-[#6d3ed1]">Guided support</p>
           <h3 className="mt-1 text-xl font-black">AI helps quietly underneath the mission.</h3>
           <p className="mt-2 text-sm font-semibold leading-5 text-[#33245f]">
@@ -1859,7 +1859,7 @@ function VisionLandingPanel({
         </article>
       </section>
 
-      <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm sm:p-6">
+      <section className="rounded-lg border border-[#ded8c7] bg-white p-4 shadow-sm sm:p-6">
         <div className="grid gap-5 lg:grid-cols-[1fr_auto] lg:items-center">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.18em] text-[#165a4b]">Start the first mission</p>
@@ -1877,7 +1877,7 @@ function VisionLandingPanel({
         </div>
       </section>
 
-      <section id="landing-contact" className="scroll-mt-36 rounded-lg border border-[#ded8c7] bg-[#f7fbff] p-5 shadow-sm sm:p-6">
+      <section id="landing-contact" className="scroll-mt-36 rounded-lg border border-[#ded8c7] bg-[#f7fbff] p-4 shadow-sm sm:p-6">
         <div className="grid gap-5 lg:grid-cols-[0.85fr_1.15fr]">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.18em] text-[#165a4b]">Contact TailTots</p>
