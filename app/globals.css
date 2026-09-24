@@ -258,3 +258,140 @@ button {
     transform: translateX(1px) rotate(-1deg);
   }
 }
+
+/* ============================================================
+   TailTots design tokens — one system for landing + app (moonshot)
+   ============================================================ */
+:root {
+  --tt-cream: #fbfaf4;
+  --tt-paper: #ffffff;
+  --tt-sand: #f8f6ed;
+  --tt-ink: #17231f;
+  --tt-ink-soft: #4f625b;
+  --tt-ink-faint: #69736f;
+  --tt-navy: #111b4f;
+  --tt-navy-soft: #31405f;
+  --tt-pine: #165a4b;
+  --tt-pine-deep: #0d3b30;
+  --tt-pine-tint: #e7f4ef;
+  --tt-sun: #ffd166;
+  --tt-sun-soft: #fff4d8;
+  --tt-tang: #f47b20;
+  --tt-tang-soft: #fde8df;
+  --tt-sky: #eef2ff;
+  --tt-blue: #2563eb;
+  --tt-grape: #6d3ed1;
+  --tt-grape-soft: #f0edff;
+  --tt-night: #0f1513;
+  --tt-line: #ded8c7;
+  --tt-line-blue: #dce6f8;
+  --tt-radius: 1rem;
+  --tt-radius-lg: 1.5rem;
+  --tt-shadow-pop: 0 10px 30px -12px rgba(23, 35, 31, 0.25);
+}
+
+@theme inline {
+  --color-tt-cream: var(--tt-cream);
+  --color-tt-paper: var(--tt-paper);
+  --color-tt-sand: var(--tt-sand);
+  --color-tt-ink: var(--tt-ink);
+  --color-tt-ink-soft: var(--tt-ink-soft);
+  --color-tt-navy: var(--tt-navy);
+  --color-tt-pine: var(--tt-pine);
+  --color-tt-pine-deep: var(--tt-pine-deep);
+  --color-tt-pine-tint: var(--tt-pine-tint);
+  --color-tt-sun: var(--tt-sun);
+  --color-tt-sun-soft: var(--tt-sun-soft);
+  --color-tt-tang: var(--tt-tang);
+  --color-tt-tang-soft: var(--tt-tang-soft);
+  --color-tt-sky: var(--tt-sky);
+  --color-tt-blue: var(--tt-blue);
+  --color-tt-grape: var(--tt-grape);
+  --color-tt-grape-soft: var(--tt-grape-soft);
+  --color-tt-night: var(--tt-night);
+  --color-tt-line: var(--tt-line);
+}
+
+/* ---------- playful motion utilities ---------- */
+@keyframes tt-float {
+  0%, 100% { transform: translateY(0) rotate(-2deg); }
+  50% { transform: translateY(-10px) rotate(2deg); }
+}
+@keyframes tt-float-slow {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-14px); }
+}
+@keyframes tt-pop-in {
+  0% { opacity: 0; transform: scale(0.92) translateY(10px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+@keyframes tt-wiggle {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-6deg); }
+  75% { transform: rotate(6deg); }
+}
+@keyframes tt-marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+@keyframes tt-sparkle {
+  0%, 100% { opacity: 0.25; transform: scale(0.8) rotate(0deg); }
+  50% { opacity: 1; transform: scale(1.15) rotate(20deg); }
+}
+@keyframes tt-confetti-fall {
+  0% { opacity: 1; transform: translateY(-8px) rotate(0deg); }
+  100% { opacity: 0; transform: translateY(46px) rotate(220deg); }
+}
+@keyframes tt-bounce-soft {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+.tt-animate-float { animation: tt-float 5s ease-in-out infinite; }
+.tt-animate-float-slow { animation: tt-float-slow 7s ease-in-out infinite; }
+.tt-animate-pop-in { animation: tt-pop-in 0.45s cubic-bezier(0.22, 1.4, 0.36, 1) both; }
+.tt-animate-wiggle-hover:hover { animation: tt-wiggle 0.5s ease-in-out; }
+.tt-animate-sparkle { animation: tt-sparkle 2.6s ease-in-out infinite; }
+.tt-animate-bounce-soft { animation: tt-bounce-soft 2.2s ease-in-out infinite; }
+.tt-confetti-piece { animation: tt-confetti-fall 1.6s ease-in forwards; }
+
+.tt-marquee-track {
+  display: flex;
+  width: max-content;
+  animation: tt-marquee 28s linear infinite;
+}
+.tt-marquee-track:hover { animation-play-state: paused; }
+
+/* ---------- premium interactive primitives ---------- */
+.tt-card-lift {
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+.tt-card-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--tt-shadow-pop);
+}
+.tt-btn-press { transition: transform 0.12s ease, filter 0.15s ease; }
+.tt-btn-press:hover { filter: brightness(1.05); }
+.tt-btn-press:active { transform: scale(0.97); }
+
+/* ---------- accessibility: visible focus everywhere ---------- */
+.tailtots-app :focus-visible {
+  outline: 3px solid var(--tt-tang);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* ---------- respect reduced motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .tt-animate-float,
+  .tt-animate-float-slow,
+  .tt-animate-pop-in,
+  .tt-animate-wiggle-hover:hover,
+  .tt-animate-sparkle,
+  .tt-animate-bounce-soft,
+  .tt-confetti-piece,
+  .tt-marquee-track {
+    animation: none !important;
+  }
+  .tt-card-lift:hover { transform: none; }
+}
