@@ -40,8 +40,8 @@ const difficultyAgeGuidance: Record<LevelKey, { minAge: number; label: string }>
 };
 
 const starterChildren: Child[] = [
-  { id: "sahasra", name: "Sahasra", age: 6, secretCode: "", points: 180, coins: 26, level: "medium", streakDays: 5 },
-  { id: "aarush", name: "Aarush", age: 9, secretCode: "", points: 72, coins: 14, level: "easy", streakDays: 2 },
+  { id: "sahasra", name: "Maya", age: 6, secretCode: "", points: 180, coins: 26, level: "medium", streakDays: 5 },
+  { id: "aarush", name: "Leo", age: 9, secretCode: "", points: 72, coins: 14, level: "easy", streakDays: 2 },
 ];
 
 const starterPets: Pet[] = [
@@ -236,7 +236,7 @@ const starterTransactions: BankTransaction[] = [
 ];
 
 const starterMoments: MemoryMoment[] = [
-  { id: "moment-1", childId: "sahasra", petId: "jack", mood: "proud", note: "Jack waited calmly while Sahasra filled the water bowl." },
+  { id: "moment-1", childId: "sahasra", petId: "jack", mood: "proud", note: "Jack waited calmly while Maya filled the water bowl." },
 ];
 
 const starterBadges: BadgeAward[] = [
@@ -291,8 +291,8 @@ const starterScheduleItems: KidScheduleItem[] = [
 ];
 
 const childLooks: Record<string, { initial: string; colors: string; joy: number; love: number; hair: string }> = {
-  sahasra: { initial: "S", colors: "from-[#ffcf70] via-[#ff8a65] to-[#7c3aed]", joy: 92, love: 88, hair: "#4a2718" },
-  aarush: { initial: "A", colors: "from-[#79d6ff] via-[#4ade80] to-[#2563eb]", joy: 78, love: 84, hair: "#1f2937" },
+  sahasra: { initial: "M", colors: "from-[#ffcf70] via-[#ff8a65] to-[#7c3aed]", joy: 92, love: 88, hair: "#4a2718" },
+  aarush: { initial: "L", colors: "from-[#79d6ff] via-[#4ade80] to-[#2563eb]", joy: 78, love: 84, hair: "#1f2937" },
 };
 
 const petLooks: Record<string, { face: string; colors: string; happiness: number; loved: number; kind: PetKind }> = {
@@ -352,7 +352,7 @@ export function TailTotsApp() {
   const [activeTab, setActiveTab] = useState("vision");
   const [isParentUnlocked, setIsParentUnlocked] = useState(true);
   const [hasLoadedSavedState, setHasLoadedSavedState] = useState(false);
-  const [familyName, setFamilyName] = useState("Nalajala Crew");
+  const [familyName, setFamilyName] = useState("Demo Crew");
   const [parentPasscode, setParentPasscode] = useState(defaultParentPasscode);
   const [parents, setParents] = useState(starterParents);
   const [children, setChildren] = useState(starterChildren);
@@ -417,7 +417,7 @@ export function TailTotsApp() {
     queueMicrotask(() => {
       const savedState = loadSavedFamilyState();
       if (savedState) {
-        setFamilyName(savedState.familyName ?? "Nalajala Crew");
+        setFamilyName(savedState.familyName ?? "Demo Crew");
         setParentPasscode(defaultParentPasscode);
         setParents(savedState.parents);
         setChildren(savedState.children.map(normalizeChildProfile));
@@ -524,7 +524,7 @@ export function TailTotsApp() {
   function loadDemoFamily() {
     setAppMode("demo");
     applyFamilySnapshot({
-      familyName: "Nalajala Crew",
+      familyName: "Demo Crew",
       parentPasscode: defaultParentPasscode,
       parents: starterParents,
       children: starterChildren,
@@ -1340,7 +1340,7 @@ function VisionLandingPanel({
       step: "1",
       title: "Mission Mode",
       eyebrow: "Kid home screen",
-      prompt: "Hi Sahasra. Jack needs fresh water and a comfort check.",
+      prompt: "Hi Maya. Jack needs fresh water and a comfort check.",
       action: "Start mission",
       detail: "A child sees one parent-approved mission with big steps, clear timing, and no distracting feed.",
       badge: "Parent approved",
@@ -1410,7 +1410,7 @@ function VisionLandingPanel({
       step: "6",
       title: "Growth Story",
       eyebrow: "Life-skills portfolio",
-      prompt: "Aarush earned On-Time Helper for remembering RB before school.",
+      prompt: "Leo earned On-Time Helper for remembering RB before school.",
       action: "Celebrate",
       detail: "Each screen helps build a private record of responsibility, empathy, leadership, and confidence.",
       badge: "Badge earned",
@@ -1691,7 +1691,7 @@ function VisionLandingPanel({
         <article className="-mx-3 border-y border-[#ded8c7] bg-[#fff4d8] p-4 shadow-sm sm:mx-0 sm:rounded-lg sm:border sm:p-6">
           <h3 className="text-2xl font-black sm:text-3xl">Founded by kids. Built for kids.</h3>
           <p className="mt-3 text-sm font-semibold leading-6 text-[#5f4a24]">
-            TailTots began with Aarush and Sahasra and a simple idea: what if everyday responsibilities could become something kids actually want to do?
+            TailTots began with two kids and a simple idea: what if everyday responsibilities could become something kids actually want to do?
           </p>
           <p className="mt-3 text-sm font-semibold leading-6 text-[#5f4a24]">
             That idea grew from caring for animals into a bigger vision - helping kids build responsibility, kindness, confidence, money skills, and independence through real-world experiences.
@@ -4366,7 +4366,7 @@ function AIPanel({ childProfiles, missions, parentSignedIn }: { childProfiles: C
     petAge: "2 years",
     routine: "Morning hay, fresh water, veggie treat, quick cage check",
     vetNotes: "Handle gently. Watch water bottle level. No loud noises near cage.",
-    memoryNote: "Aarush remembered RB's food before school and checked the water.",
+    memoryNote: "Leo remembered RB's food before school and checked the water.",
     photoMoment: "Captain basking after fresh greens",
     lifeSkill: "responsibility",
     choreGoal: "Teach responsibility through morning pet care and one family helper task",
@@ -4437,7 +4437,7 @@ function AIPanel({ childProfiles, missions, parentSignedIn }: { childProfiles: C
     }
   }
   const familyInsights = [
-    "Aarush has a strong helper streak when tasks are short and before school.",
+    "Leo has a strong helper streak when tasks are short and before school.",
     "Pet care missions are clearer when each one has one animal and one proof step.",
     "Weekend helper work should be parent-scheduled because neighborhood jobs need adult details.",
   ];
