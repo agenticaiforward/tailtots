@@ -9,6 +9,7 @@ import {
   validateIdeasInput,
 } from "../lib/ai/ideas";
 import { InMemoryRateLimiter } from "../lib/ai/rate-limit";
+import { authenticateParentRequest } from "../lib/ai/supabase-auth";
 
 const log = createLogger("worker:ai-ideas");
 
@@ -21,6 +22,13 @@ interface Env {
    * route below degrades gracefully until it exists.
    */
   AI: Ai;
+  /**
+   * Supabase project URL and anon (publishable) key used to validate parent
+   * access tokens on the AI endpoint. Set as Worker env vars in the
+   * Cloudflare dashboard. Never use the service_role key here.
+   */
+  SUPABASE_URL?: string;
+  SUPABASE_ANON_KEY?: string;
   IMAGES: {
     input(stream: ReadableStream): {
       transform(options: Record<string, unknown>): {
@@ -68,6 +76,22 @@ async function handleAiIdeas(request: Request, env: Env): Promise<Response> {
   if (ideasRateLimiter.isLimited(`ai-ideas:${clientIp(request)}`)) {
     return jsonResponse({ error: "Too many requests. Please try again later." }, 429);
   }
+  if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) {
+    log.warn("Supabase env vars missing for /api/ai/ideas");
+    return jsonResponse(
+      { error: "Parent sign-in is not configured yet. Please try again later." },
+      503,
+    );
+  }
+  const parent = await authenticateParentRequest({
+    supabaseUrl: env.SUPABASE_URL,
+    anonKey: env.SUPABASE_ANON_KEY,
+    authorizationHeader: request.headers.get("Authorization"),
+  });
+  if (!parent) {
+    return jsonResponse({ error: "Parent sign-in required." }, 401);
+  }
+  log.info("AI ideas request from parent", { userId: parent.userId });
   if (!env.AI) {
     log.warn("AI binding missing for /api/ai/ideas");
     return jsonResponse({ error: "The AI helper is not configured yet." }, 503);
