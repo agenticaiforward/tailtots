@@ -22,7 +22,7 @@ export default function TermsPage() {
         These Terms of Use (&ldquo;Terms&rdquo;) are an agreement between you and Tailtots
         (&ldquo;TailTots,&rdquo; &ldquo;we,&rdquo; &ldquo;us&rdquo;) for your use of the TailTots website,
         the TailTots mobile and web apps, and the &ldquo;TailTots for Parents&rdquo; Alexa skill
-        (invocation: &ldquo;tail tots&rdquo;), together the &ldquo;Service.&rdquo; TailTots is a
+        (invocation: &ldquo;tail tots parent&rdquo;), together the &ldquo;Service.&rdquo; TailTots is a
         parent-guided, real-world development platform that helps children build responsibility,
         kindness, and money skills through missions and parent approval, beginning with pet care.
         By using the Service, you agree to these Terms.
