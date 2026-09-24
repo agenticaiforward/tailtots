@@ -5,7 +5,7 @@
  * no router).
  *
  * The policy covers three products with their own sections:
- *   1. The TailTots for Parents Alexa skill ("tail tots", general audience).
+ *   1. The TailTots for Parents Alexa skill ("tail tots parent", general audience).
  *   2. The TailTots mobile and web apps.
  *   3. The TailTots website (launch-interest form).
  *
@@ -29,7 +29,7 @@ export function PrivacyPolicyContent() {
       <section>
         <h2 className="text-lg font-black text-[#17231f]">The TailTots for Parents Alexa skill</h2>
         <p className="mt-2">
-          &ldquo;TailTots for Parents&rdquo; (invocation: &ldquo;tail tots&rdquo;) is a <strong>general-audience,
+          &ldquo;TailTots for Parents&rdquo; (invocation: &ldquo;tail tots parent&rdquo;) is a <strong>general-audience,
           parent-facing</strong> Alexa skill. It is not directed at children. It helps a parent or guardian
           hear which missions are awaiting approval, approve missions by voice, add parent-assigned
           missions, review children&apos;s progress and Kid Bank balances, and ask for activity ideas that
