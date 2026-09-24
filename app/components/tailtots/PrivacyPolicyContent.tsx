@@ -10,13 +10,13 @@
  *   3. The TailTots website (launch-interest form).
  *
  * Placeholders the family must fill before release: Tailtots,
- * hello@tailtots.com, June 30, 2026. Everything else is finished copy.
+ * hello@tailtots.com, September 24, 2026. Everything else is finished copy.
  */
 export function PrivacyPolicyContent() {
   return (
     <div className="space-y-5 text-sm font-semibold leading-7 text-[#4f625b]">
       <p className="text-xs font-black uppercase tracking-[0.18em] text-[#7a4b12]">
-        Effective date: June 30, 2026
+        Effective date: September 24, 2026
       </p>
       <p>
         This Privacy Policy describes how Tailtots (&ldquo;TailTots,&rdquo; &ldquo;we,&rdquo; &ldquo;us&rdquo;)
@@ -76,6 +76,16 @@ export function PrivacyPolicyContent() {
           device</strong> (in the app&apos;s local storage). It is not sent to our servers, because there
           are none connected in this build. If a future version connects a secure family account backend,
           this policy will be updated before that version ships.
+        </p>
+        <p className="mt-2">
+          The parent-gated AI section of the web app includes an activity-idea helper for parents, powered
+          by Cloudflare Workers AI. When a parent asks for ideas, the only information sent with the
+          request is the <strong>child&apos;s first name, age band, and the requested life skill</strong>
+          (for example, &ldquo;kindness&rdquo;). Suggestions are disclosed as AI-generated when they are
+          offered, and a parent reviews every suggestion before anything is saved as a mission. The helper
+          does not engage in open-ended chat, gives no medical, mental-health, financial, or other
+          professional advice, and is never shown to children &mdash; it lives behind the parent passcode
+          gate.
         </p>
       </section>
 
