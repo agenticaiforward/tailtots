@@ -1447,6 +1447,9 @@ function VisionLandingPanel({
               You’ve heard it 47 times this week. TailTots turns that question into real-world responsibility, money smarts, and kindness — with you holding the leash.
             </p>
             <p className="mt-2 max-w-xl text-[15px] font-semibold leading-6 text-tt-ink-soft">
+              Puppy, kitten, guinea pig, bearded dragon — whatever’s doing those eyes at the pet-store window.
+            </p>
+            <p className="mt-2 max-w-xl text-[15px] font-semibold leading-6 text-tt-ink-soft">
               Parent-approved missions. Kid Bank. Zero stranger danger. All the “aww,” none of the chaos.
             </p>
 
