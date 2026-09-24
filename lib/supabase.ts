@@ -107,6 +107,21 @@ export async function signInParentAccount(email: string, password: string) {
   return data.user;
 }
 
+export async function sendParentMagicLink(email: string) {
+  if (!supabase) throw new Error("Parent accounts are being prepared. Please try the demo for now.");
+  if (typeof window === "undefined") throw new Error("Sign-in links only work in a browser.");
+  const normalizedEmail = email.trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+    throw new Error("Enter a valid parent email address.");
+  }
+  const { data, error } = await supabase.auth.signInWithOtp({
+    email: normalizedEmail,
+    options: { emailRedirectTo: window.location.origin },
+  });
+  if (error) throw error;
+  return data;
+}
+
 export async function signOutParentAccount() {
   if (!supabase) throw new Error("Parent accounts are being prepared. Please try the demo for now.");
   const { error } = await supabase.auth.signOut();
