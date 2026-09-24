@@ -4417,7 +4417,7 @@ void LegacyNeighborhoodPanel;
 function AIPanel({ childProfiles, missions }: { childProfiles: Child[]; missions: Mission[] }) {
   const currentUses = [
     ["Local parent tools", "TailTots now has template-powered helpers for missions, care checklists, memories, summaries, journals, and insights."],
-    ["Ready for OpenAI later", "These panels can be connected to the OpenAI API when billing credits are available."],
+    ["AI ideas are live for parents", "The Life Skill Chore Planner can generate activity ideas with Cloudflare Workers AI. Parents review every suggestion before it becomes a mission."],
   ];
   const [aiDraft, setAiDraft] = useState({
     petType: "Guinea pig",
@@ -4436,6 +4436,47 @@ function AIPanel({ childProfiles, missions }: { childProfiles: Child[]; missions
   const memoryMoment = buildMemoryMoment(aiDraft.memoryNote);
   const passportSummary = buildPassportSummary(aiDraft.petType, aiDraft.petAge, aiDraft.routine, aiDraft.vetNotes);
   const photoJournal = buildPhotoJournal(aiDraft.photoMoment);
+  const [aiIdeas, setAiIdeas] = useState<string[] | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+
+  function ageBandForAge(age: number): "4-6" | "7-9" | "10-12" {
+    if (age <= 6) return "4-6";
+    if (age <= 9) return "7-9";
+    return "10-12";
+  }
+
+  async function generateAiIdeas() {
+    const child = childProfiles[0];
+    setAiLoading(true);
+    setAiError(null);
+    try {
+      const response = await fetch("/api/ai/ideas", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          lifeSkill: aiDraft.lifeSkill,
+          childFirstName: child?.name.trim().split(/\s+/)[0] ?? "your child",
+          ageBand: child ? ageBandForAge(child.age) : "7-9",
+        }),
+      });
+      const data = (await response.json()) as { ideas?: unknown };
+      const ideas = Array.isArray(data.ideas)
+        ? data.ideas.filter((item): item is string => typeof item === "string" && item.trim().length > 0)
+        : [];
+      if (response.ok && ideas.length > 0) {
+        setAiIdeas(ideas);
+      } else {
+        setAiIdeas(null);
+        setAiError("The AI helper is unavailable right now \u2014 showing template ideas instead.");
+      }
+    } catch {
+      setAiIdeas(null);
+      setAiError("The AI helper is unavailable right now \u2014 showing template ideas instead.");
+    } finally {
+      setAiLoading(false);
+    }
+  }
   const familyInsights = [
     "Aarush has a strong helper streak when tasks are short and before school.",
     "Pet care missions are clearer when each one has one animal and one proof step.",
@@ -4489,7 +4530,8 @@ function AIPanel({ childProfiles, missions }: { childProfiles: Child[]; missions
         <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2563eb]">AI tools</p>
         <h3 className="mt-2 text-2xl font-black">Parent-side helpers you can use now</h3>
         <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-[#5f6a65]">
-          These run as safe parent-side templates. Later, the same panels can connect to approved AI services when the family enables them.
+                    The planner below can generate ideas with AI, or keep using the built-in templates. Nothing is
+          saved until a parent chooses it.
         </p>
 
         <div className="mt-5 grid gap-4 lg:grid-cols-2">
@@ -4505,6 +4547,29 @@ function AIPanel({ childProfiles, missions }: { childProfiles: Child[]; missions
               </select>
               <input className="rounded-lg border border-[#c8d2f0] px-3 py-3 text-sm font-semibold" value={aiDraft.choreGoal} onChange={(event) => setAiDraft({ ...aiDraft, choreGoal: event.target.value })} placeholder="What value should chores teach?" />
             </div>
+            <button
+              type="button"
+              onClick={generateAiIdeas}
+              disabled={aiLoading}
+              className="mt-3 min-h-11 rounded-lg bg-[#17231f] px-4 py-2 text-xs font-black text-white shadow-sm disabled:opacity-50"
+            >
+              {aiLoading ? "Generating ideas\u2026" : "Generate with AI"}
+            </button>
+            {aiError && (
+              <p className="mt-2 text-xs font-semibold text-[#8a5a00]">{aiError}</p>
+            )}
+            {aiIdeas && (
+              <div className="mt-3 rounded-lg bg-white p-3">
+                <p className="text-[11px] font-black uppercase tracking-[0.14em] text-[#2563eb]">
+                  AI-generated ideas \u2014 review before saving as a mission
+                </p>
+                <div className="mt-2 grid gap-2">
+                  {aiIdeas.map((idea) => (
+                    <p key={idea} className="rounded-lg bg-[#eef2ff] p-3 text-sm font-semibold leading-5">{idea}</p>
+                  ))}
+                </div>
+              </div>
+            )}
             <div className="mt-3 grid gap-2">
               {lifeSkillMissions.map((mission) => <p key={mission} className="rounded-lg bg-white p-3 text-sm font-semibold leading-5">{mission}</p>)}
             </div>
