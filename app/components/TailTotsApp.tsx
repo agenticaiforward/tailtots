@@ -7,9 +7,8 @@ import {
   isSupabaseConfigured,
   loadFamilyAccountSnapshot,
   saveFamilyAccountSnapshot,
-  signInParentAccount,
+  sendParentMagicLink,
   signOutParentAccount,
-  signUpParentAccount,
   submitFeedback,
   submitLaunchInterest,
   supabase,
@@ -348,22 +347,6 @@ type SavedFamilyState = {
   activeChildId?: string;
 };
 
-const blankRealFamilyState: SavedFamilyState = {
-  familyName: "My Family",
-  parentPasscode: defaultParentPasscode,
-  parents: [{ id: "parent-1", name: "Parent" }],
-  children: [],
-  pets: [],
-  missions: [],
-  transactions: [],
-  goals: [],
-  badges: [],
-  neighborhoodJobs: [],
-  moments: [],
-  familyPhotoUrl: undefined,
-  activeChildId: "",
-};
-
 export function TailTotsApp() {
   const [role, setRole] = useState<Role>("parent");
   const [activeTab, setActiveTab] = useState("vision");
@@ -400,7 +383,8 @@ export function TailTotsApp() {
     safety: "Parent confirms address and stays reachable.",
   });
   const [cloudAccountEmail, setCloudAccountEmail] = useState("");
-  const [accountDraft, setAccountDraft] = useState({ email: "", password: "" });
+  const [accountDraft, setAccountDraft] = useState({ email: "" });
+  const [magicLinkSent, setMagicLinkSent] = useState(false);
   const [accountStatus, setAccountStatus] = useState<"idle" | "saving" | "loading" | "error" | "saved">("idle");
   const [accountMessage, setAccountMessage] = useState("");
   const [appMode, setAppMode] = useState<"demo" | "real">("demo");
@@ -460,6 +444,7 @@ export function TailTotsApp() {
     });
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       setCloudAccountEmail(session?.user.email ?? "");
+      if (session?.user) setMagicLinkSent(false);
     });
     return () => {
       isMounted = false;
@@ -515,14 +500,6 @@ export function TailTotsApp() {
     setActiveChildId(snapshot.activeChildId ?? snapshot.children?.[0]?.id ?? (snapshot.children ? "" : starterChildren[0]?.id ?? ""));
   }
 
-  function openRealFamilySetup() {
-    setAppMode("real");
-    setRole("parent");
-    setIsParentUnlocked(true);
-    setActiveTab("setup");
-    requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "smooth" }));
-  }
-
   function openRouteChooser() {
     setRole("parent");
     setIsParentUnlocked(true);
@@ -562,20 +539,6 @@ export function TailTotsApp() {
     });
   }
 
-  function startBlankRealFamilySetup(parentEmail?: string) {
-    setAppMode("real");
-    applyFamilySnapshot({
-      ...blankRealFamilyState,
-      parents: [{ id: "parent-1", name: parentEmail ? parentEmail.split("@")[0] || "Parent" : "Parent" }],
-    });
-    setNewChild({ name: "", age: "8" });
-    setNewPet({ name: "", species: "", food: "" });
-    setNewGoal({ title: "", target: "25" });
-    setMomentDraft("A kind moment with our pet was...");
-    setFamilyPhotoUrl(undefined);
-    openRealFamilySetup();
-  }
-
   function openParentDemo() {
     loadDemoFamily();
     setRole("parent");
@@ -592,39 +555,18 @@ export function TailTotsApp() {
     requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "smooth" }));
   }
 
-  async function createParentAccount() {
+  async function sendParentSignInLink() {
     setAccountStatus("loading");
     setAccountMessage("");
+    setMagicLinkSent(false);
     try {
-      await signUpParentAccount(accountDraft.email, accountDraft.password);
+      await sendParentMagicLink(accountDraft.email);
       setAccountStatus("saved");
-      setAccountMessage("Parent account created. Start by adding this family's household, kids, and pets.");
-      startBlankRealFamilySetup(accountDraft.email);
+      setMagicLinkSent(true);
+      setAccountMessage(`Sign-in link sent to ${accountDraft.email.trim().toLowerCase()}. Check that inbox (and spam) — the link expires soon.`);
     } catch (error) {
       setAccountStatus("error");
-      setAccountMessage(error instanceof Error ? error.message : "Could not create the parent account.");
-    }
-  }
-
-  async function signInParentAccountFromForm() {
-    setAccountStatus("loading");
-    setAccountMessage("");
-    try {
-      const user = await signInParentAccount(accountDraft.email, accountDraft.password);
-      setCloudAccountEmail(user?.email ?? accountDraft.email);
-      const snapshot = await loadFamilyAccountSnapshot<SavedFamilyState>();
-      if (snapshot) {
-        applyFamilySnapshot(snapshot);
-        setAccountMessage("Signed in and loaded this family's TailTots account.");
-        openRealFamilySetup();
-      } else {
-        setAccountMessage("Signed in. Start by adding this family's household, kids, and pets.");
-        startBlankRealFamilySetup(user?.email ?? accountDraft.email);
-      }
-      setAccountStatus("saved");
-    } catch (error) {
-      setAccountStatus("error");
-      setAccountMessage(error instanceof Error ? error.message : "Could not sign in.");
+      setAccountMessage(error instanceof Error ? error.message : "Could not send the sign-in link.");
     }
   }
 
@@ -642,6 +584,9 @@ export function TailTotsApp() {
   }
 
   async function loadCurrentFamilyAccount() {
+    if (typeof window !== "undefined" && !window.confirm("Load the family setup saved to this parent account? This replaces the family setup on this device.")) {
+      return;
+    }
     setAccountStatus("loading");
     setAccountMessage("");
     try {
@@ -1274,8 +1219,8 @@ export function TailTotsApp() {
               setAccountDraft={setAccountDraft}
               accountStatus={accountStatus}
               accountMessage={accountMessage}
-              createParentAccount={createParentAccount}
-              signInParentAccount={signInParentAccountFromForm}
+              sendParentSignInLink={sendParentSignInLink}
+              magicLinkSent={magicLinkSent}
               signOutParentAccount={signOutParentAccountFromApp}
               saveCurrentFamilyAccount={saveCurrentFamilyAccount}
               loadCurrentFamilyAccount={loadCurrentFamilyAccount}
@@ -1329,7 +1274,7 @@ export function TailTotsApp() {
               toggleJobVisibility={toggleNeighborhoodJobVisibility}
             />
           )}
-          {visibleActiveTab === "ai" && <AIPanel childProfiles={children} missions={missions} />}
+          {visibleActiveTab === "ai" && <AIPanel childProfiles={children} missions={missions} parentSignedIn={Boolean(cloudAccountEmail)} />}
           {visibleActiveTab === "ecosystem" && <EcosystemRoadmapPanel />}
           </>
           )}
@@ -3570,12 +3515,12 @@ function EnterpriseReadinessPanel() {
 
 function FamilySetupPanel(props: {
   cloudAccountEmail: string;
-  accountDraft: { email: string; password: string };
-  setAccountDraft: (value: { email: string; password: string }) => void;
+  accountDraft: { email: string };
+  setAccountDraft: (value: { email: string }) => void;
   accountStatus: "idle" | "saving" | "loading" | "error" | "saved";
   accountMessage: string;
-  createParentAccount: () => void;
-  signInParentAccount: () => void;
+  sendParentSignInLink: () => void;
+  magicLinkSent: boolean;
   signOutParentAccount: () => void;
   saveCurrentFamilyAccount: () => void;
   loadCurrentFamilyAccount: () => void;
@@ -3652,38 +3597,35 @@ function FamilySetupPanel(props: {
         </div>
 
         {!props.cloudAccountEmail && (
-          <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_1fr_auto_auto]">
+          <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_auto]">
             <input
               value={props.accountDraft.email}
-              onChange={(event) => props.setAccountDraft({ ...props.accountDraft, email: event.target.value })}
+              onChange={(event) => props.setAccountDraft({ email: event.target.value })}
               className="min-h-12 rounded-lg border border-[#c9d8f8] px-4 py-3 font-semibold"
               inputMode="email"
               placeholder="Parent email"
               type="email"
+              aria-label="Parent email"
             />
-            <input
-              value={props.accountDraft.password}
-              onChange={(event) => props.setAccountDraft({ ...props.accountDraft, password: event.target.value })}
-              className="min-h-12 rounded-lg border border-[#c9d8f8] px-4 py-3 font-semibold"
-              placeholder="Password"
-              type="password"
-            />
-            <button onClick={props.createParentAccount} disabled={props.accountStatus === "loading"} className="min-h-12 rounded-lg bg-[#165a4b] px-5 py-3 text-sm font-black text-white disabled:opacity-60">
-              Create account
-            </button>
-            <button onClick={props.signInParentAccount} disabled={props.accountStatus === "loading"} className="min-h-12 rounded-lg border border-[#c9d8f8] bg-white px-5 py-3 text-sm font-black text-[#1f3b7a] disabled:opacity-60">
-              Sign in
+            <button onClick={props.sendParentSignInLink} disabled={props.accountStatus === "loading"} className="min-h-12 rounded-lg bg-[#165a4b] px-5 py-3 text-sm font-black text-white disabled:opacity-60">
+              {props.accountStatus === "loading" ? "Sending..." : "Email me a sign-in link"}
             </button>
           </div>
         )}
 
-        {props.cloudAccountEmail && (
+        {!props.cloudAccountEmail && props.magicLinkSent && (
+          <div className="mt-3 rounded-lg bg-[#e7f4ef] px-4 py-3 text-sm font-bold text-[#165a4b]">
+            Check your email — tap the sign-in link to finish signing in. The link expires in about an hour.
+          </div>
+        )}
+
+        {isSupabaseConfigured && props.cloudAccountEmail && (
           <div className="mt-4 flex flex-wrap gap-3">
             <button onClick={props.saveCurrentFamilyAccount} disabled={props.accountStatus === "saving"} className="min-h-12 rounded-lg bg-[#165a4b] px-5 py-3 text-sm font-black text-white disabled:opacity-60">
-              {props.accountStatus === "saving" ? "Saving..." : "Save family account"}
+              {props.accountStatus === "saving" ? "Saving..." : "Save to parent account"}
             </button>
             <button onClick={props.loadCurrentFamilyAccount} disabled={props.accountStatus === "loading"} className="min-h-12 rounded-lg border border-[#c9d8f8] bg-white px-5 py-3 text-sm font-black text-[#1f3b7a] disabled:opacity-60">
-              Load account
+              Load from parent account
             </button>
             <button onClick={props.signOutParentAccount} disabled={props.accountStatus === "loading"} className="min-h-12 rounded-lg border border-[#ded8c7] bg-[#f8f6ed] px-5 py-3 text-sm font-black text-[#5f4a24] disabled:opacity-60">
               Sign out
@@ -4414,7 +4356,7 @@ function LegacyNeighborhoodPanel({ goals, childProfiles }: { goals: SavingsGoal[
 
 void LegacyNeighborhoodPanel;
 
-function AIPanel({ childProfiles, missions }: { childProfiles: Child[]; missions: Mission[] }) {
+function AIPanel({ childProfiles, missions, parentSignedIn }: { childProfiles: Child[]; missions: Mission[]; parentSignedIn: boolean }) {
   const currentUses = [
     ["Local parent tools", "TailTots now has template-powered helpers for missions, care checklists, memories, summaries, journals, and insights."],
     ["AI ideas are live for parents", "The Life Skill Chore Planner can generate activity ideas with Cloudflare Workers AI. Parents review every suggestion before it becomes a mission."],
@@ -4446,14 +4388,31 @@ function AIPanel({ childProfiles, missions }: { childProfiles: Child[]; missions
     return "10-12";
   }
 
+  async function getParentAccessToken(): Promise<string | null> {
+    if (!supabase) return null;
+    try {
+      const { data, error } = await supabase.auth.getSession();
+      if (error) return null;
+      return data.session?.access_token ?? null;
+    } catch {
+      return null;
+    }
+  }
+
   async function generateAiIdeas() {
     const child = childProfiles[0];
     setAiLoading(true);
     setAiError(null);
     try {
+      const accessToken = await getParentAccessToken();
+      if (!accessToken) {
+        setAiIdeas(null);
+        setAiError("Sign in with your parent account to use the AI helper — the template ideas below still work.");
+        return;
+      }
       const response = await fetch("/api/ai/ideas", {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: { "content-type": "application/json", authorization: `Bearer ${accessToken}` },
         body: JSON.stringify({
           lifeSkill: aiDraft.lifeSkill,
           childFirstName: child?.name.trim().split(/\s+/)[0] ?? "your child",
@@ -4555,6 +4514,11 @@ function AIPanel({ childProfiles, missions }: { childProfiles: Child[]; missions
             >
               {aiLoading ? "Generating ideas\u2026" : "Generate with AI"}
             </button>
+            {!parentSignedIn && (
+              <p className="mt-2 text-xs font-semibold text-[#8a5a00]">
+                AI ideas need a signed-in parent account — set one up in Family Setup, under Parent account.
+              </p>
+            )}
             {aiError && (
               <p className="mt-2 text-xs font-semibold text-[#8a5a00]">{aiError}</p>
             )}
