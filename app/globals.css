@@ -297,6 +297,9 @@ button {
   --color-tt-ink: var(--tt-ink);
   --color-tt-ink-soft: var(--tt-ink-soft);
   --color-tt-navy: var(--tt-navy);
+  --color-tt-navy-soft: #31405f;
+  --color-tt-ink-faint: var(--tt-ink-faint);
+  --color-tt-line-blue: var(--tt-line-blue);
   --color-tt-pine: var(--tt-pine);
   --color-tt-pine-deep: var(--tt-pine-deep);
   --color-tt-pine-tint: var(--tt-pine-tint);
