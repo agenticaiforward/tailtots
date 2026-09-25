@@ -1324,6 +1324,14 @@ function VisionLandingPanel({
     ["🤝 Teamwork & Leadership", "Missions built for siblings, cousins, and tiny co-conspirators."],
     ["🌎 Community", "From your street to the local shelter — kindness with a map."],
   ];
+  const platformPillars = [
+    ["🌐", "Safe social practice", "Training wheels for real-world social life. Kids practice teamwork, leadership, and empathy — with zero strangers, zero feeds, zero DMs."],
+    ["🦸", "Character, on purpose", "Responsibility, kindness, honesty: a real character curriculum taught through missions, not lectures."],
+    ["🛠️", "Skills that compound", "Time, money, helping at home — the unglamorous skills that quietly run adulthood."],
+    ["🐶", "Real shelter dogs", "Kindness that leaves the screen. Kids work toward real giving for real dogs waiting in real shelters."],
+    ["🧹", "Chores & neighborhood", "Helper missions at home and around the block. The real world is the playground."],
+    ["🎯", "Parent-set donation goals", "You set the goal and fund it — your kid picks the cause and works for it. Giving, earned."],
+  ];
   const trustChips = [
     "Private by design",
     "Parents approve everything",
@@ -1452,6 +1460,9 @@ function VisionLandingPanel({
             <p className="mt-2 max-w-xl text-[15px] font-semibold leading-6 text-tt-ink-soft">
               Parent-approved missions. Kid Bank. Zero stranger danger. All the “aww,” none of the chaos.
             </p>
+            <p className="mt-2 max-w-xl text-[15px] font-semibold leading-6 text-tt-ink-soft">
+              Pet care is where it starts. Character, skills, chores, safe social practice, and real shelter giving — that’s where it goes.
+            </p>
 
             {/* PRIMARY: launch capture. SECONDARY: kid demo. Never equal weight. */}
             <form
@@ -1530,7 +1541,7 @@ function VisionLandingPanel({
           <div className="tt-marquee-track gap-8 text-sm font-black text-tt-navy-soft">
             {[0, 1].map((copy) => (
               <div key={copy} className="flex shrink-0 items-center gap-8">
-                {["🐾 Real pets, real chores", "💰 Kid Bank: earn · save · give", "🛡️ Parents approve everything", "🚫 Zero stranger chat", "🏅 Badges worth bragging about", "🤖 Guided AI, kid-safe"].map((item) => (
+                {["🐾 Real pets, real chores", "💰 Kid Bank: earn · save · give", "🎯 Parent-set giving goals", "🐶 Real shelter dogs helped", "🛡️ Parents approve everything", "🚫 Zero stranger chat", "🏅 Badges worth bragging about", "🤖 Guided AI, kid-safe"].map((item) => (
                   <span key={`${copy}-${item}`} className="whitespace-nowrap">{item}</span>
                 ))}
               </div>
@@ -1648,6 +1659,25 @@ function VisionLandingPanel({
             <p className="text-lg font-black">🎁 …and bragging rights</p>
             <p className="mt-2 text-sm font-semibold leading-6 text-white/80">Growth badges, memory moments, and a portfolio of “look what I did.” Grandparents love this part.</p>
           </article>
+        </div>
+      </section>
+
+      {/* ============ PLATFORM: pet care is the hook, this is the one-stop ============ */}
+      <section id="landing-platform" className="-mx-3 scroll-mt-36 border-y border-tt-line bg-tt-night p-5 text-white shadow-sm sm:mx-0 sm:rounded-3xl sm:border sm:p-8">
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-sun">One app · The whole childhood</p>
+        <h3 className="mt-2 max-w-2xl text-2xl font-black tracking-tight sm:text-3xl">Pet care is the hook. This is the platform.</h3>
+        <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-white/75">
+          TailTots is the one stop for raising capable, kind kids — safe social practice, character, skills, chores, neighborhood adventures,
+          and giving that actually reaches shelter dogs. Crisp on the surface, deep underneath.
+        </p>
+        <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {platformPillars.map(([emoji, title, body]) => (
+            <article key={title} className="tt-card-lift rounded-2xl bg-white/10 p-5 ring-1 ring-white/15">
+              <p className="text-2xl" aria-hidden="true">{emoji}</p>
+              <p className="mt-2 text-lg font-black">{title}</p>
+              <p className="mt-1 text-sm font-semibold leading-6 text-white/70">{body}</p>
+            </article>
+          ))}
         </div>
       </section>
 
