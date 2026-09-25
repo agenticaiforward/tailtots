@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Cropper, { type Area } from "react-easy-crop";
 import {
@@ -1295,6 +1295,128 @@ export function TailTotsApp() {
   );
 }
 
+function CountUp({ to, prefix, durationMs }: { to: number; prefix?: string; durationMs?: number }) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const [reducedMotion] = useState(
+    () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  );
+  const [value, setValue] = useState(() => (reducedMotion ? to : 0));
+  const [started, setStarted] = useState(() => reducedMotion);
+  useEffect(() => {
+    if (reducedMotion) return;
+    const node = ref.current;
+    if (!node) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setStarted(true);
+            observer.disconnect();
+          }
+        });
+      },
+      { threshold: 0.4 }
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [reducedMotion, to]);
+  useEffect(() => {
+    if (!started || reducedMotion) return;
+    const total = durationMs ?? 1300;
+    const start = performance.now();
+    let frame = 0;
+    const tick = (now: number) => {
+      const progress = Math.min(1, (now - start) / total);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setValue(Math.round(to * eased));
+      if (progress < 1) frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [started, reducedMotion, to, durationMs]);
+  return (
+    <span ref={ref}>
+      {prefix ?? ""}
+      {value.toLocaleString()}
+    </span>
+  );
+}
+
+function ShelterGivingShowcase() {
+  return (
+    <div className="mt-6 overflow-hidden rounded-2xl border border-white/15 bg-gradient-to-br from-white/10 via-white/5 to-transparent p-5 sm:p-6">
+      <div className="flex flex-wrap items-end justify-between gap-2">
+        <div>
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-sun">🐶 Shelter giving, fundraising-style</p>
+          <h4 className="mt-2 text-xl font-black tracking-tight sm:text-2xl">Real dogs. Real goals. Real bragging rights.</h4>
+        </div>
+        <span className="rounded-full bg-white/10 px-3 py-1 text-[11px] font-black uppercase tracking-[0.12em] text-white/70 ring-1 ring-white/15">
+          Illustrative example
+        </span>
+      </div>
+      <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-white/70">
+        You set the goal and fund it — your kid picks the cause and works for it. Here’s what a family giving goal looks like when it’s running:
+      </p>
+
+      <div className="mt-5 grid gap-3 sm:grid-cols-3">
+        {[
+          { emoji: "🦴", to: 1200, label: "treats funded", note: "one good deed at a time" },
+          { emoji: "🚶", to: 340, label: "shelter walks logged", note: "real legs, real dogs" },
+          { emoji: "🧸", to: 85, label: "toy drives completed", note: "squeaky ones preferred" },
+        ].map((stat) => (
+          <div key={stat.label} className="tt-card-lift rounded-2xl bg-white/10 p-4 text-center ring-1 ring-white/15">
+            <p className="text-2xl" aria-hidden="true">{stat.emoji}</p>
+            <p className="mt-1 text-3xl font-black text-tt-sun">
+              <CountUp to={stat.to} />
+            </p>
+            <p className="mt-1 text-xs font-black uppercase tracking-[0.1em] text-white/80">{stat.label}</p>
+            <p className="mt-1 text-[11px] font-semibold text-white/55">{stat.note} · example figures</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_1.2fr]">
+        <div className="rounded-2xl bg-white/10 p-5 ring-1 ring-white/15">
+          <p className="text-xs font-black uppercase tracking-[0.14em] text-white/70">Example goal thermometer</p>
+          <p className="mt-1 text-sm font-black text-white">Chew-toy fund for Sunny Paws Shelter</p>
+          <div className="mt-4 flex items-end justify-center gap-4">
+            <div className="relative h-44 w-10 overflow-hidden rounded-full bg-white/10 ring-1 ring-white/20" role="img" aria-label="Example goal thermometer showing 65 percent raised">
+              <div className="absolute inset-x-0 bottom-0 rounded-full bg-gradient-to-t from-tt-tang to-tt-sun" style={{ height: "65%" }} />
+              <div className="absolute inset-x-0 bottom-0 flex items-start justify-center pt-2 text-[11px] font-black text-tt-ink">65%</div>
+            </div>
+            <div className="pb-1 text-sm font-bold leading-6 text-white/75">
+              <p><span className="text-lg font-black text-tt-sun">$65</span> raised</p>
+              <p>of an example <span className="font-black text-white">$100</span> goal</p>
+              <p className="mt-2 text-xs font-semibold text-white/60">Every mission nudges the mercury. Kids can literally watch kindness rise. 🌡️</p>
+            </div>
+          </div>
+        </div>
+        <div className="grid gap-3">
+          {[
+            { title: "Example: Senior-dog blanket drive", meta: "Kid picked · Parent funded", pct: 80, line: "12 of 15 blankets — the shelter naps are about to get luxurious." },
+            { title: "Example: New-leash-on-life fund", meta: "Kid picked · Parent funded", pct: 45, line: "Almost halfway to 20 leashes. The dogs are already practicing their strut." },
+          ].map((card) => (
+            <article key={card.title} className="tt-card-lift rounded-2xl bg-white p-4 text-tt-ink shadow-lg">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-sm font-black">{card.title}</p>
+                <span className="rounded-full bg-tt-pine-tint px-3 py-1 text-[10px] font-black uppercase tracking-[0.1em] text-tt-pine">{card.meta}</span>
+              </div>
+              <div className="mt-3 h-3 overflow-hidden rounded-full bg-tt-sand">
+                <div className="h-3 rounded-full bg-gradient-to-r from-tt-pine to-tt-tang" style={{ width: `${card.pct}%` }} />
+              </div>
+              <div className="mt-2 flex items-center justify-between text-xs font-bold">
+                <span className="text-tt-ink-soft">{card.line}</span>
+                <span className="ml-2 shrink-0 font-black text-tt-pine">{card.pct}%</span>
+              </div>
+            </article>
+          ))}
+          <p className="text-[11px] font-semibold text-white/55">Campaign-style cards, parent-funded, kid-earned. Figures shown are examples, not real totals.</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function VisionLandingPanel({
   openParentDemo,
   openKidDemo,
@@ -1559,12 +1681,66 @@ function VisionLandingPanel({
         </div>
       </div>
 
+      {/* ============ FOMO STRIP: founding-family window, directly under the hero ============ */}
+      <section aria-label="Founding families" className="relative -mx-3 overflow-hidden border-y border-tt-pine/30 bg-tt-night p-5 text-white shadow-sm sm:mx-0 sm:rounded-3xl sm:border sm:p-6">
+        <div className="pointer-events-none absolute -right-16 -top-16 size-56 rounded-full bg-tt-sun/20 blur-3xl" aria-hidden="true" />
+        <div className="pointer-events-none absolute -bottom-20 -left-10 size-56 rounded-full bg-tt-tang/20 blur-3xl" aria-hidden="true" />
+        <div className="relative flex flex-col items-start gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="min-w-0">
+            <p className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-xs font-black uppercase tracking-[0.14em] text-tt-sun ring-1 ring-white/15">
+              <span className="tt-animate-sparkle" aria-hidden="true">🔥</span> Founding 500 · strictly optional, extremely tempting
+            </p>
+            <h3 className="mt-3 max-w-xl text-2xl font-black tracking-tight sm:text-3xl">
+              We’re opening TailTots to our first 500 founding families.
+            </h3>
+            <p className="mt-2 max-w-xl text-sm font-semibold leading-6 text-white/70">
+              Founders get early access, a founding-family badge their kids will absolutely brag about, and first dibs on shelter-giving goals.
+              The window closes at launch — no fake countdown, just a real door that shuts when we ship.
+            </p>
+          </div>
+          <form
+            className="w-full max-w-md shrink-0 rounded-2xl border border-white/15 bg-white/10 p-3 backdrop-blur sm:p-4"
+            onSubmit={(event) => { event.preventDefault(); joinLaunchList(); }}
+          >
+            <label htmlFor="fomo-launch-email" className="text-xs font-black uppercase tracking-[0.14em] text-tt-sun">
+              🐾 Claim a founding-family spot
+            </label>
+            <div className="mt-2 grid gap-2 sm:grid-cols-[1fr_auto]">
+              <input
+                id="fomo-launch-email"
+                value={launchInterest.email}
+                onChange={(event) => setLaunchInterest({ email: event.target.value })}
+                className="min-h-12 rounded-xl border border-white/20 bg-white/10 px-4 text-sm font-bold text-white placeholder:text-white/50"
+                inputMode="email"
+                placeholder="Parent email"
+                type="email"
+                required
+              />
+              <button type="submit" disabled={launchInterestStatus === "saving"} className="tt-btn-press tt-animate-wiggle-hover min-h-12 rounded-xl bg-tt-tang px-6 py-3 text-sm font-black text-white shadow-md disabled:opacity-60">
+                {launchInterestStatus === "saving" ? "Saving…" : "Save my spot"}
+              </button>
+            </div>
+            {launchInterestMessage && (
+              <p className={`mt-2 text-sm font-bold ${launchInterestStatus === "error" ? "text-tt-sun" : "text-white"}`} role="status">
+                {launchInterestMessage}
+              </p>
+            )}
+            <p className="mt-2 text-[11px] font-semibold text-white/55">Free for families. One email. Zero spam, only tail wags.</p>
+          </form>
+        </div>
+      </section>
+
       {/* ============ PET PROMISE: photos + the required language ============ */}
       <section className="-mx-3 border-y border-tt-line bg-white p-4 shadow-sm sm:mx-0 sm:rounded-3xl sm:border sm:p-6">
-        <div className="flex flex-wrap items-end justify-between gap-2">
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-tang">Exhibit A: your camera roll 📸</p>
+        <div className="mt-2 flex flex-wrap items-end justify-between gap-2">
           <h3 className="text-2xl font-black tracking-tight text-tt-navy sm:text-3xl">Built around the bond kids already have with animals.</h3>
           <p className="text-sm font-bold text-tt-ink-faint">Dogs · Cats · Rabbits · Guinea pigs · Big dreams</p>
         </div>
+        <p className="mt-2 max-w-3xl text-[15px] font-semibold leading-6 text-tt-ink-soft">
+          That bond is the doorway. On the other side: kids doing <span className="font-black text-tt-ink">real good in the real world</span> —
+          caring for shelter dogs, helping neighbors, and earning the giving they choose. Cuteness in, character out.
+        </p>
         <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
           {kidsPetPhotos.map(([label, src]) => (
             <div key={label} className="tt-card-lift group overflow-hidden rounded-2xl bg-tt-sand shadow-sm">
@@ -1598,6 +1774,9 @@ function VisionLandingPanel({
               </button>
             </div>
             <p className="mt-3 text-xs font-semibold text-white/60">Sample family included. Nothing leaves your device in the demo.</p>
+            <p className="mt-3 max-w-lg rounded-2xl bg-white/10 p-3 text-sm font-bold leading-6 text-white/85 ring-1 ring-white/15">
+              <span aria-hidden="true">🐹</span> Jack’s review: “I got fresh water <em>and</em> a comfort check. 10/10, would be cared for again.”
+            </p>
           </div>
           <div className="grid grid-cols-3 gap-2 sm:gap-3">
             {[
@@ -1620,7 +1799,8 @@ function VisionLandingPanel({
 
       {/* ============ HOW IT WORKS: 3 steps, right after the aha ============ */}
       <section className="-mx-3 border-y border-tt-line bg-white p-4 shadow-sm sm:mx-0 sm:rounded-3xl sm:border sm:p-6">
-        <h3 className="text-2xl font-black tracking-tight text-tt-navy sm:text-3xl">Ridiculously simple. Suspiciously effective.</h3>
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-pine">No PhD in parenting required 🎓</p>
+        <h3 className="mt-2 text-2xl font-black tracking-tight text-tt-navy sm:text-3xl">Ridiculously simple. Suspiciously effective.</h3>
         <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-tt-ink-soft">Three steps. That’s the whole parenting hack.</p>
         <div className="relative mt-5 grid gap-3 md:grid-cols-3 md:gap-5">
           <div className="pointer-events-none absolute left-[16%] right-[16%] top-9 hidden border-t-[3px] border-dashed border-tt-pine/30 md:block" aria-hidden="true" />
@@ -1637,6 +1817,8 @@ function VisionLandingPanel({
 
       {/* ============ PLATFORM: pet care is the hook, this is the one-stop ============ */}
       <section id="landing-platform" className="relative -mx-3 scroll-mt-36 overflow-hidden border-y border-tt-line bg-tt-night p-5 text-white shadow-sm sm:mx-0 sm:rounded-3xl sm:border sm:p-8">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(80%_60%_at_50%_0%,rgba(255,209,102,0.10),transparent_70%)]" aria-hidden="true" />
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/40 to-transparent" aria-hidden="true" />
         <div className="pointer-events-none absolute -left-24 -top-24 size-72 rounded-full bg-tt-pine/40 blur-3xl" aria-hidden="true" />
         <div className="pointer-events-none absolute -bottom-24 -right-24 size-72 rounded-full bg-tt-grape/30 blur-3xl" aria-hidden="true" />
         <div className="relative">
@@ -1664,6 +1846,113 @@ function VisionLandingPanel({
             </div>
             <p className="mt-3 text-xs font-semibold text-white/60">Start with pet care. End up with a kid who budgets. Funny how that works.</p>
           </div>
+          <ShelterGivingShowcase />
+        </div>
+      </section>
+
+      {/* ============ WILDFIRE: certificate + send-a-mission ============ */}
+      <section className="-mx-3 border-y border-tt-line bg-gradient-to-br from-tt-grape-soft via-white to-tt-sky p-5 shadow-sm sm:mx-0 sm:rounded-3xl sm:border sm:p-8">
+        <div className="grid items-start gap-6 lg:grid-cols-2">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-grape">The wildfire loop 🔥</p>
+            <h3 className="mt-2 text-2xl font-black tracking-tight text-tt-navy sm:text-3xl">The Pet Readiness Certificate</h3>
+            <p className="mt-2 text-sm font-semibold leading-6 text-tt-ink-soft">
+              Finish the pet-care journey, earn the certificate. Someday your kid will wave this in your face at the shelter. You’ll be ready — and weirdly proud.
+            </p>
+            <div className="mt-4 flex flex-wrap gap-3">
+              <button
+                onClick={() => { setCertCelebrating(true); window.setTimeout(() => setCertCelebrating(false), 1800); }}
+                className="tt-btn-press tt-animate-wiggle-hover min-h-12 rounded-xl bg-tt-grape px-6 py-3 text-sm font-black text-white shadow-lg"
+              >
+                🎓 Preview the certificate
+              </button>
+              <button
+                onClick={() => shareText("My kid is earning their TailTots Pet Readiness Certificate — real pet-care missions, parent-approved. 🐾 https://tailtots.com", "Certificate brag copied! Go show it off. 🎓")}
+                className="tt-btn-press tt-animate-wiggle-hover min-h-12 rounded-xl border-2 border-tt-grape/30 bg-white px-6 py-3 text-sm font-black text-tt-grape"
+              >
+                Share it →
+              </button>
+            </div>
+          </div>
+          <div className="relative mx-auto w-full max-w-sm">
+            {certCelebrating && (
+              <div className="pointer-events-none absolute inset-0 z-10" aria-hidden="true">
+                {["🎉", "⭐", "🐾", "💛", "🎊", "🌟"].map((emoji, i) => (
+                  <span key={i} className="tt-confetti-piece absolute text-2xl" style={{ left: `${8 + i * 15}%`, top: "10%", animationDelay: `${i * 0.12}s` }}>{emoji}</span>
+                ))}
+              </div>
+            )}
+            <div className={`tt-card-lift rounded-3xl border-4 border-double border-tt-grape/40 bg-white p-6 text-center shadow-xl ${certCelebrating ? "tt-animate-wiggle-hover" : ""}`}>
+              <p className="text-xs font-black uppercase tracking-[0.22em] text-tt-grape">TailTots · Official</p>
+              <p className="mt-1 text-2xl font-black text-tt-navy">Pet Readiness Certificate</p>
+              <p className="mx-auto mt-3 max-w-[16rem] text-sm font-semibold leading-6 text-tt-ink-soft">
+                This certifies that <span className="font-black text-tt-ink">Demo Kid</span> of the <span className="font-black text-tt-ink">Demo Crew</span> is growing into a responsible pet human — one mission at a time.
+              </p>
+              <div className="mt-4 flex items-center justify-center gap-6 text-3xl" aria-hidden="true">
+                <span>🐹</span><span>🐶</span><span>🐱</span>
+              </div>
+              <p className="mt-4 border-t border-dashed border-tt-line pt-3 text-[11px] font-bold uppercase tracking-[0.14em] text-tt-ink-faint">Parent approved · Shelter respected</p>
+            </div>
+          </div>
+        </div>
+        <div className="mt-6 rounded-2xl bg-tt-night p-5 text-white sm:p-6">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="min-w-0">
+              <p className="text-lg font-black">Know a parent who heard “can we get a puppy?!” this week? 🐶</p>
+              <p className="mt-1 text-sm font-semibold text-white/70">Send their kid a TailTots mission. Be the hero of the group chat.</p>
+            </div>
+            <button
+              onClick={() => shareText("Send your kid a real TailTots mission — feed a pet, earn coins, make a parent proud. Try it free: https://tailtots.com", "Mission invite copied! Paste it into the group chat. 💌")}
+              className="tt-btn-press tt-animate-wiggle-hover min-h-12 shrink-0 rounded-xl bg-tt-sun px-6 py-3 text-sm font-black text-tt-ink"
+            >
+              📤 Send a mission to a friend’s kid
+            </button>
+          </div>
+          {shareMessage && <p className="mt-3 text-sm font-bold text-tt-sun" role="status">{shareMessage}</p>}
+        </div>
+      </section>
+
+      {/* ============ RETURN LOOP: why kids come back, why parents keep it ============ */}
+      <section className="relative -mx-3 overflow-hidden border-y border-tt-line bg-white p-5 shadow-sm sm:mx-0 sm:rounded-3xl sm:border sm:p-8">
+        <svg className="pointer-events-none absolute right-[4%] top-6 hidden w-56 text-tt-pine opacity-[0.12] md:block" viewBox="0 0 320 80" aria-hidden="true">
+          <g fill="currentColor">
+            <use href="#tt-paw" transform="translate(24,54) rotate(-18)" />
+            <use href="#tt-paw" transform="translate(104,62) rotate(12)" />
+            <use href="#tt-paw" transform="translate(184,48) rotate(-10)" />
+            <use href="#tt-paw" transform="translate(264,58) rotate(16)" />
+          </g>
+        </svg>
+        <div className="relative">
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-grape">The habit loop 🔁</p>
+          <h3 className="mt-2 max-w-2xl text-2xl font-black tracking-tight text-tt-navy sm:text-3xl">
+            Why kids come back tomorrow. And why parents let them.
+          </h3>
+          <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-tt-ink-soft">
+            Not streaks-for-streaks’-sake. A loop where every turn leaves something real behind — a cared-for pet, a kinder block, a certificate on the fridge.
+          </p>
+          <div className="relative mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              ["🎯", "Mission", "One clear job. Big steps, real world. The opposite of a feed."],
+              ["💛", "Kindness", "A daily prompt that leaves the screen — a rock painted, a neighbor surprised."],
+              ["🎓", "Certificate", "Proof it happened. Fridge-worthy, grandparent-forwardable."],
+              ["📣", "Share", "One tap invites the next family. The loop feeds itself."],
+            ].map(([emoji, title, body], index) => (
+              <article key={title} className="tt-card-lift relative overflow-hidden rounded-2xl border border-tt-line bg-tt-cream p-5">
+                <p className="text-3xl" aria-hidden="true">{emoji}</p>
+                <p className="mt-2 text-base font-black text-tt-ink">
+                  <span className="mr-2 inline-grid size-6 place-items-center rounded-full bg-tt-grape text-[11px] font-black text-white">{index + 1}</span>
+                  {title}
+                </p>
+                <p className="mt-1 text-sm font-semibold leading-6 text-tt-ink-soft">{body}</p>
+                {index < 3 && (
+                  <span className="pointer-events-none absolute right-3 top-1/2 hidden -translate-y-1/2 text-xl text-tt-grape/40 lg:block" aria-hidden="true">→</span>
+                )}
+              </article>
+            ))}
+          </div>
+          <p className="mt-4 text-sm font-bold text-tt-ink-soft">
+            Kids chase the next mission. Parents keep the thing that makes mornings easier. Everybody wins — especially the shelter dogs. 🐶
+          </p>
         </div>
       </section>
 
@@ -1704,68 +1993,6 @@ function VisionLandingPanel({
         </div>
       </section>
 
-      {/* ============ WILDFIRE: certificate + send-a-mission ============ */}
-      <section className="-mx-3 border-y border-tt-line bg-gradient-to-br from-tt-grape-soft via-white to-tt-sky p-5 shadow-sm sm:mx-0 sm:rounded-3xl sm:border sm:p-8">
-        <div className="grid items-start gap-6 lg:grid-cols-2">
-          <div>
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-grape">The wildfire loop 🔥</p>
-            <h3 className="mt-2 text-2xl font-black tracking-tight text-tt-navy sm:text-3xl">The Pet Readiness Certificate</h3>
-            <p className="mt-2 text-sm font-semibold leading-6 text-tt-ink-soft">
-              Finish the pet-care journey, earn the certificate. Someday your kid will wave this in your face at the shelter. You’ll be ready — and weirdly proud.
-            </p>
-            <div className="mt-4 flex flex-wrap gap-3">
-              <button
-                onClick={() => { setCertCelebrating(true); window.setTimeout(() => setCertCelebrating(false), 1800); }}
-                className="tt-btn-press min-h-12 rounded-xl bg-tt-grape px-6 py-3 text-sm font-black text-white shadow-lg"
-              >
-                🎓 Preview the certificate
-              </button>
-              <button
-                onClick={() => shareText("My kid is earning their TailTots Pet Readiness Certificate — real pet-care missions, parent-approved. 🐾 https://tailtots.com", "Certificate brag copied! Go show it off. 🎓")}
-                className="tt-btn-press min-h-12 rounded-xl border-2 border-tt-grape/30 bg-white px-6 py-3 text-sm font-black text-tt-grape"
-              >
-                Share it →
-              </button>
-            </div>
-          </div>
-          <div className="relative mx-auto w-full max-w-sm">
-            {certCelebrating && (
-              <div className="pointer-events-none absolute inset-0 z-10" aria-hidden="true">
-                {["🎉", "⭐", "🐾", "💛", "🎊", "🌟"].map((emoji, i) => (
-                  <span key={i} className="tt-confetti-piece absolute text-2xl" style={{ left: `${8 + i * 15}%`, top: "10%", animationDelay: `${i * 0.12}s` }}>{emoji}</span>
-                ))}
-              </div>
-            )}
-            <div className={`tt-card-lift rounded-3xl border-4 border-double border-tt-grape/40 bg-white p-6 text-center shadow-xl ${certCelebrating ? "tt-animate-wiggle-hover" : ""}`}>
-              <p className="text-xs font-black uppercase tracking-[0.22em] text-tt-grape">TailTots · Official</p>
-              <p className="mt-1 text-2xl font-black text-tt-navy">Pet Readiness Certificate</p>
-              <p className="mx-auto mt-3 max-w-[16rem] text-sm font-semibold leading-6 text-tt-ink-soft">
-                This certifies that <span className="font-black text-tt-ink">Demo Kid</span> of the <span className="font-black text-tt-ink">Demo Crew</span> is growing into a responsible pet human — one mission at a time.
-              </p>
-              <div className="mt-4 flex items-center justify-center gap-6 text-3xl" aria-hidden="true">
-                <span>🐹</span><span>🐶</span><span>🐱</span>
-              </div>
-              <p className="mt-4 border-t border-dashed border-tt-line pt-3 text-[11px] font-bold uppercase tracking-[0.14em] text-tt-ink-faint">Parent approved · Shelter respected</p>
-            </div>
-          </div>
-        </div>
-        <div className="mt-6 rounded-2xl bg-tt-night p-5 text-white sm:p-6">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="min-w-0">
-              <p className="text-lg font-black">Know a parent who heard “can we get a puppy?!” this week? 🐶</p>
-              <p className="mt-1 text-sm font-semibold text-white/70">Send their kid a TailTots mission. Be the hero of the group chat.</p>
-            </div>
-            <button
-              onClick={() => shareText("Send your kid a real TailTots mission — feed a pet, earn coins, make a parent proud. Try it free: https://tailtots.com", "Mission invite copied! Paste it into the group chat. 💌")}
-              className="tt-btn-press min-h-12 shrink-0 rounded-xl bg-tt-sun px-6 py-3 text-sm font-black text-tt-ink"
-            >
-              📤 Send a mission to a friend’s kid
-            </button>
-          </div>
-          {shareMessage && <p className="mt-3 text-sm font-bold text-tt-sun" role="status">{shareMessage}</p>}
-        </div>
-      </section>
-
       {/* ============ FOUNDER STORY: exactly once ============ */}
       <section className="-mx-3 border-y border-tt-line bg-tt-sun-soft/50 p-5 shadow-sm sm:mx-0 sm:rounded-3xl sm:border sm:p-8">
         <div className="mx-auto max-w-3xl text-center">
@@ -1786,6 +2013,9 @@ function VisionLandingPanel({
           <h3 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">Don’t miss the launch. Your kids won’t let you.</h3>
           <p className="mx-auto mt-3 max-w-xl text-[15px] font-semibold leading-6 text-white/80">
             Free family accounts, early rewards, and launch updates. One email — that’s the whole commitment. (The missions are the fun part.)
+          </p>
+          <p className="mx-auto mt-3 inline-flex max-w-xl items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-xs font-black uppercase tracking-[0.12em] text-tt-sun ring-1 ring-white/20">
+            <span aria-hidden="true">⏳</span> Founding-family window closes at launch — no fake countdown, just a real door
           </p>
           <form
             className="mx-auto mt-5 grid max-w-lg gap-2 sm:grid-cols-[1fr_auto]"
@@ -1865,6 +2095,10 @@ function VisionLandingPanel({
               )}
             </div>
           </div>
+        </div>
+        <div className="mt-6 flex flex-col items-center justify-between gap-2 border-t border-tt-line pt-4 text-center sm:flex-row sm:text-left">
+          <p className="text-xs font-black text-tt-navy">🐾 TailTots — parent-guided real-world growth.</p>
+          <p className="text-[11px] font-semibold text-tt-ink-faint">Made with guinea-pig supervision · <a className="font-bold text-tt-pine underline decoration-tt-sun decoration-2 underline-offset-2" href="mailto:hello@tailtots.com">hello@tailtots.com</a></p>
         </div>
       </section>
     </section>
@@ -2958,6 +3192,19 @@ function MissionsPanel(props: {
   setMissionNote: (value: string) => void;
   completeMission: (missionId: string) => void;
 }) {
+  const pawgressTotal = props.missions.length;
+  const pawgressDone = props.missions.filter((mission) => mission.completedBy || mission.status === "approved").length;
+  const pawgressPct = pawgressTotal === 0 ? 0 : Math.round((pawgressDone / pawgressTotal) * 100);
+  const pawgressMessage =
+    pawgressTotal === 0
+      ? "No missions yet — the paws are napping. 😴"
+      : pawgressPct === 100
+        ? "All paws accounted for! Legendary status: achieved. 🏆"
+        : pawgressPct >= 50
+          ? "Over halfway! Somewhere, a guinea pig is impressed. 🐹"
+          : pawgressPct > 0
+            ? "Paws warming up… the treat jar is watching. 🦴"
+            : "The paws are idle. Suspiciously idle. 🐾";
   return (
     <section className="rounded-lg border border-[#ded8c7] bg-white p-4 shadow-sm sm:p-5">
       <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
@@ -2975,13 +3222,41 @@ function MissionsPanel(props: {
           placeholder="What did you notice?"
         />
       </div>
+      <div className="mt-4 rounded-lg border border-[#e8e1cf] bg-[#fbfaf4] p-4" aria-label="Mission progress">
+        <div className="flex items-center justify-between gap-2 text-sm font-black">
+          <span>🐾 Pawgress</span>
+          <span>{pawgressDone}/{pawgressTotal} · {pawgressPct}%</span>
+        </div>
+        <div className="mt-2 h-4 overflow-hidden rounded-full bg-[#f0ead8]" role="progressbar" aria-valuenow={pawgressPct} aria-valuemin={0} aria-valuemax={100} aria-label="Pawgress">
+          <div
+            className="h-4 rounded-full bg-gradient-to-r from-[#f47b20] to-[#ffd166] transition-[width] duration-700"
+            style={{ width: `${pawgressPct}%` }}
+          />
+        </div>
+        <p className="mt-2 text-sm font-bold text-[#5f6a65]">{pawgressMessage}</p>
+      </div>
       <div className="mt-5 grid gap-3">
         {props.missions.map((mission) => {
           const pet = props.pets.find((item) => item.id === mission.petId);
           const skill = getMissionLifeSkill(mission);
           const assignedChild = props.allChildren.find((child) => child.id === mission.assignedChildId);
+          const missionDone = Boolean(mission.completedBy) || mission.status === "approved";
           return (
-            <article key={mission.id} className="grid gap-4 rounded-lg border border-[#e8e1cf] bg-[#fbfaf4] p-4 lg:grid-cols-[1fr_auto] lg:items-center">
+            <article
+              key={mission.id}
+              className={`relative grid gap-4 overflow-hidden rounded-lg border p-4 lg:grid-cols-[1fr_auto] lg:items-center ${
+                missionDone
+                  ? "border-[#165a4b]/40 bg-[#eef7f2] shadow-[0_8px_24px_-12px_rgba(22,90,75,0.45)]"
+                  : "border-[#e8e1cf] bg-[#fbfaf4]"
+              }`}
+            >
+              {missionDone && (
+                <div className="pointer-events-none absolute inset-0" aria-hidden="true">
+                  {["🎉", "⭐", "🐾", "💛"].map((emoji, i) => (
+                    <span key={i} className="tt-confetti-piece absolute text-xl" style={{ left: `${12 + i * 24}%`, top: "8%", animationDelay: `${i * 0.15}s` }}>{emoji}</span>
+                  ))}
+                </div>
+              )}
               <div>
                 <div className="flex flex-wrap gap-2">
                   <span className="rounded-full bg-white px-3 py-1 text-xs font-black">{levelLabels[mission.difficulty]}</span>
@@ -3012,13 +3287,20 @@ function MissionsPanel(props: {
                   </p>
                 </div>
               </div>
-              <button
-                onClick={() => props.completeMission(mission.id)}
-                disabled={!props.activeChild || mission.status === "approved"}
-                className="min-h-14 w-full rounded-lg bg-[#f47b20] px-6 py-3 text-base font-black text-white disabled:bg-[#b9b2a2] lg:w-auto"
-              >
-                {mission.status === "approved" ? "Approved" : mission.completedBy ? "Needs approval" : "Mark done"}
-              </button>
+              <div className="grid gap-2">
+                <button
+                  onClick={() => props.completeMission(mission.id)}
+                  disabled={!props.activeChild || mission.status === "approved"}
+                  className={`tt-btn-press min-h-14 w-full rounded-lg px-6 py-3 text-base font-black text-white disabled:bg-[#b9b2a2] lg:w-auto ${missionDone ? "bg-[#165a4b]" : "bg-[#f47b20]"}`}
+                >
+                  {mission.status === "approved" ? "Approved ✓" : mission.completedBy ? "Needs approval 👀" : "Mark done"}
+                </button>
+                {missionDone && (
+                  <p className="text-center text-xs font-black text-[#165a4b] lg:text-right">
+                    {mission.status === "approved" ? "🎉 Mission crushed. Treats earned." : "🎉 Done! Awaiting the parent high-five."}
+                  </p>
+                )}
+              </div>
             </article>
           );
         })}
