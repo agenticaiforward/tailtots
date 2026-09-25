@@ -1589,6 +1589,9 @@ function VisionLandingPanel({
               Puppy, kitten, guinea pig, bearded dragon — whatever’s doing those eyes at the pet-store window.
             </p>
             <p className="mt-2 max-w-xl text-[15px] font-semibold leading-6 text-tt-ink-soft">
+              Already have the pet? Skip the wish list — your kid goes from pet <em>owner</em> to pet <em>hero</em>: real schedules, real training, real bragging rights.
+            </p>
+            <p className="mt-2 max-w-xl text-[15px] font-semibold leading-6 text-tt-ink-soft">
               Parent-approved missions. Kid Bank. Zero stranger danger. All the “aww,” none of the chaos.
             </p>
             <p className="mt-2 max-w-xl text-[15px] font-semibold leading-6 text-tt-ink-soft">
@@ -1756,6 +1759,23 @@ function VisionLandingPanel({
         </aside>
       </section>
 
+      {/* ============ FAST TRACK: for families who already have a pet ============ */}
+      <section className="-mx-3 border-y-2 border-tt-pine/40 bg-tt-pine p-5 text-white shadow-sm sm:mx-0 sm:rounded-3xl sm:border sm:p-6">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="min-w-0">
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-sun">Already have a pet? 🐾</p>
+            <h3 className="mt-1 text-2xl font-black tracking-tight sm:text-3xl">You’re on the fast track.</h3>
+            <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-white/80">
+              No wish list needed. Your kid takes over the real routine — feeding schedules they actually follow, training missions, vet-visit prep —
+              and levels up to shelter-hero giving. From “we have a dog” to “my kid <em>runs</em> the dog.”
+            </p>
+          </div>
+          <a href="#landing-demo" className="tt-btn-press min-h-12 shrink-0 rounded-xl bg-tt-sun px-6 py-3 text-sm font-black text-tt-ink">
+            See it in action →
+          </a>
+        </div>
+      </section>
+
       {/* ============ DEMO: the aha moment ============ */}
       <section id="landing-demo" className="-mx-3 scroll-mt-36 border-y border-tt-line bg-tt-night p-5 text-white shadow-sm sm:mx-0 sm:rounded-3xl sm:border sm:p-8">
         <div className="grid items-center gap-6 lg:grid-cols-2">
@@ -1764,6 +1784,7 @@ function VisionLandingPanel({
             <h3 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">Watch a mission happen.</h3>
             <p className="mt-3 max-w-lg text-[15px] font-semibold leading-6 text-white/75">
               One parent-approved mission. Big steps, clear timing, coins on the line. This is what your kid sees — no feed, no ads, no “just one more video.”
+              Have a pet? Missions run on your real one. Don’t? They build toward it.
             </p>
             <div className="mt-5 flex flex-wrap gap-3">
               <button onClick={openKidDemo} className="tt-btn-press min-h-12 rounded-xl bg-tt-sun px-6 py-3 text-sm font-black text-tt-ink shadow-lg">
@@ -1898,7 +1919,7 @@ function VisionLandingPanel({
         <div className="mt-6 rounded-2xl bg-tt-night p-5 text-white sm:p-6">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="min-w-0">
-              <p className="text-lg font-black">Know a parent who heard “can we get a puppy?!” this week? 🐶</p>
+              <p className="text-lg font-black">Know a parent who heard “can we get a puppy?!” — or one whose kids should help with the pet they have? 🐶</p>
               <p className="mt-1 text-sm font-semibold text-white/70">Send their kid a TailTots mission. Be the hero of the group chat.</p>
             </div>
             <button
@@ -1906,6 +1927,18 @@ function VisionLandingPanel({
               className="tt-btn-press tt-animate-wiggle-hover min-h-12 shrink-0 rounded-xl bg-tt-sun px-6 py-3 text-sm font-black text-tt-ink"
             >
               📤 Send a mission to a friend’s kid
+            </button>
+          </div>
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-4 border-t border-white/10 pt-4">
+            <div className="min-w-0">
+              <p className="text-lg font-black">Your kid’s giving goal helps real shelter dogs 🐶</p>
+              <p className="mt-1 text-sm font-semibold text-white/70">The brag pet parents actually post. Copy it, share it, watch the good spread.</p>
+            </div>
+            <button
+              onClick={() => shareText("My kid’s TailTots giving goal helps real shelter dogs — missions, Kid Bank coins, actual good in the world. 🐾 https://tailtots.com", "Giving brag copied! Go spread the good. 💛")}
+              className="tt-btn-press tt-animate-wiggle-hover min-h-12 shrink-0 rounded-xl bg-tt-sun px-6 py-3 text-sm font-black text-tt-ink"
+            >
+              💛 Share the giving goal
             </button>
           </div>
           {shareMessage && <p className="mt-3 text-sm font-bold text-tt-sun" role="status">{shareMessage}</p>}
