@@ -1317,13 +1317,6 @@ function VisionLandingPanel({
     ["2", "Your kid gets a mission", "One clear, age-fit mission with big steps. No feed, no doomscroll, no “just one more video.”"],
     ["3", "Real-world care gets celebrated", "You approve the mission, the points, and every Kid Bank dollar. High-fives all around."],
   ];
-  const lifeSkills = [
-    ["🐾 Responsibility", "Pets, chores, homework — the unglamorous stuff, gloriously gamified."],
-    ["❤️ Kindness & Empathy", "Big feelings, practiced daily. Local shelters approve."],
-    ["💰 Money Skills", "Earn it, then split it: save, spend, give. You release every single dollar."],
-    ["🤝 Teamwork & Leadership", "Missions built for siblings, cousins, and tiny co-conspirators."],
-    ["🌎 Community", "From your street to the local shelter — kindness with a map."],
-  ];
   const platformPillars = [
     ["🌐", "Safe social practice", "Training wheels for real-world social life. Kids practice teamwork, leadership, and empathy — with zero strangers, zero feeds, zero DMs."],
     ["🦸", "Character, on purpose", "Responsibility, kindness, honesty: a real character curriculum taught through missions, not lectures."],
@@ -1441,8 +1434,24 @@ function VisionLandingPanel({
 
       {/* ============ HERO: the pet-led hook ============ */}
       <div id="landing-home" className="relative -mx-3 scroll-mt-36 overflow-hidden border-y border-tt-line bg-tt-cream text-tt-ink shadow-sm sm:mx-0 sm:rounded-3xl sm:border">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(55%_45%_at_18%_8%,rgba(255,209,102,0.4),transparent_70%)]" aria-hidden="true" />
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(45%_40%_at_92%_88%,rgba(22,90,75,0.14),transparent_70%)]" aria-hidden="true" />
         <div className="pointer-events-none absolute -right-10 -top-10 select-none text-[10rem] opacity-15 tt-animate-float" aria-hidden="true">🐶</div>
         <div className="pointer-events-none absolute -left-6 bottom-16 select-none text-[7rem] opacity-15 tt-animate-float-slow" aria-hidden="true">🐰</div>
+        <svg className="pointer-events-none absolute bottom-16 left-[6%] hidden w-64 text-tt-pine opacity-[0.13] md:block lg:w-80" viewBox="0 0 320 80" aria-hidden="true">
+          <defs>
+            <g id="tt-paw">
+              <ellipse cx="0" cy="8" rx="9" ry="7" />
+              <circle cx="-12" cy="-4" r="3.6" /><circle cx="-4" cy="-9" r="3.6" /><circle cx="5" cy="-9" r="3.6" /><circle cx="13" cy="-4" r="3.6" />
+            </g>
+          </defs>
+          <g fill="currentColor">
+            <use href="#tt-paw" transform="translate(24,54) rotate(-18)" />
+            <use href="#tt-paw" transform="translate(104,62) rotate(12)" />
+            <use href="#tt-paw" transform="translate(184,48) rotate(-10)" />
+            <use href="#tt-paw" transform="translate(264,58) rotate(16)" />
+          </g>
+        </svg>
         <div className="relative grid gap-6 p-5 sm:p-8 lg:grid-cols-[1.05fr_0.95fr] lg:items-center xl:p-10">
           <div className="min-w-0">
             <p className="inline-flex items-center gap-2 rounded-full border border-tt-pine/30 bg-tt-pine-tint px-4 py-2 text-xs font-black uppercase tracking-[0.12em] text-tt-pine">
@@ -1609,6 +1618,55 @@ function VisionLandingPanel({
         </div>
       </section>
 
+      {/* ============ HOW IT WORKS: 3 steps, right after the aha ============ */}
+      <section className="-mx-3 border-y border-tt-line bg-white p-4 shadow-sm sm:mx-0 sm:rounded-3xl sm:border sm:p-6">
+        <h3 className="text-2xl font-black tracking-tight text-tt-navy sm:text-3xl">Ridiculously simple. Suspiciously effective.</h3>
+        <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-tt-ink-soft">Three steps. That’s the whole parenting hack.</p>
+        <div className="relative mt-5 grid gap-3 md:grid-cols-3 md:gap-5">
+          <div className="pointer-events-none absolute left-[16%] right-[16%] top-9 hidden border-t-[3px] border-dashed border-tt-pine/30 md:block" aria-hidden="true" />
+          {howItWorks.map(([number, title, body]) => (
+            <article key={number} className="tt-card-lift relative overflow-hidden rounded-2xl bg-tt-cream p-5">
+              <span className="pointer-events-none absolute -right-2 -top-4 select-none text-[5rem] font-black text-tt-pine/10" aria-hidden="true">{number}</span>
+              <span className="relative z-10 grid size-10 place-items-center rounded-full bg-tt-pine text-base font-black text-white ring-4 ring-white">{number}</span>
+              <p className="mt-3 text-lg font-black text-tt-ink">{title}</p>
+              <p className="mt-1 text-sm font-semibold leading-6 text-tt-ink-soft">{body}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      {/* ============ PLATFORM: pet care is the hook, this is the one-stop ============ */}
+      <section id="landing-platform" className="relative -mx-3 scroll-mt-36 overflow-hidden border-y border-tt-line bg-tt-night p-5 text-white shadow-sm sm:mx-0 sm:rounded-3xl sm:border sm:p-8">
+        <div className="pointer-events-none absolute -left-24 -top-24 size-72 rounded-full bg-tt-pine/40 blur-3xl" aria-hidden="true" />
+        <div className="pointer-events-none absolute -bottom-24 -right-24 size-72 rounded-full bg-tt-grape/30 blur-3xl" aria-hidden="true" />
+        <div className="relative">
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-sun">One app · The whole childhood</p>
+          <h3 className="mt-2 max-w-2xl text-2xl font-black tracking-tight sm:text-3xl">Pet care is the hook. This is the platform.</h3>
+          <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-white/75">
+            TailTots is the one stop for raising capable, kind kids — safe social practice, character, skills, chores, neighborhood adventures,
+            and giving that actually reaches shelter dogs. Crisp on the surface, deep underneath.
+          </p>
+          <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {platformPillars.map(([emoji, title, body]) => (
+              <article key={title} className="tt-card-lift rounded-2xl bg-white/10 p-5 ring-1 ring-white/15">
+                <p className="text-2xl" aria-hidden="true">{emoji}</p>
+                <p className="mt-2 text-lg font-black">{title}</p>
+                <p className="mt-1 text-sm font-semibold leading-6 text-white/70">{body}</p>
+              </article>
+            ))}
+          </div>
+          <div className="mt-6 rounded-2xl border border-white/15 bg-white/5 p-4 sm:p-5">
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-sun">Every mission grows something real</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {["🐾 Responsibility", "❤️ Kindness & Empathy", "💰 Money Skills", "🤝 Teamwork & Leadership", "🌎 Community", "🎁 Bragging rights"].map((chip) => (
+                <span key={chip} className="rounded-full bg-white/10 px-4 py-2 text-xs font-black text-white ring-1 ring-white/15">{chip}</span>
+              ))}
+            </div>
+            <p className="mt-3 text-xs font-semibold text-white/60">Start with pet care. End up with a kid who budgets. Funny how that works.</p>
+          </div>
+        </div>
+      </section>
+
       {/* ============ DAILY KINDNESS: the reason to come back ============ */}
       <section className="-mx-3 border-y border-tt-line bg-gradient-to-br from-tt-sun-soft via-white to-tt-pine-tint p-5 shadow-sm sm:mx-0 sm:rounded-3xl sm:border sm:p-8" aria-label="Today's kindness prompt">
         <div className="mx-auto max-w-2xl text-center">
@@ -1628,62 +1686,11 @@ function VisionLandingPanel({
         </div>
       </section>
 
-      {/* ============ HOW IT WORKS: 3 steps ============ */}
-      <section className="-mx-3 border-y border-tt-line bg-white p-4 shadow-sm sm:mx-0 sm:rounded-3xl sm:border sm:p-6">
-        <h3 className="text-2xl font-black tracking-tight text-tt-navy sm:text-3xl">Ridiculously simple. Suspiciously effective.</h3>
-        <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-tt-ink-soft">Three steps. That’s the whole parenting hack.</p>
-        <div className="mt-5 grid gap-3 md:grid-cols-3">
-          {howItWorks.map(([number, title, body]) => (
-            <article key={number} className="tt-card-lift relative overflow-hidden rounded-2xl bg-tt-cream p-5">
-              <span className="pointer-events-none absolute -right-2 -top-4 select-none text-[5rem] font-black text-tt-pine/10" aria-hidden="true">{number}</span>
-              <span className="grid size-10 place-items-center rounded-full bg-tt-pine text-base font-black text-white">{number}</span>
-              <p className="mt-3 text-lg font-black text-tt-ink">{title}</p>
-              <p className="mt-1 text-sm font-semibold leading-6 text-tt-ink-soft">{body}</p>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      {/* ============ PILLARS ============ */}
-      <section className="-mx-3 border-y border-tt-line bg-tt-cream p-4 shadow-sm sm:mx-0 sm:rounded-3xl sm:border sm:p-6">
-        <h3 className="text-2xl font-black tracking-tight text-tt-navy sm:text-3xl">Every mission grows something real.</h3>
-        <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-tt-ink-soft">Start with pet care. End up with a kid who budgets. Funny how that works.</p>
-        <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {lifeSkills.map(([title, body], index) => (
-            <article key={title} className={`tt-card-lift rounded-2xl p-5 ${index % 2 === 0 ? "bg-white" : "bg-tt-sun-soft/60"} border border-tt-line/60`}>
-              <p className="text-lg font-black text-tt-navy">{title}</p>
-              <p className="mt-2 text-sm font-semibold leading-6 text-tt-ink-soft">{body}</p>
-            </article>
-          ))}
-          <article className="tt-card-lift rounded-2xl bg-tt-pine p-5 text-white">
-            <p className="text-lg font-black">🎁 …and bragging rights</p>
-            <p className="mt-2 text-sm font-semibold leading-6 text-white/80">Growth badges, memory moments, and a portfolio of “look what I did.” Grandparents love this part.</p>
-          </article>
-        </div>
-      </section>
-
-      {/* ============ PLATFORM: pet care is the hook, this is the one-stop ============ */}
-      <section id="landing-platform" className="-mx-3 scroll-mt-36 border-y border-tt-line bg-tt-night p-5 text-white shadow-sm sm:mx-0 sm:rounded-3xl sm:border sm:p-8">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-sun">One app · The whole childhood</p>
-        <h3 className="mt-2 max-w-2xl text-2xl font-black tracking-tight sm:text-3xl">Pet care is the hook. This is the platform.</h3>
-        <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-white/75">
-          TailTots is the one stop for raising capable, kind kids — safe social practice, character, skills, chores, neighborhood adventures,
-          and giving that actually reaches shelter dogs. Crisp on the surface, deep underneath.
-        </p>
-        <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {platformPillars.map(([emoji, title, body]) => (
-            <article key={title} className="tt-card-lift rounded-2xl bg-white/10 p-5 ring-1 ring-white/15">
-              <p className="text-2xl" aria-hidden="true">{emoji}</p>
-              <p className="mt-2 text-lg font-black">{title}</p>
-              <p className="mt-1 text-sm font-semibold leading-6 text-white/70">{body}</p>
-            </article>
-          ))}
-        </div>
-      </section>
-
       {/* ============ SAFETY: one punchy line ============ */}
-      <section className="-mx-3 border-y border-tt-line bg-white p-5 shadow-sm sm:mx-0 sm:rounded-3xl sm:border sm:p-8">
-        <div className="mx-auto max-w-3xl text-center">
+      <section className="relative -mx-3 overflow-hidden border-y border-tt-line bg-white p-5 shadow-sm sm:mx-0 sm:rounded-3xl sm:border sm:p-8">
+        <div className="pointer-events-none absolute -right-8 top-1/2 -translate-y-1/2 select-none text-[11rem] opacity-[0.06]" aria-hidden="true">🛡️</div>
+        <div className="pointer-events-none absolute -left-10 -top-10 select-none text-[8rem] opacity-[0.05]" aria-hidden="true">🔒</div>
+        <div className="relative mx-auto max-w-3xl text-center">
           <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-pine">Safety, without the lecture</p>
           <h3 className="mt-3 text-3xl font-black leading-tight tracking-tight text-tt-navy sm:text-4xl">
             Your child will never talk to a stranger on TailTots. <span className="underline decoration-tt-sun decoration-4 underline-offset-4">Period.</span>

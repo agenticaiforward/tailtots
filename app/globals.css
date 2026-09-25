@@ -263,9 +263,9 @@ button {
    TailTots design tokens — one system for landing + app (moonshot)
    ============================================================ */
 :root {
-  --tt-cream: #fbfaf4;
+  --tt-cream: #faf8f0;
   --tt-paper: #ffffff;
-  --tt-sand: #f8f6ed;
+  --tt-sand: #f5f1e5;
   --tt-ink: #17231f;
   --tt-ink-soft: #4f625b;
   --tt-ink-faint: #69736f;
@@ -282,7 +282,7 @@ button {
   --tt-blue: #2563eb;
   --tt-grape: #6d3ed1;
   --tt-grape-soft: #f0edff;
-  --tt-night: #0f1513;
+  --tt-night: #0b100e;
   --tt-line: #ded8c7;
   --tt-line-blue: #dce6f8;
   --tt-radius: 1rem;
