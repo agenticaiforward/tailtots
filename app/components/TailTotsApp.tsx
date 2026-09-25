@@ -1996,11 +1996,12 @@ function VisionLandingPanel({
       {/* ============ FOUNDER STORY: exactly once ============ */}
       <section className="-mx-3 border-y border-tt-line bg-tt-sun-soft/50 p-5 shadow-sm sm:mx-0 sm:rounded-3xl sm:border sm:p-8">
         <div className="mx-auto max-w-3xl text-center">
-          <p className="text-4xl" aria-hidden="true">🐹</p>
-          <h3 className="mt-2 text-2xl font-black tracking-tight text-tt-navy sm:text-3xl">It started with two kids and one very patient guinea pig.</h3>
+          <p className="text-4xl" aria-hidden="true">🐹🐢🐟</p>
+          <h3 className="mt-2 text-2xl font-black tracking-tight text-tt-navy sm:text-3xl">It started with two guinea pigs, a tortoise, a tank of fish — and one big question.</h3>
           <p className="mx-auto mt-3 max-w-2xl text-[15px] font-semibold leading-7 text-tt-ink-soft">
-            TailTots began with a simple question: what if everyday responsibilities felt like adventures? That question grew from caring for animals into a bigger
-            mission — helping kids build responsibility, kindness, confidence, money skills, and independence through real-world experiences.
+            “Why can’t all the kids in the world have a pet?” That was the question the kids kept asking. And it became TailTots: a way for every kid to live the
+            pet-care journey — the feeding schedules, the patience, the pride — whether or not their family is ready for the real thing yet. What began with animals
+            grew into a bigger mission: helping kids build responsibility, kindness, confidence, money skills, and independence through real-world experiences.
           </p>
           <p className="mt-3 text-sm font-black text-tt-navy">Founded by kids. Built for kids. Approved by parents. 🐾</p>
         </div>
