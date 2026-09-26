@@ -28,6 +28,7 @@ create table public.children (
   points integer not null default 0,
   coins integer not null default 0,
   streak_days integer not null default 0,
+  last_streak_date date,
   created_at timestamptz not null default now()
 );
 

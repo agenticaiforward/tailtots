@@ -349,9 +349,155 @@ type SavedFamilyState = {
   badges?: BadgeAward[];
   neighborhoodJobs?: NeighborhoodJob[];
   moments?: MemoryMoment[];
+  certificates?: Certificate[];
   familyPhotoUrl?: string;
   activeChildId?: string;
 };
+
+/** An earned end-of-journey honor. One per child; a readiness certificate can upgrade to hero. */
+type CertificateKind = "readiness" | "hero";
+type Certificate = {
+  id: string;
+  childId: string;
+  kind: CertificateKind;
+  title: string;
+  earnedAt: string; // ISO date string
+};
+
+const CERT_MISSIONS_REQUIRED = 8;
+const CERT_STREAK_REQUIRED = 5;
+const CERT_SKILLS_REQUIRED = 3;
+
+function certificateTitleFor(kind: CertificateKind): string {
+  return kind === "hero" ? "Certified Pet Hero" : "Pet Readiness Certificate";
+}
+
+function localDayKey(date = new Date()): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+/**
+ * True per-day streak: approving several missions on the same day counts once;
+ * a missed day resets the streak to 1. Children saved before streak dates
+ * existed keep their displayed streak once (legacy data assumed daily activity).
+ */
+function applyDailyStreak(child: Child, today = localDayKey()): Child {
+  if (child.lastStreakDate === today) return child;
+  const yesterday = localDayKey(new Date(Date.now() - 86400000));
+  const continued = child.lastStreakDate === yesterday || (child.lastStreakDate == null && child.streakDays > 0);
+  return { ...child, streakDays: continued ? child.streakDays + 1 : 1, lastStreakDate: today };
+}
+
+/**
+ * Add dollars to a goal and stamp completion the moment it is fully funded.
+ */
+function withGoalProgress(goal: SavingsGoal, added: number, now = new Date().toISOString()): SavingsGoal {
+  const saved = Math.min(goal.target, goal.saved + added);
+  return {
+    ...goal,
+    saved,
+    completedAt: goal.completedAt ?? (saved >= goal.target ? now : undefined),
+  };
+}
+
+/**
+ * ID-based merge of pulled relational rows over local state. Relational
+ * columns win; snapshot-only fields (no DB column yet) are preserved from the
+ * local copy so a cloud pull never wipes photos, questions, causes, or
+ * parent visibility choices. Local-only items (not yet pushed) are kept.
+ */
+function mergeEntitiesById<T extends { id: string }>(
+  current: T[],
+  pulled: T[],
+  mergeOne: (current: T, pulled: T) => T,
+): T[] {
+  const currentById = new Map(current.map((item) => [item.id, item]));
+  const merged = pulled.map((item) => {
+    const existing = currentById.get(item.id);
+    currentById.delete(item.id);
+    return existing ? mergeOne(existing, item) : item;
+  });
+  return [...merged, ...currentById.values()];
+}
+
+function mergePulledChild(current: Child, pulled: Child): Child {
+  return { ...pulled, photoUrl: current.photoUrl ?? pulled.photoUrl, secretCode: current.secretCode };
+}
+
+function mergePulledPet(current: Pet, pulled: Pet): Pet {
+  return { ...pulled, photoUrl: current.photoUrl ?? pulled.photoUrl };
+}
+
+function mergePulledMission(current: Mission, pulled: Mission): Mission {
+  return {
+    ...pulled,
+    question: current.question || pulled.question,
+    allowanceDollars: current.allowanceDollars ?? pulled.allowanceDollars,
+    assignedChildId: pulled.assignedChildId ?? current.assignedChildId,
+    note: pulled.note ?? current.note,
+  };
+}
+
+function mergePulledTransaction(current: BankTransaction, pulled: BankTransaction): BankTransaction {
+  return {
+    ...pulled,
+    activityId: current.activityId ?? pulled.activityId,
+    goalId: current.goalId ?? pulled.goalId,
+  };
+}
+
+function mergePulledGoal(current: SavingsGoal, pulled: SavingsGoal): SavingsGoal {
+  return {
+    ...pulled,
+    sharedWithTrustedFamilies: current.sharedWithTrustedFamilies ?? pulled.sharedWithTrustedFamilies,
+    causeNote: current.causeNote ?? pulled.causeNote,
+    seededByParent: current.seededByParent ?? pulled.seededByParent,
+    completedAt: current.completedAt ?? pulled.completedAt,
+    donationConfirmedAt: current.donationConfirmedAt ?? pulled.donationConfirmedAt,
+  };
+}
+
+function mergePulledJob(current: NeighborhoodJob, pulled: NeighborhoodJob): NeighborhoodJob {
+  return {
+    ...pulled,
+    visibleToKids: current.visibleToKids,
+    minAge: current.minAge ?? pulled.minAge,
+    skillFocus: current.skillFocus ?? pulled.skillFocus,
+    trustSignals: current.trustSignals ?? pulled.trustSignals,
+    missionId: current.missionId ?? pulled.missionId,
+  };
+}
+
+/**
+ * Journey progress toward an earnable certificate. The hero track (families
+ * with a real pet) counts approved pet-care missions; the readiness track
+ * counts approved missions of any kind.
+ */
+function getCertificateProgress(
+  child: Child,
+  missions: Mission[],
+  badges: BadgeAward[],
+  petCareOnly: boolean,
+) {
+  const approved = missions.filter((mission) => mission.status === "approved" && mission.completedBy === child.id);
+  const counted = petCareOnly ? approved.filter((mission) => mission.category === "pet_care") : approved;
+  const skillAreas = new Set(badges.filter((badge) => badge.childId === child.id).map((badge) => badge.skill)).size;
+  return {
+    missionsDone: counted.length,
+    missionsRequired: CERT_MISSIONS_REQUIRED,
+    streakDays: child.streakDays,
+    streakRequired: CERT_STREAK_REQUIRED,
+    skillAreas,
+    skillsRequired: CERT_SKILLS_REQUIRED,
+    eligible:
+      counted.length >= CERT_MISSIONS_REQUIRED &&
+      child.streakDays >= CERT_STREAK_REQUIRED &&
+      skillAreas >= CERT_SKILLS_REQUIRED,
+  };
+}
 
 export function TailTotsApp() {
   const [role, setRole] = useState<Role>("parent");
@@ -370,11 +516,13 @@ export function TailTotsApp() {
   const [neighborhoodJobs, setNeighborhoodJobs] = useState(starterNeighborhoodJobs);
   const [scheduleItems] = useState(starterScheduleItems);
   const [moments, setMoments] = useState<MemoryMoment[]>(starterMoments);
+  const [certificates, setCertificates] = useState<Certificate[]>([]);
+  const [justEarnedCertId, setJustEarnedCertId] = useState<string | null>(null);
   const [activeChildId, setActiveChildId] = useState(starterChildren[0]?.id ?? "");
   const [missionNote, setMissionNote] = useState("");
   const [newChild, setNewChild] = useState({ name: "", age: "8" });
   const [newPet, setNewPet] = useState({ name: "", species: "", food: "" });
-  const [newGoal, setNewGoal] = useState({ title: "", target: "25" });
+  const [newGoal, setNewGoal] = useState({ title: "", target: "25", kind: "save" as "save" | "give", cause: "Animal shelter", seed: "" });
   const [momentDraft, setMomentDraft] = useState("A kind moment with our pet was...");
   const [familyPhotoUrl, setFamilyPhotoUrl] = useState<string | undefined>();
   const [photoCropDraft, setPhotoCropDraft] = useState<PhotoCropDraft | undefined>();
@@ -422,21 +570,41 @@ export function TailTotsApp() {
   }, [badges, children, goals, missions, moments, neighborhoodJobs, pets, transactions]);
   /**
    * Apply pulled relational state over whatever is on screen. The relational
-   * tables are authoritative for the entities they cover; snapshot-only fields
-   * (photos, passcode, parent list, family photo) are left untouched.
+   * tables are authoritative for the columns they cover; snapshot-only fields
+   * (photos, mission questions, goal causes, job visibility, parent list,
+   * passcode, family photo) are preserved via ID-based merge so a cloud pull
+   * never wipes them. Local-only items not yet pushed are kept.
    */
   const applyPulledFamilyState = useCallback(
     (pulled: NonNullable<Awaited<ReturnType<typeof pullFamilyState>>>) => {
       applyingPullRef.current = true;
       try {
-        setChildren(pulled.children.map(normalizeChildProfile));
-        setPets(pulled.pets.map(normalizePetProfile));
-        setMissions(pulled.missions);
-        setTransactions(pulled.bankTransactions);
-        setGoals(pulled.savingsGoals);
-        setBadges(pulled.badgeAwards);
-        setNeighborhoodJobs(pulled.neighborhoodJobs.map(normalizeNeighborhoodJob));
-        setMoments(pulled.memoryMoments);
+        setChildren((current) =>
+          mergeEntitiesById(
+            current,
+            pulled.children.map(normalizeChildProfile),
+            mergePulledChild,
+          ),
+        );
+        setPets((current) =>
+          mergeEntitiesById(
+            current,
+            pulled.pets.map(normalizePetProfile),
+            mergePulledPet,
+          ),
+        );
+        setMissions((current) => mergeEntitiesById(current, pulled.missions, mergePulledMission));
+        setTransactions((current) => mergeEntitiesById(current, pulled.bankTransactions, mergePulledTransaction));
+        setGoals((current) => mergeEntitiesById(current, pulled.savingsGoals, mergePulledGoal));
+        setBadges(() => pulled.badgeAwards);
+        setNeighborhoodJobs((current) =>
+          mergeEntitiesById(
+            current,
+            pulled.neighborhoodJobs.map(normalizeNeighborhoodJob),
+            mergePulledJob,
+          ),
+        );
+        setMoments(() => pulled.memoryMoments);
         if (pulled.children[0]) setActiveChildId(pulled.children[0].id);
       } finally {
         applyingPullRef.current = false;
@@ -517,6 +685,7 @@ export function TailTotsApp() {
         setBadges(savedState.badges ?? starterBadges);
         setNeighborhoodJobs(savedState.neighborhoodJobs ? savedState.neighborhoodJobs.map(normalizeNeighborhoodJob) : starterNeighborhoodJobs);
         setMoments(savedState.moments ?? starterMoments);
+        setCertificates(savedState.certificates ?? []);
         setFamilyPhotoUrl(savedState.familyPhotoUrl);
         setActiveChildId(savedState.activeChildId ?? savedState.children?.[0]?.id ?? "");
       }
@@ -563,8 +732,8 @@ export function TailTotsApp() {
 
   useEffect(() => {
     if (!hasLoadedSavedState) return;
-    saveFamilyState({ familyName, parentPasscode, parents, children, pets, missions, transactions, goals, badges, neighborhoodJobs, moments, familyPhotoUrl, activeChildId });
-  }, [activeChildId, badges, children, familyName, familyPhotoUrl, goals, hasLoadedSavedState, missions, moments, neighborhoodJobs, parentPasscode, parents, pets, transactions]);
+    saveFamilyState({ familyName, parentPasscode, parents, children, pets, missions, transactions, goals, badges, neighborhoodJobs, moments, familyPhotoUrl, activeChildId, certificates });
+  }, [activeChildId, badges, certificates, children, familyName, familyPhotoUrl, goals, hasLoadedSavedState, missions, moments, neighborhoodJobs, parentPasscode, parents, pets, transactions]);
 
   // Debounced relational cloud push: mirrors family state into the Supabase
   // tables a couple of seconds after any change, while cloud sync is on.
@@ -596,6 +765,40 @@ export function TailTotsApp() {
     };
   }, [activeChildId, badges, children, cloudFamilyId, cloudSyncOn, familyName, getCurrentFamilySyncState, goals, hasLoadedSavedState, missions, moments, neighborhoodJobs, parents, pets, transactions]);
 
+  // Certificate awards: when a child's journey criteria are newly met, issue
+  // the earned certificate (hero track for families with a real pet, readiness
+  // otherwise). A readiness certificate upgrades to hero if hero criteria are
+  // met later. Runs on the same data the Growth tab renders.
+  useEffect(() => {
+    if (!hasLoadedSavedState) return;
+    const hasPets = pets.length > 0;
+    const awards: Certificate[] = [];
+    for (const child of children) {
+      const existing = certificates.find((cert) => cert.childId === child.id);
+      const heroEligible = hasPets && getCertificateProgress(child, missions, badges, true).eligible;
+      const readinessEligible = getCertificateProgress(child, missions, badges, false).eligible;
+      const kind: CertificateKind | null = heroEligible ? "hero" : readinessEligible ? "readiness" : null;
+      if (!kind || existing?.kind === kind) continue;
+      awards.push({
+        id: `cert-${child.id}-${kind}-${Date.now()}`,
+        childId: child.id,
+        kind,
+        title: certificateTitleFor(kind),
+        earnedAt: new Date().toISOString(),
+      });
+    }
+    if (awards.length === 0) return;
+    // Apply outside the synchronous effect body: awarding is a reaction to
+    // newly-eligible journey data, not part of rendering it.
+    queueMicrotask(() => {
+      setCertificates((prev) => {
+        const awardedChildIds = new Set(awards.map((award) => award.childId));
+        return [...prev.filter((cert) => !awardedChildIds.has(cert.childId)), ...awards];
+      });
+      setJustEarnedCertId(awards[awards.length - 1].id);
+    });
+  }, [badges, certificates, children, hasLoadedSavedState, missions, pets]);
+
   useEffect(() => {
     queueMicrotask(() => {
       const requestedTab = new URLSearchParams(window.location.search).get("tab");
@@ -620,6 +823,7 @@ export function TailTotsApp() {
       moments,
       familyPhotoUrl,
       activeChildId,
+      certificates,
     };
   }
 
@@ -635,6 +839,7 @@ export function TailTotsApp() {
     setBadges(snapshot.badges ?? starterBadges);
     setNeighborhoodJobs(snapshot.neighborhoodJobs ? snapshot.neighborhoodJobs.map(normalizeNeighborhoodJob) : starterNeighborhoodJobs);
     setMoments(snapshot.moments ?? starterMoments);
+    setCertificates(snapshot.certificates ?? []);
     setFamilyPhotoUrl(snapshot.familyPhotoUrl);
     setActiveChildId(snapshot.activeChildId ?? snapshot.children?.[0]?.id ?? (snapshot.children ? "" : starterChildren[0]?.id ?? ""));
   }
@@ -971,7 +1176,7 @@ export function TailTotsApp() {
     setChildren((items) =>
       items.map((child) =>
         child.id === mission.completedBy
-          ? { ...child, points: child.points + mission.points, coins: child.coins + mission.coins, streakDays: child.streakDays + 1 }
+          ? { ...applyDailyStreak(child), points: child.points + mission.points, coins: child.coins + mission.coins }
           : child,
       ),
     );
@@ -1011,7 +1216,7 @@ export function TailTotsApp() {
     if (transaction.category === "save" && transaction.goalId) {
       setGoals((items) =>
         items.map((goal) =>
-          goal.id === transaction.goalId ? { ...goal, saved: Math.min(goal.target, goal.saved + transaction.amount) } : goal,
+          goal.id === transaction.goalId ? withGoalProgress(goal, transaction.amount) : goal,
         ),
       );
     }
@@ -1081,21 +1286,35 @@ export function TailTotsApp() {
 
   function addSavingsGoal() {
     if (!activeChild || !newGoal.title.trim()) return;
-    const target = Math.max(1, Number(newGoal.target) || 25);
-    setGoals((items) => [
-      {
-        id: `goal-${Date.now()}`,
-        childId: activeChild.id,
-        title: newGoal.title.trim(),
-        target,
-        saved: 0,
-        type: "family_reward",
-        sharedWithTrustedFamilies: false,
-        causeNote: "Parent can choose to share this goal with trusted families.",
-      },
-      ...items,
-    ]);
-    setNewGoal({ title: "", target: "25" });
+    const isGiving = newGoal.kind === "give";
+    const seed = isGiving ? Math.max(0, Math.floor(Number(newGoal.seed) || 0)) : 0;
+    const target = Math.max(1, Math.floor(Number(newGoal.target) || 25));
+    const now = new Date().toISOString();
+    const goal: SavingsGoal = {
+      id: `goal-${Date.now()}`,
+      childId: activeChild.id,
+      title: newGoal.title.trim(),
+      target,
+      saved: 0,
+      type: isGiving ? "donation" : "family_reward",
+      sharedWithTrustedFamilies: isGiving,
+      causeNote: isGiving ? newGoal.cause : "Parent can choose to share this goal with trusted families.",
+      seededByParent: isGiving && seed > 0 ? seed : undefined,
+    };
+    setGoals((items) => [seed > 0 ? withGoalProgress(goal, seed, now) : goal, ...items]);
+    setNewGoal({ title: "", target: "25", kind: "save", cause: "Animal shelter", seed: "" });
+  }
+
+  /** Parent confirms the real-world donation for a fully funded giving goal. */
+  function confirmDonation(goalId: string) {
+    const now = new Date().toISOString();
+    setGoals((items) =>
+      items.map((goal) =>
+        goal.id === goalId && goal.type === "donation" && goal.completedAt && !goal.donationConfirmedAt
+          ? { ...goal, donationConfirmedAt: now }
+          : goal,
+      ),
+    );
   }
 
   function addMoment() {
@@ -1302,6 +1521,8 @@ export function TailTotsApp() {
             <VisionLandingPanel
               openParentDemo={openParentDemo}
               openKidDemo={openKidDemo}
+              previewChildName={children[0]?.name ?? "Demo Kid"}
+              previewFamilyName={familyName || "Demo Crew"}
             />
           )}
           {(role === "child" || isParentUnlocked) && visibleActiveTab === "hub" && (
@@ -1370,6 +1591,8 @@ export function TailTotsApp() {
               newGoal={newGoal}
               setNewGoal={setNewGoal}
               addSavingsGoal={addSavingsGoal}
+              confirmDonation={confirmDonation}
+              isParentView={role === "parent"}
               setActiveTab={setActiveTab}
             />
           )}
@@ -1444,6 +1667,12 @@ export function TailTotsApp() {
               momentDraft={momentDraft}
               setMomentDraft={setMomentDraft}
               addMoment={addMoment}
+              missions={missions}
+              certificates={certificates}
+              familyName={familyName}
+              hasPets={pets.length > 0}
+              justEarnedCertId={justEarnedCertId}
+              onDismissEarned={() => setJustEarnedCertId(null)}
             />
           )}
           {visibleActiveTab === "neighborhood" && (
@@ -1607,9 +1836,13 @@ function ShelterGivingShowcase() {
 function VisionLandingPanel({
   openParentDemo,
   openKidDemo,
+  previewChildName,
+  previewFamilyName,
 }: {
   openParentDemo: () => void;
   openKidDemo: () => void;
+  previewChildName: string;
+  previewFamilyName: string;
 }) {
   const [showBackToTop, setShowBackToTop] = useState(false);
   const [launchInterest, setLaunchInterest] = useState({ email: "" });
@@ -2125,7 +2358,7 @@ function VisionLandingPanel({
               <p className="text-xs font-black uppercase tracking-[0.22em] text-tt-grape">TailTots · Official</p>
               <p className="mt-1 text-2xl font-black text-tt-navy">Pet Readiness Certificate</p>
               <p className="mx-auto mt-3 max-w-[16rem] text-sm font-semibold leading-6 text-tt-ink-soft">
-                This certifies that <span className="font-black text-tt-ink">Demo Kid</span> of the <span className="font-black text-tt-ink">Demo Crew</span> is growing into a responsible pet human — one mission at a time.
+                This certifies that <span className="font-black text-tt-ink">{previewChildName}</span> of the <span className="font-black text-tt-ink">{previewFamilyName}</span> is growing into a responsible pet human — one mission at a time.
               </p>
               <div className="mt-4 flex items-center justify-center gap-6 text-3xl" aria-hidden="true">
                 <span>🐹</span><span>🐶</span><span>🐱</span>
@@ -3619,9 +3852,11 @@ function BankPanel(props: {
   transactions: BankTransaction[];
   goals: SavingsGoal[];
   requestBankMove: (category: BankCategory, amount?: number, description?: string, goalId?: string) => void;
-  newGoal: { title: string; target: string };
-  setNewGoal: (value: { title: string; target: string }) => void;
+  newGoal: { title: string; target: string; kind: "save" | "give"; cause: string; seed: string };
+  setNewGoal: (value: { title: string; target: string; kind: "save" | "give"; cause: string; seed: string }) => void;
   addSavingsGoal: () => void;
+  confirmDonation: (goalId: string) => void;
+  isParentView: boolean;
   setActiveTab: (tab: string) => void;
 }) {
   type KidMoneyCategory = Exclude<BankCategory, "earn" | "spend">;
@@ -3738,12 +3973,27 @@ function BankPanel(props: {
             )}
             {childGoals.map((goal) => {
               const percent = Math.min(100, (goal.saved / goal.target) * 100);
+              const isDonation = goal.type === "donation";
               return (
                 <article key={goal.id} className="rounded-lg bg-[#f8f6ed] p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <p className="text-lg font-black">{goal.title}</p>
-                      <p className="text-sm font-bold text-[#5f6a65]">${goal.target - goal.saved} left to go</p>
+                      <p className="text-lg font-black">
+                        {isDonation ? "💛 " : ""}{goal.title}
+                      </p>
+                      {isDonation && goal.causeNote && (
+                        <p className="mt-1 inline-block rounded-full bg-[#ffe9a8] px-2 py-0.5 text-xs font-black text-[#7a4b12]">{goal.causeNote}</p>
+                      )}
+                      <p className="mt-1 text-sm font-bold text-[#5f6a65]">
+                        {goal.donationConfirmedAt
+                          ? "🎉 Donated — thank you for the real-world kindness!"
+                          : goal.completedAt
+                            ? "Goal reached! Waiting for parent to confirm the donation."
+                            : `$${goal.target - goal.saved} left to go`}
+                      </p>
+                      {isDonation && goal.seededByParent ? (
+                        <p className="mt-1 text-xs font-bold text-[#69736f]">Parent seeded ${goal.seededByParent} to start</p>
+                      ) : null}
                       <p className="mt-1 text-xs font-bold text-[#69736f]">
                         {goal.sharedWithTrustedFamilies ? "Shared with trusted families as a cause" : "Private goal"}
                       </p>
@@ -3751,11 +4001,21 @@ function BankPanel(props: {
                     <span className="rounded-full bg-white px-3 py-1 text-sm font-black">${goal.saved}/${goal.target}</span>
                   </div>
                   <div className="mt-3 h-4 rounded-full bg-white">
-                    <div className="h-4 rounded-full bg-[#0f766e]" style={{ width: `${percent}%` }} />
+                    <div className={`h-4 rounded-full ${isDonation ? "bg-[#f4b400]" : "bg-[#0f766e]"}`} style={{ width: `${percent}%` }} />
                   </div>
-                  <p className="mt-3 rounded-lg bg-white p-3 text-xs font-bold text-[#5f6a65]">
-                    Use the choices panel to move available dollars into this goal.
-                  </p>
+                  {isDonation && goal.completedAt && !goal.donationConfirmedAt && props.isParentView && (
+                    <button
+                      onClick={() => props.confirmDonation(goal.id)}
+                      className="mt-3 min-h-11 w-full rounded-lg bg-[#165a4b] px-4 py-2 text-sm font-black text-white"
+                    >
+                      Confirm: we donated ${goal.target} to {goal.causeNote ?? "the cause"} ✓
+                    </button>
+                  )}
+                  {!goal.completedAt && (
+                    <p className="mt-3 rounded-lg bg-white p-3 text-xs font-bold text-[#5f6a65]">
+                      Use the choices panel to move available dollars into this goal.
+                    </p>
+                  )}
                 </article>
               );
             })}
@@ -3763,10 +4023,28 @@ function BankPanel(props: {
 
           <div className="mt-4 rounded-lg bg-[#fff4d8] p-4">
             <h4 className="text-lg font-black">Start a new goal</h4>
+            {props.isParentView && (
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                {(["save", "give"] as const).map((kind) => (
+                  <button
+                    key={kind}
+                    onClick={() => props.setNewGoal({ ...props.newGoal, kind })}
+                    className={`min-h-11 rounded-lg px-4 py-2 text-sm font-black ${props.newGoal.kind === kind ? "bg-[#17231f] text-white" : "border border-[#d7caa9] bg-white text-[#17231f]"}`}
+                  >
+                    {kind === "save" ? "💰 Save for something" : "💛 Giving goal"}
+                  </button>
+                ))}
+              </div>
+            )}
+            {props.isParentView && props.newGoal.kind === "give" && (
+              <p className="mt-2 text-xs font-bold leading-5 text-[#7a4b12]">
+                You set the goal and fund the start — your kid picks it and works toward it. Giving, earned.
+              </p>
+            )}
             <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_120px_auto]">
               <input
                 className="rounded-lg border border-[#d7caa9] px-4 py-3 font-semibold"
-                placeholder="Example: Captain treats"
+                placeholder={props.newGoal.kind === "give" ? "Example: Blankets for Sunny Paws Shelter" : "Example: Captain treats"}
                 value={props.newGoal.title}
                 onChange={(event) => props.setNewGoal({ ...props.newGoal, title: event.target.value })}
               />
@@ -3779,6 +4057,32 @@ function BankPanel(props: {
               />
               <button onClick={props.addSavingsGoal} className="min-h-12 rounded-lg bg-[#f47b20] px-5 py-3 text-sm font-black text-white">Add goal</button>
             </div>
+            {props.isParentView && props.newGoal.kind === "give" && (
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                <label className="block text-sm font-black">
+                  Cause
+                  <select
+                    className="mt-1 w-full rounded-lg border border-[#d7caa9] bg-white px-4 py-3 font-semibold"
+                    value={props.newGoal.cause}
+                    onChange={(event) => props.setNewGoal({ ...props.newGoal, cause: event.target.value })}
+                  >
+                    {["Animal shelter", "Pet rescue", "Classroom cause", "Neighborhood helper fund", "Other kindness"].map((cause) => (
+                      <option key={cause} value={cause}>{cause}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="block text-sm font-black">
+                  Parent seed $
+                  <input
+                    className="mt-1 w-full rounded-lg border border-[#d7caa9] px-4 py-3 font-semibold"
+                    inputMode="numeric"
+                    placeholder="0"
+                    value={props.newGoal.seed}
+                    onChange={(event) => props.setNewGoal({ ...props.newGoal, seed: event.target.value })}
+                  />
+                </label>
+              </div>
+            )}
           </div>
         </div>
 
@@ -4427,6 +4731,64 @@ function FamilySetupPanel(props: {
   );
 }
 
+function CertificateCard(props: {
+  child: Child;
+  missions: Mission[];
+  badges: BadgeAward[];
+  certificates: Certificate[];
+  familyName: string;
+  hasPets: boolean;
+}) {
+  const earned = props.certificates.find((cert) => cert.childId === props.child.id);
+  const progress = getCertificateProgress(props.child, props.missions, props.badges, props.hasPets);
+  const trackLabel = props.hasPets ? "Certified Pet Hero track" : "Pet Readiness track";
+  if (earned) {
+    const earnedDate = new Date(earned.earnedAt);
+    const dateLabel = Number.isNaN(earnedDate.getTime())
+      ? earned.earnedAt
+      : earnedDate.toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
+    return (
+      <div className="mt-4 rounded-3xl border-4 border-double border-[#7c3aed]/40 bg-white p-5 text-center shadow-sm">
+        <p className="text-[11px] font-black uppercase tracking-[0.22em] text-[#7c3aed]">TailTots · Official</p>
+        <p className="mt-1 text-xl font-black text-[#17231f]">{earned.title}</p>
+        <p className="mx-auto mt-2 max-w-[18rem] text-sm font-semibold leading-6 text-[#5f6a65]">
+          This certifies that <span className="font-black text-[#17231f]">{props.child.name}</span> of the{" "}
+          <span className="font-black text-[#17231f]">{props.familyName}</span> family earned this honor on {dateLabel} —
+          real missions, parent-approved, streak kept alive.
+        </p>
+        <div className="mt-3 flex items-center justify-center gap-4 text-2xl" aria-hidden="true">
+          <span>🎓</span><span>🐾</span><span>⭐</span>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="mt-4 rounded-lg border border-[#e3ddc9] bg-white p-4">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-sm font-black text-[#17231f]">🎓 Journey to the certificate</p>
+        <span className="rounded-full bg-[#f0edff] px-2 py-1 text-[11px] font-black text-[#4c1d95]">{trackLabel}</span>
+      </div>
+      <div className="mt-3 grid gap-2">
+        <Meter
+          label={props.hasPets ? "Approved pet-care missions" : "Approved missions"}
+          value={Math.min(100, Math.round((progress.missionsDone / progress.missionsRequired) * 100))}
+          color="#7c3aed"
+        />
+        <p className="-mt-1 text-right text-xs font-bold text-[#5f6a65]">{progress.missionsDone}/{progress.missionsRequired}</p>
+        <Meter label="Streak days" value={Math.min(100, Math.round((progress.streakDays / progress.streakRequired) * 100))} color="#f47b20" />
+        <p className="-mt-1 text-right text-xs font-bold text-[#5f6a65]">{progress.streakDays}/{progress.streakRequired}</p>
+        <Meter label="Life-skill areas with badges" value={Math.min(100, Math.round((progress.skillAreas / progress.skillsRequired) * 100))} color="#0f766e" />
+        <p className="-mt-1 text-right text-xs font-bold text-[#5f6a65]">{progress.skillAreas}/{progress.skillsRequired}</p>
+      </div>
+      <p className="mt-2 text-xs font-semibold leading-5 text-[#5f6a65]">
+        {props.hasPets
+          ? "Finish the journey to become a Certified Pet Hero — real pet care, proven over time."
+          : "Finish the journey to earn the Pet Readiness Certificate — the case for a real pet."}
+      </p>
+    </div>
+  );
+}
+
 function GrowthPanel(props: {
   childProfiles: Child[];
   badges: BadgeAward[];
@@ -4434,11 +4796,32 @@ function GrowthPanel(props: {
   momentDraft: string;
   setMomentDraft: (value: string) => void;
   addMoment: () => void;
+  missions: Mission[];
+  certificates: Certificate[];
+  familyName: string;
+  hasPets: boolean;
+  justEarnedCertId: string | null;
+  onDismissEarned: () => void;
 }) {
+  const justEarned = props.certificates.find((cert) => cert.id === props.justEarnedCertId);
+  const justEarnedChild = justEarned ? props.childProfiles.find((child) => child.id === justEarned.childId) : undefined;
   return (
     <section className="rounded-lg border border-[#ded8c7] bg-white p-5">
       <p className="text-xs font-black uppercase tracking-[0.18em] text-[#7c3aed]">Character growth</p>
       <h2 className="mt-2 text-3xl font-black">Responsibility, empathy, kindness, leadership</h2>
+      {justEarned && (
+        <div className="mt-4 rounded-lg border-2 border-[#7c3aed] bg-[#f0edff] p-4" role="status">
+          <p className="text-lg font-black text-[#4c1d95]">🎓 {justEarnedChild?.name ?? "Your kid"} just earned: {justEarned.title}!</p>
+          <p className="mt-1 text-sm font-semibold text-[#5f6a65]">
+            {justEarned.kind === "hero"
+              ? "Real pet care, proven over time. From pet owner to pet hero — frame it."
+              : "The pet-care journey, completed. This is the case for a real pet — framed and ready."}
+          </p>
+          <button onClick={props.onDismissEarned} className="mt-3 rounded-lg bg-[#7c3aed] px-4 py-2 text-sm font-black text-white">
+            Celebrate 🎉
+          </button>
+        </div>
+      )}
       <div className="mt-5 grid gap-4 lg:grid-cols-2">
         {props.childProfiles.map((child) => (
           <div key={child.id} className="rounded-lg bg-[#f8f6ed] p-4">
@@ -4449,6 +4832,14 @@ function GrowthPanel(props: {
               </div>
               <span className="rounded-full bg-white px-3 py-1 text-xs font-black">{levelLabels[child.level]}</span>
             </div>
+            <CertificateCard
+              child={child}
+              missions={props.missions}
+              badges={props.badges}
+              certificates={props.certificates}
+              familyName={props.familyName}
+              hasPets={props.hasPets}
+            />
             <div className="mt-4 grid gap-3">
               <Meter label="Task progress" value={Math.min(100, Math.round((child.points / 220) * 100))} color="#f47b20" />
               <Meter label="Loving it" value={getChildLook(child.id).love} color="#7c3aed" />

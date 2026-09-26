@@ -58,3 +58,6 @@ create unique index if not exists savings_goals_child_client_idx
   on public.savings_goals (child_id, client_id);
 create unique index if not exists memory_moments_child_client_idx
   on public.memory_moments (child_id, client_id);
+
+alter table public.children
+  add column if not exists last_streak_date date;

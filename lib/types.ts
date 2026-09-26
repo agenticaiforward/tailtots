@@ -13,6 +13,8 @@ export type Child = {
   coins: number;
   level: LevelKey;
   streakDays: number;
+  /** Local YYYY-MM-DD of the last day a streak was extended. Powers true per-day streaks. */
+  lastStreakDate?: string;
 };
 
 export type Pet = {
@@ -62,6 +64,12 @@ export type SavingsGoal = {
   type: "toy" | "pet_food" | "treats" | "donation" | "family_reward";
   sharedWithTrustedFamilies?: boolean;
   causeNote?: string;
+  /** Parent-funded seed dollars added when a giving goal is created. */
+  seededByParent?: number;
+  /** ISO date when saved first reached target. */
+  completedAt?: string;
+  /** ISO date when a parent confirmed the real-world donation happened. */
+  donationConfirmedAt?: string;
 };
 
 export type MemoryMoment = {

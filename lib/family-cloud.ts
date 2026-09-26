@@ -205,6 +205,7 @@ export function appIdForRow(row: { id: string; client_id: string | null }): stri
 export interface DbChildRow {
   id: string; family_id: string; display_name: string; level_key: string;
   points: number; coins: number; streak_days: number; age: number | null;
+  last_streak_date: string | null;
   client_id: string | null;
 }
 export interface DbPetRow {
@@ -252,6 +253,7 @@ export interface DbMomentRow {
 export interface ChildRowUpsert {
   family_id: string; display_name: string; level_key: LevelKey; points: number;
   coins: number; streak_days: number; age: number; client_id: string;
+  last_streak_date: string | null;
 }
 
 /**
@@ -270,6 +272,7 @@ export function mapChildToRow(familyId: string, child: Child): ChildRowUpsert {
     streak_days: child.streakDays,
     age: child.age,
     client_id: child.id,
+    last_streak_date: child.lastStreakDate ?? null,
   };
 }
 
@@ -512,6 +515,7 @@ export function mapRowToChild(row: DbChildRow): Child {
     coins: asNumber(row.coins),
     level: asLevelKey(row.level_key),
     streakDays: asNumber(row.streak_days),
+    lastStreakDate: row.last_streak_date ?? undefined,
   };
 }
 
@@ -910,7 +914,7 @@ export async function pullFamilyState(
   const childRows = asRowArray<DbChildRow>(
     await selectWhere(
       client, "children", "family_id", familyId,
-      "id,family_id,display_name,level_key,points,coins,streak_days,age,client_id",
+      "id,family_id,display_name,level_key,points,coins,streak_days,age,last_streak_date,client_id",
       "created_at",
     ),
   );
