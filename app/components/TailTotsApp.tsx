@@ -132,7 +132,28 @@ type NeighborhoodJob = {
   status: "posted" | "accepted" | "approved" | "completed";
   acceptedBy?: string;
   missionId?: string;
+  groupId?: string;
 };
+
+/** A parent-created neighborhood crew. Groups are parent-managed: only parents add or
+ * remove members, and kids never see contact details — just the group name and member count. */
+type NeighborhoodGroup = {
+  id: string;
+  name: string;
+  note: string;
+  inviteCode: string;
+  memberNames: string[];
+  createdAt: string;
+};
+
+function makeInviteCode(): string {
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let code = "";
+  for (let i = 0; i < 6; i += 1) {
+    code += alphabet[Math.floor(Math.random() * alphabet.length)];
+  }
+  return code;
+}
 
 type KidScheduleItem = {
   id: string;
@@ -325,7 +346,7 @@ const tabItems = [
 ];
 
 const kidTabIds = ["missions", "schedule", "hub", "pets", "pet-helper", "bank", "neighborhood", "growth"];
-const parentTabIds = ["vision", "approvals", "schedule", "hub", "pets", "neighborhood", "growth", "ai", "ecosystem"];
+const parentTabIds = ["vision", "approvals", "schedule", "hub", "pets", "setup", "neighborhood", "growth", "ai", "ecosystem"];
 const defaultParentPasscode = "4321";
 
 const savedFamilyStateKey = "tailtots-family-state-v1";
@@ -342,6 +363,7 @@ type SavedFamilyState = {
   goals?: SavingsGoal[];
   badges?: BadgeAward[];
   neighborhoodJobs?: NeighborhoodJob[];
+  neighborhoodGroups?: NeighborhoodGroup[];
   moments?: MemoryMoment[];
   familyPhotoUrl?: string;
   activeChildId?: string;
@@ -362,6 +384,10 @@ export function TailTotsApp() {
   const [goals, setGoals] = useState(starterGoals);
   const [badges, setBadges] = useState(starterBadges);
   const [neighborhoodJobs, setNeighborhoodJobs] = useState(starterNeighborhoodJobs);
+  const [neighborhoodGroups, setNeighborhoodGroups] = useState<NeighborhoodGroup[]>([]);
+  const [groupDraft, setGroupDraft] = useState({ name: "", note: "" });
+  const [joinCodeDraft, setJoinCodeDraft] = useState("");
+  const [groupMessage, setGroupMessage] = useState("");
   const [scheduleItems] = useState(starterScheduleItems);
   const [moments, setMoments] = useState<MemoryMoment[]>(starterMoments);
   const [activeChildId, setActiveChildId] = useState(starterChildren[0]?.id ?? "");
@@ -381,8 +407,11 @@ export function TailTotsApp() {
     rewardDollars: "5",
     badgeTitle: "Trusted Helper",
     safety: "Parent confirms address and stays reachable.",
+    groupId: "",
   });
   const [cloudAccountEmail, setCloudAccountEmail] = useState("");
+  const [accountSheetOpen, setAccountSheetOpen] = useState(false);
+  const [accountWelcome, setAccountWelcome] = useState(false);
   const [accountDraft, setAccountDraft] = useState({ email: "" });
   const [magicLinkSent, setMagicLinkSent] = useState(false);
   const [accountStatus, setAccountStatus] = useState<"idle" | "saving" | "loading" | "error" | "saved">("idle");
@@ -427,6 +456,7 @@ export function TailTotsApp() {
         setGoals(savedState.goals ?? starterGoals);
         setBadges(savedState.badges ?? starterBadges);
         setNeighborhoodJobs(savedState.neighborhoodJobs ? savedState.neighborhoodJobs.map(normalizeNeighborhoodJob) : starterNeighborhoodJobs);
+        setNeighborhoodGroups(savedState.neighborhoodGroups ? savedState.neighborhoodGroups.map(normalizeNeighborhoodGroup) : []);
         setMoments(savedState.moments ?? starterMoments);
         setFamilyPhotoUrl(savedState.familyPhotoUrl);
         setActiveChildId(savedState.activeChildId ?? savedState.children?.[0]?.id ?? "");
@@ -442,9 +472,13 @@ export function TailTotsApp() {
       if (!isMounted) return;
       setCloudAccountEmail(data.session?.user.email ?? "");
     });
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
       setCloudAccountEmail(session?.user.email ?? "");
       if (session?.user) setMagicLinkSent(false);
+      if (event === "SIGNED_IN" && session?.user) {
+        setAccountWelcome(true);
+        setAccountSheetOpen(true);
+      }
     });
     return () => {
       isMounted = false;
@@ -454,8 +488,8 @@ export function TailTotsApp() {
 
   useEffect(() => {
     if (!hasLoadedSavedState) return;
-    saveFamilyState({ familyName, parentPasscode, parents, children, pets, missions, transactions, goals, badges, neighborhoodJobs, moments, familyPhotoUrl, activeChildId });
-  }, [activeChildId, badges, children, familyName, familyPhotoUrl, goals, hasLoadedSavedState, missions, moments, neighborhoodJobs, parentPasscode, parents, pets, transactions]);
+    saveFamilyState({ familyName, parentPasscode, parents, children, pets, missions, transactions, goals, badges, neighborhoodJobs, neighborhoodGroups, moments, familyPhotoUrl, activeChildId });
+  }, [activeChildId, badges, children, familyName, familyPhotoUrl, goals, hasLoadedSavedState, missions, moments, neighborhoodGroups, neighborhoodJobs, parentPasscode, parents, pets, transactions]);
 
   useEffect(() => {
     queueMicrotask(() => {
@@ -478,6 +512,7 @@ export function TailTotsApp() {
       goals,
       badges,
       neighborhoodJobs,
+      neighborhoodGroups,
       moments,
       familyPhotoUrl,
       activeChildId,
@@ -495,6 +530,7 @@ export function TailTotsApp() {
     setGoals(snapshot.goals ?? starterGoals);
     setBadges(snapshot.badges ?? starterBadges);
     setNeighborhoodJobs(snapshot.neighborhoodJobs ? snapshot.neighborhoodJobs.map(normalizeNeighborhoodJob) : starterNeighborhoodJobs);
+    setNeighborhoodGroups(snapshot.neighborhoodGroups ? snapshot.neighborhoodGroups.map(normalizeNeighborhoodGroup) : []);
     setMoments(snapshot.moments ?? starterMoments);
     setFamilyPhotoUrl(snapshot.familyPhotoUrl);
     setActiveChildId(snapshot.activeChildId ?? snapshot.children?.[0]?.id ?? (snapshot.children ? "" : starterChildren[0]?.id ?? ""));
@@ -534,6 +570,7 @@ export function TailTotsApp() {
       goals: starterGoals,
       badges: starterBadges,
       neighborhoodJobs: starterNeighborhoodJobs,
+      neighborhoodGroups: [],
       moments: starterMoments,
       activeChildId: starterChildren[0]?.id ?? "",
     });
@@ -951,10 +988,68 @@ export function TailTotsApp() {
         skillFocus: Number(jobDraft.rewardDollars) >= 8 ? "leadership" : "teamwork",
         trustSignals: ["parent_gate", "age_fit", "no_messaging", "adult_nearby", "private_child"],
         status: "posted",
+        groupId: jobDraft.groupId || undefined,
       },
       ...items,
     ]);
-    setJobDraft({ title: "Pet sitting helper", family: "Neighbor family", pet: "Pet name", time: "Saturday, 10:00 AM", rewardDollars: "5", badgeTitle: "Trusted Helper", safety: "Parent confirms address and stays reachable." });
+    setJobDraft({ title: "Pet sitting helper", family: "Neighbor family", pet: "Pet name", time: "Saturday, 10:00 AM", rewardDollars: "5", badgeTitle: "Trusted Helper", safety: "Parent confirms address and stays reachable.", groupId: "" });
+  }
+
+  function createNeighborhoodGroup() {
+    const name = groupDraft.name.trim();
+    if (!name) {
+      setGroupMessage("Give the group a name first — like “Maple Street crew”.");
+      return;
+    }
+    setNeighborhoodGroups((items) => [
+      {
+        id: `group-${Date.now()}`,
+        name,
+        note: groupDraft.note.trim(),
+        inviteCode: makeInviteCode(),
+        memberNames: [familyName.trim() || "Your family"],
+        createdAt: new Date().toISOString(),
+      },
+      ...items,
+    ]);
+    setGroupDraft({ name: "", note: "" });
+    setGroupMessage(`“${name}” is live! Share the invite code with trusted parents.`);
+  }
+
+  function removeNeighborhoodGroup(groupId: string) {
+    const group = neighborhoodGroups.find((item) => item.id === groupId);
+    if (typeof window !== "undefined" && group && !window.confirm(`Delete “${group.name}”? Kids will just see it disappear — no messages are sent.`)) return;
+    setNeighborhoodGroups((items) => items.filter((item) => item.id !== groupId));
+    setNeighborhoodJobs((items) => items.map((job) => (job.groupId === groupId ? { ...job, groupId: undefined } : job)));
+    setGroupMessage("Group deleted.");
+  }
+
+  function joinNeighborhoodGroup() {
+    const code = joinCodeDraft.trim().toUpperCase();
+    if (!code) {
+      setGroupMessage("Type the 6-letter invite code a parent shared with you.");
+      return;
+    }
+    const match = neighborhoodGroups.find((group) => group.inviteCode.toUpperCase() === code);
+    if (match) {
+      setGroupMessage(`That code belongs to “${match.name}”, which is already on this device — you are in it!`);
+      return;
+    }
+    setGroupMessage("No group on this device uses that code yet. Codes come from another parent's device — in this demo, groups live on this family’s device for now.");
+  }
+
+  async function copyInviteCode(code: string) {
+    setGroupMessage("");
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(`Join our TailTots neighborhood group with invite code ${code}. Parents create a group in the Neighborhood tab of tailtots.com and tap “Join with code”.`);
+        setGroupMessage("Invite text copied — paste it to the parents you trust.");
+      } else {
+        setGroupMessage(`Copy this invite code yourself: ${code}`);
+      }
+    } catch {
+      setGroupMessage(`Copy this invite code yourself: ${code}`);
+    }
   }
 
   function acceptNeighborhoodJob(jobId: string) {
@@ -1098,6 +1193,36 @@ export function TailTotsApp() {
             />
           )}
 
+          {role === "parent" && (
+            <button
+              onClick={() => setAccountSheetOpen(true)}
+              aria-label={cloudAccountEmail ? `Parent account: ${cloudAccountEmail}` : "Sign in to your parent account"}
+              className={`flex min-h-12 w-full items-center justify-between gap-2 rounded-lg border px-4 py-2 shadow-sm ${
+                cloudAccountEmail
+                  ? "border-[#b8cfc6] bg-[#e7f4ef]"
+                  : "border-[#165a4b] bg-[#165a4b] text-white"
+              }`}
+            >
+              {cloudAccountEmail ? (
+                <>
+                  <span className="flex min-w-0 items-center gap-2">
+                    <span aria-hidden="true">👤</span>
+                    <span className="max-w-[170px] truncate text-sm font-black text-[#165a4b]">{cloudAccountEmail}</span>
+                  </span>
+                  <span className="shrink-0 rounded-full bg-[#165a4b] px-3 py-1 text-xs font-black text-white">Account</span>
+                </>
+              ) : (
+                <>
+                  <span className="flex min-w-0 items-center gap-2 text-sm font-black">
+                    <span aria-hidden="true">🔐</span>
+                    <span className="truncate">Parent account</span>
+                  </span>
+                  <span className="shrink-0 rounded-full bg-white px-3 py-1 text-xs font-black text-[#165a4b]">Sign in</span>
+                </>
+              )}
+            </button>
+          )}
+
           {(role === "child" || isParentUnlocked) && (
           <nav className="grid grid-flow-col gap-2 overflow-x-auto pb-1 lg:grid-flow-row lg:overflow-visible lg:pb-0">
             {visibleTabs.filter((tab) => tab.id !== "vision").map((tab) => (
@@ -1173,6 +1298,7 @@ export function TailTotsApp() {
               scheduleItems={scheduleItems}
               role={role}
               setActiveChildId={role === "child" ? requestChildSwitch : setActiveChildId}
+              familyName={familyName}
             />
           )}
           {visibleActiveTab === "pets" && <PassportPanel pets={pets} updatePetPhoto={role === "parent" ? updatePetPhoto : undefined} />}
@@ -1272,6 +1398,16 @@ export function TailTotsApp() {
               acceptJob={acceptNeighborhoodJob}
               approveJob={approveNeighborhoodJob}
               toggleJobVisibility={toggleNeighborhoodJobVisibility}
+              groups={neighborhoodGroups}
+              groupDraft={groupDraft}
+              setGroupDraft={setGroupDraft}
+              groupMessage={groupMessage}
+              createGroup={createNeighborhoodGroup}
+              removeGroup={removeNeighborhoodGroup}
+              joinCodeDraft={joinCodeDraft}
+              setJoinCodeDraft={setJoinCodeDraft}
+              joinGroup={joinNeighborhoodGroup}
+              copyInviteCode={copyInviteCode}
             />
           )}
           {visibleActiveTab === "ai" && <AIPanel childProfiles={children} missions={missions} parentSignedIn={Boolean(cloudAccountEmail)} />}
@@ -1289,6 +1425,29 @@ export function TailTotsApp() {
             setPendingPhotoCropQueue([]);
             setPhotoCropDraft(undefined);
           }}
+        />
+      )}
+      {role === "parent" && (
+        <AccountSheetModal
+          open={accountSheetOpen}
+          onClose={() => setAccountSheetOpen(false)}
+          cloudAccountEmail={cloudAccountEmail}
+          accountDraft={accountDraft}
+          setAccountDraft={setAccountDraft}
+          accountStatus={accountStatus}
+          accountMessage={accountMessage}
+          sendParentSignInLink={sendParentSignInLink}
+          magicLinkSent={magicLinkSent}
+          saveCurrentFamilyAccount={saveCurrentFamilyAccount}
+          loadCurrentFamilyAccount={loadCurrentFamilyAccount}
+          signOutParentAccount={signOutParentAccountFromApp}
+          goToFamilySetup={() => {
+            setAccountSheetOpen(false);
+            setActiveTab("setup");
+            requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "smooth" }));
+          }}
+          accountWelcome={accountWelcome}
+          dismissWelcome={() => setAccountWelcome(false)}
         />
       )}
     </main>
@@ -1619,7 +1778,7 @@ function VisionLandingPanel({
               onSubmit={(event) => { event.preventDefault(); joinLaunchList(); }}
             >
               <label htmlFor="hero-launch-email" className="text-xs font-black uppercase tracking-[0.14em] text-tt-pine">
-                👨‍👩‍👧 Get your family on the launch list
+                📬 Get launch updates (free newsletter)
               </label>
               <div className="mt-2 grid gap-2 sm:grid-cols-[1fr_auto]">
                 <input
@@ -1633,7 +1792,7 @@ function VisionLandingPanel({
                   required
                 />
                 <button type="submit" disabled={launchInterestStatus === "saving"} className="tt-btn-press min-h-12 rounded-xl bg-tt-tang px-6 py-3 text-sm font-black text-white shadow-md disabled:opacity-60">
-                  {launchInterestStatus === "saving" ? "Saving…" : "Join free 🚀"}
+                  {launchInterestStatus === "saving" ? "Saving…" : "Get launch updates 🚀"}
                 </button>
               </div>
               {launchInterestMessage && (
@@ -1641,7 +1800,7 @@ function VisionLandingPanel({
                   {launchInterestMessage}
                 </p>
               )}
-              <p className="mt-2 text-xs font-semibold text-tt-ink-faint">Free for families. Unsubscribe anytime. Your inbox stays boring; your kids won’t.</p>
+              <p className="mt-2 text-xs font-semibold text-tt-ink-faint">This is just the newsletter — it doesn&apos;t create your account. Unsubscribe anytime. To create your free parent account, tap <strong className="font-black">Sign in</strong> in the parent panel.</p>
             </form>
             )}
 
@@ -2078,7 +2237,7 @@ function VisionLandingPanel({
           <p className="text-4xl tt-animate-bounce-soft" aria-hidden="true">🚀</p>
           <h3 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">Don’t miss the launch. Your kids won’t let you.</h3>
           <p className="mx-auto mt-3 max-w-xl text-[15px] font-semibold leading-6 text-white/80">
-            Free family accounts, early rewards, and launch updates. One email — that’s the whole commitment. (The missions are the fun part.)
+            Launch news, founding-family perks, and early rewards. One email, no spam. (The missions are the fun part.)
           </p>
           <p className="mx-auto mt-3 inline-flex max-w-xl items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-xs font-black uppercase tracking-[0.12em] text-tt-sun ring-1 ring-white/20">
             <span aria-hidden="true">⏳</span> Founding-family window closes at launch — no fake countdown, just a real door
@@ -2104,7 +2263,7 @@ function VisionLandingPanel({
               required
             />
             <button type="submit" disabled={launchInterestStatus === "saving"} className="tt-btn-press min-h-12 rounded-xl bg-tt-sun px-6 py-3 text-sm font-black text-tt-ink disabled:opacity-60">
-              {launchInterestStatus === "saving" ? "Saving…" : "Count us in 🎉"}
+              {launchInterestStatus === "saving" ? "Saving…" : "Get launch updates 🎉"}
             </button>
           </form>
           )}
@@ -2113,6 +2272,9 @@ function VisionLandingPanel({
               {launchInterestMessage}
             </p>
           )}
+          <p className="mx-auto mt-3 max-w-lg text-xs font-semibold text-white/60">
+            The newsletter doesn&apos;t create your parent account — use the <strong className="font-black">Sign in</strong> button in the parent panel for that.
+          </p>
         </div>
       </section>
 
@@ -2279,6 +2441,7 @@ function SchedulePanel({
   scheduleItems,
   role,
   setActiveChildId,
+  familyName,
 }: {
   activeChild?: Child;
   childProfiles: Child[];
@@ -2286,16 +2449,34 @@ function SchedulePanel({
   scheduleItems: KidScheduleItem[];
   role: Role;
   setActiveChildId: (childId: string) => void;
+  familyName: string;
 }) {
   const isParent = role === "parent";
   const visibleItems = scheduleItems.filter((item) => (isParent ? true : item.childId === activeChild?.id));
   const visibleMissions = missions.filter((mission) => (isParent ? true : !mission.assignedChildId || mission.assignedChildId === activeChild?.id)).slice(0, 4);
-  const familyAvailabilityLink = `tailtots.com/availability/${childProfiles.map((child) => child.name.toLowerCase()).join("-") || "family"}`;
+  const availabilitySlug =
+    familyName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "family";
+  const familyAvailabilityLink = `tailtots.com/availability/${availabilitySlug}`;
   const playdateWindows = [
     ["Weekday calm visit", "Tuesday or Thursday, 4:30-6:00 PM", "Parent confirms address, pet temperament, and adult presence."],
     ["Weekend pet hello", "Saturday, 10:00 AM-12:00 PM", "Good for supervised pet introductions or shared care learning."],
     ["Shelter kindness block", "Sunday afternoon", "Parent-reviewed volunteer or donation activity with badge credit."],
   ];
+  const [availabilityCopied, setAvailabilityCopied] = useState(false);
+  async function copyAvailabilitySummary() {
+    const summary = `Our family is free for playdates: ${playdateWindows
+      .map(([title, time]) => `${title} (${time})`)
+      .join("; ")}. Parents coordinate first at https://${familyAvailabilityLink} — no kid profiles or contact details shared.`;
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(summary);
+        setAvailabilityCopied(true);
+        setTimeout(() => setAvailabilityCopied(false), 3000);
+      }
+    } catch {
+      setAvailabilityCopied(false);
+    }
+  }
   const calendarDays = ["Today", "Wednesday", "Thursday", "Saturday", "Sunday"];
 
   return (
@@ -2364,7 +2545,14 @@ function SchedulePanel({
             <div className="rounded-lg bg-[#eef2ff] p-4">
               <p className="text-xs font-black uppercase tracking-[0.14em] text-[#1d4ed8]">Share link preview</p>
               <p className="mt-2 break-all rounded-lg bg-white p-3 text-sm font-black text-[#17231f]">{familyAvailabilityLink}</p>
-              <button className="mt-3 min-h-11 rounded-lg bg-[#2563eb] px-4 py-2 text-sm font-black text-white">Generate availability link</button>
+              <button onClick={copyAvailabilitySummary} className="mt-3 min-h-11 rounded-lg bg-[#2563eb] px-4 py-2 text-sm font-black text-white">
+                {availabilityCopied ? "Copied to clipboard ✓" : "Copy safe share summary"}
+              </button>
+              {availabilityCopied && (
+                <p className="mt-2 text-xs font-bold text-[#165a4b]" role="status">
+                  Copied — paste it to the parents you trust. No kid names or addresses included.
+                </p>
+              )}
             </div>
             <div className="grid gap-2">
               {playdateWindows.map(([title, time, note]) => (
@@ -2962,6 +3150,7 @@ function saveFamilyState(state: SavedFamilyState) {
     children: state.children.map(normalizeChildProfile),
     pets: state.pets.map(normalizePetProfile),
     neighborhoodJobs: state.neighborhoodJobs.map(normalizeNeighborhoodJob),
+    neighborhoodGroups: (state.neighborhoodGroups ?? []).map(normalizeNeighborhoodGroup),
   };
   try {
     window.localStorage.setItem(savedFamilyStateKey, JSON.stringify(safeState));
@@ -2989,6 +3178,16 @@ function normalizeNeighborhoodJob(job: NeighborhoodJob): NeighborhoodJob {
     minAge: job.minAge ?? 4,
     skillFocus: job.skillFocus ?? "teamwork",
     trustSignals: job.trustSignals?.length ? job.trustSignals : ["parent_gate", "age_fit", "private_child"],
+  };
+}
+
+function normalizeNeighborhoodGroup(group: NeighborhoodGroup): NeighborhoodGroup {
+  return {
+    ...group,
+    note: group.note ?? "",
+    memberNames: Array.isArray(group.memberNames) ? group.memberNames : [],
+    inviteCode: group.inviteCode || makeInviteCode(),
+    createdAt: group.createdAt || new Date().toISOString(),
   };
 }
 
@@ -3887,6 +4086,153 @@ function EnterpriseReadinessPanel() {
   );
 }
 
+const accountSteps = [
+  ["1", "Enter your email below"],
+  ["2", "Tap the sign-in link we email you"],
+  ["3", "You're in — no password, ever"],
+];
+
+function AccountSheetModal(props: {
+  open: boolean;
+  onClose: () => void;
+  cloudAccountEmail: string;
+  accountDraft: { email: string };
+  setAccountDraft: (value: { email: string }) => void;
+  accountStatus: "idle" | "saving" | "loading" | "error" | "saved";
+  accountMessage: string;
+  sendParentSignInLink: () => void;
+  magicLinkSent: boolean;
+  saveCurrentFamilyAccount: () => void;
+  loadCurrentFamilyAccount: () => void;
+  signOutParentAccount: () => void;
+  goToFamilySetup: () => void;
+  accountWelcome: boolean;
+  dismissWelcome: () => void;
+}) {
+  if (!props.open) return null;
+  const signedIn = Boolean(props.cloudAccountEmail);
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-[#17231f]/60 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Parent account">
+      <section className="w-full max-w-lg rounded-2xl bg-white p-5 shadow-2xl sm:p-6">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-[#165a4b]">Parent account</p>
+            <h2 className="mt-2 text-2xl font-black sm:text-3xl">{signedIn ? "You're signed in" : "Create or open your parent account"}</h2>
+            <p className="mt-2 text-sm font-semibold leading-6 text-[#5f6a65]">
+              {signedIn
+                ? "Your family setup can live safely here and come with you across devices."
+                : "One account keeps this family's profiles, photos, goals, points, Kid Bank, badges, and parent settings together."}
+            </p>
+          </div>
+          <button onClick={props.onClose} aria-label="Close account" className="min-h-10 rounded-lg border border-[#ded8c7] px-4 py-2 text-sm font-black">Close</button>
+        </div>
+
+        {!signedIn && (
+          <ol className="mt-4 grid gap-2">
+            {accountSteps.map(([number, text]) => (
+              <li key={number} className="flex items-center gap-3 rounded-lg bg-[#f8f6ed] px-4 py-3">
+                <span aria-hidden="true" className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#165a4b] text-sm font-black text-white">{number}</span>
+                <span className="text-sm font-black text-[#25352f]">{text}</span>
+              </li>
+            ))}
+          </ol>
+        )}
+
+        {!signedIn && (
+          <form
+            className="mt-4"
+            onSubmit={(event) => { event.preventDefault(); props.sendParentSignInLink(); }}
+          >
+            <label htmlFor="account-sheet-email" className="text-sm font-black text-[#25352f]">
+              Parent email
+              <input
+                id="account-sheet-email"
+                value={props.accountDraft.email}
+                onChange={(event) => props.setAccountDraft({ email: event.target.value })}
+                className="mt-2 w-full min-h-12 rounded-lg border border-[#c9d8f8] px-4 py-3 text-base font-semibold"
+                inputMode="email"
+                placeholder="you@example.com"
+                type="email"
+                required
+              />
+            </label>
+            <button
+              type="submit"
+              disabled={props.accountStatus === "loading"}
+              className="mt-3 min-h-12 w-full rounded-lg bg-[#165a4b] px-5 py-3 text-sm font-black text-white disabled:opacity-60"
+            >
+              {props.accountStatus === "loading" ? "Sending..." : "Email me a sign-in link"}
+            </button>
+            <p className="mt-2 text-xs font-semibold text-[#5f6a65]">Free forever for families. The link expires in about an hour.</p>
+          </form>
+        )}
+
+        {!signedIn && props.magicLinkSent && (
+          <div className="mt-4 rounded-lg bg-[#e7f4ef] px-4 py-3 text-sm font-bold text-[#165a4b]">
+            Check your email — tap the sign-in link to finish signing in. Don&apos;t see it? Peek in spam. The link expires in about an hour.
+          </div>
+        )}
+
+        {signedIn && props.accountWelcome && (
+          <div className="mt-4 rounded-lg bg-[#e7f4ef] p-4">
+            <p className="text-sm font-black text-[#165a4b]">🎉 Welcome! Your account is ready.</p>
+            <p className="mt-1 text-sm font-semibold text-[#25352f]">Save this family setup now so it&apos;s kept safe and syncs to your other devices.</p>
+            <button
+              onClick={() => { props.dismissWelcome(); props.saveCurrentFamilyAccount(); }}
+              disabled={props.accountStatus === "saving"}
+              className="mt-3 min-h-12 w-full rounded-lg bg-[#165a4b] px-5 py-3 text-sm font-black text-white disabled:opacity-60"
+            >
+              {props.accountStatus === "saving" ? "Saving..." : "Save my family setup now"}
+            </button>
+          </div>
+        )}
+
+        {signedIn && (
+          <div className="mt-4">
+            <div className="rounded-lg bg-[#e7f4ef] px-4 py-3 text-sm font-black text-[#165a4b]">
+              Signed in: {props.cloudAccountEmail}
+            </div>
+            <div className="mt-3 grid gap-2">
+              <button
+                onClick={props.saveCurrentFamilyAccount}
+                disabled={props.accountStatus === "saving"}
+                className="min-h-12 rounded-lg bg-[#165a4b] px-5 py-3 text-sm font-black text-white disabled:opacity-60"
+              >
+                {props.accountStatus === "saving" ? "Saving..." : "Save to parent account"}
+              </button>
+              <button
+                onClick={props.loadCurrentFamilyAccount}
+                disabled={props.accountStatus === "loading"}
+                className="min-h-12 rounded-lg border border-[#c9d8f8] bg-white px-5 py-3 text-sm font-black text-[#1f3b7a] disabled:opacity-60"
+              >
+                Load from parent account
+              </button>
+              <button
+                onClick={props.signOutParentAccount}
+                disabled={props.accountStatus === "loading"}
+                className="min-h-12 rounded-lg border border-[#ded8c7] bg-[#f8f6ed] px-5 py-3 text-sm font-black text-[#5f4a24] disabled:opacity-60"
+              >
+                Sign out
+              </button>
+            </div>
+          </div>
+        )}
+
+        {props.accountMessage && (
+          <p className={`mt-3 text-sm font-bold ${props.accountStatus === "error" ? "text-[#b44421]" : "text-[#165a4b]"}`}>{props.accountMessage}</p>
+        )}
+
+        <button
+          onClick={props.goToFamilySetup}
+          className="mt-4 flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-[#ded8c7] bg-white px-4 py-2 text-sm font-black text-[#165a4b]"
+        >
+          Full family setup →
+        </button>
+      </section>
+    </div>
+  );
+}
+
 function FamilySetupPanel(props: {
   cloudAccountEmail: string;
   accountDraft: { email: string };
@@ -3969,6 +4315,17 @@ function FamilySetupPanel(props: {
             {props.cloudAccountEmail ? `Signed in: ${props.cloudAccountEmail}` : isSupabaseConfigured ? "Ready for account sign in" : "Account setup"}
           </div>
         </div>
+
+        {!props.cloudAccountEmail && (
+          <ol className="mt-4 grid gap-2 sm:grid-cols-3">
+            {accountSteps.map(([number, text]) => (
+              <li key={number} className="flex items-center gap-2 rounded-lg bg-[#f8f6ed] px-3 py-2">
+                <span aria-hidden="true" className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-[#165a4b] text-xs font-black text-white">{number}</span>
+                <span className="text-xs font-black text-[#25352f]">{text}</span>
+              </li>
+            ))}
+          </ol>
+        )}
 
         {!props.cloudAccountEmail && (
           <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_auto]">
@@ -4293,18 +4650,38 @@ function NeighborhoodPanel({
   acceptJob,
   approveJob,
   toggleJobVisibility,
+  groups,
+  groupDraft,
+  setGroupDraft,
+  groupMessage,
+  createGroup,
+  removeGroup,
+  joinCodeDraft,
+  setJoinCodeDraft,
+  joinGroup,
+  copyInviteCode,
 }: {
   goals: SavingsGoal[];
   childProfiles: Child[];
   activeChild?: Child;
   role: Role;
   jobs: NeighborhoodJob[];
-  jobDraft: { title: string; family: string; pet: string; time: string; rewardDollars: string; badgeTitle: string; safety: string };
-  setJobDraft: (value: { title: string; family: string; pet: string; time: string; rewardDollars: string; badgeTitle: string; safety: string }) => void;
+  jobDraft: { title: string; family: string; pet: string; time: string; rewardDollars: string; badgeTitle: string; safety: string; groupId: string };
+  setJobDraft: (value: { title: string; family: string; pet: string; time: string; rewardDollars: string; badgeTitle: string; safety: string; groupId: string }) => void;
   postJob: () => void;
   acceptJob: (jobId: string) => void;
   approveJob: (jobId: string) => void;
   toggleJobVisibility: (jobId: string) => void;
+  groups: NeighborhoodGroup[];
+  groupDraft: { name: string; note: string };
+  setGroupDraft: (value: { name: string; note: string }) => void;
+  groupMessage: string;
+  createGroup: () => void;
+  removeGroup: (groupId: string) => void;
+  joinCodeDraft: string;
+  setJoinCodeDraft: (value: string) => void;
+  joinGroup: () => void;
+  copyInviteCode: (code: string) => void;
 }) {
   const sharedGoals = goals.filter((goal) => goal.sharedWithTrustedFamilies);
   const visibleJobs =
@@ -4317,6 +4694,21 @@ function NeighborhoodPanel({
     ["Teamwork", "Two-kid supply sorting task with parent", "Split points fairly, one shared family badge"],
     ["Leadership", "Older kid teaches a younger kid safe pet observation", "Higher points, parent nearby"],
   ];
+  const skillTemplateDrafts: Record<string, { title: string; rewardDollars: string; badgeTitle: string; safety: string }> = {
+    Responsibility: { title: "Morning pet check for a trusted neighbor", rewardDollars: "3", badgeTitle: "Reliable Helper", safety: "Parent confirms address and stays reachable." },
+    Empathy: { title: "Make a comfort card for a newly adopted pet", rewardDollars: "0", badgeTitle: "Kindness badge", safety: "Craft at home; parent delivers the card." },
+    Teamwork: { title: "Two-kid supply sorting task with parent", rewardDollars: "4", badgeTitle: "Team Player", safety: "Parent supervises the whole task." },
+    Leadership: { title: "Older kid teaches a younger kid safe pet observation", rewardDollars: "8", badgeTitle: "Pet Mentor", safety: "Parent nearby at all times." },
+  };
+  function applySkillTemplate(skill: string) {
+    const draft = skillTemplateDrafts[skill];
+    if (!draft) return;
+    setJobDraft({ ...jobDraft, title: draft.title, rewardDollars: draft.rewardDollars, badgeTitle: draft.badgeTitle, safety: draft.safety });
+    if (typeof window !== "undefined") {
+      const target = document.getElementById("neighborhood-post-job");
+      if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }
   const privacyRules = [
     "Parents approve every job before it appears to kids.",
     "Kids do not see addresses, phone numbers, or adult contact details.",
@@ -4340,6 +4732,111 @@ function NeighborhoodPanel({
         </p>
       </div>
 
+      <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm" aria-label="Neighborhood groups">
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#f47b20]">Neighborhood groups</p>
+        <h3 className="mt-2 text-2xl font-black">Your street, your crew</h3>
+        <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-[#5f6a65]">
+          Groups are parent-managed: only parents create or remove groups, and kids never see addresses, phone numbers, or other contact details — just the group name and how many families are in.
+        </p>
+
+        {role === "parent" ? (
+          <div className="mt-4 grid gap-3 rounded-lg bg-[#f8f6ed] p-4">
+            <div className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
+              <label className="text-sm font-black text-[#25352f]">
+                Group name
+                <input
+                  value={groupDraft.name}
+                  onChange={(event) => setGroupDraft({ ...groupDraft, name: event.target.value })}
+                  className="mt-1 w-full rounded-lg border border-[#ded8c7] bg-white px-3 py-3 text-sm font-semibold"
+                  placeholder="Maple Street crew"
+                  maxLength={48}
+                />
+              </label>
+              <label className="text-sm font-black text-[#25352f]">
+                Note <span className="font-semibold text-[#8a8a8a]">(optional)</span>
+                <input
+                  value={groupDraft.note}
+                  onChange={(event) => setGroupDraft({ ...groupDraft, note: event.target.value })}
+                  className="mt-1 w-full rounded-lg border border-[#ded8c7] bg-white px-3 py-3 text-sm font-semibold"
+                  placeholder="Meetups near the park"
+                  maxLength={80}
+                />
+              </label>
+              <div className="flex items-end">
+                <button onClick={createGroup} className="min-h-12 w-full rounded-lg bg-[#f47b20] px-5 py-3 text-sm font-black text-white sm:w-auto">
+                  Create a group
+                </button>
+              </div>
+            </div>
+            <form
+              className="flex flex-wrap items-end gap-2"
+              onSubmit={(event) => { event.preventDefault(); joinGroup(); }}
+            >
+              <label className="text-sm font-black text-[#25352f]">
+                Got an invite code?
+                <input
+                  value={joinCodeDraft}
+                  onChange={(event) => setJoinCodeDraft(event.target.value.toUpperCase())}
+                  className="mt-1 w-full rounded-lg border border-[#ded8c7] bg-white px-3 py-3 text-sm font-semibold uppercase tracking-[0.2em] sm:w-44"
+                  placeholder="ABC123"
+                  maxLength={6}
+                />
+              </label>
+              <button type="submit" className="min-h-12 rounded-lg border border-[#ded8c7] bg-white px-5 py-3 text-sm font-black text-[#165a4b]">
+                Join with code
+              </button>
+            </form>
+          </div>
+        ) : null}
+
+        {groupMessage && (
+          <p className="mt-3 rounded-lg bg-[#fff4d8] px-4 py-3 text-sm font-bold text-[#7a4b12]" role="status">{groupMessage}</p>
+        )}
+
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {groups.map((group) => (
+            <article key={group.id} className="rounded-lg border border-[#ded8c7] bg-[#f8f6ed] p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="truncate text-lg font-black">🏘️ {group.name}</p>
+                  {group.note && <p className="mt-1 text-sm font-semibold text-[#5f6a65]">{group.note}</p>}
+                </div>
+                {role === "parent" && (
+                  <button
+                    onClick={() => removeGroup(group.id)}
+                    aria-label={`Delete group ${group.name}`}
+                    className="min-h-10 shrink-0 rounded-lg border border-[#ded8c7] bg-white px-3 py-2 text-xs font-black text-[#7a2c2c]"
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
+              <p className="mt-2 text-xs font-black text-[#5f6a65]">
+                {group.memberNames.length} {group.memberNames.length === 1 ? "family" : "families"} in
+              </p>
+              {role === "parent" && (
+                <div className="mt-3 flex items-center justify-between gap-2 rounded-lg bg-white p-3">
+                  <div>
+                    <p className="text-[11px] font-black uppercase tracking-[0.14em] text-[#5f6a65]">Invite code</p>
+                    <p className="text-lg font-black tracking-[0.2em] text-[#165a4b]">{group.inviteCode}</p>
+                  </div>
+                  <button onClick={() => copyInviteCode(group.inviteCode)} className="min-h-10 shrink-0 rounded-lg bg-[#165a4b] px-4 py-2 text-xs font-black text-white">
+                    Copy invite
+                  </button>
+                </div>
+              )}
+            </article>
+          ))}
+          {!groups.length && (
+            <p className="rounded-lg bg-[#f8f6ed] p-4 text-sm font-semibold text-[#5f6a65] sm:col-span-2 xl:col-span-3">
+              {role === "parent"
+                ? "No groups yet — create your first one above in under 30 seconds. 👆"
+                : "No neighborhood groups yet — ask a parent to create one."}
+            </p>
+          )}
+        </div>
+      </section>
+
       <div className="grid gap-3 rounded-lg border border-[#ded8c7] bg-[#e7f4ef] p-4 sm:grid-cols-2 xl:grid-cols-4 sm:p-5">
         {[
           "Parent posts job",
@@ -4355,7 +4852,7 @@ function NeighborhoodPanel({
       </div>
 
       {role === "parent" && (
-        <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
+        <section id="neighborhood-post-job" className="scroll-mt-24 rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
           <p className="text-xs font-black uppercase tracking-[0.18em] text-[#f47b20]">Post a job</p>
           <h3 className="mt-2 text-2xl font-black">Create a parent-screened helper mission</h3>
           <p className="mt-2 text-sm font-semibold text-[#5f6a65]">New jobs stay hidden from kids until a parent explicitly approves them for kid view below.</p>
@@ -4368,6 +4865,21 @@ function NeighborhoodPanel({
             <input className="rounded-lg border border-[#ded8c7] px-3 py-3 text-sm font-semibold" value={jobDraft.badgeTitle} onChange={(event) => setJobDraft({ ...jobDraft, badgeTitle: event.target.value })} placeholder="Badge" />
           </div>
           <textarea className="mt-3 min-h-20 w-full rounded-lg border border-[#ded8c7] px-3 py-3 text-sm font-semibold" value={jobDraft.safety} onChange={(event) => setJobDraft({ ...jobDraft, safety: event.target.value })} placeholder="Safety note" />
+          {groups.length > 0 && (
+            <label className="mt-3 block max-w-sm text-sm font-black text-[#25352f]">
+              Share with a group <span className="font-semibold text-[#8a8a8a]">(optional)</span>
+              <select
+                value={jobDraft.groupId}
+                onChange={(event) => setJobDraft({ ...jobDraft, groupId: event.target.value })}
+                className="mt-2 w-full min-h-12 rounded-lg border border-[#ded8c7] bg-white px-3 py-3 text-sm font-semibold"
+              >
+                <option value="">Just this family</option>
+                {groups.map((group) => (
+                  <option key={group.id} value={group.id}>🏘️ {group.name}</option>
+                ))}
+              </select>
+            </label>
+          )}
           <button onClick={postJob} className="mt-3 min-h-12 rounded-lg bg-[#165a4b] px-5 py-3 text-sm font-black text-white">Save for parent review</button>
         </section>
       )}
@@ -4385,7 +4897,7 @@ function NeighborhoodPanel({
                 <p className="text-xs font-black uppercase tracking-[0.14em] text-[#5b21b6]">{skill}</p>
                 <p className="mt-2 text-base font-black leading-5">{title}</p>
                 <p className="mt-2 text-xs font-semibold leading-5 text-[#5f6a65]">{detail}</p>
-                <button className="mt-3 min-h-10 rounded-lg bg-white px-3 py-2 text-xs font-black text-[#33245f]">Use template</button>
+                <button onClick={() => applySkillTemplate(skill)} className="mt-3 min-h-10 rounded-lg bg-white px-3 py-2 text-xs font-black text-[#33245f]">Use template</button>
               </article>
             ))}
           </div>
@@ -4399,11 +4911,17 @@ function NeighborhoodPanel({
           {visibleJobs.map((job) => {
             const acceptedChild = childProfiles.find((child) => child.id === job.acceptedBy);
             const skill = job.skillFocus ?? "teamwork";
+            const jobGroup = job.groupId ? groups.find((group) => group.id === job.groupId) : undefined;
             return (
               <article key={job.id} className="rounded-lg bg-[#fff4d8] p-4">
                 <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
                   <div>
                     <p className="text-lg font-black">{job.title}</p>
+                    {jobGroup && (
+                      <p className="mt-1 inline-flex rounded-full bg-[#165a4b] px-3 py-1 text-xs font-black text-white">
+                        🏘️ {jobGroup.name}
+                      </p>
+                    )}
                     <p className="mt-1 text-sm font-semibold text-[#5f6a65]">{job.family} - {job.pet} - {job.time}</p>
                     <p className="mt-1 text-sm font-black text-[#7a4b12]">{job.rewardDollars ? `$${job.rewardDollars} allowance` : job.badgeTitle}</p>
                     {acceptedChild && <p className="mt-1 text-xs font-black text-[#165a4b]">Accepted by {acceptedChild.name}</p>}
