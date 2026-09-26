@@ -19,9 +19,11 @@ create table public.parents (
 create table public.children (
   id uuid primary key default gen_random_uuid(),
   family_id uuid not null references public.families(id) on delete cascade,
+  client_id text,
+  age integer,
   display_name text not null,
   avatar_color text not null default '#ffd166',
-  secret_code_hash text not null,
+  secret_code_hash text not null default 'pending',
   level_key text not null default 'easy',
   points integer not null default 0,
   coins integer not null default 0,
@@ -32,6 +34,7 @@ create table public.children (
 create table public.pets (
   id uuid primary key default gen_random_uuid(),
   family_id uuid not null references public.families(id) on delete cascade,
+  client_id text,
   name text not null,
   species text not null,
   breed text,
@@ -63,6 +66,7 @@ create table public.levels (
 create table public.tasks (
   id uuid primary key default gen_random_uuid(),
   family_id uuid not null references public.families(id) on delete cascade,
+  client_id text,
   pet_id uuid references public.pets(id) on delete set null,
   title text not null,
   category text not null check (category in ('pet_care', 'chore', 'kindness', 'money', 'community')),
@@ -88,6 +92,7 @@ create table public.task_completions (
   id uuid primary key default gen_random_uuid(),
   task_id uuid not null references public.tasks(id) on delete cascade,
   child_id uuid not null references public.children(id) on delete cascade,
+  client_id text,
   status text not null default 'pending' check (status in ('pending', 'approved', 'rejected')),
   child_note text,
   voice_note_url text,
@@ -118,6 +123,7 @@ create table public.stickers (
 create table public.kid_bank_transactions (
   id uuid primary key default gen_random_uuid(),
   child_id uuid not null references public.children(id) on delete cascade,
+  client_id text,
   category text not null check (category in ('earn', 'save', 'spend', 'give')),
   amount_cents integer not null,
   description text not null,
@@ -128,6 +134,7 @@ create table public.kid_bank_transactions (
 create table public.savings_goals (
   id uuid primary key default gen_random_uuid(),
   child_id uuid not null references public.children(id) on delete cascade,
+  client_id text,
   title text not null,
   target_cents integer not null,
   saved_cents integer not null default 0,
@@ -159,6 +166,7 @@ create table public.approvals (
 create table public.memory_moments (
   id uuid primary key default gen_random_uuid(),
   family_id uuid not null references public.families(id) on delete cascade,
+  client_id text,
   child_id uuid not null references public.children(id) on delete cascade,
   pet_id uuid references public.pets(id) on delete set null,
   mood text not null check (mood in ('kind', 'silly', 'cranky', 'proud', 'helper')),
@@ -169,6 +177,7 @@ create table public.memory_moments (
 create table public.badge_awards (
   id uuid primary key default gen_random_uuid(),
   family_id uuid not null references public.families(id) on delete cascade,
+  client_id text,
   child_id uuid not null references public.children(id) on delete cascade,
   title text not null,
   skill text not null check (skill in ('responsibility', 'empathy', 'teamwork', 'leadership', 'time')),
@@ -180,6 +189,7 @@ create table public.badge_awards (
 create table public.neighborhood_jobs (
   id uuid primary key default gen_random_uuid(),
   family_id uuid not null references public.families(id) on delete cascade,
+  client_id text,
   title text not null,
   neighbor_family_name text not null,
   pet_name text not null,
@@ -242,6 +252,15 @@ create index approvals_family_id_status_idx on public.approvals(family_id, statu
 create index kid_bank_transactions_child_id_idx on public.kid_bank_transactions(child_id);
 create index savings_goals_child_id_idx on public.savings_goals(child_id);
 create index badge_awards_family_id_child_id_idx on public.badge_awards(family_id, child_id);
+create unique index children_family_client_idx on public.children(family_id, client_id);
+create unique index pets_family_client_idx on public.pets(family_id, client_id);
+create unique index tasks_family_client_idx on public.tasks(family_id, client_id);
+create unique index badge_awards_family_client_idx on public.badge_awards(family_id, client_id);
+create unique index neighborhood_jobs_family_client_idx on public.neighborhood_jobs(family_id, client_id);
+create unique index task_completions_child_client_idx on public.task_completions(child_id, client_id);
+create unique index kid_bank_transactions_child_client_idx on public.kid_bank_transactions(child_id, client_id);
+create unique index savings_goals_child_client_idx on public.savings_goals(child_id, client_id);
+create unique index memory_moments_child_client_idx on public.memory_moments(child_id, client_id);
 create index neighborhood_jobs_family_id_status_idx on public.neighborhood_jobs(family_id, status);
 create index launch_interest_signups_created_at_idx on public.launch_interest_signups(created_at desc);
 create unique index launch_interest_signups_email_source_idx on public.launch_interest_signups(lower(email), source);

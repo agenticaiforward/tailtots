@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Cropper, { type Area } from "react-easy-crop";
 import {
@@ -24,6 +24,12 @@ import type {
   Role,
   SavingsGoal,
 } from "@/lib/types";
+import {
+  ensureFamilyForCurrentUser,
+  pullFamilyState,
+  pushFamilyState,
+  type FamilySyncState,
+} from "@/lib/family-cloud";
 
 const levelLabels: Record<LevelKey, string> = {
   easy: "Easy",
@@ -388,6 +394,89 @@ export function TailTotsApp() {
   const [accountStatus, setAccountStatus] = useState<"idle" | "saving" | "loading" | "error" | "saved">("idle");
   const [accountMessage, setAccountMessage] = useState("");
   const [appMode, setAppMode] = useState<"demo" | "real">("demo");
+  // Relational cloud sync (Supabase tables). Null when signed out or not bootstrapped yet.
+  const [cloudFamilyId, setCloudFamilyId] = useState<string | null>(null);
+  const [cloudSyncOn, setCloudSyncOn] = useState(false);
+  const [cloudSyncStatus, setCloudSyncStatus] = useState<"idle" | "working" | "error">("idle");
+  const [cloudSyncMessage, setCloudSyncMessage] = useState("");
+  const cloudUserIdRef = useRef<string | null>(null);
+  const applyingPullRef = useRef(false);
+  const pushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Latest-value refs so the sign-in bootstrap never uses stale closure state.
+  const familyNameRef = useRef(familyName);
+  familyNameRef.current = familyName;
+  const parentsRef = useRef(parents);
+  parentsRef.current = parents;
+  /** Build the relational sync payload from the current app state. */
+  const getCurrentFamilySyncState = useCallback((): FamilySyncState => {
+    return {
+      children,
+      pets,
+      missions: missions ?? [],
+      bankTransactions: transactions ?? [],
+      savingsGoals: goals ?? [],
+      badgeAwards: badges ?? [],
+      neighborhoodJobs: (neighborhoodJobs ?? []).map(normalizeNeighborhoodJob),
+      memoryMoments: moments ?? [],
+    };
+  }, [badges, children, goals, missions, moments, neighborhoodJobs, pets, transactions]);
+  /**
+   * Apply pulled relational state over whatever is on screen. The relational
+   * tables are authoritative for the entities they cover; snapshot-only fields
+   * (photos, passcode, parent list, family photo) are left untouched.
+   */
+  const applyPulledFamilyState = useCallback(
+    (pulled: NonNullable<Awaited<ReturnType<typeof pullFamilyState>>>) => {
+      applyingPullRef.current = true;
+      try {
+        setChildren(pulled.children.map(normalizeChildProfile));
+        setPets(pulled.pets.map(normalizePetProfile));
+        setMissions(pulled.missions);
+        setTransactions(pulled.bankTransactions);
+        setGoals(pulled.savingsGoals);
+        setBadges(pulled.badgeAwards);
+        setNeighborhoodJobs(pulled.neighborhoodJobs.map(normalizeNeighborhoodJob));
+        setMoments(pulled.memoryMoments);
+        if (pulled.children[0]) setActiveChildId(pulled.children[0].id);
+      } finally {
+        applyingPullRef.current = false;
+      }
+    },
+    [],
+  );
+  /**
+   * Sign-in bootstrap for the relational backend: ensure the parent's family
+   * row exists, then pull the family's cloud data. A fresh (childless) family
+   * does NOT auto-push — the parent opts in explicitly so demo content never
+   * silently seeds their cloud.
+   */
+  const bootstrapCloudFamily = useCallback(async () => {
+    if (!supabase) return;
+    setCloudSyncStatus("working");
+    setCloudSyncMessage("Connecting your family's cloud data...");
+    try {
+      const familyId = await ensureFamilyForCurrentUser(
+        supabase,
+        familyNameRef.current?.trim() || "My Family",
+        parentsRef.current?.[0]?.name?.trim() || "Parent",
+      );
+      setCloudFamilyId(familyId);
+      const pulled = await pullFamilyState(supabase, familyId);
+      if (pulled) {
+        applyPulledFamilyState(pulled);
+        setCloudSyncOn(true);
+        setAppMode("real");
+        setCloudSyncStatus("idle");
+        setCloudSyncMessage("Loaded your family's cloud data. Changes now save automatically.");
+      } else {
+        setCloudSyncStatus("idle");
+        setCloudSyncMessage("Cloud family is ready. Turn on cloud sync below to keep this device's setup in your parent account.");
+      }
+    } catch (error) {
+      setCloudSyncStatus("error");
+      setCloudSyncMessage(error instanceof Error ? error.message : "Could not connect cloud data.");
+    }
+  }, [applyPulledFamilyState]);
 
   const activeChild = children.find((child) => child.id === activeChildId) ?? children[0];
   const activePet = pets[0];
@@ -438,24 +527,74 @@ export function TailTotsApp() {
   useEffect(() => {
     if (!supabase) return;
     let isMounted = true;
-    supabase.auth.getSession().then(({ data }) => {
+    const handleSession = (userId: string | null, email: string) => {
       if (!isMounted) return;
-      setCloudAccountEmail(data.session?.user.email ?? "");
+      setCloudAccountEmail(email);
+      if (userId) {
+        setMagicLinkSent(false);
+        if (cloudUserIdRef.current !== userId) {
+          cloudUserIdRef.current = userId;
+          void bootstrapCloudFamily();
+        }
+      } else {
+        cloudUserIdRef.current = null;
+        setCloudFamilyId(null);
+        setCloudSyncOn(false);
+        setCloudSyncStatus("idle");
+        setCloudSyncMessage("");
+        setAppMode("demo");
+        if (pushTimerRef.current) {
+          clearTimeout(pushTimerRef.current);
+          pushTimerRef.current = null;
+        }
+      }
+    };
+    supabase.auth.getSession().then(({ data }) => {
+      handleSession(data.session?.user.id ?? null, data.session?.user.email ?? "");
     });
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setCloudAccountEmail(session?.user.email ?? "");
-      if (session?.user) setMagicLinkSent(false);
+      handleSession(session?.user.id ?? null, session?.user.email ?? "");
     });
     return () => {
       isMounted = false;
       listener.subscription.unsubscribe();
     };
-  }, []);
+  }, [bootstrapCloudFamily]);
 
   useEffect(() => {
     if (!hasLoadedSavedState) return;
     saveFamilyState({ familyName, parentPasscode, parents, children, pets, missions, transactions, goals, badges, neighborhoodJobs, moments, familyPhotoUrl, activeChildId });
   }, [activeChildId, badges, children, familyName, familyPhotoUrl, goals, hasLoadedSavedState, missions, moments, neighborhoodJobs, parentPasscode, parents, pets, transactions]);
+
+  // Debounced relational cloud push: mirrors family state into the Supabase
+  // tables a couple of seconds after any change, while cloud sync is on.
+  useEffect(() => {
+    if (!hasLoadedSavedState || !cloudSyncOn || !cloudFamilyId || !supabase) return;
+    if (applyingPullRef.current) return;
+    const client = supabase;
+    const familyId = cloudFamilyId;
+    if (pushTimerRef.current) clearTimeout(pushTimerRef.current);
+    pushTimerRef.current = setTimeout(() => {
+      pushTimerRef.current = null;
+      setCloudSyncStatus("working");
+      pushFamilyState(client, familyId, getCurrentFamilySyncState()).then(
+        () => {
+          setCloudSyncStatus("idle");
+          setCloudSyncMessage("Cloud sync is on — changes now save automatically.");
+        },
+        (error) => {
+          setCloudSyncStatus("error");
+          setCloudSyncMessage(error instanceof Error ? error.message : "Cloud sync failed.");
+        },
+      );
+    }, 2000);
+    return () => {
+      if (pushTimerRef.current) {
+        clearTimeout(pushTimerRef.current);
+        pushTimerRef.current = null;
+      }
+    };
+  }, [activeChildId, badges, children, cloudFamilyId, cloudSyncOn, familyName, getCurrentFamilySyncState, goals, hasLoadedSavedState, missions, moments, neighborhoodJobs, parents, pets, transactions]);
 
   useEffect(() => {
     queueMicrotask(() => {
@@ -575,6 +714,7 @@ export function TailTotsApp() {
     setAccountMessage("");
     try {
       await saveFamilyAccountSnapshot(getCurrentFamilySnapshot());
+      await flushCloudSyncNow();
       setAccountStatus("saved");
       setAccountMessage("Saved this family's profiles, photos, goals, points, Kid Bank, and parent settings to the account.");
     } catch (error) {
@@ -597,6 +737,13 @@ export function TailTotsApp() {
         return;
       }
       applyFamilySnapshot(snapshot);
+      // Relational tables are authoritative for the entities they cover: layer
+      // the cloud pull over the snapshot so a stale snapshot can't regress them.
+      // Snapshot-only fields (photos, passcode, parent list) stay as loaded.
+      if (supabase && cloudFamilyId) {
+        const pulled = await pullFamilyState(supabase, cloudFamilyId);
+        if (pulled) applyPulledFamilyState(pulled);
+      }
       setAccountStatus("saved");
       setAccountMessage("Loaded this family's cloud account.");
     } catch (error) {
@@ -616,6 +763,41 @@ export function TailTotsApp() {
     } catch (error) {
       setAccountStatus("error");
       setAccountMessage(error instanceof Error ? error.message : "Could not sign out.");
+    }
+  }
+
+  /** Explicit opt-in: push this device's state to a fresh cloud family. */
+  async function enableCloudSyncNow() {
+    if (!supabase || !cloudFamilyId) return;
+    setCloudSyncStatus("working");
+    setCloudSyncMessage("Pushing this device's setup to your cloud family...");
+    try {
+      await pushFamilyState(supabase, cloudFamilyId, getCurrentFamilySyncState());
+      setCloudSyncOn(true);
+      setAppMode("real");
+      setCloudSyncStatus("idle");
+      setCloudSyncMessage("Cloud sync is on — changes now save automatically.");
+    } catch (error) {
+      setCloudSyncStatus("error");
+      setCloudSyncMessage(error instanceof Error ? error.message : "Could not start cloud sync.");
+    }
+  }
+
+  /** Immediate (non-debounced) relational push, used by explicit Save. */
+  async function flushCloudSyncNow() {
+    if (!supabase || !cloudFamilyId || !cloudSyncOn) return;
+    if (pushTimerRef.current) {
+      clearTimeout(pushTimerRef.current);
+      pushTimerRef.current = null;
+    }
+    setCloudSyncStatus("working");
+    try {
+      await pushFamilyState(supabase, cloudFamilyId, getCurrentFamilySyncState());
+      setCloudSyncStatus("idle");
+      setCloudSyncMessage("Cloud sync is on — changes now save automatically.");
+    } catch (error) {
+      setCloudSyncStatus("error");
+      setCloudSyncMessage(error instanceof Error ? error.message : "Cloud sync failed.");
     }
   }
 
@@ -1224,6 +1406,11 @@ export function TailTotsApp() {
               signOutParentAccount={signOutParentAccountFromApp}
               saveCurrentFamilyAccount={saveCurrentFamilyAccount}
               loadCurrentFamilyAccount={loadCurrentFamilyAccount}
+              cloudFamilyReady={cloudFamilyId !== null}
+              cloudSyncOn={cloudSyncOn}
+              cloudSyncStatus={cloudSyncStatus}
+              cloudSyncMessage={cloudSyncMessage}
+              enableCloudSyncNow={enableCloudSyncNow}
               familyName={familyName}
               setFamilyName={setFamilyName}
               parents={parents}
@@ -3898,6 +4085,11 @@ function FamilySetupPanel(props: {
   signOutParentAccount: () => void;
   saveCurrentFamilyAccount: () => void;
   loadCurrentFamilyAccount: () => void;
+  cloudFamilyReady: boolean;
+  cloudSyncOn: boolean;
+  cloudSyncStatus: "idle" | "working" | "error";
+  cloudSyncMessage: string;
+  enableCloudSyncNow: () => void;
   familyName: string;
   setFamilyName: (value: string) => void;
   parents: ParentProfile[];
@@ -4011,6 +4203,33 @@ function FamilySetupPanel(props: {
           <p className={`mt-3 text-sm font-bold ${props.accountStatus === "error" ? "text-[#b44421]" : "text-[#165a4b]"}`}>
             {props.accountMessage}
           </p>
+        )}
+
+        {props.cloudAccountEmail && props.cloudFamilyReady && !props.cloudSyncOn && (
+          <div className="mt-4 rounded-lg border border-[#c9d8f8] bg-[#f4f8ff] p-4">
+            <p className="text-sm font-black text-[#1f3b7a]">Cloud sync is ready — turn it on?</p>
+            <p className="mt-1 text-sm font-semibold leading-6 text-[#5f6a65]">
+              This pushes the kids, pets, missions, Kid Bank, goals, badges, and jobs on this device into your family&apos;s private cloud tables, then keeps them in sync automatically.
+            </p>
+            <button
+              onClick={props.enableCloudSyncNow}
+              disabled={props.cloudSyncStatus === "working"}
+              className="mt-3 min-h-12 rounded-lg bg-[#1f3b7a] px-5 py-3 text-sm font-black text-white disabled:opacity-60"
+            >
+              {props.cloudSyncStatus === "working" ? "Starting sync..." : "Turn on cloud sync"}
+            </button>
+          </div>
+        )}
+
+        {props.cloudSyncOn && (
+          <div className={`mt-4 rounded-lg border p-4 ${props.cloudSyncStatus === "error" ? "border-[#e8b4a0] bg-[#fdf1ec]" : "border-[#b8cfc6] bg-[#e7f4ef]"}`}>
+            <p className={`text-sm font-black ${props.cloudSyncStatus === "error" ? "text-[#b44421]" : "text-[#165a4b]"}`}>
+              {props.cloudSyncStatus === "working" ? "Syncing with your family's cloud..." : props.cloudSyncStatus === "error" ? "Cloud sync hit a snag" : "Cloud sync is on"}
+            </p>
+            {props.cloudSyncMessage && (
+              <p className="mt-1 text-sm font-semibold leading-6 text-[#5f6a65]">{props.cloudSyncMessage}</p>
+            )}
+          </div>
         )}
       </div>
 
