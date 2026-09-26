@@ -1445,9 +1445,9 @@ function VisionLandingPanel({
 
   const journeySteps = [
     ["🔍", "Learn the animal", "Pet Passports decode what the pet really needs — food, space, costs, lifespan. Fantasy out, respect in."],
-    ["🎯", "Practice the routine", "Daily age-fit missions. Have a pet? Real care routines — feeding, water, comfort checks. Don’t? Parent-set home and community chores: the nagging you already do becomes the training ground."],
+    ["🎯", "Own the routine", "Daily age-fit missions. Have a pet? Your kid takes over the real routine — feeding, water, comfort checks, for real this time. Don’t? Parent-set home and community chores: the nagging you already do becomes the training ground."],
     ["📈", "Prove it over time", "Streaks plus your approvals build the proof record. Not one good day — sixty. This answers “will they stick with it?”"],
-    ["🎓", "Earn the certificate", "The proof record, framed. Wavable at parents — and someday, at the shelter."],
+    ["🎓", "Earn the certificate", "The proof record, framed. No pet yet? It’s the case for one. Have one? It’s the title: Certified Pet Hero."],
     ["🌟", "Grow beyond the routine", "The habit loop now runs skills, money smarts, and giving missions — donate, pool money, fund real causes. Same missions, both tracks."],
   ];
   const platformPillars = [
@@ -1849,7 +1849,7 @@ function VisionLandingPanel({
         </p>
         <aside className="mt-4 max-w-3xl rounded-2xl border-2 border-tt-pine/30 bg-tt-pine-tint p-4">
           <p className="text-sm font-bold leading-6 text-tt-ink-soft">
-            <span aria-hidden="true">🐾 </span><span className="font-black text-tt-navy">Already have a pet?</span> Skip to step 2 — missions run on your real animal from day one, and the loop expands from there.
+            <span aria-hidden="true">🐾 </span><span className="font-black text-tt-navy">Already have a pet?</span> Start at step 2 — and it’s not practice. It’s the real routine, transferred from you to your kid, with streaks proving it stuck.
           </p>
         </aside>
         <ol className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5 lg:gap-4">
