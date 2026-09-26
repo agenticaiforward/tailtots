@@ -1443,10 +1443,12 @@ function VisionLandingPanel({
   const [certCelebrating, setCertCelebrating] = useState(false);
   const [shareMessage, setShareMessage] = useState("");
 
-  const howItWorks = [
-    ["1", "You pick the goal", "A pet-care habit, a life skill, or a giving mission. You set the rules — TailTots just makes them fun."],
-    ["2", "Your kid gets a mission", "One clear, age-fit mission with big steps. No feed, no doomscroll, no “just one more video.”"],
-    ["3", "Real-world care gets celebrated", "You approve the mission, the points, and every Kid Bank dollar. High-fives all around."],
+  const journeySteps = [
+    ["🔍", "Learn the animal", "Pet Passports decode what the pet really needs — food, space, costs, lifespan. Fantasy out, respect in."],
+    ["🎯", "Practice the routine", "Daily age-fit missions: feeding schedules, water checks, comfort checks. Small steps, real consistency."],
+    ["📈", "Prove it over time", "Streaks plus your approvals build the proof record. Not one good day — sixty. This answers “will they stick with it?”"],
+    ["🎓", "Earn the certificate", "The proof record, framed. Wavable at parents — and someday, at the shelter."],
+    ["🌟", "Expand beyond the pet", "The habit loop now runs chores, skills, money smarts, and shelter giving. The pet was the doorway."],
   ];
   const platformPillars = [
     ["🌐", "Safe social practice", "Training wheels for real-world social life. Kids practice teamwork, leadership, and empathy — with zero strangers, zero feeds, zero DMs."],
@@ -1838,22 +1840,31 @@ function VisionLandingPanel({
         </div>
       </section>
 
-      {/* ============ HOW IT WORKS: 3 steps, right after the aha ============ */}
+      {/* ============ THE JOURNEY: how kids become pet-ready, then everything-ready ============ */}
       <section className="-mx-3 border-y border-tt-line bg-white p-4 shadow-sm sm:mx-0 sm:rounded-3xl sm:border sm:p-6">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-pine">No PhD in parenting required 🎓</p>
-        <h3 className="mt-2 text-2xl font-black tracking-tight text-tt-navy sm:text-3xl">Ridiculously simple. Suspiciously effective.</h3>
-        <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-tt-ink-soft">Three steps. That’s the whole parenting hack.</p>
-        <div className="relative mt-5 grid gap-3 md:grid-cols-3 md:gap-5">
-          <div className="pointer-events-none absolute left-[16%] right-[16%] top-9 hidden border-t-[3px] border-dashed border-tt-pine/30 md:block" aria-hidden="true" />
-          {howItWorks.map(([number, title, body]) => (
-            <article key={number} className="tt-card-lift relative overflow-hidden rounded-2xl bg-tt-cream p-5">
-              <span className="pointer-events-none absolute -right-2 -top-4 select-none text-[5rem] font-black text-tt-pine/10" aria-hidden="true">{number}</span>
-              <span className="relative z-10 grid size-10 place-items-center rounded-full bg-tt-pine text-base font-black text-white ring-4 ring-white">{number}</span>
-              <p className="mt-3 text-lg font-black text-tt-ink">{title}</p>
-              <p className="mt-1 text-sm font-semibold leading-6 text-tt-ink-soft">{body}</p>
-            </article>
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-pine">How it actually works 🗺️</p>
+        <h3 className="mt-2 max-w-2xl text-2xl font-black tracking-tight text-tt-navy sm:text-3xl">From “can we get a puppy?!” to “already done, Mom.”</h3>
+        <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-tt-ink-soft">
+          Pet care is the doorway — the habit loop is the house. Kids master the loop on something they love, then it runs everything else.
+        </p>
+        <aside className="mt-4 max-w-3xl rounded-2xl border-2 border-tt-pine/30 bg-tt-pine-tint p-4">
+          <p className="text-sm font-bold leading-6 text-tt-ink-soft">
+            <span aria-hidden="true">🐾 </span><span className="font-black text-tt-navy">Already have a pet?</span> Skip to step 2 — missions run on your real animal from day one, and the loop expands from there.
+          </p>
+        </aside>
+        <ol className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5 lg:gap-4">
+          {journeySteps.map(([emoji, title, body], index) => (
+            <li key={title} className="tt-card-lift relative overflow-hidden rounded-2xl bg-tt-cream p-5">
+              <span className="pointer-events-none absolute -right-2 -top-4 select-none text-[5rem] font-black text-tt-pine/10" aria-hidden="true">{index + 1}</span>
+              <span className="relative z-10 grid size-10 place-items-center rounded-full bg-tt-pine text-base" aria-hidden="true">{emoji}</span>
+              <p className="mt-3 text-base font-black text-tt-ink">{index + 1}. {title}</p>
+              <p className="mt-1 text-[13px] font-semibold leading-5 text-tt-ink-soft">{body}</p>
+            </li>
           ))}
-        </div>
+        </ol>
+        <p className="mt-5 max-w-3xl text-sm font-semibold leading-6 text-tt-ink-soft">
+          Your job? Approve missions — about 30 seconds a day. TailTots does the nagging. <span className="font-black text-tt-ink">No PhD in parenting required.</span>
+        </p>
       </section>
 
       {/* ============ PLATFORM: pet care is the hook, this is the one-stop ============ */}
