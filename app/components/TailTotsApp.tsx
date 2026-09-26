@@ -1445,10 +1445,10 @@ function VisionLandingPanel({
 
   const journeySteps = [
     ["🔍", "Learn the animal", "Pet Passports decode what the pet really needs — food, space, costs, lifespan. Fantasy out, respect in."],
-    ["🎯", "Practice the routine", "Daily age-fit missions: feeding schedules, water checks, comfort checks. Small steps, real consistency."],
+    ["🎯", "Practice the routine", "Daily age-fit missions. Have a pet? Real care routines — feeding, water, comfort checks. Don’t? Parent-set home and community chores: the nagging you already do becomes the training ground."],
     ["📈", "Prove it over time", "Streaks plus your approvals build the proof record. Not one good day — sixty. This answers “will they stick with it?”"],
     ["🎓", "Earn the certificate", "The proof record, framed. Wavable at parents — and someday, at the shelter."],
-    ["🌟", "Expand beyond the pet", "The habit loop now runs chores, skills, money smarts, and shelter giving. The pet was the doorway."],
+    ["🌟", "Grow beyond the routine", "The habit loop now runs skills, money smarts, and giving missions — donate, pool money, fund real causes. Same missions, both tracks."],
   ];
   const platformPillars = [
     ["🌐", "Safe social practice", "Training wheels for real-world social life. Kids practice teamwork, leadership, and empathy — with zero strangers, zero feeds, zero DMs."],
@@ -1845,7 +1845,7 @@ function VisionLandingPanel({
         <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-pine">How it actually works 🗺️</p>
         <h3 className="mt-2 max-w-2xl text-2xl font-black tracking-tight text-tt-navy sm:text-3xl">From “can we get a puppy?!” to “already done, Mom.”</h3>
         <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-tt-ink-soft">
-          Pet care is the doorway — the habit loop is the house. Kids master the loop on something they love, then it runs everything else.
+          Every kid masters the same habit loop — mission, action, your approval, streak. The doorway differs: real pet care, or parent-set home and community chores. The house is the same.
         </p>
         <aside className="mt-4 max-w-3xl rounded-2xl border-2 border-tt-pine/30 bg-tt-pine-tint p-4">
           <p className="text-sm font-bold leading-6 text-tt-ink-soft">
