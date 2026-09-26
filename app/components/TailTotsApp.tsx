@@ -394,10 +394,18 @@ function applyDailyStreak(child: Child, today = localDayKey()): Child {
 }
 
 /**
+ * Dollars in a goal that came from the kid's own earnings. Parent seed money
+ * is family generosity, not the kid's wallet — it must never reduce the
+ * child's spendable balance.
+ */
+function goalKidSaved(goal: SavingsGoal): number {
+  return Math.max(0, goal.saved - (goal.seededByParent ?? 0));
+}
+
+/**
  * Add dollars to a goal and stamp completion the moment it is fully funded.
  */
-function withGoalProgress(goal: SavingsGoal, added: number, now = new Date().toISOString()): SavingsGoal {
-  const saved = Math.min(goal.target, goal.saved + added);
+function withGoalProgress(goal: SavingsGoal, added: number, now = new Date().toISOString()): SavingsGoal {  const saved = Math.min(goal.target, goal.saved + added);
   return {
     ...goal,
     saved,
@@ -1179,6 +1187,16 @@ export function TailTotsApp() {
     setMissionNote("");
   }
 
+  /** Repeat an approved mission: a fresh pending copy; the approved original stays as history. */
+  function repeatMission(missionId: string) {
+    const mission = missions.find((item) => item.id === missionId);
+    if (!mission || mission.status !== "approved") return;
+    setMissions((items) => [
+      { ...mission, id: `mission-${Date.now()}`, status: "pending", completedBy: undefined, note: undefined },
+      ...items,
+    ]);
+  }
+
   function approveMission(missionId: string) {
     const mission = missions.find((item) => item.id === missionId);
     if (!mission?.completedBy) return;
@@ -1277,7 +1295,7 @@ export function TailTotsApp() {
     const childTransactions = transactions.filter((item) => item.childId === activeChild.id && item.status === "approved");
     const approvedEarned = childTransactions.filter((item) => item.category === "earn").reduce((sum, item) => sum + item.amount, 0);
     const approvedSpentOrGiven = childTransactions.filter((item) => item.category === "spend" || item.category === "give").reduce((sum, item) => sum + item.amount, 0);
-    const approvedGoalSavings = goals.filter((goal) => goal.childId === activeChild.id).reduce((sum, goal) => sum + goal.saved, 0);
+    const approvedGoalSavings = goals.filter((goal) => goal.childId === activeChild.id).reduce((sum, goal) => sum + goalKidSaved(goal), 0);
     const availableBalance = Math.max(0, approvedEarned - approvedSpentOrGiven - approvedGoalSavings);
     if ((category === "save" || category === "give" || category === "spend") && amount > availableBalance) return;
     setTransactions((items) => [
@@ -1390,7 +1408,7 @@ export function TailTotsApp() {
   };
 
   /** Fill the job draft from a skill template so "Use template" does real work. */
-  function useJobTemplate(skill: string) {
+  function fillJobTemplate(skill: string) {
     const template = jobTemplateDrafts[skill];
     if (!template) return;
     setJobDraft({ title: template.title, family: "Neighbor family", pet: template.pet, time: template.time, rewardDollars: template.rewardDollars, badgeTitle: template.badgeTitle, safety: template.safety });
@@ -1629,6 +1647,7 @@ export function TailTotsApp() {
                 missionNote={missionNote}
                 setMissionNote={setMissionNote}
                 completeMission={completeMission}
+                repeatMission={repeatMission}
               />
             </>
           )}
@@ -1765,7 +1784,7 @@ export function TailTotsApp() {
               acceptJob={acceptNeighborhoodJob}
               approveJob={approveNeighborhoodJob}
               toggleJobVisibility={toggleNeighborhoodJobVisibility}
-              useJobTemplate={useJobTemplate}
+              fillJobTemplate={fillJobTemplate}
             />
           )}
           {visibleActiveTab === "ai" && <AIPanel childProfiles={children} missions={missions} parentSignedIn={Boolean(cloudAccountEmail)} />}
@@ -3761,6 +3780,7 @@ function MissionsPanel(props: {
   missionNote: string;
   setMissionNote: (value: string) => void;
   completeMission: (missionId: string) => void;
+  repeatMission: (missionId: string) => void;
 }) {
   const pawgressTotal = props.missions.length;
   const pawgressDone = props.missions.filter((mission) => mission.completedBy || mission.status === "approved").length;
@@ -3869,6 +3889,14 @@ function MissionsPanel(props: {
                   <p className="text-center text-xs font-black text-[#165a4b] lg:text-right">
                     {mission.status === "approved" ? "🎉 Mission crushed. Treats earned." : "🎉 Done! Awaiting the parent high-five."}
                   </p>
+                )}
+                {mission.status === "approved" && (
+                  <button
+                    onClick={() => props.repeatMission(mission.id)}
+                    className="min-h-11 rounded-lg border border-[#165a4b] bg-white px-4 py-2 text-sm font-black text-[#165a4b]"
+                  >
+                    Do again 🔁
+                  </button>
                 )}
               </div>
             </article>
@@ -4141,7 +4169,7 @@ function BankPanel(props: {
   const approvedTransactions = childTransactions.filter((tx) => tx.status === "approved");
   const approvedAllowance = approvedTransactions.filter((tx) => tx.category === "earn").reduce((sum, tx) => sum + tx.amount, 0);
   const spentOrGiven = approvedTransactions.filter((tx) => tx.category === "spend" || tx.category === "give").reduce((sum, tx) => sum + tx.amount, 0);
-  const savedForGoals = childGoals.reduce((sum, goal) => sum + goal.saved, 0);
+  const savedForGoals = childGoals.reduce((sum, goal) => sum + goalKidSaved(goal), 0);
   const availableBalance = Math.max(0, approvedAllowance - spentOrGiven - savedForGoals);
   const earnedActivityTransactions = childTransactions.filter((tx) => tx.category === "earn" && tx.status === "approved").slice(0, 4);
   const givePurposes = ["Animal shelter", "Classroom cause", "Neighborhood helper fund", "Pet rescue", "Other kindness"];
@@ -5266,7 +5294,7 @@ function NeighborhoodPanel({
   acceptJob,
   approveJob,
   toggleJobVisibility,
-  useJobTemplate,
+  fillJobTemplate,
 }: {
   goals: SavingsGoal[];
   childProfiles: Child[];
@@ -5279,7 +5307,7 @@ function NeighborhoodPanel({
   acceptJob: (jobId: string) => void;
   approveJob: (jobId: string) => void;
   toggleJobVisibility: (jobId: string) => void;
-  useJobTemplate: (skill: string) => void;
+  fillJobTemplate: (skill: string) => void;
 }) {
   const sharedGoals = goals.filter((goal) => goal.sharedWithTrustedFamilies);
   const visibleJobs =
@@ -5360,7 +5388,7 @@ function NeighborhoodPanel({
                 <p className="text-xs font-black uppercase tracking-[0.14em] text-[#5b21b6]">{skill}</p>
                 <p className="mt-2 text-base font-black leading-5">{title}</p>
                 <p className="mt-2 text-xs font-semibold leading-5 text-[#5f6a65]">{detail}</p>
-                <button onClick={() => useJobTemplate(skill)} className="mt-3 min-h-10 rounded-lg bg-white px-3 py-2 text-xs font-black text-[#33245f]">Use template</button>
+                <button onClick={() => fillJobTemplate(skill)} className="mt-3 min-h-10 rounded-lg bg-white px-3 py-2 text-xs font-black text-[#33245f]">Use template</button>
               </article>
             ))}
           </div>
