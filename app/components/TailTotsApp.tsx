@@ -1428,6 +1428,15 @@ function VisionLandingPanel({
   const [launchInterest, setLaunchInterest] = useState({ email: "" });
   const [launchInterestStatus, setLaunchInterestStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [launchInterestMessage, setLaunchInterestMessage] = useState("");
+  // Once a visitor joins, every launch form collapses into a "you're in" note (persisted per device).
+  const [launchJoined, setLaunchJoined] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      return window.localStorage.getItem("tt-launch-joined") === "1";
+    } catch {
+      return false; // private mode: stay unjoined
+    }
+  });
   const [feedbackDraft, setFeedbackDraft] = useState({ email: "", message: "" });
   const [feedbackStatus, setFeedbackStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [feedbackMessage, setFeedbackMessage] = useState("");
@@ -1493,6 +1502,8 @@ function VisionLandingPanel({
       setLaunchInterestStatus("saved");
       setLaunchInterestMessage(result.mode === "cloud" ? "You’re on the list! Check your inbox for tail wags soon. 🐾" : "Thanks — you’re on the TailTots update list.");
       setLaunchInterest({ email: "" });
+      setLaunchJoined(true);
+      try { window.localStorage.setItem("tt-launch-joined", "1"); } catch { /* private mode */ }
     } catch (error) {
       setLaunchInterestStatus("error");
       setLaunchInterestMessage(error instanceof Error ? error.message : "Could not save this signup yet.");
@@ -1586,10 +1597,7 @@ function VisionLandingPanel({
               You’ve heard it 47 times this week. TailTots turns that question into real-world responsibility, money smarts, and kindness — with you holding the leash.
             </p>
             <p className="mt-2 max-w-xl text-[15px] font-semibold leading-6 text-tt-ink-soft">
-              Puppy, kitten, guinea pig, bearded dragon — whatever’s doing those eyes at the pet-store window.
-            </p>
-            <p className="mt-2 max-w-xl text-[15px] font-semibold leading-6 text-tt-ink-soft">
-              Already have the pet? Skip the wish list — your kid goes from pet <em>owner</em> to pet <em>hero</em>: real schedules, real training, real bragging rights.
+              Puppy, kitten, guinea pig, bearded dragon — whatever’s doing those eyes at the pet-store window. <strong className="font-black text-tt-navy">Already have the pet?</strong> Your kid goes from pet owner to pet hero.
             </p>
             <p className="mt-2 max-w-xl text-[15px] font-semibold leading-6 text-tt-ink-soft">
               Parent-approved missions. Kid Bank. Zero stranger danger. All the “aww,” none of the chaos.
@@ -1599,6 +1607,11 @@ function VisionLandingPanel({
             </p>
 
             {/* PRIMARY: launch capture. SECONDARY: kid demo. Never equal weight. */}
+            {launchJoined ? (
+              <p className="mt-6 max-w-xl rounded-2xl border-2 border-tt-pine bg-tt-pine-tint p-4 text-sm font-black text-tt-pine">
+                🎉 You’re on the launch list! Watch your inbox for tail wags.
+              </p>
+            ) : (
             <form
               className="mt-6 max-w-xl rounded-2xl border-2 border-tt-pine bg-white p-3 shadow-[0_10px_30px_-12px_rgba(22,90,75,0.35)] sm:p-4"
               onSubmit={(event) => { event.preventDefault(); joinLaunchList(); }}
@@ -1628,6 +1641,7 @@ function VisionLandingPanel({
               )}
               <p className="mt-2 text-xs font-semibold text-tt-ink-faint">Free for families. Unsubscribe anytime. Your inbox stays boring; your kids won’t.</p>
             </form>
+            )}
 
             <button onClick={openKidDemo} className="tt-btn-press group mt-4 inline-flex min-h-11 items-center gap-2 rounded-full px-2 py-2 text-sm font-black text-tt-pine underline decoration-tt-sun decoration-[3px] underline-offset-4">
               <span aria-hidden="true">👀</span> Skeptical? Let your kid try a mission first
@@ -1701,6 +1715,11 @@ function VisionLandingPanel({
               The window closes at launch — no fake countdown, just a real door that shuts when we ship.
             </p>
           </div>
+          {launchJoined ? (
+            <p className="w-full max-w-md shrink-0 rounded-2xl border border-white/15 bg-white/10 p-4 text-sm font-black text-tt-sun backdrop-blur">
+              🎉 You’re in! Your founding-family spot is claimed.
+            </p>
+          ) : (
           <form
             className="w-full max-w-md shrink-0 rounded-2xl border border-white/15 bg-white/10 p-3 backdrop-blur sm:p-4"
             onSubmit={(event) => { event.preventDefault(); joinLaunchList(); }}
@@ -1730,6 +1749,7 @@ function VisionLandingPanel({
             )}
             <p className="mt-2 text-[11px] font-semibold text-white/55">Free for families. One email. Zero spam, only tail wags.</p>
           </form>
+          )}
         </div>
       </section>
 
@@ -2052,6 +2072,11 @@ function VisionLandingPanel({
           <p className="mx-auto mt-3 inline-flex max-w-xl items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-xs font-black uppercase tracking-[0.12em] text-tt-sun ring-1 ring-white/20">
             <span aria-hidden="true">⏳</span> Founding-family window closes at launch — no fake countdown, just a real door
           </p>
+          {launchJoined ? (
+            <p className="mx-auto mt-5 max-w-lg rounded-xl bg-white/10 p-4 text-sm font-black text-tt-sun ring-1 ring-white/20">
+              🎉 You’re counted in! See you at launch.
+            </p>
+          ) : (
           <form
             className="mx-auto mt-5 grid max-w-lg gap-2 sm:grid-cols-[1fr_auto]"
             onSubmit={(event) => { event.preventDefault(); joinLaunchList(); }}
@@ -2071,6 +2096,7 @@ function VisionLandingPanel({
               {launchInterestStatus === "saving" ? "Saving…" : "Count us in 🎉"}
             </button>
           </form>
+          )}
           {launchInterestMessage && (
             <p className={`mt-3 text-sm font-bold ${launchInterestStatus === "error" ? "text-tt-sun" : "text-white"}`} role="status">
               {launchInterestMessage}
