@@ -1838,6 +1838,8 @@ export function TailTotsApp() {
               approveJob={approveNeighborhoodJob}
               toggleJobVisibility={toggleNeighborhoodJobVisibility}
               fillJobTemplate={fillJobTemplate}
+              transactions={transactions}
+              setActiveTab={setActiveTab}
             />
           )}
           {visibleActiveTab === "ai" && <AIPanel childProfiles={children} missions={missions} parentSignedIn={Boolean(cloudAccountEmail)} />}
@@ -4201,6 +4203,27 @@ function PassportPanel({ pets, isParentView, updatePet, updatePetPhoto, onStudyC
   );
 }
 
+/**
+ * Approved per-child contributions to a pooled goal, from save transactions.
+ * Parent seed money is shown separately on the goal card.
+ */
+function goalContributions(
+  goalId: string,
+  transactions: BankTransaction[],
+  childProfiles: Child[],
+): { name: string; amount: number }[] {
+  const sums = new Map<string, number>();
+  for (const tx of transactions) {
+    if (tx.goalId === goalId && tx.status === "approved" && tx.category === "save") {
+      sums.set(tx.childId, (sums.get(tx.childId) ?? 0) + tx.amount);
+    }
+  }
+  return [...sums.entries()].map(([childId, amount]) => ({
+    name: childProfiles.find((child) => child.id === childId)?.name ?? "Family",
+    amount,
+  }));
+}
+
 function BankPanel(props: {
   child?: Child;
   childProfiles: Child[];
@@ -4232,11 +4255,17 @@ function BankPanel(props: {
     reason: "",
     goalId: childGoals[0]?.id ?? "",
   });
-  const selectedGoalId = childGoals.some((goal) => goal.id === moneyDraft.goalId) ? moneyDraft.goalId : childGoals[0]?.id ?? "";
+  const saveGoalOptions = [
+    ...childGoals,
+    ...props.goals.filter(
+      (goal) => goal.childId !== props.child?.id && goal.type === "donation" && goal.sharedWithTrustedFamilies && !childGoals.some((mine) => mine.id === goal.id),
+    ),
+  ];
+  const selectedGoalId = saveGoalOptions.some((goal) => goal.id === moneyDraft.goalId) ? moneyDraft.goalId : saveGoalOptions[0]?.id ?? "";
   const requestedAmount = Math.max(1, Number(moneyDraft.amount) || 1);
   const submitMoneyRequest = () => {
     if (requestedAmount > availableBalance) return;
-    const selectedGoal = childGoals.find((goal) => goal.id === selectedGoalId);
+    const selectedGoal = saveGoalOptions.find((goal) => goal.id === selectedGoalId);
     if (moneyDraft.category === "save" && !selectedGoal) return;
     const defaultReason =
       moneyDraft.category === "save"
@@ -4491,7 +4520,11 @@ function BankPanel(props: {
                   value={selectedGoalId}
                   onChange={(event) => setMoneyDraft({ ...moneyDraft, goalId: event.target.value })}
                 >
-                  {childGoals.map((goal) => <option key={goal.id} value={goal.id}>{goal.title} (${goal.saved}/${goal.target})</option>)}
+                  {saveGoalOptions.map((goal) => {
+                    const owner = props.childProfiles.find((child) => child.id === goal.childId);
+                    const pooled = goal.childId !== props.child?.id;
+                    return <option key={goal.id} value={goal.id}>{pooled ? `Family pool: ${goal.title} (${owner?.name ?? "family"})` : goal.title} (${goal.saved}/${goal.target})</option>;
+                  })}
                 </select>
               ) : (
                 <select
@@ -4506,12 +4539,12 @@ function BankPanel(props: {
             </label>
             <button
               onClick={submitMoneyRequest}
-              disabled={requestedAmount > availableBalance || (moneyDraft.category === "save" && !childGoals.length)}
+              disabled={requestedAmount > availableBalance || (moneyDraft.category === "save" && !saveGoalOptions.length)}
               className="mt-5 min-h-14 w-full rounded-lg bg-[#165a4b] px-5 py-4 text-lg font-black text-white disabled:cursor-not-allowed disabled:bg-[#b8c4bf]"
             >
               Ask parent to approve {moneyDraft.category} ${requestedAmount}
             </button>
-            {moneyDraft.category === "save" && !childGoals.length && (
+            {moneyDraft.category === "save" && !saveGoalOptions.length && (
               <p className="mt-3 text-sm font-bold text-[#7a4b12]">Add a goal before saving dollars.</p>
             )}
             {requestedAmount > availableBalance && (
@@ -5355,6 +5388,8 @@ function NeighborhoodPanel({
   approveJob,
   toggleJobVisibility,
   fillJobTemplate,
+  transactions,
+  setActiveTab,
 }: {
   goals: SavingsGoal[];
   childProfiles: Child[];
@@ -5368,6 +5403,8 @@ function NeighborhoodPanel({
   approveJob: (jobId: string) => void;
   toggleJobVisibility: (jobId: string) => void;
   fillJobTemplate: (skill: string) => void;
+  transactions: BankTransaction[];
+  setActiveTab: (tab: string) => void;
 }) {
   const sharedGoals = goals.filter((goal) => goal.sharedWithTrustedFamilies);
   const visibleJobs =
@@ -5554,28 +5591,52 @@ function NeighborhoodPanel({
       </section>
 
       <div className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#0f766e]">Family-supported goals</p>
-        <h3 className="mt-2 text-2xl font-black">Trusted families can help a cause</h3>
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#0f766e]">Family pool</p>
+        <h3 className="mt-2 text-2xl font-black">Everyone chips in for the cause</h3>
+        <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-[#5f6a65]">
+          Donation goals a parent shares become a family pool — any kid can contribute their own approved dollars.
+          Every move is parent-approved first, and no child is publicly searchable.
+        </p>
         <div className="mt-4 grid gap-3 lg:grid-cols-2">
           {sharedGoals.map((goal) => {
             const child = childProfiles.find((item) => item.id === goal.childId);
             const percent = Math.min(100, (goal.saved / goal.target) * 100);
+            const contributions = goalContributions(goal.id, transactions, childProfiles);
             return (
               <article key={goal.id} className="rounded-lg bg-[#e7f4ef] p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-lg font-black">{goal.title}</p>
                     <p className="mt-1 text-sm font-semibold text-[#5f6a65]">{goal.causeNote}</p>
-                    <p className="mt-1 text-xs font-bold text-[#165a4b]">Parent-shared by {child?.name ?? "family"}</p>
+                    <p className="mt-1 text-xs font-bold text-[#165a4b]">Started by {child?.name ?? "family"}</p>
                   </div>
                   <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-[#165a4b]">${goal.saved}/${goal.target}</span>
                 </div>
                 <div className="mt-3 h-3 rounded-full bg-white">
                   <div className="h-3 rounded-full bg-[#0f766e]" style={{ width: `${percent}%` }} />
                 </div>
+                {(contributions.length > 0 || goal.seededByParent) && (
+                  <p className="mt-2 text-xs font-bold text-[#5f6a65]">
+                    {[
+                      ...contributions.map((c) => `${c.name} $${c.amount}`),
+                      ...(goal.seededByParent ? [`Parent seed $${goal.seededByParent}`] : []),
+                    ].join(" · ")}
+                  </p>
+                )}
+                <button
+                  onClick={() => setActiveTab("bank")}
+                  className="mt-3 min-h-11 w-full rounded-lg bg-[#165a4b] px-4 py-2 text-sm font-black text-white"
+                >
+                  Contribute in Kid Bank →
+                </button>
               </article>
             );
           })}
+          {sharedGoals.length === 0 && (
+            <p className="rounded-lg bg-[#f8f6ed] p-4 text-sm font-semibold text-[#5f6a65]">
+              No pooled goals yet. Parents create a giving goal in Kid Bank and share it to start a family pool.
+            </p>
+          )}
         </div>
       </div>
 
