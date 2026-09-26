@@ -366,12 +366,64 @@ type Certificate = {
   earnedAt: string; // ISO date string
 };
 
-const CERT_MISSIONS_REQUIRED = 8;
-const CERT_STREAK_REQUIRED = 5;
-const CERT_SKILLS_REQUIRED = 3;
+const CERT_REQUIREMENTS = {
+  readiness: { missions: 12, streak: 7, skills: 3 },
+  hero: { missions: 20, streak: 14, skills: 3 },
+} as const;
 
 function certificateTitleFor(kind: CertificateKind): string {
   return kind === "hero" ? "Certified Pet Hero" : "Pet Readiness Certificate";
+}
+
+/** Self-contained printable certificate document (downloadable, shareable). */
+function buildCertificateHtml(child: Child, cert: Certificate, familyName: string): string {
+  const escapeHtml = (value: string) =>
+    value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  const childName = escapeHtml(child.name);
+  const family = escapeHtml(familyName);
+  const earnedDate = new Date(cert.earnedAt);
+  const dateLabel = Number.isNaN(earnedDate.getTime())
+    ? cert.earnedAt
+    : earnedDate.toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
+  const line = cert.kind === "hero"
+    ? "for real pet care, proven over time — feeding, water, comfort, and responsibility, parent-approved"
+    : "for completing the pet-care journey — learning the animal, owning the routine, and proving it over time";
+  return `<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8" />
+<title>${cert.title} — ${childName}</title>
+<style>
+  body { font-family: Georgia, 'Times New Roman', serif; background: #f8f6ed; display: flex; justify-content: center; padding: 48px 16px; margin: 0; }
+  .cert { background: #fff; border: 6px double #7c3aed; border-radius: 24px; max-width: 640px; width: 100%; padding: 56px 48px; text-align: center; }
+  .kicker { font-size: 12px; letter-spacing: 4px; text-transform: uppercase; color: #7c3aed; font-weight: bold; }
+  h1 { font-size: 40px; margin: 12px 0 4px; color: #17231f; }
+  .name { font-size: 32px; font-weight: bold; color: #7c3aed; margin: 16px 0 4px; }
+  .family { font-size: 16px; color: #5f6a65; }
+  p.body { font-size: 17px; line-height: 1.7; color: #25352f; margin: 24px 0; }
+  .date { font-size: 14px; color: #5f6a65; margin-top: 24px; }
+  .paws { font-size: 32px; margin-top: 16px; letter-spacing: 12px; }
+  @media print { body { background: #fff; padding: 0; } .cert { border-width: 8px; } }
+</style></head>
+<body><div class="cert">
+  <div class="kicker">TailTots · Official</div>
+  <h1>${cert.title}</h1>
+  <div class="name">${childName}</div>
+  <div class="family">of the ${family} family</div>
+  <p class="body">This certifies that <strong>${childName}</strong> earned this honor on ${dateLabel}, ${line}.</p>
+  <div class="paws">🎓 🐾 ⭐</div>
+  <div class="date">Awarded ${dateLabel} · tailtots.com</div>
+</div></body></html>`;
+}
+
+function downloadCertificate(child: Child, cert: Certificate, familyName: string) {
+  const blob = new Blob([buildCertificateHtml(child, cert, familyName)], { type: "text/html" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `${cert.title.replace(/[^a-z0-9]+/gi, "-")}-${child.name.replace(/[^a-z0-9]+/gi, "-")}.html`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
 }
 
 function localDayKey(date = new Date()): string {
@@ -492,20 +544,21 @@ function getCertificateProgress(
   badges: BadgeAward[],
   petCareOnly: boolean,
 ) {
+  const required = petCareOnly ? CERT_REQUIREMENTS.hero : CERT_REQUIREMENTS.readiness;
   const approved = missions.filter((mission) => mission.status === "approved" && mission.completedBy === child.id);
   const counted = petCareOnly ? approved.filter((mission) => mission.category === "pet_care") : approved;
   const skillAreas = new Set(badges.filter((badge) => badge.childId === child.id).map((badge) => badge.skill)).size;
   return {
     missionsDone: counted.length,
-    missionsRequired: CERT_MISSIONS_REQUIRED,
+    missionsRequired: required.missions,
     streakDays: child.streakDays,
-    streakRequired: CERT_STREAK_REQUIRED,
+    streakRequired: required.streak,
     skillAreas,
-    skillsRequired: CERT_SKILLS_REQUIRED,
+    skillsRequired: required.skills,
     eligible:
-      counted.length >= CERT_MISSIONS_REQUIRED &&
-      child.streakDays >= CERT_STREAK_REQUIRED &&
-      skillAreas >= CERT_SKILLS_REQUIRED,
+      counted.length >= required.missions &&
+      child.streakDays >= required.streak &&
+      skillAreas >= required.skills,
   };
 }
 
@@ -1963,7 +2016,7 @@ function VisionLandingPanel({
   const journeySteps = [
     ["🔍", "Learn the animal", "Pet Passports decode what the pet really needs — food, space, costs, lifespan. Fantasy out, respect in."],
     ["🎯", "Own the routine", "Daily age-fit missions. Have a pet? Your kid takes over the real routine — feeding, water, comfort checks, for real this time. Don’t? Parent-set home and community chores: the nagging you already do becomes the training ground."],
-    ["📈", "Prove it over time", "Streaks plus your approvals build the proof record. Not one good day — sixty. This answers “will they stick with it?”"],
+    ["📈", "Prove it over time", "Streaks plus your approvals build the proof record — day after day, toward sixty and beyond. Certificates mark the milestones along the way. This answers “will they stick with it?”"],
     ["🎓", "Earn the certificate", "The proof record, framed. No pet yet? It’s the case for one. Have one? It’s the title: Certified Pet Hero."],
     ["🌟", "Grow beyond the routine", "The habit loop now runs skills, money smarts, and giving missions — donate, pool money, fund real causes. Same missions, both tracks."],
   ];
@@ -5062,6 +5115,13 @@ function CertificateCard(props: {
         <div className="mt-3 flex items-center justify-center gap-4 text-2xl" aria-hidden="true">
           <span>🎓</span><span>🐾</span><span>⭐</span>
         </div>
+        <button
+          onClick={() => downloadCertificate(props.child, earned, props.familyName)}
+          className="mt-4 min-h-11 rounded-lg bg-[#7c3aed] px-5 py-2 text-sm font-black text-white"
+        >
+          Download certificate 🖨️
+        </button>
+        <p className="mt-2 text-xs font-semibold text-[#5f6a65]">Saves as a printable page — frame it, or share it with grandparents.</p>
       </div>
     );
   }
