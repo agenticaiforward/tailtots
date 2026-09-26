@@ -42,3 +42,4 @@ next-env.d.ts
 /android.partial-backup-*/
 /.jdk/
 /android/local.properties
+tsconfig.tsbuildinfo
