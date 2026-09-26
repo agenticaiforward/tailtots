@@ -349,6 +349,8 @@ type SavedFamilyState = {
   badges?: BadgeAward[];
   neighborhoodJobs?: NeighborhoodJob[];
   moments?: MemoryMoment[];
+  studiedAnimals?: string[];
+  socialPracticeDone?: Record<string, string[]>;
   certificates?: Certificate[];
   familyPhotoUrl?: string;
   activeChildId?: string;
@@ -516,6 +518,8 @@ export function TailTotsApp() {
   const [neighborhoodJobs, setNeighborhoodJobs] = useState(starterNeighborhoodJobs);
   const [scheduleItems] = useState(starterScheduleItems);
   const [moments, setMoments] = useState<MemoryMoment[]>(starterMoments);
+  const [studiedAnimals, setStudiedAnimals] = useState<string[]>([]);
+  const [socialPracticeDone, setSocialPracticeDone] = useState<Record<string, string[]>>({});
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [justEarnedCertId, setJustEarnedCertId] = useState<string | null>(null);
   const [activeChildId, setActiveChildId] = useState(starterChildren[0]?.id ?? "");
@@ -685,6 +689,8 @@ export function TailTotsApp() {
         setBadges(savedState.badges ?? starterBadges);
         setNeighborhoodJobs(savedState.neighborhoodJobs ? savedState.neighborhoodJobs.map(normalizeNeighborhoodJob) : starterNeighborhoodJobs);
         setMoments(savedState.moments ?? starterMoments);
+        setStudiedAnimals(savedState.studiedAnimals ?? []);
+        setSocialPracticeDone(savedState.socialPracticeDone ?? {});
         setCertificates(savedState.certificates ?? []);
         setFamilyPhotoUrl(savedState.familyPhotoUrl);
         setActiveChildId(savedState.activeChildId ?? savedState.children?.[0]?.id ?? "");
@@ -732,8 +738,8 @@ export function TailTotsApp() {
 
   useEffect(() => {
     if (!hasLoadedSavedState) return;
-    saveFamilyState({ familyName, parentPasscode, parents, children, pets, missions, transactions, goals, badges, neighborhoodJobs, moments, familyPhotoUrl, activeChildId, certificates });
-  }, [activeChildId, badges, certificates, children, familyName, familyPhotoUrl, goals, hasLoadedSavedState, missions, moments, neighborhoodJobs, parentPasscode, parents, pets, transactions]);
+    saveFamilyState({ familyName, parentPasscode, parents, children, pets, missions, transactions, goals, badges, neighborhoodJobs, moments, studiedAnimals, socialPracticeDone, familyPhotoUrl, activeChildId, certificates });
+  }, [activeChildId, badges, certificates, children, familyName, familyPhotoUrl, goals, hasLoadedSavedState, missions, moments, neighborhoodJobs, parentPasscode, parents, pets, studiedAnimals, socialPracticeDone, transactions]);
 
   // Debounced relational cloud push: mirrors family state into the Supabase
   // tables a couple of seconds after any change, while cloud sync is on.
@@ -821,6 +827,8 @@ export function TailTotsApp() {
       badges,
       neighborhoodJobs,
       moments,
+      studiedAnimals,
+      socialPracticeDone,
       familyPhotoUrl,
       activeChildId,
       certificates,
@@ -839,6 +847,8 @@ export function TailTotsApp() {
     setBadges(snapshot.badges ?? starterBadges);
     setNeighborhoodJobs(snapshot.neighborhoodJobs ? snapshot.neighborhoodJobs.map(normalizeNeighborhoodJob) : starterNeighborhoodJobs);
     setMoments(snapshot.moments ?? starterMoments);
+    setStudiedAnimals(snapshot.studiedAnimals ?? []);
+    setSocialPracticeDone(snapshot.socialPracticeDone ?? {});
     setCertificates(snapshot.certificates ?? []);
     setFamilyPhotoUrl(snapshot.familyPhotoUrl);
     setActiveChildId(snapshot.activeChildId ?? snapshot.children?.[0]?.id ?? (snapshot.children ? "" : starterChildren[0]?.id ?? ""));
@@ -1332,6 +1342,60 @@ export function TailTotsApp() {
     setMomentDraft("");
   }
 
+  /** Answer a social practice scenario; completing all six earns the Safe Social Star badge. */
+  function answerSocialScenario(childId: string, scenarioId: string) {
+    const done = socialPracticeDone[childId] ?? [];
+    if (done.includes(scenarioId)) return;
+    const updated = [...done, scenarioId];
+    setSocialPracticeDone((prev) => ({ ...prev, [childId]: updated }));
+    if (
+      updated.length >= socialScenarios.length &&
+      !badges.some((badge) => badge.childId === childId && badge.title === "Safe Social Star")
+    ) {
+      setBadges((items) => [
+        {
+          id: `badge-social-${Date.now()}`,
+          childId,
+          title: "Safe Social Star",
+          skill: "empathy",
+          note: "Completed all 6 safe social practice scenarios",
+          awardedAt: "Today",
+        },
+        ...items,
+      ]);
+    }
+  }
+
+  /** Record that the family studied a learning passport (no-pet track). */
+  function recordPassportStudy(animal: string) {
+    const child = activeChild ?? children[0];
+    if (!child || studiedAnimals.includes(animal)) return;
+    setStudiedAnimals((items) => [...items, animal]);
+    setMoments((items) => [
+      {
+        id: `moment-study-${Date.now()}`,
+        childId: child.id,
+        mood: "proud",
+        note: `Studied the ${animal} learning passport — food, space, costs, lifespan, and real care needs.`,
+      },
+      ...items,
+    ]);
+  }
+
+  const jobTemplateDrafts: Record<string, { title: string; pet: string; time: string; rewardDollars: string; badgeTitle: string; safety: string }> = {
+    Responsibility: { title: "Morning pet check for a trusted neighbor", pet: "Neighbor pet", time: "Weekday mornings, 15 minutes", rewardDollars: "4", badgeTitle: "Responsibility Star", safety: "Parent confirms the visit and stays reachable by phone." },
+    Empathy: { title: "Make a comfort card for a newly adopted pet", pet: "Shelter buddy", time: "Any afternoon this week", rewardDollars: "0", badgeTitle: "Kindness Badge", safety: "Card is delivered by the parent — no kid-to-shelter contact." },
+    Teamwork: { title: "Two-kid supply sorting task with parent", pet: "Neighbor pet", time: "Saturday with a parent", rewardDollars: "5", badgeTitle: "Team Player", safety: "Parent supervises the whole task; points split fairly." },
+    Leadership: { title: "Older kid teaches a younger kid safe pet observation", pet: "Neighbor pet", time: "Weekend, 30 minutes", rewardDollars: "10", badgeTitle: "Junior Leader", safety: "Parent stays nearby the entire time; older kid leads, never alone." },
+  };
+
+  /** Fill the job draft from a skill template so "Use template" does real work. */
+  function useJobTemplate(skill: string) {
+    const template = jobTemplateDrafts[skill];
+    if (!template) return;
+    setJobDraft({ title: template.title, family: "Neighbor family", pet: template.pet, time: template.time, rewardDollars: template.rewardDollars, badgeTitle: template.badgeTitle, safety: template.safety });
+  }
+
   function postNeighborhoodJob() {
     const allowedChildren = children.map((child) => child.id);
     if (!jobDraft.title.trim() || !jobDraft.family.trim() || !jobDraft.pet.trim() || !allowedChildren.length) return;
@@ -1578,7 +1642,16 @@ export function TailTotsApp() {
               setActiveChildId={role === "child" ? requestChildSwitch : setActiveChildId}
             />
           )}
-          {visibleActiveTab === "pets" && <PassportPanel pets={pets} updatePetPhoto={role === "parent" ? updatePetPhoto : undefined} />}
+          {visibleActiveTab === "pets" && (
+            <PassportPanel
+              pets={pets}
+              isParentView={role === "parent"}
+              updatePet={updatePet}
+              updatePetPhoto={role === "parent" ? updatePetPhoto : undefined}
+              onStudyComplete={recordPassportStudy}
+              studiedAnimals={studiedAnimals}
+            />
+          )}
           {visibleActiveTab === "pet-helper" && <KidPetHelperPanel activeChild={activeChild} pets={pets} moments={moments} />}
           {visibleActiveTab === "bank" && (
             <BankPanel
@@ -1673,6 +1746,10 @@ export function TailTotsApp() {
               hasPets={pets.length > 0}
               justEarnedCertId={justEarnedCertId}
               onDismissEarned={() => setJustEarnedCertId(null)}
+              activeChildId={activeChild?.id}
+              onSelectChild={role === "parent" ? setActiveChildId : undefined}
+              socialPracticeDone={socialPracticeDone}
+              onAnswerSocialScenario={answerSocialScenario}
             />
           )}
           {visibleActiveTab === "neighborhood" && (
@@ -1688,6 +1765,7 @@ export function TailTotsApp() {
               acceptJob={acceptNeighborhoodJob}
               approveJob={approveNeighborhoodJob}
               toggleJobVisibility={toggleNeighborhoodJobVisibility}
+              useJobTemplate={useJobTemplate}
             />
           )}
           {visibleActiveTab === "ai" && <AIPanel childProfiles={children} missions={missions} parentSignedIn={Boolean(cloudAccountEmail)} />}
@@ -3801,7 +3879,130 @@ function MissionsPanel(props: {
   );
 }
 
-function PassportPanel({ pets, updatePetPhoto }: { pets: Pet[]; updatePetPhoto?: (petId: string, file?: File) => void }) {
+const socialScenarios: {
+  id: string;
+  title: string;
+  situation: string;
+  choices: { text: string; best: boolean; feedback: string }[];
+}[] = [
+  {
+    id: "unkind-comment",
+    title: "The unkind comment",
+    situation: "Someone writes 'your drawing is bad' under your picture in the class gallery. Your stomach drops. What do you do?",
+    choices: [
+      { text: "Write something mean back", best: false, feedback: "Fighting back feels good for a second, then the whole thing gets bigger. Mean replies are screenshots forever." },
+      { text: "Don't reply. Show a trusted adult.", best: true, feedback: "Exactly right. Starve the trolls, loop in a grown-up. Not replying is a power move, not weakness." },
+      { text: "Post something embarrassing about them", best: false, feedback: "Revenge posts make YOU the bully in the story. Tell an adult instead — that's the strong move." },
+    ],
+  },
+  {
+    id: "stranger-friend",
+    title: "The stranger friend request",
+    situation: "A player with a cool avatar wants to be your friend in your game. You've never met them. They seem nice. What now?",
+    choices: [
+      { text: "Accept — more friends is more fun!", best: false, feedback: "Cool avatars can hide anyone. Strangers don't become friends just by clicking accept." },
+      { text: "Ask a parent first", best: true, feedback: "Perfect. Real-life rule: you don't follow strangers home, and you don't friend them online without a parent check." },
+      { text: "Share your username publicly to get even more friends", best: false, feedback: "Public usernames invite exactly the people you don't want. Keep your circle small and parent-approved." },
+    ],
+  },
+  {
+    id: "photo-share",
+    title: "The photo share",
+    situation: "Your friend took a silly photo of you and wants to post it. You're not sure you like it. What do you say?",
+    choices: [
+      { text: "Say nothing — it's just a photo", best: false, feedback: "If it bothers you, it matters. Your face, your choice — always okay to speak up." },
+      { text: "'Ask me first — my face, my choice'", best: true, feedback: "Nailed it. Consent isn't just a grown-up word. Good friends ask before they post." },
+      { text: "Post an embarrassing photo of them back", best: false, feedback: "Photo wars have no winners. Use your words: 'please don't post that of me.'" },
+    ],
+  },
+  {
+    id: "group-pile-on",
+    title: "The group chat pile-on",
+    situation: "Everyone in the group chat is laughing at one kid's mistake. It feels funny… and also kind of wrong. What do you do?",
+    choices: [
+      { text: "Laugh along — everyone else is", best: false, feedback: "'Everyone else is' is how pile-ons happen. The kid being laughed at sees every single message." },
+      { text: "Say nothing and keep scrolling", best: false, feedback: "Silence is safer than joining in, but kindness is braver. Even leaving the chat sends a message." },
+      { text: "Say something kind, or leave the chat", best: true, feedback: "That's leadership. One person standing up changes the whole temperature of a group chat." },
+    ],
+  },
+  {
+    id: "personal-info",
+    title: "The personal info ask",
+    situation: "A new online friend asks what school you go to and what time you walk home. They seem friendly. What do you share?",
+    choices: [
+      { text: "Tell them — they're nice", best: false, feedback: "'Nice' online means nothing. School, address, routines — these never go to online-only friends. Ever." },
+      { text: "Keep it private — real friends don't need that info", best: true, feedback: "Exactly. Personal details are need-to-know, and an online stranger never needs to know." },
+      { text: "Make something up", best: false, feedback: "Lying dodges this one, but the habit is risky. The real skill is a clean 'I don't share that online.'" },
+    ],
+  },
+  {
+    id: "teammate-struggle",
+    title: "The struggling teammate",
+    situation: "In a team game, one player keeps messing up and your team is losing. Some players are getting mad at them. You…?",
+    choices: [
+      { text: "Tell them they're ruining the game", best: false, feedback: "Yelling at a teammate has never once made anyone play better. It just makes them feel small." },
+      { text: "Quit the game in frustration", best: false, feedback: "Quitting on a team teaches quitting. There's a better play here." },
+      { text: "Encourage them and share one tip", best: true, feedback: "That's a captain's move. Teams win on encouragement — and you just practiced real leadership." },
+    ],
+  },
+];
+
+const learningPassports: { animal: string; tagline: string; facts: [string, string][] }[] = [
+  {
+    animal: "Dog",
+    tagline: "The classic best friend — and the biggest commitment",
+    facts: [
+      ["🍖 Food", "Measured meals twice a day. Chocolate, grapes, and onions are dangerous — no table scraps roulette."],
+      ["🏡 Space", "Daily walks plus room to play. A tired dog is a happy dog; a bored dog redecorates your couch."],
+      ["💰 Costs", "Vet bills are the big surprise — checkups, vaccines, and the occasional swallowed sock."],
+      ["⏳ Lifespan", "Roughly a decade or more. This is a 'rest of childhood' promise, not a summer hobby."],
+      ["💛 Care", "Training, fresh water always, and being part of the family — dogs need their people."],
+    ],
+  },
+  {
+    animal: "Cat",
+    tagline: "Independent — until 3am zoomies",
+    facts: [
+      ["🍖 Food", "Regular meals and constant fresh water. Cats are picky because they can be."],
+      ["🏡 Space", "Vertical space matters — shelves and scratching posts beat a bigger floor."],
+      ["💰 Costs", "Litter, food, and vet care add up quietly. Spaying/neutering is part of responsible ownership."],
+      ["⏳ Lifespan", "Well into the teens. Your kindergartner's cat may see them off to college."],
+      ["💛 Care", "Daily litter box scooping, play sessions, and respecting the 'pet me, but only like this' rules."],
+    ],
+  },
+  {
+    animal: "Guinea pig",
+    tagline: "Small, social, and louder than expected",
+    facts: [
+      ["🍖 Food", "Unlimited hay always, plus vitamin C veggies daily. Their teeth never stop growing — hay files them."],
+      ["🏡 Space", "Much bigger homes than pet stores suggest — and they need a same-species friend. Lonely is not okay."],
+      ["💰 Costs", "Bedding, hay, and veggies are ongoing. Exotic vets cost more than cat-and-dog vets."],
+      ["⏳ Lifespan", "About 5–7 years. Short enough to grasp, long enough to matter."],
+      ["💛 Care", "Gentle handling, clean bedding, and floor time. They wheek when they're happy — you'll learn the sound."],
+    ],
+  },
+  {
+    animal: "Fish",
+    tagline: "Calm to watch, chemistry to keep",
+    facts: [
+      ["🍖 Food", "A tiny pinch once or twice a day. Overfeeding is the #1 beginner mistake — it pollutes the water."],
+      ["🏡 Space", "Bigger tanks are easier, not harder — small bowls swing wildly in temperature and chemistry."],
+      ["💰 Costs", "Filter, heater, water conditioner, and test kit before the fish. The setup costs more than the fish."],
+      ["⏳ Lifespan", "Years, not weeks — when the water is right. Most early losses are water problems, not fish problems."],
+      ["💛 Care", "Partial water changes weekly and testing the water. You're really keeping water; the fish just live in it."],
+    ],
+  },
+];
+
+function PassportPanel({ pets, isParentView, updatePet, updatePetPhoto, onStudyComplete, studiedAnimals }: {
+  pets: Pet[];
+  isParentView: boolean;
+  updatePet: (petId: string, updates: Partial<Pet>) => void;
+  updatePetPhoto?: (petId: string, file?: File) => void;
+  onStudyComplete: (animal: string) => void;
+  studiedAnimals: string[];
+}) {
+  const [editingPetId, setEditingPetId] = useState<string | null>(null);
   return (
     <section className="space-y-4">
       <div className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
@@ -3809,14 +4010,57 @@ function PassportPanel({ pets, updatePetPhoto }: { pets: Pet[]; updatePetPhoto?:
         <h2 className="mt-2 text-3xl font-black">Everything kids need to care correctly</h2>
         <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-[#5f6a65]">
           Each passport keeps the pet&apos;s food, care notes, vet, and medicine in one place so kids do not have to guess.
+          {isParentView && pets.length > 0 && " Parents can edit any passport — vet changes, new medicine, new routines."}
         </p>
       </div>
+      {pets.length === 0 && (
+        <div className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-[#7c3aed]">📚 No pet yet? Start here</p>
+          <h3 className="mt-2 text-2xl font-black">Learning passports</h3>
+          <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-[#5f6a65]">
+            No pet needed to start becoming responsible. Study an animal&apos;s real needs — food, space, costs, lifespan —
+            and it counts as journey progress in the Growth Log.
+          </p>
+          <div className="mt-4 grid gap-4 lg:grid-cols-2">
+            {learningPassports.map((passport) => {
+              const studied = studiedAnimals.includes(passport.animal);
+              return (
+                <article key={passport.animal} className="rounded-lg bg-[#f8f6ed] p-4">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <h4 className="text-lg font-black">{passport.animal}</h4>
+                      <p className="text-xs font-bold text-[#5f6a65]">{passport.tagline}</p>
+                    </div>
+                    {studied && <span className="rounded-full bg-[#0f766e] px-3 py-1 text-xs font-black text-white">Studied ✓</span>}
+                  </div>
+                  <dl className="mt-3 grid gap-2">
+                    {passport.facts.map(([label, fact]) => (
+                      <div key={label} className="rounded-lg bg-white p-3 text-sm">
+                        <dt className="font-black">{label}</dt>
+                        <dd className="mt-1 font-semibold leading-5 text-[#5f6a65]">{fact}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                  {!studied && (
+                    <button
+                      onClick={() => onStudyComplete(passport.animal)}
+                      className="mt-3 min-h-11 w-full rounded-lg bg-[#7c3aed] px-4 py-2 text-sm font-black text-white"
+                    >
+                      We studied the {passport.animal} ✓
+                    </button>
+                  )}
+                </article>
+              );
+            })}
+          </div>
+        </div>
+      )}
       <div className="grid gap-4 lg:grid-cols-2">
         {pets.map((pet) => (
           <article key={pet.id} className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
             <ProfilePhoto label={pet.name} initial={getPetLook(pet.id).face} colors={getPetLook(pet.id).colors} size="lg" variant="pet" petKind={getPetLook(pet.id).kind} photoUrl={pet.photoUrl} />
-            <div>
+            <div className="flex-1">
               <p className="text-xs font-black uppercase tracking-[0.18em] text-[#7a4b12]">{pet.name}&apos;s passport</p>
               <h2 className="text-3xl font-black">{pet.name}</h2>
               <p className="text-sm font-black text-[#0f766e]">{pet.species}</p>
@@ -3827,17 +4071,48 @@ function PassportPanel({ pets, updatePetPhoto }: { pets: Pet[]; updatePetPhoto?:
               </label>
               )}
             </div>
+            {isParentView && (
+              <button
+                onClick={() => setEditingPetId(editingPetId === pet.id ? null : pet.id)}
+                className="min-h-11 rounded-lg border border-[#ded8c7] bg-white px-4 py-2 text-sm font-black text-[#17231f]"
+              >
+                {editingPetId === pet.id ? "Done" : "Edit"}
+              </button>
+            )}
           </div>
           <div className="mt-5 grid gap-3">
             <Meter label={`${pet.name} happiness`} value={getPetLook(pet.id).happiness} color="#f47b20" />
             <Meter label={`${pet.name} feeling loved`} value={getPetLook(pet.id).loved} color="#0f766e" />
           </div>
+          {isParentView && editingPetId === pet.id ? (
+            <div className="mt-5 grid gap-3">
+              <label className="block text-sm font-black">Name
+                <input className="mt-1 w-full rounded-lg border border-[#ded8c7] px-4 py-3 font-semibold" value={pet.name} onChange={(event) => updatePet(pet.id, { name: event.target.value })} />
+              </label>
+              <label className="block text-sm font-black">Species
+                <input className="mt-1 w-full rounded-lg border border-[#ded8c7] px-4 py-3 font-semibold" value={pet.species} onChange={(event) => updatePet(pet.id, { species: event.target.value })} />
+              </label>
+              <label className="block text-sm font-black">Favorite food
+                <input className="mt-1 w-full rounded-lg border border-[#ded8c7] px-4 py-3 font-semibold" value={pet.favoriteFood} onChange={(event) => updatePet(pet.id, { favoriteFood: event.target.value })} />
+              </label>
+              <label className="block text-sm font-black">Care notes
+                <textarea className="mt-1 min-h-24 w-full rounded-lg border border-[#ded8c7] px-4 py-3 font-semibold" value={pet.careNotes} onChange={(event) => updatePet(pet.id, { careNotes: event.target.value })} />
+              </label>
+              <label className="block text-sm font-black">Vet
+                <input className="mt-1 w-full rounded-lg border border-[#ded8c7] px-4 py-3 font-semibold" value={pet.vet} onChange={(event) => updatePet(pet.id, { vet: event.target.value })} />
+              </label>
+              <label className="block text-sm font-black">Medicine
+                <input className="mt-1 w-full rounded-lg border border-[#ded8c7] px-4 py-3 font-semibold" value={pet.medicine} onChange={(event) => updatePet(pet.id, { medicine: event.target.value })} />
+              </label>
+            </div>
+          ) : (
           <dl className="mt-5 grid gap-3 text-sm">
             <div className="rounded-lg bg-[#f8f6ed] p-3"><dt className="font-black">Favorite food</dt><dd>{pet.favoriteFood}</dd></div>
             <div className="rounded-lg bg-[#f8f6ed] p-3"><dt className="font-black">Care notes</dt><dd>{pet.careNotes}</dd></div>
             <div className="rounded-lg bg-[#f8f6ed] p-3"><dt className="font-black">Vet</dt><dd>{pet.vet}</dd></div>
             <div className="rounded-lg bg-[#f8f6ed] p-3"><dt className="font-black">Medicine</dt><dd>{pet.medicine}</dd></div>
           </dl>
+          )}
           </article>
         ))}
       </div>
@@ -4789,6 +5064,83 @@ function CertificateCard(props: {
   );
 }
 
+function SocialPracticeSection({ childProfiles, activeChildId, onSelectChild, done, onAnswer }: {
+  childProfiles: Child[];
+  activeChildId?: string;
+  onSelectChild?: (childId: string) => void;
+  done: Record<string, string[]>;
+  onAnswer: (childId: string, scenarioId: string) => void;
+}) {
+  const [selectedId, setSelectedId] = useState<string | undefined>(activeChildId);
+  const [revealed, setRevealed] = useState<Record<string, number>>({});
+  const childId = onSelectChild ? (selectedId ?? childProfiles[0]?.id) : (activeChildId ?? childProfiles[0]?.id);
+  const child = childProfiles.find((item) => item.id === childId);
+  const completed = childId ? done[childId] ?? [] : [];
+  if (!child) return null;
+  return (
+    <section className="mt-5 rounded-lg border border-[#ded8c7] bg-white p-5">
+      <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2563eb]">🌐 Safe social practice</p>
+      <h3 className="mt-2 text-2xl font-black">Training wheels for real-world social life</h3>
+      <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-[#5f6a65]">
+        Practice tricky online moments with zero strangers, zero feeds, zero DMs. Pick what you&apos;d do, get instant coaching,
+        and earn the Safe Social Star badge when {child.name} finishes all {socialScenarios.length}.
+      </p>
+      {onSelectChild && childProfiles.length > 1 && (
+        <div className="mt-3 flex flex-wrap gap-2">
+          {childProfiles.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => { setSelectedId(item.id); onSelectChild(item.id); }}
+              className={`min-h-10 rounded-full px-4 py-2 text-xs font-black ${item.id === childId ? "bg-[#2563eb] text-white" : "bg-[#eef2ff] text-[#1e3a8a]"}`}
+            >
+              {item.name}
+            </button>
+          ))}
+        </div>
+      )}
+      <div className="mt-3 flex items-center gap-3">
+        <div className="h-2 flex-1 rounded-full bg-[#eef2ff]">
+          <div className="h-2 rounded-full bg-[#2563eb]" style={{ width: `${Math.round((completed.length / socialScenarios.length) * 100)}%` }} />
+        </div>
+        <span className="text-xs font-black text-[#1e3a8a]">{completed.length}/{socialScenarios.length} practiced</span>
+      </div>
+      <div className="mt-4 grid gap-3 lg:grid-cols-2">
+        {socialScenarios.map((scenario) => {
+          const isDone = completed.includes(scenario.id);
+          const picked = revealed[scenario.id];
+          const shownFeedback = picked !== undefined
+            ? scenario.choices[picked].feedback
+            : scenario.choices.find((choice) => choice.best)?.feedback;
+          return (
+            <article key={scenario.id} className="rounded-lg bg-[#f8f6ed] p-4">
+              <div className="flex items-start justify-between gap-2">
+                <h4 className="font-black">{scenario.title}</h4>
+                {isDone && <span className="shrink-0 rounded-full bg-[#2563eb] px-3 py-1 text-xs font-black text-white">Practiced ✓</span>}
+              </div>
+              <p className="mt-2 text-sm font-semibold leading-5 text-[#5f6a65]">{scenario.situation}</p>
+              {isDone ? (
+                <p className="mt-3 rounded-lg bg-white p-3 text-sm font-semibold leading-5 text-[#1e3a8a]">💡 {shownFeedback}</p>
+              ) : (
+                <div className="mt-3 grid gap-2">
+                  {scenario.choices.map((choice, index) => (
+                    <button
+                      key={choice.text}
+                      onClick={() => { setRevealed((prev) => ({ ...prev, [scenario.id]: index })); onAnswer(child.id, scenario.id); }}
+                      className="min-h-11 rounded-lg border border-[#c8d2f0] bg-white px-3 py-2 text-left text-sm font-bold text-[#17231f] hover:bg-[#eef2ff]"
+                    >
+                      {choice.text}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </article>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 function GrowthPanel(props: {
   childProfiles: Child[];
   badges: BadgeAward[];
@@ -4802,6 +5154,10 @@ function GrowthPanel(props: {
   hasPets: boolean;
   justEarnedCertId: string | null;
   onDismissEarned: () => void;
+  activeChildId?: string;
+  onSelectChild?: (childId: string) => void;
+  socialPracticeDone: Record<string, string[]>;
+  onAnswerSocialScenario: (childId: string, scenarioId: string) => void;
 }) {
   const justEarned = props.certificates.find((cert) => cert.id === props.justEarnedCertId);
   const justEarnedChild = justEarned ? props.childProfiles.find((child) => child.id === justEarned.childId) : undefined;
@@ -4877,6 +5233,13 @@ function GrowthPanel(props: {
           </div>
         ))}
       </div>
+      <SocialPracticeSection
+        childProfiles={props.childProfiles}
+        activeChildId={props.activeChildId}
+        onSelectChild={props.onSelectChild}
+        done={props.socialPracticeDone}
+        onAnswer={props.onAnswerSocialScenario}
+      />
       <div className="mt-5 rounded-lg bg-[#f0edff] p-4">
         <h3 className="font-black">Memory moments</h3>
         <div className="mt-3 flex flex-col gap-2 sm:flex-row">
@@ -4903,6 +5266,7 @@ function NeighborhoodPanel({
   acceptJob,
   approveJob,
   toggleJobVisibility,
+  useJobTemplate,
 }: {
   goals: SavingsGoal[];
   childProfiles: Child[];
@@ -4915,6 +5279,7 @@ function NeighborhoodPanel({
   acceptJob: (jobId: string) => void;
   approveJob: (jobId: string) => void;
   toggleJobVisibility: (jobId: string) => void;
+  useJobTemplate: (skill: string) => void;
 }) {
   const sharedGoals = goals.filter((goal) => goal.sharedWithTrustedFamilies);
   const visibleJobs =
@@ -4995,7 +5360,7 @@ function NeighborhoodPanel({
                 <p className="text-xs font-black uppercase tracking-[0.14em] text-[#5b21b6]">{skill}</p>
                 <p className="mt-2 text-base font-black leading-5">{title}</p>
                 <p className="mt-2 text-xs font-semibold leading-5 text-[#5f6a65]">{detail}</p>
-                <button className="mt-3 min-h-10 rounded-lg bg-white px-3 py-2 text-xs font-black text-[#33245f]">Use template</button>
+                <button onClick={() => useJobTemplate(skill)} className="mt-3 min-h-10 rounded-lg bg-white px-3 py-2 text-xs font-black text-[#33245f]">Use template</button>
               </article>
             ))}
           </div>
