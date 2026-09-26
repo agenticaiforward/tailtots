@@ -1712,6 +1712,7 @@ export function TailTotsApp() {
               scheduleItems={scheduleItems}
               role={role}
               setActiveChildId={role === "child" ? requestChildSwitch : setActiveChildId}
+              familyName={familyName}
             />
           )}
           {visibleActiveTab === "pets" && (
@@ -2846,6 +2847,7 @@ function EcosystemRoadmapPanel() {
 
 function SchedulePanel({
   activeChild,
+  familyName,
   childProfiles,
   missions,
   scheduleItems,
@@ -2858,11 +2860,16 @@ function SchedulePanel({
   scheduleItems: KidScheduleItem[];
   role: Role;
   setActiveChildId: (childId: string) => void;
+  familyName: string;
 }) {
   const isParent = role === "parent";
   const visibleItems = scheduleItems.filter((item) => (isParent ? true : item.childId === activeChild?.id));
   const visibleMissions = missions.filter((mission) => (isParent ? true : !mission.assignedChildId || mission.assignedChildId === activeChild?.id)).slice(0, 4);
-  const familyAvailabilityLink = `tailtots.com/availability/${childProfiles.map((child) => child.name.toLowerCase()).join("-") || "family"}`;
+  const familyCode = familyName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "family";
+  // Preview of the future share link. No kid names, addresses, or contact
+  // details ever go in the link — the other parent sees only time windows.
+  const familyAvailabilityLink = `tailtots.com/availability/${familyCode}`;
+  const [availabilityCopied, setAvailabilityCopied] = useState(false);
   const playdateWindows = [
     ["Weekday calm visit", "Tuesday or Thursday, 4:30-6:00 PM", "Parent confirms address, pet temperament, and adult presence."],
     ["Weekend pet hello", "Saturday, 10:00 AM-12:00 PM", "Good for supervised pet introductions or shared care learning."],
@@ -2936,7 +2943,24 @@ function SchedulePanel({
             <div className="rounded-lg bg-[#eef2ff] p-4">
               <p className="text-xs font-black uppercase tracking-[0.14em] text-[#1d4ed8]">Share link preview</p>
               <p className="mt-2 break-all rounded-lg bg-white p-3 text-sm font-black text-[#17231f]">{familyAvailabilityLink}</p>
-              <button className="mt-3 min-h-11 rounded-lg bg-[#2563eb] px-4 py-2 text-sm font-black text-white">Generate availability link</button>
+              <button
+                onClick={() => {
+                  const summary = [`${familyName} — playdate availability (via TailTots)`,
+                    ...playdateWindows.map(([title, time]) => `• ${title}: ${time}`),
+                    "Parent approves every plan before kids hear about it. No addresses or kid details shared here.",
+                  ].join("\n");
+                  navigator.clipboard?.writeText(summary).then(
+                    () => {
+                      setAvailabilityCopied(true);
+                      window.setTimeout(() => setAvailabilityCopied(false), 2500);
+                    },
+                    () => setAvailabilityCopied(false),
+                  );
+                }}
+                className="mt-3 min-h-11 rounded-lg bg-[#2563eb] px-4 py-2 text-sm font-black text-white"
+              >
+                {availabilityCopied ? "Copied! Paste it to the other parent ✓" : "Copy share text"}
+              </button>
             </div>
             <div className="grid gap-2">
               {playdateWindows.map(([title, time, note]) => (
