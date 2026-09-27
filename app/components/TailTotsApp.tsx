@@ -1642,36 +1642,48 @@ export function TailTotsApp() {
         isRouteChooser ? "grid-cols-1" : "lg:grid-cols-[280px_1fr] xl:grid-cols-[300px_1fr]"
       }`}>
         <aside className={`min-w-0 space-y-3 lg:space-y-4 ${isRouteChooser ? "hidden" : ""}`}>
-          <div className="overflow-hidden rounded-lg border border-[#ded8c7] bg-white shadow-sm">
-            <div className="relative min-h-[220px] max-w-full overflow-hidden bg-[linear-gradient(135deg,#165a4b,#f47b20_58%,#2563eb)] sm:min-h-[280px] lg:min-h-[430px]">
-              {familyPhotoUrl && <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${familyPhotoUrl})` }} />}
-              <div className="absolute inset-0 bg-[linear-gradient(to_top,rgba(23,35,31,0.72),rgba(23,35,31,0.08)_55%,rgba(23,35,31,0.18))]" />
-              {!familyPhotoUrl && (
+          <div className="rounded-lg border border-[#ded8c7] bg-white p-3 shadow-sm">
+            {familyPhotoUrl ? (
+              <figure className="relative rotate-[-1.5deg] rounded-md bg-white p-3 pb-3 shadow-[0_12px_32px_rgba(23,35,31,0.20)] ring-1 ring-[#e5ddc8]">
+                <span aria-hidden="true" className="absolute -top-2.5 left-8 z-10 h-6 w-20 -rotate-[8deg] rounded-[2px] bg-[#ffd166]/85 shadow-sm" />
+                <span aria-hidden="true" className="absolute -top-2.5 right-8 z-10 h-6 w-20 rotate-[8deg] rounded-[2px] bg-[#7dd3fc]/75 shadow-sm" />
+                <div className="overflow-hidden rounded-[3px]">
+                  <img src={familyPhotoUrl} alt={`${familyName} family photo`} className="h-60 w-full object-cover sm:h-72 lg:h-[26rem]" />
+                </div>
+                <figcaption className="flex items-center justify-between gap-2 px-1 pt-3">
+                  <p className="truncate text-sm font-black text-[#17231f]">The {familyName} family 📸</p>
+                  <span className="shrink-0 rounded-full bg-[#e7f4ef] px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-[#0f766e]">
+                    {appMode === "real" ? "Your family" : "Demo family"}
+                  </span>
+                </figcaption>
+              </figure>
+            ) : (
+              <div className="relative min-h-[220px] max-w-full overflow-hidden rounded-md bg-[linear-gradient(135deg,#165a4b,#f47b20_58%,#2563eb)] sm:min-h-[280px] lg:min-h-[430px]">
                 <div className="absolute inset-0 grid place-items-center">
                   <div className="absolute left-8 top-16 rounded-full bg-white/90 px-3 py-1 text-xs font-black text-[#7c3aed] shadow-sm animate-[reward-pop_2.8s_ease-in-out_infinite]">+coins</div>
                   <div className="absolute right-8 top-24 rounded-full bg-[#ffd166] px-3 py-1 text-xs font-black text-[#17231f] shadow-sm animate-[reward-pop_3.2s_ease-in-out_infinite]">badge</div>
                   <div className="absolute bottom-28 left-10 rounded-full bg-white/90 px-3 py-1 text-xs font-black text-[#165a4b] shadow-sm animate-[reward-pop_3.5s_ease-in-out_infinite]">done</div>
                   <FamilyFaceParade parents={parents} childProfiles={children} pets={pets} animated />
                 </div>
-              )}
-              <div className="absolute left-4 top-4 rounded-full bg-white/90 px-3 py-1 text-[11px] font-black text-[#165a4b] shadow-sm">
-                {appMode === "real" ? "Your family" : "Demo family"}
-              </div>
-              <div className="absolute bottom-4 left-4 right-4 text-white">
-                <p className="text-xs font-black uppercase tracking-[0.16em] text-[#ffd166]">Household</p>
-                <h2 className="text-2xl font-black leading-tight sm:text-3xl">{familyName}</h2>
-                {role === "parent" && isParentUnlocked && (
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <label className="inline-flex min-h-11 cursor-pointer items-center rounded-lg bg-white px-4 py-2 text-xs font-black text-[#17231f] shadow-sm">
-                    Family photo
-                  <input className="sr-only" type="file" accept="image/*" onChange={(event) => updateFamilyPhoto(event.target.files?.[0])} />
-                  </label>
-                  <button onClick={() => setActiveTab("pets")} className="min-h-11 rounded-lg bg-[#17231f]/90 px-4 py-2 text-xs font-black text-white shadow-sm">
-                    Pets
-                  </button>
+                <div className="absolute left-4 top-4 rounded-full bg-white/90 px-3 py-1 text-[11px] font-black text-[#165a4b] shadow-sm">
+                  {appMode === "real" ? "Your family" : "Demo family"}
                 </div>
-                )}
               </div>
+            )}
+            <div className="px-1 pb-1 pt-3">
+              <p className="text-xs font-black uppercase tracking-[0.16em] text-[#0f766e]">Household</p>
+              <h2 className="text-2xl font-black leading-tight text-[#17231f] sm:text-3xl">{familyName}</h2>
+              {role === "parent" && isParentUnlocked && (
+              <div className="mt-3 flex flex-wrap gap-2">
+                <label className="inline-flex min-h-11 cursor-pointer items-center rounded-lg border border-[#ded8c7] bg-white px-4 py-2 text-xs font-black text-[#17231f] shadow-sm">
+                  Family photo
+                <input className="sr-only" type="file" accept="image/*" onChange={(event) => updateFamilyPhoto(event.target.files?.[0])} />
+                </label>
+                <button onClick={() => setActiveTab("pets")} className="min-h-11 rounded-lg bg-[#17231f] px-4 py-2 text-xs font-black text-white shadow-sm">
+                  Pets
+                </button>
+              </div>
+              )}
             </div>
           </div>
 
@@ -4204,17 +4216,13 @@ function MissionsPanel(props: {
       {isKidView && statusPet && statusPetStats && statusPetLook && (
         <div className="mt-4 overflow-hidden rounded-xl border border-[#ded8c7] bg-[#fbfaf4]">
           <div className="flex items-center gap-4 p-4">
-            <div className={`rounded-full ring-4 ring-offset-2 ring-offset-[#fbfaf4] ${statusPetStats.stageRing}`}>
-              <ProfilePhoto
-                label={statusPet.name}
-                initial={statusPetLook.face}
-                colors={statusPetLook.colors}
-                size="lg"
-                variant="pet"
-                petKind={statusPetLook.kind}
-                photoUrl={statusPet.photoUrl}
-              />
-            </div>
+            <PetMedallion
+              label={statusPet.name}
+              petKind={statusPetLook.kind}
+              photoUrl={statusPet.photoUrl}
+              stage={statusPetStats.stage}
+              stageRing={statusPetStats.stageRing}
+            />
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
                 <p className="text-xl font-black">{statusPet.name}</p>
@@ -4637,9 +4645,7 @@ function PassportPanel({ pets, missions, isParentView, updatePet, updatePetPhoto
           return (
           <article key={pet.id} className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-            <div className={`rounded-2xl ring-4 ${care.stageRing}`}>
-              <ProfilePhoto label={pet.name} initial={getPetLook(pet.id, pet).face} colors={getPetLook(pet.id, pet).colors} size="lg" variant="pet" petKind={getPetLook(pet.id, pet).kind} photoUrl={pet.photoUrl} />
-            </div>
+            <PetMedallion label={pet.name} petKind={getPetLook(pet.id, pet).kind} photoUrl={pet.photoUrl} stage={care.stage} stageRing={care.stageRing} />
             <div className="flex-1">
               <p className="text-xs font-black uppercase tracking-[0.18em] text-[#7a4b12]">{pet.name}&apos;s passport</p>
               <h2 className="text-3xl font-black">{pet.name}</h2>
@@ -6767,6 +6773,37 @@ function buildPassportSummary(petType: string, petAge: string, routine: string, 
 function buildPhotoJournal(moment: string) {
   const cleanMoment = moment.trim() || "A sweet pet moment";
   return `${cleanMoment}. Suggested caption: "A little care today made our pet feel safe, seen, and loved."`;
+}
+
+/** Layered portrait medallion for pet photos: stage-colored dashed "sticker" ring,
+ *  soft shadow, sparkle, and a stage ribbon — like a prize badge. */
+function PetMedallion({
+  label,
+  petKind,
+  photoUrl,
+  stage,
+  stageRing,
+}: {
+  label: string;
+  petKind: PetKind;
+  photoUrl?: string;
+  stage: string;
+  stageRing: string;
+}) {
+  const dashBorder = stageRing.replace("ring-", "border-");
+  return (
+    <div className="relative w-fit shrink-0 px-2 pb-7 pt-2">
+      <svg aria-hidden="true" viewBox="0 0 24 24" className="absolute right-0.5 top-0 z-10 size-6 rotate-12 text-[#f4b400] drop-shadow-sm" fill="currentColor">
+        <path d="M12 2c.6 4.8 3.2 7.4 8 8-4.8.6-7.4 3.2-8 8-.6-4.8-3.2-7.4-8-8 4.8-.6 7.4-3.2 8-8z" />
+      </svg>
+      <div className={`rounded-[1.75rem] border-4 border-dashed ${dashBorder} bg-white p-2 shadow-[0_10px_28px_rgba(23,35,31,0.16)]`}>
+        <PetCharacter kind={petKind} size="lg" photoUrl={photoUrl} label={label} />
+      </div>
+      <div className="absolute bottom-1 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-[#17231f] px-3.5 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-[#ffd166] shadow-lg ring-2 ring-white">
+        ★ {stage}
+      </div>
+    </div>
+  );
 }
 
 function ProfilePhoto({
