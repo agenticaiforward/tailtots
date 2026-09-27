@@ -7172,7 +7172,7 @@ function AnimatedPetBuddy({ color, delay, photoUrl, label, kind = "pet" }: { col
   if (photoUrl) {
     return (
       <div className="relative h-24 w-20 animate-[pet-wiggle_2.1s_ease-in-out_infinite]" style={{ animationDelay: delay }}>
-        <PetBuddyFace kind={kind} photoUrl={photoUrl} label={label ?? "Pet"} size="md" animated={false} className="absolute bottom-0 left-1/2 -translate-x-1/2" />
+        <PetBuddyFace kind={kind} photoUrl={photoUrl} label={label ?? "Pet"} size="md" className="absolute bottom-0 left-1/2 -translate-x-1/2" />
       </div>
     );
   }
