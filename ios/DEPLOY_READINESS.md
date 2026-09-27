@@ -3,7 +3,7 @@
 **Audited/updated:** 2026-09-27 · Canonical project: `~/workspace/tailtots-builds/ios/`
 (Capacitor 8 wrapper · bundle `com.tailtots.family` · display name `TailTots` · v1.0 build 1 ·
 iOS deployment target 15.0)
-**Fresh Mac handoff ZIP:** `~/workspace/tailtots-builds/ios/tailtots-iphone-app.zip` (15 MB, rebuilt 2026-09-27 — contains the current web bundle)
+**Fresh Mac handoff ZIP:** `~/workspace/tailtots-builds/ios/tailtots-iphone-app.zip` (30 MB, rebuilt 2026-09-27 evening — contains the current web bundle with parental gate, privacy links, local landing images, and pet-buddy species library)
 **Prior full audit:** `~/workspace/tailtots-builds/ios/APPLE_AUDIT.md` (2026-09-23 — still the reference for review-risk findings)
 
 ---
