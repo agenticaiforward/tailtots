@@ -2210,20 +2210,17 @@ function VisionLandingPanel({
             <p className="inline-flex items-center gap-2 rounded-full border border-tt-pine/30 bg-tt-pine-tint px-4 py-2 text-xs font-black uppercase tracking-[0.12em] text-tt-pine">
               <span className="tt-animate-sparkle" aria-hidden="true">✨</span> Free for families · Launching soon
             </p>
-            <h2 className="mt-4 max-w-2xl text-[2.6rem] font-black leading-[1.02] tracking-tight text-tt-navy sm:text-6xl">
-              “Can we get a <span className="relative inline-block px-1"><span className="absolute inset-0 -rotate-1 rounded bg-tt-sun/70" aria-hidden="true" /><span className="relative">puppy?!</span></span>”
+            <h2 className="tt-display mt-4 max-w-2xl text-[2.75rem] font-black leading-[1.04] text-tt-navy sm:text-6xl">
+              Raise a capable, <span className="relative inline-block px-1"><span className="absolute inset-0 -rotate-1 rounded bg-tt-sun/70" aria-hidden="true" /><span className="relative italic">caring</span></span> kid.
             </h2>
             <p className="mt-4 max-w-xl text-lg font-bold leading-7 text-tt-navy-soft">
-              You’ve heard it 47 times this week. TailTots turns that question into real-world responsibility, money smarts, and kindness — with you holding the leash.
+              It starts with the question you’ve heard 47 times — “Can we get a puppy?!” — and becomes real-world responsibility you can actually see: missions done, streaks kept, character earned.
             </p>
             <p className="mt-2 max-w-xl text-[15px] font-semibold leading-6 text-tt-ink-soft">
-              Puppy, kitten, guinea pig, bearded dragon — whatever’s doing those eyes at the pet-store window. <strong className="font-black text-tt-navy">Already have the pet?</strong> Your kid goes from pet owner to pet hero.
+              Real pet care, or <strong className="font-black text-tt-navy">readiness for one</strong> — parent-approved missions, about 30 seconds of your day. Puppy, kitten, guinea pig, bearded dragon… or no pet yet. Both doors lead to the same kid.
             </p>
             <p className="mt-2 max-w-xl text-[15px] font-semibold leading-6 text-tt-ink-soft">
-              Parent-approved missions. Kid Bank. Zero stranger danger. All the “aww,” none of the chaos.
-            </p>
-            <p className="mt-2 max-w-xl text-[15px] font-semibold leading-6 text-tt-ink-soft">
-              Pet care is where it starts. Character, skills, chores, safe social practice, and real shelter giving — that’s where it goes.
+              Parent-approved everything. Kid Bank. Zero stranger danger. All the “aww,” none of the chaos.
             </p>
 
             {/* PRIMARY: launch capture. SECONDARY: kid demo. Never equal weight. */}
@@ -2309,7 +2306,7 @@ function VisionLandingPanel({
           <div className="tt-marquee-track gap-8 text-sm font-black text-tt-navy-soft">
             {[0, 1].map((copy) => (
               <div key={copy} className="flex shrink-0 items-center gap-8">
-                {["🐾 Real pets, real chores", "💰 Kid Bank: earn · save · give", "🎯 Parent-set giving goals", "🐶 Real shelter dogs helped", "🛡️ Parents approve everything", "🚫 Zero stranger chat", "🏅 Badges worth bragging about", "🤖 Guided AI, kid-safe"].map((item) => (
+                {["🐾 Real pets, real chores", "💰 Kid Bank: earn · save · give", "🎯 Parent-set giving goals", "🐶 Giving goals for shelter dogs", "🛡️ Parents approve everything", "🚫 Zero stranger chat", "🏅 Badges worth bragging about", "🤖 Guided AI, kid-safe"].map((item) => (
                   <span key={`${copy}-${item}`} className="whitespace-nowrap">{item}</span>
                 ))}
               </div>
@@ -2323,13 +2320,104 @@ function VisionLandingPanel({
         <div className="grid items-center gap-6 p-5 sm:p-8 lg:grid-cols-[0.9fr_1.1fr]">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-tang">6:47 PM at your house</p>
-            <h3 className="mt-2 text-2xl font-black tracking-tight text-tt-navy sm:text-3xl">This is what responsibility looks like.</h3>
+            <h3 className="mt-2 text-2xl tt-display font-black text-tt-navy sm:text-3xl">This is what responsibility looks like.</h3>
             <p className="mt-2 max-w-lg text-[15px] font-semibold leading-6 text-tt-ink-soft">
               No nagging. No charts on the fridge. Just a kid who noticed the water bowl was low — because Jack, Captain, and RB are <em>their</em> crew now.
             </p>
           </div>
           <div className="overflow-hidden rounded-2xl shadow-lg ring-1 ring-tt-line">
             <img src="/hero-kids-pets.png" alt="Two kids caring for their guinea pig, tortoise, and fish at home" className="w-full object-cover" loading="lazy" />
+          </div>
+        </div>
+      </section>
+
+      {/* ============ DOCTRINE: outcome first, the fight we pick, pressure-tested ============ */}
+      <section aria-label="The TailTots doctrine" className="relative -mx-3 overflow-hidden border-y border-tt-line bg-tt-night text-white shadow-sm sm:mx-0 sm:rounded-3xl sm:border">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(70%_50%_at_50%_0%,rgba(255,209,102,0.08),transparent_70%)]" aria-hidden="true" />
+        <div className="relative p-5 sm:p-8 lg:p-10">
+          <p className="text-xs font-black uppercase tracking-[0.22em] text-tt-sun">The TailTots doctrine</p>
+          <h3 className="tt-display mt-3 max-w-3xl text-4xl font-black leading-[1.05] sm:text-5xl">
+            Position the outcome first.<br />Let the pet prove it.
+          </h3>
+          <p className="mt-4 max-w-3xl text-[15px] font-semibold leading-7 text-white/70">
+            The clean story is not “everything for kids,” and it is not “an app for pet families.” It is a system where children build real responsibility — and parents can see the evidence.
+          </p>
+
+          <ol className="mt-8">
+            {[
+              ["Outcome", "Raise a capable, caring kid."],
+              ["Mechanism", "Real responsibilities, beginning with pet care or readiness."],
+              ["Proof", "Parent-approved progress, consistency, and earned recognition."],
+              ["Platform", "Character, money, giving, shelter impact, and neighborhood missions."],
+            ].map(([title, body], index) => (
+              <li key={title} className="grid grid-cols-[3rem_1fr] items-baseline gap-4 border-t border-white/15 py-5 last:border-b sm:grid-cols-[4rem_1fr]">
+                <span className="tt-display text-3xl font-black text-[#ff8a65] sm:text-4xl" aria-hidden="true">{index + 1}</span>
+                <div>
+                  <p className="tt-display text-2xl font-black sm:text-3xl">{title}</p>
+                  <p className="mt-1 text-[15px] font-semibold text-white/65">{body}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+
+          {/* The fight we pick */}
+          <div className="mt-10 grid gap-4 lg:grid-cols-2">
+            <article className="tt-card-lift rounded-3xl bg-white/[0.07] p-6 ring-1 ring-tt-sun/30 sm:p-8">
+              <p className="text-xs font-black uppercase tracking-[0.2em] text-tt-sun">Where we force the fight</p>
+              <div className="mt-4 flex gap-2" aria-hidden="true">
+                {["/pets/pet-dog.png", "/pets/pet-cat.png", "/pets/pet-guinea-pig.png", "/pets/pet-tortoise.png", "/pets/pet-fish.png"].map((src) => (
+                  <img key={src} src={src} alt="" className="size-11 rounded-full object-cover ring-2 ring-tt-sun/50 sm:size-12" loading="lazy" />
+                ))}
+              </div>
+              <ul className="mt-5 space-y-4">
+                {[
+                  ["Real pet care", "versus a virtual pet."],
+                  ["Demonstrated character", "versus financial lessons or alerts."],
+                  ["Child-led service and giving", "versus a passive money bucket."],
+                  ["Certificates grounded in", "completed real-world responsibilities."],
+                ].map(([bold, rest]) => (
+                  <li key={bold} className="flex gap-3 text-[15px] font-semibold leading-6 text-white/85">
+                    <span className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-full bg-tt-sun text-xs font-black text-tt-ink" aria-hidden="true">✓</span>
+                    <span><strong className="font-black text-white">{bold}</strong> {rest}</span>
+                  </li>
+                ))}
+              </ul>
+            </article>
+            <article className="rounded-3xl bg-black/30 p-6 ring-1 ring-white/10 sm:p-8">
+              <p className="text-xs font-black uppercase tracking-[0.2em] text-white/50">Where we refuse the fight</p>
+              <ul className="mt-5 space-y-4">
+                {[
+                  "Debit cards, banking infrastructure, and savings yields.",
+                  "Device monitoring, threat detection, and location safety.",
+                  "Generic household chore tracking without a deeper outcome.",
+                ].map((item) => (
+                  <li key={item} className="flex gap-3 text-[15px] font-semibold leading-6 text-white/55">
+                    <span className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-full bg-white/10 text-xs font-black text-white/50" aria-hidden="true">✕</span>
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-6 border-t border-white/10 pt-4 text-sm font-semibold leading-6 text-white/50">
+                If it doesn’t build a more capable, caring kid — with proof a parent can see — we don’t build it.
+              </p>
+            </article>
+          </div>
+
+          {/* Pressure-tested */}
+          <p className="mt-10 text-xs font-black uppercase tracking-[0.22em] text-tt-sun">Pressure-tested</p>
+          <h4 className="tt-display mt-2 max-w-2xl text-3xl font-black leading-tight sm:text-4xl">Asked like an investor. Answered like a parent.</h4>
+          <div className="mt-6 grid gap-3 sm:grid-cols-2">
+            {[
+              ["Will no-pet families enter through readiness?", "Yes. “Prove you’re ready” is a doorway, not a waiting room. Kids earn the Pet Readiness Certificate through real home and community missions — for many families it becomes the case for the pet; for others, it’s the whole journey."],
+              ["Does the certificate change behavior?", "It’s built to. Certificates are earned through sustained, parent-approved responsibility — streaks and consistency after the novelty fades — never taps on a screen."],
+              ["Can the platform expand without diluting the wedge?", "Money skills, giving, and neighborhood missions arrive as the next chapter of the same loop — mission, approval, streak — not feature sprawl."],
+              ["Can schools adopt the outcome language?", "Responsibility, empathy, and service are entry points every school already believes in. The pet is the hook; the outcomes are universal."],
+            ].map(([question, answer]) => (
+              <article key={question} className="tt-card-lift rounded-2xl bg-tt-cream p-5 text-tt-ink sm:p-6">
+                <p className="tt-display text-xl font-black leading-snug text-tt-navy">{question}</p>
+                <p className="mt-2 text-sm font-semibold leading-6 text-tt-ink-soft">{answer}</p>
+              </article>
+            ))}
           </div>
         </div>
       </section>
@@ -2393,7 +2481,7 @@ function VisionLandingPanel({
       <section className="-mx-3 border-y border-tt-line bg-white p-4 shadow-sm sm:mx-0 sm:rounded-3xl sm:border sm:p-6">
         <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-tang">Exhibit A: your camera roll 📸</p>
         <div className="mt-2 flex flex-wrap items-end justify-between gap-2">
-          <h3 className="text-2xl font-black tracking-tight text-tt-navy sm:text-3xl">Built around the bond kids already have with animals.</h3>
+          <h3 className="text-2xl tt-display font-black text-tt-navy sm:text-3xl">Built around the bond kids already have with animals.</h3>
           <p className="text-sm font-bold text-tt-ink-faint">Dogs · Cats · Rabbits · Guinea pigs · Big dreams</p>
         </div>
         <p className="mt-2 max-w-3xl text-[15px] font-semibold leading-6 text-tt-ink-soft">
@@ -2477,7 +2565,7 @@ function VisionLandingPanel({
       {/* ============ THE JOURNEY: how kids become pet-ready, then everything-ready ============ */}
       <section className="-mx-3 border-y border-tt-line bg-white p-4 shadow-sm sm:mx-0 sm:rounded-3xl sm:border sm:p-6">
         <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-pine">How it actually works 🗺️</p>
-        <h3 className="mt-2 max-w-2xl text-2xl font-black tracking-tight text-tt-navy sm:text-3xl">From “can we get a puppy?!” to “already done, Mom.”</h3>
+        <h3 className="mt-2 max-w-2xl text-2xl tt-display font-black text-tt-navy sm:text-3xl">From “can we get a puppy?!” to “already done, Mom.”</h3>
         <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-tt-ink-soft">
           Every kid masters the same habit loop — mission, action, your approval, streak. The doorway differs: real pet care, or parent-set home and community chores. The house is the same.
         </p>
@@ -2512,7 +2600,7 @@ function VisionLandingPanel({
           <h3 className="mt-2 max-w-2xl text-2xl font-black tracking-tight sm:text-3xl">Pet care is the hook. This is the platform.</h3>
           <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-white/75">
             TailTots is the one stop for raising capable, kind kids — safe social practice, character, skills, chores, neighborhood adventures,
-            and giving that actually reaches shelter dogs. Crisp on the surface, deep underneath.
+            and giving goals for real shelter dogs. Each arrives as the next chapter of the same loop — never feature sprawl. Crisp on the surface, deep underneath.
           </p>
           <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {platformPillars.map(([emoji, title, body]) => (
@@ -2541,9 +2629,9 @@ function VisionLandingPanel({
         <div className="grid items-start gap-6 lg:grid-cols-2">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-grape">The wildfire loop 🔥</p>
-            <h3 className="mt-2 text-2xl font-black tracking-tight text-tt-navy sm:text-3xl">The Pet Readiness Certificate</h3>
+            <h3 className="mt-2 text-2xl tt-display font-black text-tt-navy sm:text-3xl">The Pet Readiness Certificate</h3>
             <p className="mt-2 text-sm font-semibold leading-6 text-tt-ink-soft">
-              Finish the pet-care journey, earn the certificate. Someday your kid will wave this in your face at the shelter. You’ll be ready — and weirdly proud.
+              Earned through sustained, parent-approved responsibility — never bought, never tapped into existence. Someday your kid will wave this in your face at the shelter. You’ll be ready — and weirdly proud.
             </p>
             <div className="mt-4 flex flex-wrap gap-3">
               <button
@@ -2622,7 +2710,7 @@ function VisionLandingPanel({
         </svg>
         <div className="relative">
           <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-grape">The habit loop 🔁</p>
-          <h3 className="mt-2 max-w-2xl text-2xl font-black tracking-tight text-tt-navy sm:text-3xl">
+          <h3 className="mt-2 max-w-2xl text-2xl tt-display font-black text-tt-navy sm:text-3xl">
             Why kids come back tomorrow. And why parents let them.
           </h3>
           <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-tt-ink-soft">
@@ -2695,7 +2783,7 @@ function VisionLandingPanel({
       <section className="-mx-3 border-y border-tt-line bg-tt-sun-soft/50 p-5 shadow-sm sm:mx-0 sm:rounded-3xl sm:border sm:p-8">
         <div className="mx-auto max-w-3xl text-center">
           <p className="text-4xl" aria-hidden="true">🐹🐢🐟</p>
-          <h3 className="mt-2 text-2xl font-black tracking-tight text-tt-navy sm:text-3xl">It started with two guinea pigs, a tortoise, a tank of fish — and one big question.</h3>
+          <h3 className="mt-2 text-2xl tt-display font-black text-tt-navy sm:text-3xl">It started with two guinea pigs, a tortoise, a tank of fish — and one big question.</h3>
           <p className="mx-auto mt-3 max-w-2xl text-[15px] font-semibold leading-7 text-tt-ink-soft">
             “Why can’t all the kids in the world have a pet?” That was the question the kids kept asking. It turned into a bigger one: what if everyday responsibilities felt
             like adventures? So we built TailTots — a way for every kid to live the pet-care journey, the feeding schedules, the patience, the pride, whether or not
@@ -2754,7 +2842,7 @@ function VisionLandingPanel({
       <section id="landing-contact" className="-mx-3 scroll-mt-36 border-y border-tt-line bg-[#f7fbff] p-4 shadow-sm sm:mx-0 sm:rounded-3xl sm:border sm:p-6">
         <div className="grid gap-5 lg:grid-cols-[0.85fr_1.15fr]">
           <div>
-            <h3 className="text-2xl font-black tracking-tight text-tt-navy sm:text-3xl">Questions, feedback, or partnership ideas?</h3>
+            <h3 className="text-2xl tt-display font-black text-tt-navy sm:text-3xl">Questions, feedback, or partnership ideas?</h3>
             <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-tt-ink-soft">
               Send a note here or email <a className="font-black text-tt-pine underline decoration-tt-sun decoration-2 underline-offset-4" href="mailto:hello@tailtots.com">hello@tailtots.com</a>. We read everything — usually with a guinea pig on our lap.
             </p>
