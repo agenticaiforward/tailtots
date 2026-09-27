@@ -10,16 +10,16 @@ iOS deployment target 15.0)
 
 ## Verdict: STAGED, not yet submittable
 
-Everything that can be done on Linux is done. Three **code-level** blockers remain in the
-web app (no Mac needed — main-agent lane, can be fixed before the Mac is even opened),
-and compilation/signing/upload inherently need a Mac + Apple Developer access.
+Everything that can be done on Linux is done, **including the three code-level
+blockers** (fixed 2026-09-27 evening, committed on `moonshot`). Compilation,
+signing, and upload inherently need a Mac + Apple Developer access.
 
 | # | Blocker | Status (2026-09-27) |
 |---|---------|---------------------|
 | B1 | Camera usage description (crash on "Take Photo") | ✅ FIXED — `NSCameraUsageDescription` + `NSPhotoLibraryUsageDescription` in `Info.plist` |
-| B2 | No parental gate — child can flip the role toggle into full parent controls | ❌ OPEN — `app/components/TailTotsApp.tsx:616` (`isParentUnlocked` defaults `true`), `:1273` (role toggle sets it `true` unconditionally). Implement a real gate (passcode modal or grown-up check) before entering the parent role. |
-| B3 | No privacy policy surfaced in the app | ⚠️ HALF — `app/privacy/page.tsx` + `PrivacyPolicyContent.tsx` exist in the Next.js web app (good as the App Store Connect Privacy Policy URL), but the **mobile entry** (`mobile/src/main.tsx` → `TailTotsApp`) renders no privacy link. Add a Privacy link (landing footer + Family Setup) pointing at `https://tailtots.com/privacy`. |
-| L1 | Landing images hotlinked (Unsplash / assets.moargut.com / c.nau.ch) | ❌ OPEN — `app/components/TailTotsApp.tsx:2148-2151`. Download licensed copies, bundle under `public/`, reference locally. Breaks offline + licensing risk. |
+| B2 | No parental gate — child can flip the role toggle into full parent controls | ✅ FIXED — passcode gate modal on child→parent toggle + Contact-us path (`TailTotsApp.tsx`: `parentGateOpen`/`submitParentGate`); demo passcode 4321, changeable in Family Setup |
+| B3 | No privacy policy surfaced in the app | ✅ FIXED — Privacy + Terms links in landing footer and Family Setup intro, both → `https://tailtots.com/privacy` |
+| L1 | Landing images hotlinked (Unsplash / assets.moargut.com / c.nau.ch) | ✅ FIXED — all four bundled under `public/landing/` and referenced locally; verified loading (w:720) |
 | L2 | Demo shipped a real family's identity | ✅ FIXED — kids are now "Maya" (6) and "Leo" (9); pet names are the family's own public founder-story pets |
 | L3 | `mailto:` link on public landing | ✅ FIXED — none found in current panels |
 
@@ -41,10 +41,10 @@ and compilation/signing/upload inherently need a Mac + Apple Developer access.
 
 ## Remaining work (no Mac needed — main-agent lane)
 
-1. **B2 parental gate** — implement before any submission (likely rejection under Guideline 1.3 otherwise).
-2. **B3 in-app privacy link** — surface `PrivacyPolicyContent` (or link `https://tailtots.com/privacy`) in the mobile flow.
-3. **L1 local images** — bundle the four landing photos locally.
-4. Optional: hide the dead "Create account / Sign in" UI when auth is unconfigured (R3); align "Guided AI" copy with the local template reality (R4); remove Next.js boilerplate (`file.svg`, `globe.svg`, `window.svg`, `screenshot.jpeg`, `sw.js`) from `public/` so it stops shipping in `www/` (R5).
+1. ~~**B2 parental gate** — implement before any submission (likely rejection under Guideline 1.3 otherwise).~~ ✅ DONE 2026-09-27.
+2. ~~**B3 in-app privacy link** — surface `PrivacyPolicyContent` (or link `https://tailtots.com/privacy`) in the mobile flow.~~ ✅ DONE 2026-09-27.
+3. ~~**L1 local images** — bundle the four landing photos locally.~~ ✅ DONE 2026-09-27.
+4. Optional: hide the dead "Create account / Sign in" UI when auth is unconfigured (R3); align "Guided AI" copy with the local template reality (R4). (R5 boilerplate cleanup done 2026-09-27.)
 
 After any of these, re-run: `npm run mobile:web:build` → copy `dist/mobile` → `ios/www` → `npx cap sync ios` (or just `npm run ios:sync` from the repo once the script fix is committed).
 
@@ -124,6 +124,6 @@ This build: **no network calls to any backend** (verified — zero `supabase.co`
 
 1. **Mac choice**: (a) build on your own Mac with the guide above ← recommended, or (b) approve a paid cloud-Mac service later.
 2. **Apple Developer Program**: confirm the paid membership exists (or enroll — $99/yr) and hand over access via the secure flow (App Store Connect API key preferred for uploads).
-3. **Final call on the 3 code blockers** (B2 gate design, B3 privacy surface, L1 image licensing) — the web-app work must land and be re-synced before the Mac archive.
+3. ~~**Final call on the 3 code blockers** (B2 gate design, B3 privacy surface, L1 image licensing) — the web-app work must land and be re-synced before the Mac archive.~~ ✅ All three fixed and committed 2026-09-27 — just re-sync (`npm run ios:sync`) before archiving.
 4. **Listing copy**: subtitle, description, keywords, support URL — or delegate the copy to the agent.
 5. **Screenshots**: captured on the Mac simulator during path (a), or delegate a shot list.
