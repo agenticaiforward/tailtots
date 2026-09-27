@@ -1717,7 +1717,7 @@ export function TailTotsApp() {
                   <div className="absolute bottom-28 left-10 rounded-full bg-white/90 px-3 py-1 text-xs font-black text-[#165a4b] shadow-sm animate-[reward-pop_3.5s_ease-in-out_infinite]">done</div>
                   <FamilyFaceParade parents={parents} childProfiles={children} pets={pets} animated />
                 </div>
-                <div className="absolute left-1/2 top-3 -translate-x-1/2 rounded-full bg-white/90 px-3 py-1 text-[11px] font-black text-[#165a4b] shadow-sm">
+                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-white/90 px-3 py-1 text-[11px] font-black text-[#165a4b] shadow-sm">
                   {appMode === "real" ? "Your family" : "Demo family"}
                 </div>
               </div>
