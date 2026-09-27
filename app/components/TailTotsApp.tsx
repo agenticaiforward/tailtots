@@ -3170,6 +3170,8 @@ function SchedulePanel({
   familyName: string;
 }) {
   const isParent = role === "parent";
+  const [availabilityCopied, setAvailabilityCopied] = useState(false);
+  const [scheduleFilterChildId, setScheduleFilterChildId] = useState<string | null>(null);
   const visibleItems = scheduleItems.filter((item) => {
     if (!isParent) return item.childId === activeChild?.id;
     if (scheduleFilterChildId) return item.childId === scheduleFilterChildId;
@@ -3180,8 +3182,6 @@ function SchedulePanel({
   // Preview of the future share link. No kid names, addresses, or contact
   // details ever go in the link — the other parent sees only time windows.
   const familyAvailabilityLink = `tailtots.com/availability/${familyCode}`;
-  const [availabilityCopied, setAvailabilityCopied] = useState(false);
-  const [scheduleFilterChildId, setScheduleFilterChildId] = useState<string | null>(null);
   const playdateWindows = [
     ["Weekday calm visit", "Tuesday or Thursday, 4:30-6:00 PM", "Parent confirms address, pet temperament, and adult presence."],
     ["Weekend pet hello", "Saturday, 10:00 AM-12:00 PM", "Good for supervised pet introductions or shared care learning."],
