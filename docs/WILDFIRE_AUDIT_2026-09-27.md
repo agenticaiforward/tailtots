@@ -53,13 +53,22 @@ No narrowing. Hooks stay sharp; scope stays wide.
 ## 7. Minute functional testing + flow clarity + bug fixes
 **Prompt:** "Test each and every minute thing… flow good for any new parent or
 kid… make improvements… fix all the bugs."
-**Verdict:** 🔄 IN PROGRESS. Dedicated E2E agents on parent flow and kid flow.
-Fixes already landed from this review:
-- Parental gate: passcode modal on child→parent toggle and Contact-us path
-  (demo passcode 4321, changeable in Family Setup).
-- Privacy + Terms links in landing footer and Family Setup.
-- Four hotlinked landing images now bundled locally (`public/landing/`).
-- Unreferenced Next.js boilerplate removed from `public/`.
+**Verdict:** ✅ KID FLOW COMPLETE (2026-09-27). Dedicated E2E: 0 console/page
+errors across all 8 kid tabs, all core loops pass (mission → high-five → nudge,
+profile switch, pet check-in, bank gating, social scenarios, parent gate).
+Fixed from the report:
+- B1: "Start today's missions" now smooth-scrolls to the mission list.
+- C1: Neighborhood privacy copy kid-worded ("Grown-ups keep every job safe").
+- C2: Fairness engine no longer shows sibling point gaps to kids.
+- C3: "Kitchen counter view" → "Family screen".
+- C4: Kid Bank shows a $0 earn-path banner up top.
+- C5: New-buddy pet card no longer claims "all cared for".
+- C6: Pet Helper answer pops with a highlight pulse on update.
+- C7: Empty schedule days say "Free day" (was a dead "Open" label).
+- C8: "Demo family" pill moved to bottom-center, clear of faces.
+- Bonus: pet parade accessories now actually animate (static Tailwind classes;
+  was `animated={false}` + dynamic class names Tailwind couldn't emit).
+🔄 PARENT FLOW: dedicated E2E still running at time of writing.
 
 ## Open items (need the user at home)
 1. Publisher access: Amazon developer/AWS, Apple Developer, Play Console —
