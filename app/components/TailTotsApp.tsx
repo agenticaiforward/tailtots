@@ -619,6 +619,7 @@ export function TailTotsApp() {
   const [gateError, setGateError] = useState(false);
   const [gateNext, setGateNext] = useState<"hub" | "contact">("hub");
   const [hasLoadedSavedState, setHasLoadedSavedState] = useState(false);
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const [familyName, setFamilyName] = useState("Demo Crew");
   const [parentPasscode, setParentPasscode] = useState(defaultParentPasscode);
   const [parents, setParents] = useState(starterParents);
@@ -853,6 +854,7 @@ export function TailTotsApp() {
   useEffect(() => {
     if (!hasLoadedSavedState) return;
     saveFamilyState({ familyName, parentPasscode, parents, children, pets, missions, transactions, goals, badges, neighborhoodJobs, moments, studiedAnimals, socialPracticeDone, familyPhotoUrl, activeChildId, certificates });
+    setLastSavedAt(new Date());
   }, [activeChildId, badges, certificates, children, familyName, familyPhotoUrl, goals, hasLoadedSavedState, missions, moments, neighborhoodJobs, parentPasscode, parents, pets, studiedAnimals, socialPracticeDone, transactions]);
 
   // Debounced relational cloud push: mirrors family state into the Supabase
@@ -1016,7 +1018,12 @@ export function TailTotsApp() {
   }
 
   function openParentDemo() {
-    loadDemoFamily();
+    const saved = loadSavedFamilyState();
+    if (saved && saved.children.length > 0) {
+      applyFamilySnapshot(saved);
+    } else {
+      loadDemoFamily();
+    }
     setRole("parent");
     setIsParentUnlocked(true);
     setActiveTab("approvals");
@@ -1024,9 +1031,14 @@ export function TailTotsApp() {
   }
 
   function openKidDemo() {
-    loadDemoFamily();
+    const saved = loadSavedFamilyState();
+    if (saved && saved.children.length > 0) {
+      applyFamilySnapshot(saved);
+    } else {
+      loadDemoFamily();
+    }
     setRole("child");
-    setActiveChildId(starterChildren[0]?.id ?? "");
+    setActiveChildId(saved?.activeChildId ?? starterChildren[0]?.id ?? "");
     setActiveTab("missions");
     requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "smooth" }));
   }
@@ -1901,6 +1913,7 @@ export function TailTotsApp() {
               enableCloudSyncNow={enableCloudSyncNow}
               familyName={familyName}
               setFamilyName={setFamilyName}
+              lastSavedAt={lastSavedAt}
               parents={parents}
               updateParent={updateParent}
               updateParentPhoto={updateParentPhoto}
@@ -3157,13 +3170,18 @@ function SchedulePanel({
   familyName: string;
 }) {
   const isParent = role === "parent";
-  const visibleItems = scheduleItems.filter((item) => (isParent ? true : item.childId === activeChild?.id));
+  const visibleItems = scheduleItems.filter((item) => {
+    if (!isParent) return item.childId === activeChild?.id;
+    if (scheduleFilterChildId) return item.childId === scheduleFilterChildId;
+    return true;
+  });
   const visibleMissions = missions.filter((mission) => (isParent ? true : !mission.assignedChildId || mission.assignedChildId === activeChild?.id)).slice(0, 4);
   const familyCode = familyName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "family";
   // Preview of the future share link. No kid names, addresses, or contact
   // details ever go in the link — the other parent sees only time windows.
   const familyAvailabilityLink = `tailtots.com/availability/${familyCode}`;
   const [availabilityCopied, setAvailabilityCopied] = useState(false);
+  const [scheduleFilterChildId, setScheduleFilterChildId] = useState<string | null>(null);
   const playdateWindows = [
     ["Weekday calm visit", "Tuesday or Thursday, 4:30-6:00 PM", "Parent confirms address, pet temperament, and adult presence."],
     ["Weekend pet hello", "Saturday, 10:00 AM-12:00 PM", "Good for supervised pet introductions or shared care learning."],
@@ -3207,9 +3225,21 @@ function SchedulePanel({
             </p>
           </div>
           {isParent && (
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2" role="group" aria-label="Filter schedule by child">
+              <button
+                onClick={() => setScheduleFilterChildId(null)}
+                aria-pressed={scheduleFilterChildId === null}
+                className={`min-h-10 rounded-lg border px-3 py-2 text-sm font-black ${scheduleFilterChildId === null ? "border-[#165a4b] bg-[#165a4b] text-white" : "border-[#ded8c7] bg-white text-[#17231f]"}`}
+              >
+                All kids
+              </button>
               {childProfiles.map((child) => (
-                <button key={child.id} onClick={() => setActiveChildId(child.id)} className="min-h-10 rounded-lg border border-[#ded8c7] px-3 py-2 text-sm font-black">
+                <button
+                  key={child.id}
+                  onClick={() => setScheduleFilterChildId(scheduleFilterChildId === child.id ? null : child.id)}
+                  aria-pressed={scheduleFilterChildId === child.id}
+                  className={`min-h-10 rounded-lg border px-3 py-2 text-sm font-black ${scheduleFilterChildId === child.id ? "border-[#165a4b] bg-[#165a4b] text-white" : "border-[#ded8c7] bg-white text-[#17231f]"}`}
+                >
                   {child.name}, {child.age}
                 </button>
               ))}
@@ -3221,8 +3251,8 @@ function SchedulePanel({
       <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
         <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-[#7c3aed]">{isParent ? "Combined view" : "My week"}</p>
-            <h3 className="mt-2 text-2xl font-black">{isParent ? "All kids in one family calendar" : "Your own schedule"}</h3>
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-[#7c3aed]">{isParent ? (scheduleFilterChildId ? `${childProfiles.find((c) => c.id === scheduleFilterChildId)?.name ?? "Kid"} only` : "Combined view") : "My week"}</p>
+            <h3 className="mt-2 text-2xl font-black">{isParent ? (scheduleFilterChildId ? "One child's schedule" : "All kids in one family calendar") : "Your own schedule"}</h3>
           </div>
           {isParent && <span className="rounded-lg bg-[#f0edff] px-4 py-2 text-sm font-black text-[#33245f]">Parent-only combined calendar</span>}
         </div>
@@ -3997,7 +4027,7 @@ function normalizeNeighborhoodJob(job: NeighborhoodJob): NeighborhoodJob {
 }
 
 function normalizePetProfile(pet: Pet): Pet {
-  return pet.id === "jack" ? { ...pet, photoUrl: undefined } : pet;
+  return pet;
 }
 
 function isMissionAgeAppropriate(mission: Mission, child: Child) {
@@ -5528,6 +5558,7 @@ function FamilySetupPanel(props: {
   enableCloudSyncNow: () => void;
   familyName: string;
   setFamilyName: (value: string) => void;
+  lastSavedAt: Date | null;
   parents: ParentProfile[];
   updateParent: (parentId: string, updates: Partial<ParentProfile>) => void;
   updateParentPhoto: (parentId: string, file?: File) => void;
@@ -5672,7 +5703,14 @@ function FamilySetupPanel(props: {
 
       <div className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
         <p className="text-xs font-black uppercase tracking-[0.18em] text-[#f47b20]">Family setup</p>
-        <h2 className="mt-2 text-3xl font-black">Household, kids, and pets</h2>
+        <div className="mt-2 flex flex-wrap items-center gap-3">
+          <h2 className="text-3xl font-black">Household, kids, and pets</h2>
+          {props.lastSavedAt && (
+            <span className="rounded-full bg-[#e7f4ef] px-3 py-1 text-xs font-black text-[#0f513f]" aria-live="polite">
+              Saved ✓ {props.lastSavedAt.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
+            </span>
+          )}
+        </div>
         <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-[#5f6a65]">
           This is the control room for who uses TailTots. Keep parent info simple, make each kid easy to recognize, and make every pet passport easy to scan.
         </p>
@@ -5715,10 +5753,14 @@ function FamilySetupPanel(props: {
           <button
             onClick={props.pickProfilesFromSavedFamilyPhoto}
             disabled={!props.hasFamilyPhoto}
+            title={props.hasFamilyPhoto ? "Crop profile photos from the family picture" : "Upload a family photo first"}
             className="min-h-12 rounded-lg bg-[#165a4b] px-5 py-3 text-sm font-black text-white disabled:cursor-not-allowed disabled:bg-[#b8c4bf]"
           >
             Pick profiles from current family photo
           </button>
+          {!props.hasFamilyPhoto && (
+            <p className="text-xs font-semibold text-[#8a948f]">Upload a family photo first to pick profiles from it.</p>
+          )}
         </div>
       </div>
 
@@ -6029,12 +6071,12 @@ function GrowthPanel(props: {
       <div className="mt-5 grid gap-4 lg:grid-cols-2">
         {props.childProfiles.map((child) => (
           <div key={child.id} className="rounded-lg bg-[#f8f6ed] p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex min-w-0 items-center gap-3">
                 <ProfilePhoto label={child.name} initial={getChildLook(child.id).initial} colors={getChildLook(child.id).colors} variant="kid" hair={getChildLook(child.id).hair} photoUrl={child.photoUrl} />
-                <h3 className="text-xl font-black">{child.name}</h3>
+                <h3 className="truncate text-xl font-black">{child.name}</h3>
               </div>
-              <span className="rounded-full bg-white px-3 py-1 text-xs font-black">{levelLabels[child.level]}</span>
+              <span className="shrink-0 rounded-full bg-white px-3 py-1 text-xs font-black">{levelLabels[child.level]}</span>
             </div>
             <CertificateCard
               child={child}
