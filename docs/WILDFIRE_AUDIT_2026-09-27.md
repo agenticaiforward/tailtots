@@ -69,6 +69,19 @@ Fixed from the report:
 - Bonus: pet parade accessories now actually animate (static Tailwind classes;
   was `animated={false}` + dynamic class names Tailwind couldn't emit).
 🔄 PARENT FLOW: dedicated E2E still running at time of writing.
+**PARENT FLOW COMPLETE (2026-09-27).** Dedicated E2E: 0 console/page errors
+across all 9 parent tabs; core kid→parent mission loop verified end-to-end
+(mark done → reflection → send → approve → points/coins credit). Fixed:
+- CRITICAL: re-entering the parent side no longer wipes customizations —
+  `openParentDemo()`/`openKidDemo()` now restore the saved family when one exists.
+- CRITICAL: Jack's uploaded pet photo persists — removed the
+  `normalizePetProfile()` override that blanked `photoUrl` for Jack.
+- HIGH: Schedule kid pills are now real filters with `aria-pressed` + selected
+  state and an "All kids" option; heading reflects the filter.
+- HIGH: Family Setup shows a "Saved ✓ HH:MM" badge on every autosave.
+- MEDIUM: "Pick profiles" button explains it needs a family photo first.
+- MEDIUM: Growth Log card headers truncate instead of colliding.
+- Also fixed a hook-order crash the new filter briefly introduced.
 
 ## Open items (need the user at home)
 1. Publisher access: Amazon developer/AWS, Apple Developer, Play Console —
