@@ -6334,6 +6334,16 @@ function KidCharacter({
       <div className="mx-auto -mt-1 grid h-8 w-12 place-items-center rounded-t-2xl bg-white/90 text-sm font-black text-[#17231f]">
         {initial}
       </div>
+      {/* Real family photo as the base, illustrated paw badge layered on top. */}
+      {photoUrl && (
+        <span className="absolute bottom-3 right-1 grid size-6 place-items-center rounded-full bg-[#f47b20] shadow-md ring-2 ring-white" aria-hidden="true">
+          <svg viewBox="0 0 24 24" className="size-3.5 text-white" fill="currentColor">
+            <ellipse cx="12" cy="15.5" rx="4.2" ry="3.4" />
+            <circle cx="6.2" cy="10.5" r="1.9" /><circle cx="9.7" cy="7.6" r="1.9" />
+            <circle cx="14.3" cy="7.6" r="1.9" /><circle cx="17.8" cy="10.5" r="1.9" />
+          </svg>
+        </span>
+      )}
     </div>
   );
 }
@@ -6351,12 +6361,23 @@ function PetCharacter({
 }) {
   const compact = size === "xs";
   // Illustrated storybook portrait wins over the CSS-drawn fallback whenever we have one.
-  const portrait = photoUrl ? undefined : petPortraitForKind(kind);
-  if (portrait) {
+  const portrait = petPortraitForKind(kind);
+  if (portrait && !photoUrl) {
     const frame = size === "xs" ? "size-8" : size === "lg" ? "size-28" : "size-16";
     return (
       <div className="relative animate-[pet-wiggle_2.4s_ease-in-out_infinite]">
         <img src={portrait} alt={`${label} illustrated portrait`} className={`${frame} rounded-2xl object-cover shadow-md ring-2 ring-white`} />
+      </div>
+    );
+  }
+  // Real photo as the base, illustrated buddy badge layered on top.
+  if (photoUrl && portrait) {
+    const frame = size === "xs" ? "size-8" : size === "lg" ? "size-28" : "size-16";
+    const badge = size === "xs" ? "size-4" : size === "lg" ? "size-9" : "size-6";
+    return (
+      <div className="relative">
+        <img src={photoUrl} alt={`${label} photo`} className={`${frame} rounded-2xl object-cover shadow-md ring-2 ring-white`} />
+        <img src={portrait} alt="" aria-hidden="true" className={`absolute -bottom-1.5 -right-1.5 ${badge} rounded-full object-cover shadow-md ring-2 ring-white`} />
       </div>
     );
   }
@@ -6475,6 +6496,16 @@ function AnimatedFamilyCharacter({
       <div className="absolute bottom-7 right-0 h-8 w-3 origin-top rounded-full bg-[#0ea5e9] ring-2 ring-white animate-[arm-wave_2s_ease-in-out_infinite_reverse]">
         <span className="absolute -bottom-1 left-1/2 size-4 -translate-x-1/2 rounded-full ring-2 ring-white" style={{ backgroundColor: tone }} />
       </div>
+      {/* Real family photo as the base, illustrated paw badge layered on top. */}
+      {photoUrl && (
+        <span className="absolute -right-1 top-8 grid size-5 place-items-center rounded-full bg-[#f47b20] shadow-md ring-2 ring-white" aria-hidden="true">
+          <svg viewBox="0 0 24 24" className="size-3 text-white" fill="currentColor">
+            <ellipse cx="12" cy="15.5" rx="4.2" ry="3.4" />
+            <circle cx="6.2" cy="10.5" r="1.9" /><circle cx="9.7" cy="7.6" r="1.9" />
+            <circle cx="14.3" cy="7.6" r="1.9" /><circle cx="17.8" cy="10.5" r="1.9" />
+          </svg>
+        </span>
+      )}
     </div>
   );
 }
