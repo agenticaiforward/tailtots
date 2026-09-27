@@ -6144,7 +6144,7 @@ function NeighborhoodPanel({
     ["Teamwork", "Two-kid supply sorting task with parent", "Split points fairly, one shared family badge"],
     ["Leadership", "Older kid teaches a younger kid safe pet observation", "Higher points, parent nearby"],
   ];
-  const privacyRules = isKidView
+  const privacyRules = role === "child"
     ? [
         "Grown-ups check every job first to keep you safe.",
         "You never see addresses or phone numbers — only the fun job.",
