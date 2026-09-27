@@ -107,7 +107,7 @@ type PhotoCropDraft = {
 };
 
 type PhotoCropTarget = Pick<PhotoCropDraft, "targetType" | "targetId" | "label" | "fit">;
-type PetKind = "dog" | "guinea" | "tortoise" | "fish" | "pet";
+type PetKind = "dog" | "cat" | "guinea" | "tortoise" | "fish" | "pet";
 type LifeSkillKey = "responsibility" | "empathy" | "teamwork" | "leadership" | "time";
 type TrustSignalKey = "parent_gate" | "age_fit" | "no_messaging" | "adult_nearby" | "private_child";
 
@@ -307,6 +307,52 @@ const petLooks: Record<string, { face: string; colors: string; happiness: number
   captain: { face: "C", colors: "from-[#86efac] via-[#65a30d] to-[#365314]", happiness: 88, loved: 90, kind: "tortoise" },
   rb: { face: "R", colors: "from-[#93c5fd] via-[#06b6d4] to-[#1d4ed8]", happiness: 86, loved: 87, kind: "fish" },
 };
+
+/** Illustrated storybook pet portraits. Shown whenever the family hasn't captured a real photo yet. */
+const PET_PORTRAITS: Partial<Record<PetKind, string>> = {
+  guinea: "/pets/pet-guinea-pig.png",
+  tortoise: "/pets/pet-tortoise.png",
+  fish: "/pets/pet-fish.png",
+  dog: "/pets/pet-dog.png",
+  cat: "/pets/pet-cat.png",
+};
+
+/** Guess a pet kind from free-text species so user-added pets get the right portrait. */
+function inferPetKind(species?: string): PetKind {
+  const s = (species ?? "").toLowerCase();
+  if (s.includes("guinea")) return "guinea";
+  if (s.includes("tortoise") || s.includes("turtle")) return "tortoise";
+  if (s.includes("fish")) return "fish";
+  if (s.includes("dog") || s.includes("puppy")) return "dog";
+  if (s.includes("cat") || s.includes("kitten")) return "cat";
+  return "pet";
+}
+
+/** Illustrated portrait for a pet kind, or undefined when only the CSS-drawn fallback exists. */
+function petPortraitForKind(kind: PetKind): string | undefined {
+  return PET_PORTRAITS[kind];
+}
+
+/**
+ * Live pet mood + growth stage from real approved care missions.
+ * The pet visibly thrives because the kid did real things — the anti-fade engine.
+ */
+function getPetCareStats(petId: string, missions: Mission[]): {
+  approved: number;
+  happiness: number;
+  loved: number;
+  mood: string;
+  stage: string;
+  stageRing: string;
+} {
+  const approved = missions.filter((m) => m.petId === petId && (m.status === "approved" || Boolean(m.completedBy))).length;
+  const happiness = Math.min(98, 60 + approved * 5);
+  const loved = Math.min(98, 66 + approved * 4);
+  const mood = approved === 0 ? "Waiting to meet you" : approved < 5 ? "Warming up" : approved < 15 ? "Happy" : "Thriving";
+  const stage = approved < 5 ? "New buddy" : approved < 15 ? "Rising star" : approved < 30 ? "Superstar" : "Legend";
+  const stageRing = approved < 5 ? "ring-[#d8cfc0]" : approved < 15 ? "ring-[#d97706]" : approved < 30 ? "ring-[#94a3b8]" : "ring-[#f4b400]";
+  return { approved, happiness, loved, mood, stage, stageRing };
+}
 
 const familyStats = [
   ["Care rhythm", 88, "#f47b20"],
@@ -1718,6 +1764,7 @@ export function TailTotsApp() {
           {visibleActiveTab === "pets" && (
             <PassportPanel
               pets={pets}
+              missions={missions}
               isParentView={role === "parent"}
               updatePet={updatePet}
               updatePetPhoto={role === "parent" ? updatePetPhoto : undefined}
@@ -2144,8 +2191,6 @@ function VisionLandingPanel({
       <div id="landing-home" className="relative -mx-3 scroll-mt-36 overflow-hidden border-y border-tt-line bg-tt-cream text-tt-ink shadow-sm sm:mx-0 sm:rounded-3xl sm:border">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(55%_45%_at_18%_8%,rgba(255,209,102,0.4),transparent_70%)]" aria-hidden="true" />
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(45%_40%_at_92%_88%,rgba(22,90,75,0.14),transparent_70%)]" aria-hidden="true" />
-        <div className="pointer-events-none absolute -right-10 -top-10 select-none text-[10rem] opacity-15 tt-animate-float" aria-hidden="true">🐶</div>
-        <div className="pointer-events-none absolute -left-6 bottom-16 select-none text-[7rem] opacity-15 tt-animate-float-slow" aria-hidden="true">🐰</div>
         <svg className="pointer-events-none absolute bottom-16 left-[6%] hidden w-64 text-tt-pine opacity-[0.13] md:block lg:w-80" viewBox="0 0 320 80" aria-hidden="true">
           <defs>
             <g id="tt-paw">
@@ -2227,8 +2272,8 @@ function VisionLandingPanel({
           {/* Real product visual: the actual Mission Mode UI, alive */}
           <div className="relative mx-auto w-full max-w-md">
             <div className="tt-animate-float-slow absolute -left-4 -top-6 z-10 rotate-[-8deg] rounded-2xl border border-tt-line bg-white px-4 py-3 shadow-lg" aria-hidden="true">
-              <p className="text-2xl">🐹</p>
-              <p className="text-[11px] font-black text-tt-ink">Jack says hi</p>
+              <img src="/pets/pet-guinea-pig.png" alt="" className="size-10 rounded-xl object-cover ring-2 ring-white" />
+              <p className="mt-1 text-[11px] font-black text-tt-ink">Jack says hi</p>
             </div>
             <div className="tt-animate-float absolute -right-3 top-1/3 z-10 rotate-[7deg] rounded-2xl border border-tt-line bg-white px-4 py-3 shadow-lg" aria-hidden="true">
               <p className="text-2xl">🏅</p>
@@ -2272,6 +2317,22 @@ function VisionLandingPanel({
           </div>
         </div>
       </div>
+
+      {/* ============ HERO ILLUSTRATION: the dream, painted ============ */}
+      <section aria-label="A TailTots evening at home" className="-mx-3 overflow-hidden border-y border-tt-line bg-white shadow-sm sm:mx-0 sm:rounded-3xl sm:border">
+        <div className="grid items-center gap-6 p-5 sm:p-8 lg:grid-cols-[0.9fr_1.1fr]">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-tang">6:47 PM at your house</p>
+            <h3 className="mt-2 text-2xl font-black tracking-tight text-tt-navy sm:text-3xl">This is what responsibility looks like.</h3>
+            <p className="mt-2 max-w-lg text-[15px] font-semibold leading-6 text-tt-ink-soft">
+              No nagging. No charts on the fridge. Just a kid who noticed the water bowl was low — because Jack, Captain, and RB are <em>their</em> crew now.
+            </p>
+          </div>
+          <div className="overflow-hidden rounded-2xl shadow-lg ring-1 ring-tt-line">
+            <img src="/hero-kids-pets.png" alt="Two kids caring for their guinea pig, tortoise, and fish at home" className="w-full object-cover" loading="lazy" />
+          </div>
+        </div>
+      </section>
 
       {/* ============ FOMO STRIP: founding-family window, directly under the hero ============ */}
       <section aria-label="Founding families" className="relative -mx-3 overflow-hidden border-y border-tt-pine/30 bg-tt-night p-5 text-white shadow-sm sm:mx-0 sm:rounded-3xl sm:border sm:p-6">
@@ -3206,7 +3267,7 @@ function HomeHubPanel({
               <p className="text-center text-sm font-black uppercase tracking-[0.14em] text-[#ffd166]">Pet buddies</p>
               <div className="mt-4 grid grid-cols-2 gap-4">
                 {pets.slice(0, 4).map((pet) => {
-                  const look = getPetLook(pet.id);
+                  const look = getPetLook(pet.id, pet);
                   return (
                     <div key={pet.id} className="grid place-items-center rounded-lg bg-white/10 p-3">
                       <ProfilePhoto
@@ -3504,7 +3565,7 @@ function Hero({
           <p className="text-xs font-black uppercase tracking-[0.14em] text-[#165a4b]">Active pets</p>
           <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
             {pets.map((item) => {
-              const look = getPetLook(item.id);
+              const look = getPetLook(item.id, item);
               return (
                 <div key={item.id} className="grid place-items-center gap-1 rounded-lg bg-white p-2 text-center text-[11px] font-black">
                   <ProfilePhoto label={item.name} initial={look.face} colors={look.colors} size="xs" variant="pet" petKind={look.kind} photoUrl={item.photoUrl} />
@@ -3821,7 +3882,7 @@ function FamilyFaceParade({
           />
         ))}
         {visiblePets.map((pet, index) => (
-          <AnimatedPetBuddy key={pet.id} color={index % 2 === 0 ? "#f47b20" : "#0f766e"} delay={`${(people.length + index) * 0.12}s`} photoUrl={pet.photoUrl} label={pet.name} kind={getPetLook(pet.id).kind} />
+          <AnimatedPetBuddy key={pet.id} color={index % 2 === 0 ? "#f47b20" : "#0f766e"} delay={`${(people.length + index) * 0.12}s`} photoUrl={pet.photoUrl} label={pet.name} kind={getPetLook(pet.id, pet).kind} />
         ))}
       </div>
     );
@@ -3844,7 +3905,7 @@ function FamilyFaceParade({
         );
       })}
       {visiblePets.map((pet) => {
-        const look = getPetLook(pet.id);
+        const look = getPetLook(pet.id, pet);
         return <ProfilePhoto key={pet.id} label={pet.name} initial={look.face} colors={look.colors} size={compact ? "xs" : "md"} variant="pet" petKind={look.kind} photoUrl={pet.photoUrl} />;
       })}
     </div>
@@ -3931,7 +3992,7 @@ function MissionsPanel(props: {
                   <span className="rounded-full bg-white px-3 py-1 text-xs font-black">{levelLabels[mission.difficulty]}</span>
                   {pet ? (
                     <span className="inline-flex items-center gap-2 rounded-full bg-[#e7f4ef] py-1 pl-1 pr-3 text-xs font-black">
-                      <ProfilePhoto label={pet.name} initial={getPetLook(pet.id).face} colors={getPetLook(pet.id).colors} size="xs" variant="pet" petKind={getPetLook(pet.id).kind} photoUrl={pet.photoUrl} />
+                      <ProfilePhoto label={pet.name} initial={getPetLook(pet.id, pet).face} colors={getPetLook(pet.id, pet).colors} size="xs" variant="pet" petKind={getPetLook(pet.id, pet).kind} photoUrl={pet.photoUrl} />
                       {pet.name}
                     </span>
                   ) : (
@@ -4101,8 +4162,9 @@ const learningPassports: { animal: string; tagline: string; facts: [string, stri
   },
 ];
 
-function PassportPanel({ pets, isParentView, updatePet, updatePetPhoto, onStudyComplete, studiedAnimals }: {
+function PassportPanel({ pets, missions, isParentView, updatePet, updatePetPhoto, onStudyComplete, studiedAnimals }: {
   pets: Pet[];
+  missions: Mission[];
   isParentView: boolean;
   updatePet: (petId: string, updates: Partial<Pet>) => void;
   updatePetPhoto?: (petId: string, file?: File) => void;
@@ -4163,14 +4225,22 @@ function PassportPanel({ pets, isParentView, updatePet, updatePetPhoto, onStudyC
         </div>
       )}
       <div className="grid gap-4 lg:grid-cols-2">
-        {pets.map((pet) => (
+        {pets.map((pet) => {
+          const care = getPetCareStats(pet.id, missions);
+          return (
           <article key={pet.id} className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-            <ProfilePhoto label={pet.name} initial={getPetLook(pet.id).face} colors={getPetLook(pet.id).colors} size="lg" variant="pet" petKind={getPetLook(pet.id).kind} photoUrl={pet.photoUrl} />
+            <div className={`rounded-2xl ring-4 ${care.stageRing}`}>
+              <ProfilePhoto label={pet.name} initial={getPetLook(pet.id, pet).face} colors={getPetLook(pet.id, pet).colors} size="lg" variant="pet" petKind={getPetLook(pet.id, pet).kind} photoUrl={pet.photoUrl} />
+            </div>
             <div className="flex-1">
               <p className="text-xs font-black uppercase tracking-[0.18em] text-[#7a4b12]">{pet.name}&apos;s passport</p>
               <h2 className="text-3xl font-black">{pet.name}</h2>
               <p className="text-sm font-black text-[#0f766e]">{pet.species}</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <span className="rounded-full bg-[#e7f4ef] px-3 py-1 text-xs font-black text-[#0f766e]">{care.mood}</span>
+                <span className={`rounded-full bg-white px-3 py-1 text-xs font-black ring-2 ${care.stageRing}`}>{care.stage} · {care.approved} care {care.approved === 1 ? "mission" : "missions"}</span>
+              </div>
               {updatePetPhoto && (
               <label className="mt-3 inline-flex cursor-pointer rounded-lg bg-[#165a4b] px-3 py-2 text-xs font-black text-white">
                 Capture pet photo
@@ -4188,8 +4258,8 @@ function PassportPanel({ pets, isParentView, updatePet, updatePetPhoto, onStudyC
             )}
           </div>
           <div className="mt-5 grid gap-3">
-            <Meter label={`${pet.name} happiness`} value={getPetLook(pet.id).happiness} color="#f47b20" />
-            <Meter label={`${pet.name} feeling loved`} value={getPetLook(pet.id).loved} color="#0f766e" />
+            <Meter label={`${pet.name} happiness`} value={care.happiness} color="#f47b20" />
+            <Meter label={`${pet.name} feeling loved`} value={care.loved} color="#0f766e" />
           </div>
           {isParentView && editingPetId === pet.id ? (
             <div className="mt-5 grid gap-3">
@@ -4221,7 +4291,8 @@ function PassportPanel({ pets, isParentView, updatePet, updatePetPhoto, onStudyC
           </dl>
           )}
           </article>
-        ))}
+          );
+        })}
       </div>
     </section>
   );
@@ -5084,7 +5155,7 @@ function FamilySetupPanel(props: {
         <h3 className="mt-2 text-2xl font-black">Pet passports</h3>
         <div className="mt-4 grid gap-3 lg:grid-cols-2">
           {props.pets.map((pet) => {
-            const look = getPetLook(pet.id);
+            const look = getPetLook(pet.id, pet);
             return (
               <article key={pet.id} className="rounded-lg border border-[#e8e1cf] bg-[#fbfaf4] p-4">
                 <div className="flex items-center gap-3">
@@ -6279,6 +6350,16 @@ function PetCharacter({
   label: string;
 }) {
   const compact = size === "xs";
+  // Illustrated storybook portrait wins over the CSS-drawn fallback whenever we have one.
+  const portrait = photoUrl ? undefined : petPortraitForKind(kind);
+  if (portrait) {
+    const frame = size === "xs" ? "size-8" : size === "lg" ? "size-28" : "size-16";
+    return (
+      <div className="relative animate-[pet-wiggle_2.4s_ease-in-out_infinite]">
+        <img src={portrait} alt={`${label} illustrated portrait`} className={`${frame} rounded-2xl object-cover shadow-md ring-2 ring-white`} />
+      </div>
+    );
+  }
   const isFish = kind === "fish";
   const isTortoise = kind === "tortoise";
   const isGuinea = kind === "guinea";
@@ -6399,6 +6480,17 @@ function AnimatedFamilyCharacter({
 }
 
 function AnimatedPetBuddy({ color, delay, photoUrl, label, kind = "pet" }: { color: string; delay: string; photoUrl?: string; label?: string; kind?: PetKind }) {
+  // Illustrated storybook portrait wins over the CSS-drawn fallback whenever we have one.
+  if (!photoUrl) {
+    const portrait = petPortraitForKind(kind);
+    if (portrait) {
+      return (
+        <div className="relative h-20 w-20 animate-[pet-wiggle_2.1s_ease-in-out_infinite]" style={{ animationDelay: delay }}>
+          <img src={portrait} alt={`${label ?? "Pet"} illustrated portrait`} className="size-20 rounded-2xl object-cover shadow-md ring-2 ring-white/80" />
+        </div>
+      );
+    }
+  }
   if (!photoUrl && kind === "fish") {
     return (
       <div className="relative h-20 w-20 animate-[fish-swim_2.4s_ease-in-out_infinite]" style={{ animationDelay: delay }}>
@@ -6457,8 +6549,10 @@ function getChildLook(childId?: string) {
   return childLooks[childId ?? ""] ?? { initial: "K", colors: "from-[#ffd166] via-[#f47b20] to-[#165a4b]", joy: 80, love: 80, hair: "#2f1b12" };
 }
 
-function getPetLook(petId?: string) {
-  return petLooks[petId ?? ""] ?? { face: "P", colors: "from-[#ffd166] via-[#f47b20] to-[#165a4b]", happiness: 80, loved: 80, kind: "pet" };
+function getPetLook(petId?: string, pet?: Pet) {
+  const known = petLooks[petId ?? ""];
+  if (known) return known;
+  return { face: "P", colors: "from-[#ffd166] via-[#f47b20] to-[#165a4b]", happiness: 80, loved: 80, kind: inferPetKind(pet?.species) };
 }
 
 function getMissionLifeSkill(mission: Mission): LifeSkillKey {
