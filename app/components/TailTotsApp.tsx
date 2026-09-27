@@ -770,7 +770,7 @@ export function TailTotsApp() {
   const activeApprovedMissionCount = activeChildMissions.filter((mission) => mission.status === "approved").length;
   const activeCompletedMissionCount = activeChildMissions.filter((mission) => mission.completedBy).length;
   const taskProgress = Math.round((activeCompletedMissionCount / Math.max(1, activeChildMissions.length)) * 100);
-  const fairnessSummary = useMemo(() => getFairnessSummary(missions, children), [children, missions]);
+  const fairnessSummary = useMemo(() => getFairnessSummary(missions, children, role === "child"), [children, missions, role]);
   const familySkillSummary = useMemo(() => getFamilySkillSummary(badges, children), [badges, children]);
 
   const pendingApprovals = useMemo(
@@ -1717,7 +1717,7 @@ export function TailTotsApp() {
                   <div className="absolute bottom-28 left-10 rounded-full bg-white/90 px-3 py-1 text-xs font-black text-[#165a4b] shadow-sm animate-[reward-pop_3.5s_ease-in-out_infinite]">done</div>
                   <FamilyFaceParade parents={parents} childProfiles={children} pets={pets} animated />
                 </div>
-                <div className="absolute left-4 top-4 rounded-full bg-white/90 px-3 py-1 text-[11px] font-black text-[#165a4b] shadow-sm">
+                <div className="absolute left-1/2 top-3 -translate-x-1/2 rounded-full bg-white/90 px-3 py-1 text-[11px] font-black text-[#165a4b] shadow-sm">
                   {appMode === "real" ? "Your family" : "Demo family"}
                 </div>
               </div>
@@ -3234,7 +3234,7 @@ function SchedulePanel({
               return (
                 <div key={day.weekday} className="flex items-center justify-between rounded-lg bg-[#f8f6ed] px-3 py-2 text-xs font-bold text-[#8a948f]">
                   <span>{day.heading}</span>
-                  <span>Open</span>
+                  <span>Free day</span>
                 </div>
               );
             }
@@ -3413,8 +3413,8 @@ function KidPetHelperPanel({ activeChild, pets, moments }: { activeChild?: Child
             </button>
           ))}
         </div>
-        <div id="pet-helper-answer" className="mt-4 scroll-mt-24 rounded-lg bg-[#e7f4ef] p-4">
-          <p className="text-xs font-black uppercase tracking-[0.14em] text-[#165a4b]">TailTots suggestion</p>
+        <div key={selectedQuestion} id="pet-helper-answer" className="mt-4 scroll-mt-24 rounded-lg bg-[#e7f4ef] p-4 animate-[answer-pop_0.6s_ease-out]">
+          <p className="text-xs font-black uppercase tracking-[0.14em] text-[#165a4b]">TailTots suggestion ✨ new!</p>
           <p className="mt-2 text-lg font-black leading-7">{aiSuggestion.title}</p>
           <p className="mt-2 text-sm font-semibold leading-6 text-[#4f625b]">{aiSuggestion.body}</p>
         </div>
@@ -3626,7 +3626,7 @@ function HomeHubPanel({
 
         <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
           <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2563eb]">Tablet home display</p>
-          <h3 className="mt-2 text-2xl font-black sm:text-3xl">{isParentView ? "Parent next steps" : "Kitchen counter view"}</h3>
+          <h3 className="mt-2 text-2xl font-black sm:text-3xl">{isParentView ? "Parent next steps" : "Family screen"}</h3>
           <div className="mt-4 grid gap-3">
             {reminders.map((reminder) => (
               <p key={reminder} className="rounded-lg bg-[#f8f6ed] p-4 text-base font-black leading-6 sm:text-lg sm:leading-7">{reminder}</p>
@@ -3832,7 +3832,7 @@ function Hero({
               Pick the child, complete today&apos;s care and helper missions, then parent approval handles rewards.
             </p>
             <div className="mt-4 flex flex-wrap gap-3">
-              <button onClick={() => setActiveTab("missions")} className="min-h-11 rounded-lg bg-[#f47b20] px-4 py-3 text-sm font-black text-white sm:min-h-12 sm:px-5">
+              <button onClick={() => document.getElementById("today-mission-list")?.scrollIntoView({ behavior: "smooth", block: "start" })} className="min-h-11 rounded-lg bg-[#f47b20] px-4 py-3 text-sm font-black text-white sm:min-h-12 sm:px-5">
                 Start today&apos;s missions
               </button>
               {role === "parent" && (
@@ -4328,7 +4328,7 @@ function MissionsPanel(props: {
                 <span className="rounded-full bg-[#e7f4ef] px-3 py-1 text-xs font-black text-[#0f513f]">{statusPetStats.mood}</span>
               </div>
               <p className="mt-1 text-sm font-semibold text-[#5f6a65]">
-                {firstOpenNeed ? `${statusPet.name} is waiting on: “${firstOpenNeed.title}” 🐾` : `${statusPet.name} is all cared for — nice work! 🌟`}
+                {firstOpenNeed ? `${statusPet.name} is waiting on: “${firstOpenNeed.title}” 🐾` : statusPetStats.approved === 0 ? `Say hi to ${statusPet.name} — your first care mission is below! 👋` : `${statusPet.name} is all cared for — nice work! 🌟`}
               </p>
             </div>
           </div>
@@ -4952,6 +4952,12 @@ function BankPanel(props: {
               <p className="text-xs font-black text-[#2563eb]">reward coins</p>
             </div>
           </div>
+          {availableBalance === 0 && (
+            <div className="mt-3 rounded-lg border-2 border-dashed border-[#f47b20] bg-[#fff8ef] p-4 text-center">
+              <p className="text-base font-black text-[#9a4a12]">You have $0 right now — that's okay!</p>
+              <p className="mt-1 text-sm font-bold text-[#6f5c31]">Finish a parent-assigned mission to earn your first dollars, then come back here to save or give.</p>
+            </div>
+          )}
         </div>
       </div>
 
@@ -6138,12 +6144,19 @@ function NeighborhoodPanel({
     ["Teamwork", "Two-kid supply sorting task with parent", "Split points fairly, one shared family badge"],
     ["Leadership", "Older kid teaches a younger kid safe pet observation", "Higher points, parent nearby"],
   ];
-  const privacyRules = [
-    "Parents approve every job before it appears to kids.",
-    "Kids do not see addresses, phone numbers, or adult contact details.",
-    "Applications show parent names and family intent first, not public child profiles.",
-    "Completion proof goes to parents only before money, points, or badges are awarded.",
-  ];
+  const privacyRules = isKidView
+    ? [
+        "Grown-ups check every job first to keep you safe.",
+        "You never see addresses or phone numbers — only the fun job.",
+        "Your grown-up handles all the applying and talking.",
+        "You earn points and badges after your grown-up says the job is done.",
+      ]
+    : [
+        "Parents approve every job before it appears to kids.",
+        "Kids do not see addresses, phone numbers, or adult contact details.",
+        "Applications show parent names and family intent first, not public child profiles.",
+        "Completion proof goes to parents only before money, points, or badges are awarded.",
+      ];
   const shelterPrograms = [
     ["Shelter reading buddy", "Kids read calmly near adoptable pets while staff and parents supervise.", "Empathy badge"],
     ["Donation helper", "Families collect towels, food, or toys and log the kindness mission.", "Community Kindness badge"],
@@ -6286,7 +6299,7 @@ function NeighborhoodPanel({
 
       <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
         <p className="text-xs font-black uppercase tracking-[0.18em] text-[#0f766e]">Privacy and trust</p>
-        <h3 className="mt-2 text-2xl font-black">{role === "parent" ? "Why families can safely apply for jobs" : "What kids do not see"}</h3>
+        <h3 className="mt-2 text-2xl font-black">{role === "parent" ? "Why families can safely apply for jobs" : "Grown-ups keep every job safe"}</h3>
         <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           {privacyRules.map((rule) => (
             <p key={rule} className="rounded-lg bg-[#e7f4ef] p-4 text-sm font-black leading-5 text-[#165a4b]">{rule}</p>
@@ -7250,7 +7263,7 @@ function getKidMissionReason(mission: Mission, child?: Child) {
   return `${ageCopy}, it builds ${skillCopy}, and it keeps points fair with the family.`;
 }
 
-function getFairnessSummary(missions: Mission[], children: Child[]) {
+function getFairnessSummary(missions: Mission[], children: Child[], isKidView = false) {
   const plannedPoints = children.map((child) => ({
     child,
     points: missions
@@ -7261,12 +7274,16 @@ function getFairnessSummary(missions: Mission[], children: Child[]) {
   const lowest = sorted[0];
   const highest = sorted[sorted.length - 1];
   const spread = highest && lowest ? highest.points - lowest.points : 0;
+  const balanced = spread <= 8;
   return {
     spread,
-    label: spread <= 8 ? "Balanced today" : "Needs balancing",
-    detail:
-      spread <= 8
-        ? "Kids are set up to finish with similar points."
+    label: balanced ? "Balanced today" : isKidView ? "Fair turns for everyone" : "Needs balancing",
+    detail: balanced
+      ? isKidView
+        ? "Everyone gets fair turns today. Finish your missions to shine!"
+        : "Kids are set up to finish with similar points."
+      : isKidView
+        ? "Grown-ups are balancing everyone's turns behind the scenes."
         : `${highest?.child.name ?? "One child"} has ${spread} more planned points than ${lowest?.child.name ?? "another child"}.`,
   };
 }

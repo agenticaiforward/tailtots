@@ -205,6 +205,21 @@ button {
   }
 }
 
+@keyframes answer-pop {
+  0% {
+    transform: scale(0.96);
+    box-shadow: 0 0 0 0 rgba(244, 123, 32, 0.55);
+  }
+  60% {
+    transform: scale(1.015);
+    box-shadow: 0 0 0 10px rgba(244, 123, 32, 0);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(244, 123, 32, 0);
+  }
+}
+
 @keyframes tongue-pop {
   0%,
   70%,
