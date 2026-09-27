@@ -195,6 +195,16 @@ button {
   }
 }
 
+@keyframes tail-wag {
+  0%,
+  100% {
+    transform: rotate(-16deg);
+  }
+  50% {
+    transform: rotate(16deg);
+  }
+}
+
 @keyframes tongue-pop {
   0%,
   70%,

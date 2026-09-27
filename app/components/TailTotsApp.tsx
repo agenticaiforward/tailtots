@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Cropper, { type Area } from "react-easy-crop";
+import { PetBuddyFace } from "./pet-buddy";
+import type { PetKind } from "./pet-buddy";
 import {
   isSupabaseConfigured,
   loadFamilyAccountSnapshot,
@@ -59,6 +61,7 @@ const starterPets: Pet[] = [
     careNotes: "Fresh hay, clean cage corners, quiet handling.",
     vet: "Green Trail Vet",
     medicine: "None",
+    photoUrl: "/demo-faces/pets/jack.jpg",
   },
   {
     id: "jamie",
@@ -68,6 +71,7 @@ const starterPets: Pet[] = [
     careNotes: "Check water bottle, refill hay, and keep the bedding dry.",
     vet: "Family Pet Clinic",
     medicine: "None",
+    photoUrl: "/demo-faces/pets/jamie.jpg",
   },
   {
     id: "captain",
@@ -77,6 +81,7 @@ const starterPets: Pet[] = [
     careNotes: "Fresh greens, clean water, and a warm basking spot.",
     vet: "Exotic Pet Clinic",
     medicine: "None",
+    photoUrl: "/demo-faces/pets/captain.jpg",
   },
   {
     id: "rb",
@@ -86,6 +91,7 @@ const starterPets: Pet[] = [
     careNotes: "Feed a small pinch and check that the water looks clear.",
     vet: "Aquatic care store",
     medicine: "None",
+    photoUrl: "/demo-faces/pets/rb.jpg",
   },
 ];
 
@@ -107,7 +113,6 @@ type PhotoCropDraft = {
 };
 
 type PhotoCropTarget = Pick<PhotoCropDraft, "targetType" | "targetId" | "label" | "fit">;
-type PetKind = "dog" | "cat" | "guinea" | "tortoise" | "fish" | "pet";
 type LifeSkillKey = "responsibility" | "empathy" | "teamwork" | "leadership" | "time";
 type TrustSignalKey = "parent_gate" | "age_fit" | "no_messaging" | "adult_nearby" | "private_child";
 
@@ -325,6 +330,9 @@ function inferPetKind(species?: string): PetKind {
   if (s.includes("fish")) return "fish";
   if (s.includes("dog") || s.includes("puppy")) return "dog";
   if (s.includes("cat") || s.includes("kitten")) return "cat";
+  if (s.includes("rabbit") || s.includes("bunny")) return "rabbit";
+  if (s.includes("hamster")) return "hamster";
+  if (s.includes("bird") || s.includes("parrot") || s.includes("budgie") || s.includes("cockatiel")) return "bird";
   return "pet";
 }
 
@@ -2321,7 +2329,7 @@ function VisionLandingPanel({
           {/* Real product visual: the actual Mission Mode UI, alive */}
           <div className="relative mx-auto w-full max-w-md">
             <div className="tt-animate-float-slow absolute -left-4 -top-6 z-10 rotate-[-8deg] rounded-2xl border border-tt-line bg-white px-4 py-3 shadow-lg" aria-hidden="true">
-              <img src="/pets/pet-guinea-pig.png" alt="" className="size-10 rounded-xl object-cover ring-2 ring-white" />
+              <img src="/demo-faces/pets/jack.jpg" alt="Jack the guinea pig" className="size-10 rounded-xl object-cover ring-2 ring-white" />
               <p className="mt-1 text-[11px] font-black text-tt-ink">Jack says hi</p>
             </div>
             <div className="tt-animate-float absolute -right-3 top-1/3 z-10 rotate-[7deg] rounded-2xl border border-tt-line bg-white px-4 py-3 shadow-lg" aria-hidden="true">
@@ -6912,14 +6920,12 @@ function PetCharacter({
       </div>
     );
   }
-  // Real photo as the base, illustrated buddy badge layered on top.
-  if (photoUrl && portrait) {
-    const frame = size === "xs" ? "size-8" : size === "lg" ? "size-28" : "size-16";
-    const badge = size === "xs" ? "size-4" : size === "lg" ? "size-9" : "size-6";
+  // Real photo is the hero: the animal's actual face fills the circle, with
+  // species accessories (ears, tail, whiskers…) composited around it.
+  if (photoUrl) {
     return (
-      <div className="relative">
-        <img src={photoUrl} alt={`${label} photo`} className={`${frame} rounded-2xl object-cover shadow-md ring-2 ring-white`} />
-        <img src={portrait} alt="" aria-hidden="true" className={`absolute -bottom-1.5 -right-1.5 ${badge} rounded-full object-cover shadow-md ring-2 ring-white`} />
+      <div className={`relative ${compact ? "scale-[0.42]" : size === "lg" ? "scale-110" : "scale-90"}`}>
+        <PetBuddyFace kind={kind} photoUrl={photoUrl} label={label} size={size} />
       </div>
     );
   }
@@ -7075,20 +7081,23 @@ function AnimatedPetBuddy({ color, delay, photoUrl, label, kind = "pet" }: { col
       </div>
     );
   }
+  // Real pet photo: the animal's actual face with species-correct accessories
+  // (ears, tail, whiskers…) from the pet-buddy library.
+  if (photoUrl) {
+    return (
+      <div className="relative h-24 w-20 animate-[pet-wiggle_2.1s_ease-in-out_infinite]" style={{ animationDelay: delay }}>
+        <PetBuddyFace kind={kind} photoUrl={photoUrl} label={label ?? "Pet"} size="md" animated={false} className="absolute bottom-0 left-1/2 -translate-x-1/2" />
+      </div>
+    );
+  }
   return (
     <div className="relative h-20 w-20 animate-[pet-wiggle_2.1s_ease-in-out_infinite]" style={{ animationDelay: delay }}>
       <div className="absolute left-2 top-3 h-9 w-5 -rotate-12 rounded-full bg-[#6b3b19]" />
       <div className="absolute right-2 top-3 h-9 w-5 rotate-12 rounded-full bg-[#6b3b19]" />
       <div className="absolute bottom-0 left-1/2 size-16 -translate-x-1/2 overflow-hidden rounded-full ring-2 ring-white/80" style={{ backgroundColor: color }}>
-        {photoUrl ? (
-          <Image src={photoUrl} alt={`${label ?? "Pet"} captured face`} fill sizes="72px" className="object-cover" unoptimized />
-        ) : (
-          <>
-            <div className="absolute left-5 top-7 size-2 rounded-full bg-[#17231f]" />
-            <div className="absolute right-5 top-7 size-2 rounded-full bg-[#17231f]" />
-            <div className="absolute bottom-4 left-1/2 size-3 -translate-x-1/2 rounded-full bg-[#17231f]" />
-          </>
-        )}
+        <div className="absolute left-5 top-7 size-2 rounded-full bg-[#17231f]" />
+        <div className="absolute right-5 top-7 size-2 rounded-full bg-[#17231f]" />
+        <div className="absolute bottom-4 left-1/2 size-3 -translate-x-1/2 rounded-full bg-[#17231f]" />
       </div>
     </div>
   );
