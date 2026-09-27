@@ -46,8 +46,8 @@ const difficultyAgeGuidance: Record<LevelKey, { minAge: number; label: string }>
 };
 
 const starterChildren: Child[] = [
-  { id: "sahasra", name: "Maya", age: 6, secretCode: "", points: 180, coins: 26, level: "medium", streakDays: 5 },
-  { id: "aarush", name: "Leo", age: 9, secretCode: "", points: 72, coins: 14, level: "easy", streakDays: 2 },
+  { id: "sahasra", name: "Maya", age: 6, secretCode: "", points: 180, coins: 26, level: "medium", streakDays: 5, photoUrl: "/demo-faces/maya.jpg" },
+  { id: "aarush", name: "Leo", age: 9, secretCode: "", points: 72, coins: 14, level: "easy", streakDays: 2, photoUrl: "/demo-faces/leo.jpg" },
 ];
 
 const starterPets: Pet[] = [
@@ -150,7 +150,7 @@ type KidScheduleItem = {
   note: string;
 };
 
-const starterParents: ParentProfile[] = [{ id: "parent-1", name: "Parent" }];
+const starterParents: ParentProfile[] = [{ id: "parent-1", name: "Parent", photoUrl: "/demo-faces/parent.jpg" }];
 
 const starterMissions: Mission[] = [
   {
@@ -6886,16 +6886,6 @@ function KidCharacter({
       <div className="mx-auto -mt-1 grid h-8 w-12 place-items-center rounded-t-2xl bg-white/90 text-sm font-black text-[#17231f]">
         {initial}
       </div>
-      {/* Real family photo as the base, illustrated paw badge layered on top. */}
-      {photoUrl && (
-        <span className="absolute bottom-3 right-1 grid size-6 place-items-center rounded-full bg-[#f47b20] shadow-md ring-2 ring-white" aria-hidden="true">
-          <svg viewBox="0 0 24 24" className="size-3.5 text-white" fill="currentColor">
-            <ellipse cx="12" cy="15.5" rx="4.2" ry="3.4" />
-            <circle cx="6.2" cy="10.5" r="1.9" /><circle cx="9.7" cy="7.6" r="1.9" />
-            <circle cx="14.3" cy="7.6" r="1.9" /><circle cx="17.8" cy="10.5" r="1.9" />
-          </svg>
-        </span>
-      )}
     </div>
   );
 }
@@ -7048,16 +7038,6 @@ function AnimatedFamilyCharacter({
       <div className="absolute bottom-7 right-0 h-8 w-3 origin-top rounded-full bg-[#0ea5e9] ring-2 ring-white animate-[arm-wave_2s_ease-in-out_infinite_reverse]">
         <span className="absolute -bottom-1 left-1/2 size-4 -translate-x-1/2 rounded-full ring-2 ring-white" style={{ backgroundColor: tone }} />
       </div>
-      {/* Real family photo as the base, illustrated paw badge layered on top. */}
-      {photoUrl && (
-        <span className="absolute -right-1 top-8 grid size-5 place-items-center rounded-full bg-[#f47b20] shadow-md ring-2 ring-white" aria-hidden="true">
-          <svg viewBox="0 0 24 24" className="size-3 text-white" fill="currentColor">
-            <ellipse cx="12" cy="15.5" rx="4.2" ry="3.4" />
-            <circle cx="6.2" cy="10.5" r="1.9" /><circle cx="9.7" cy="7.6" r="1.9" />
-            <circle cx="14.3" cy="7.6" r="1.9" /><circle cx="17.8" cy="10.5" r="1.9" />
-          </svg>
-        </span>
-      )}
     </div>
   );
 }
