@@ -371,7 +371,7 @@ const tabItems = [
 ];
 
 const kidTabIds = ["missions", "schedule", "hub", "pets", "pet-helper", "bank", "neighborhood", "growth"];
-const parentTabIds = ["vision", "approvals", "schedule", "hub", "pets", "neighborhood", "growth", "ai", "ecosystem"];
+const parentTabIds = ["vision", "approvals", "setup", "schedule", "hub", "pets", "neighborhood", "growth", "ai", "ecosystem"];
 const defaultParentPasscode = "4321";
 
 const savedFamilyStateKey = "tailtots-family-state-v1";
@@ -1753,6 +1753,7 @@ export function TailTotsApp() {
                 approvedMissionCount={activeApprovedMissionCount}
                 pets={pets}
                 setActiveTab={setActiveTab}
+                role={role}
               />
               <MissionsPanel
                 activeChild={activeChild}
@@ -3712,6 +3713,7 @@ function Hero({
   approvedMissionCount,
   pets,
   setActiveTab,
+  role,
 }: {
   child?: Child;
   childProfiles: Child[];
@@ -3721,6 +3723,7 @@ function Hero({
   approvedMissionCount: number;
   pets: Pet[];
   setActiveTab: (tab: string) => void;
+  role: Role;
 }) {
   const childLook = getChildLook(child?.id);
   return (
@@ -3739,9 +3742,11 @@ function Hero({
               <button onClick={() => setActiveTab("missions")} className="min-h-11 rounded-lg bg-[#f47b20] px-4 py-3 text-sm font-black text-white sm:min-h-12 sm:px-5">
                 Start today&apos;s missions
               </button>
-              <button onClick={() => setActiveTab("setup")} className="min-h-11 rounded-lg border border-white/35 bg-white/10 px-4 py-3 text-sm font-black text-white sm:min-h-12 sm:px-5">
-                Manage family setup
-              </button>
+              {role === "parent" && (
+                <button onClick={() => setActiveTab("setup")} className="min-h-11 rounded-lg border border-white/35 bg-white/10 px-4 py-3 text-sm font-black text-white sm:min-h-12 sm:px-5">
+                  Manage family setup
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -3950,8 +3955,8 @@ function PhotoCropModal({
   }, [draft]);
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-[#17231f]/60 p-4 backdrop-blur-sm">
-      <section className="w-full max-w-4xl rounded-lg bg-white p-5 shadow-2xl">
+    <div className="fixed inset-0 z-50 grid overflow-y-auto bg-[#17231f]/60 p-4 backdrop-blur-sm">
+      <section className="m-auto w-full max-w-4xl rounded-lg bg-white p-5 shadow-2xl">
         <div className="flex items-start justify-between gap-4 border-b border-[#ded8c7] pb-4">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.18em] text-[#f47b20]">Head-focused profile crop</p>
