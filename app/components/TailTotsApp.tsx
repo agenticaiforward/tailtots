@@ -614,6 +614,10 @@ export function TailTotsApp() {
   const [role, setRole] = useState<Role>("parent");
   const [activeTab, setActiveTab] = useState("vision");
   const [isParentUnlocked, setIsParentUnlocked] = useState(true);
+  const [parentGateOpen, setParentGateOpen] = useState(false);
+  const [gateInput, setGateInput] = useState("");
+  const [gateError, setGateError] = useState(false);
+  const [gateNext, setGateNext] = useState<"hub" | "contact">("hub");
   const [hasLoadedSavedState, setHasLoadedSavedState] = useState(false);
   const [familyName, setFamilyName] = useState("Demo Crew");
   const [parentPasscode, setParentPasscode] = useState(defaultParentPasscode);
@@ -972,6 +976,14 @@ export function TailTotsApp() {
   }
 
   function openContactSection() {
+    if (role === "child") {
+      // Grown-ups only: contact lives in the parent area.
+      setGateNext("contact");
+      setGateInput("");
+      setGateError(false);
+      setParentGateOpen(true);
+      return;
+    }
     setRole("parent");
     setIsParentUnlocked(true);
     setActiveTab("vision");
@@ -1268,11 +1280,43 @@ export function TailTotsApp() {
   }
 
   function switchRole(nextRole: Role) {
+    if (nextRole === "parent" && role === "child") {
+      // Grown-up gate: a kid must not flip the toggle straight into parent controls.
+      setGateNext("hub");
+      setGateInput("");
+      setGateError(false);
+      setParentGateOpen(true);
+      return;
+    }
     setRole(nextRole);
     setActiveTab(nextRole === "parent" ? "hub" : "missions");
     if (nextRole === "parent") setIsParentUnlocked(true);
     if (nextRole === "child" && !activeChildId) setActiveChildId(children[0]?.id ?? starterChildren[0]?.id ?? "");
     requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "smooth" }));
+  }
+
+  function submitParentGate() {
+    if (gateInput === parentPasscode) {
+      setParentGateOpen(false);
+      setGateInput("");
+      setRole("parent");
+      setActiveTab("hub");
+      setIsParentUnlocked(true);
+      const dest = gateNext;
+      requestAnimationFrame(() => {
+        if (dest === "contact") {
+          const target = document.getElementById("landing-contact");
+          if (target) {
+            const targetTop = target.getBoundingClientRect().top + window.scrollY - 120;
+            window.scrollTo({ top: Math.max(0, targetTop), behavior: "smooth" });
+          }
+        } else {
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        }
+      });
+    } else {
+      setGateError(true);
+    }
   }
 
   function completeMission(missionId: string) {
@@ -1933,6 +1977,47 @@ export function TailTotsApp() {
           }}
         />
       )}
+      {parentGateOpen && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-[#17231f]/80 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Grown-ups only">
+          <div className="tt-animate-pop-in w-full max-w-sm rounded-3xl border border-[#ded8c7] bg-white p-6 text-center shadow-2xl sm:p-8">
+            <p className="text-5xl" aria-hidden="true">🔒</p>
+            <p className="mt-2 text-xs font-black uppercase tracking-[0.22em] text-[#165a4b]">Grown-ups only</p>
+            <p className="mt-2 text-xl font-black text-[#17231f]">Enter the parent passcode</p>
+            <p className="mx-auto mt-2 max-w-xs text-sm font-semibold leading-6 text-[#5f6a65]">
+              Parent controls stay behind your passcode. You can change it anytime in Family Setup.
+            </p>
+            <label className="mt-4 block text-left text-xs font-black uppercase tracking-[0.14em] text-[#53615b]">
+              Parent passcode
+              <input
+                type="password"
+                inputMode="numeric"
+                autoFocus
+                value={gateInput}
+                onChange={(event) => { setGateInput(event.target.value); setGateError(false); }}
+                onKeyDown={(event) => { if (event.key === "Enter") submitParentGate(); }}
+                placeholder="••••"
+                className={`mt-2 w-full rounded-xl border-2 bg-white px-4 py-3 text-center text-2xl font-black tracking-[0.3em] text-[#17231f] outline-none ${gateError ? "border-red-500" : "border-[#ded8c7] focus:border-[#165a4b]"}`}
+              />
+            </label>
+            {gateError && <p className="mt-2 text-sm font-black text-red-600">That passcode did not match. Try again.</p>}
+            <p className="mt-3 text-xs font-semibold text-[#8a8f8b]">Demo passcode: 4321 — change it in Family Setup.</p>
+            <div className="mt-4 grid gap-2">
+              <button
+                onClick={submitParentGate}
+                className="tt-btn-press min-h-12 w-full rounded-xl bg-[#165a4b] px-5 py-3 text-sm font-black text-white"
+              >
+                Unlock parent mode
+              </button>
+              <button
+                onClick={() => setParentGateOpen(false)}
+                className="tt-btn-press min-h-12 w-full rounded-xl border-2 border-[#ded8c7] bg-white px-5 py-3 text-sm font-black text-[#53615b]"
+              >
+                Back to kid mode
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {(() => {
         // Full-screen takeover: a certificate moment should interrupt whatever tab is active.
         const earned = certificates.find((cert) => cert.id === justEarnedCertId);
@@ -2145,10 +2230,10 @@ function VisionLandingPanel({
     "No rankings, no ads, no strangers",
   ];
   const kidsPetPhotos = [
-    ["Kid + dog", "https://images.unsplash.com/photo-1528301725143-1ba694832e77?auto=format&fit=crop&w=720&q=80"],
-    ["Kid + rabbit", "https://assets.moargut.com/moargut/2025/12/BAP_3958_RA_2021-1366x2048.jpg"],
-    ["Kid + cat", "https://images.unsplash.com/photo-1740679953723-64630527299d?auto=format&fit=crop&w=720&q=80"],
-    ["Kid + guinea pig", "https://c.nau.ch/i/LxxZQq/900/kontakt-tiere.jpg"],
+    ["Kid + dog", "/landing/kid-dog.jpg"],
+    ["Kid + rabbit", "/landing/kid-rabbit.jpg"],
+    ["Kid + cat", "/landing/kid-cat.jpg"],
+    ["Kid + guinea pig", "/landing/kid-guinea-pig.jpg"],
   ];
   const kindnessPrompts = [
     "Leave a painted rock where a neighbor will find it. 🪨",
@@ -2952,7 +3037,7 @@ function VisionLandingPanel({
         </div>
         <div className="mt-6 flex flex-col items-center justify-between gap-2 border-t border-tt-line pt-4 text-center sm:flex-row sm:text-left">
           <p className="text-xs font-black text-tt-navy">🐾 TailTots — parent-guided real-world growth.</p>
-          <p className="text-[11px] font-semibold text-tt-ink-faint">Made with guinea-pig supervision · <a className="font-bold text-tt-pine underline decoration-tt-sun decoration-2 underline-offset-2" href="mailto:hello@tailtots.com">hello@tailtots.com</a></p>
+          <p className="text-[11px] font-semibold text-tt-ink-faint">Made with guinea-pig supervision · <a className="font-bold text-tt-pine underline decoration-tt-sun decoration-2 underline-offset-2" href="mailto:hello@tailtots.com">hello@tailtots.com</a> · <a className="font-bold text-tt-pine underline decoration-tt-sun decoration-2 underline-offset-2" href="https://tailtots.com/privacy" target="_blank" rel="noreferrer">Privacy</a> · <a className="font-bold text-tt-pine underline decoration-tt-sun decoration-2 underline-offset-2" href="https://tailtots.com/terms" target="_blank" rel="noreferrer">Terms</a></p>
         </div>
       </section>
     </section>
@@ -5477,6 +5562,7 @@ function FamilySetupPanel(props: {
             <h2 className="mt-2 text-2xl font-black sm:text-3xl">Start simple. Add the family pieces first.</h2>
             <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-[#5f6a65]">
               Set up the parent account, household, kids, and pets. TailTots can grow into goals, rewards, and Kid Bank after the first mission.
+              Read our <a className="font-black text-[#165a4b] underline" href="https://tailtots.com/privacy" target="_blank" rel="noreferrer">Privacy Policy</a>.
             </p>
           </div>
           <div className="rounded-lg bg-[#165a4b] px-4 py-3 text-sm font-black text-white">
