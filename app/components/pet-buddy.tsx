@@ -37,10 +37,13 @@ type SpeciesKit = {
 };
 
 const svgWrap = "h-full w-full";
+/* Static animation class literals — Tailwind only generates classes it can see
+   verbatim in source, so no template-literal assembly here. */
 const flop = (animated: boolean, slow = false) =>
-  animated ? `animate-[ear-flop_${slow ? "2.6" : "1.9"}s_ease-in-out_infinite]` : "";
-const wag = (animated: boolean, dur = "1.6s") =>
-  animated ? `animate-[tail-wag_${dur}_ease-in-out_infinite]` : "";
+  animated ? (slow ? "animate-[ear-flop_2.6s_ease-in-out_infinite]" : "animate-[ear-flop_1.9s_ease-in-out_infinite]") : "";
+const wagFast = (animated: boolean) => (animated ? "animate-[tail-wag_1.1s_ease-in-out_infinite]" : "");
+const wag = (animated: boolean) => (animated ? "animate-[tail-wag_1.5s_ease-in-out_infinite]" : "");
+const wagSlow = (animated: boolean) => (animated ? "animate-[tail-wag_1.8s_ease-in-out_infinite]" : "");
 
 /* ------------------------------------------------------------------ */
 /* Shared bits                                                         */
@@ -93,7 +96,7 @@ const dogKit: SpeciesKit = {
       <>
         <div className={`absolute -left-[4%] top-[1%] z-0 h-[36%] w-[30%] origin-top ${flop(animated)}`}>{ear}</div>
         <div className={`absolute -right-[4%] top-[1%] z-0 h-[36%] w-[30%] origin-top -scale-x-100 ${flop(animated)}`}>{ear}</div>
-        <div className={`absolute -right-[9%] top-[46%] z-0 h-[34%] w-[24%] origin-bottom-left ${wag(animated, "1.5s")}`}>
+        <div className={`absolute -right-[9%] top-[46%] z-0 h-[34%] w-[24%] origin-bottom-left ${wag(animated)}`}>
           <svg viewBox="0 0 100 100" className={svgWrap}>
             <path d="M30 96 C58 78 72 44 88 12 C93 4 100 10 94 20 C76 50 58 80 40 98 Z" fill="#8a5a33" />
             <path d="M82 12 C86 8 92 10 90 16 L78 34 C74 30 76 20 82 12 Z" fill="#f3ddba" />
@@ -128,7 +131,7 @@ const catKit: SpeciesKit = {
       <>
         <div className={`absolute left-[2%] top-[0%] z-0 h-[30%] w-[28%] origin-bottom ${flop(animated, true)}`}>{ear}</div>
         <div className={`absolute right-[2%] top-[0%] z-0 h-[30%] w-[28%] origin-bottom -scale-x-100 ${flop(animated, true)}`}>{ear}</div>
-        <div className={`absolute -right-[10%] top-[40%] z-0 h-[44%] w-[26%] origin-bottom ${wag(animated, "1.8s")}`}>
+        <div className={`absolute -right-[10%] top-[40%] z-0 h-[44%] w-[26%] origin-bottom ${wagSlow(animated)}`}>
           <svg viewBox="0 0 100 140" className={svgWrap}>
             <path d="M40 132 C30 96 34 60 62 34 C76 21 92 20 94 32 C95 42 82 46 72 52 C52 64 48 96 56 130 Z" fill="#f5a54a" />
             <path d="M62 34 C76 21 92 20 94 32 C95 40 86 44 78 48 L64 44 Z" fill="#e08a2e" />
@@ -273,7 +276,7 @@ const tortoiseKit: SpeciesKit = {
 const fishKit: SpeciesKit = {
   behind: (animated) => (
     <>
-      <div className={`absolute -right-[12%] top-[30%] z-0 h-[40%] w-[30%] origin-left ${wag(animated, "1.1s")}`}>
+      <div className={`absolute -right-[12%] top-[30%] z-0 h-[40%] w-[30%] origin-left ${wagFast(animated)}`}>
         <svg viewBox="0 0 100 100" className={svgWrap}>
           <path d="M8 50 L92 6 L70 50 L92 94 Z" fill="#38bdf8" />
           <path d="M8 50 L60 28 L52 50 L60 72 Z" fill="#0ea5e9" opacity="0.8" />
