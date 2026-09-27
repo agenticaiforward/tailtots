@@ -354,12 +354,6 @@ function getPetCareStats(petId: string, missions: Mission[]): {
   return { approved, happiness, loved, mood, stage, stageRing };
 }
 
-const familyStats = [
-  ["Care rhythm", 88, "#f47b20"],
-  ["Pet comfort", 91, "#0f766e"],
-  ["Kid confidence", 86, "#2563eb"],
-];
-
 const tabItems = [
   { id: "vision", label: "Vision" },
   { id: "missions", label: "Today" },
@@ -631,6 +625,7 @@ export function TailTotsApp() {
   const [justEarnedCertId, setJustEarnedCertId] = useState<string | null>(null);
   const [activeChildId, setActiveChildId] = useState(starterChildren[0]?.id ?? "");
   const [missionNote, setMissionNote] = useState("");
+  const [nudgedMissionIds, setNudgedMissionIds] = useState<string[]>([]);
   const [newChild, setNewChild] = useState({ name: "", age: "8" });
   const [newPet, setNewPet] = useState({ name: "", species: "", food: "" });
   const [newGoal, setNewGoal] = useState({ title: "", target: "25", kind: "save" as "save" | "give", cause: "Animal shelter", seed: "" });
@@ -1284,6 +1279,11 @@ export function TailTotsApp() {
       ),
     );
     setMissionNote("");
+    // The streak rewards the kid's effort, not the parent's timing: completing
+    // advances it once per day (applyDailyStreak's lastStreakDate guard keeps
+    // multiple completions on the same day to a single bump). Parent approval
+    // still gates coins/points/allowance; send-back leaves the streak alone.
+    setChildren((items) => items.map((child) => (child.id === activeChild.id ? applyDailyStreak(child) : child)));
   }
 
   /** Repeat an approved mission: a fresh pending copy; the approved original stays as history. */
@@ -1300,10 +1300,11 @@ export function TailTotsApp() {
     const mission = missions.find((item) => item.id === missionId);
     if (!mission?.completedBy) return;
     setMissions((items) => items.map((item) => (item.id === missionId ? { ...item, status: "approved" } : item)));
+    setNudgedMissionIds((ids) => ids.filter((id) => id !== missionId));
     setChildren((items) =>
       items.map((child) =>
         child.id === mission.completedBy
-          ? { ...applyDailyStreak(child), points: child.points + mission.points, coins: child.coins + mission.coins }
+          ? { ...child, points: child.points + mission.points, coins: child.coins + mission.coins }
           : child,
       ),
     );
@@ -1349,8 +1350,10 @@ export function TailTotsApp() {
     }
   }
 
-  function rejectMission(missionId: string) {
-    setMissions((items) => items.map((mission) => (mission.id === missionId ? { ...mission, completedBy: undefined, note: undefined, status: "rejected" } : mission)));
+  function rejectMission(missionId: string, reason?: string) {
+    // The parent's reason becomes the mission note, so the kid sees it on the card. No schema change needed.
+    setMissions((items) => items.map((mission) => (mission.id === missionId ? { ...mission, completedBy: undefined, note: reason ?? undefined, status: "rejected" } : mission)));
+    setNudgedMissionIds((ids) => ids.filter((id) => id !== missionId));
   }
 
   function assignMission(missionId: string, childId: string) {
@@ -1720,6 +1723,7 @@ export function TailTotsApp() {
               role={role}
               isParentUnlocked={isParentUnlocked}
               pendingCount={pendingApprovals.length}
+              nudgedMissionIds={nudgedMissionIds}
               setActiveTab={setActiveTab}
               scheduleItems={scheduleItems}
             />
@@ -1747,6 +1751,9 @@ export function TailTotsApp() {
                 setMissionNote={setMissionNote}
                 completeMission={completeMission}
                 repeatMission={repeatMission}
+                role={role}
+                nudgedMissionIds={nudgedMissionIds}
+                onNudgeMission={(missionId) => setNudgedMissionIds((ids) => (ids.includes(missionId) ? ids : [...ids, missionId]))}
               />
             </>
           )}
@@ -1864,8 +1871,6 @@ export function TailTotsApp() {
               certificates={certificates}
               familyName={familyName}
               hasPets={pets.length > 0}
-              justEarnedCertId={justEarnedCertId}
-              onDismissEarned={() => setJustEarnedCertId(null)}
               activeChildId={activeChild?.id}
               onSelectChild={role === "parent" ? setActiveChildId : undefined}
               socialPracticeDone={socialPracticeDone}
@@ -1907,6 +1912,40 @@ export function TailTotsApp() {
           }}
         />
       )}
+      {(() => {
+        // Full-screen takeover: a certificate moment should interrupt whatever tab is active.
+        const earned = certificates.find((cert) => cert.id === justEarnedCertId);
+        if (!earned) return null;
+        const earnedChild = children.find((child) => child.id === earned.childId);
+        return (
+          <div className="fixed inset-0 z-50 grid place-items-center bg-[#17231f]/80 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Certificate earned">
+            <div className="tt-animate-pop-in w-full max-w-md rounded-3xl border-4 border-double border-[#7c3aed]/40 bg-white p-6 text-center shadow-2xl sm:p-8">
+              <p className="text-5xl" aria-hidden="true">🎓</p>
+              <p className="mt-2 text-xs font-black uppercase tracking-[0.22em] text-[#7c3aed]">Certificate earned</p>
+              <p className="mt-2 text-2xl font-black text-[#17231f]">{earnedChild?.name ?? "Your kid"} just earned: {earned.title}!</p>
+              <p className="mx-auto mt-3 max-w-sm text-sm font-semibold leading-6 text-[#5f6a65]">
+                {earned.kind === "hero"
+                  ? "Real pet care, proven over time. From pet owner to pet hero — frame it."
+                  : "The pet-care journey, completed. This is the case for a real pet — framed and ready."}
+              </p>
+              <div className="mt-6 grid gap-2">
+                <button
+                  onClick={() => { if (earnedChild) downloadCertificate(earnedChild, earned, familyName); }}
+                  className="tt-btn-press min-h-12 w-full rounded-xl bg-[#7c3aed] px-5 py-3 text-sm font-black text-white"
+                >
+                  🖨️ Print / save the certificate
+                </button>
+                <button
+                  onClick={() => setJustEarnedCertId(null)}
+                  className="tt-btn-press min-h-12 w-full rounded-xl border-2 border-[#7c3aed]/30 bg-white px-5 py-3 text-sm font-black text-[#7c3aed]"
+                >
+                  Celebrate 🎉
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </main>
   );
 }
@@ -3024,7 +3063,31 @@ function SchedulePanel({
     ["Weekend pet hello", "Saturday, 10:00 AM-12:00 PM", "Good for supervised pet introductions or shared care learning."],
     ["Shelter kindness block", "Sunday afternoon", "Parent-reviewed volunteer or donation activity with badge credit."],
   ];
-  const calendarDays = ["Today", "Wednesday", "Thursday", "Saturday", "Sunday"];
+  // Real rolling seven-day window. Existing schedule items use weekday labels ("Today", "Wednesday"…),
+  // so map them onto this week's real weekday names without changing the data model.
+  const weekDays = Array.from({ length: 7 }, (_, offset) => {
+    const date = new Date();
+    date.setDate(date.getDate() + offset);
+    const weekday = date.toLocaleDateString(undefined, { weekday: "long" });
+    return {
+      weekday,
+      isToday: offset === 0,
+      heading: offset === 0 ? "Today" : date.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" }),
+    };
+  });
+  const itemsForWeekday = (weekday: string) =>
+    visibleItems.filter((item) =>
+      item.day === "Today" ? weekDays[0].weekday === weekday : item.day.toLowerCase() === weekday.toLowerCase()
+    );
+  // Missions carry no dates, so completion dots describe each child's current mission state on the Today column.
+  const dotChildren = isParent ? childProfiles : childProfiles.filter((child) => child.id === activeChild?.id);
+  const childMissionDot = (childId: string): "full" | "partial" | "none" => {
+    const relevant = missions.filter((mission) => !mission.assignedChildId || mission.assignedChildId === childId);
+    if (!relevant.length) return "none";
+    if (relevant.every((mission) => mission.status === "approved")) return "full";
+    if (relevant.some((mission) => mission.status === "approved" || mission.completedBy)) return "partial";
+    return "none";
+  };
 
   return (
     <section className="space-y-4">
@@ -3057,14 +3120,38 @@ function SchedulePanel({
           </div>
           {isParent && <span className="rounded-lg bg-[#f0edff] px-4 py-2 text-sm font-black text-[#33245f]">Parent-only combined calendar</span>}
         </div>
-        <div className="mt-4 grid gap-3 lg:grid-cols-5">
-          {calendarDays.map((day) => {
-            const dayItems = visibleItems.filter((item) => item.day === day);
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
+          {weekDays.map((day) => {
+            const dayItems = itemsForWeekday(day.weekday);
+            if (!dayItems.length) {
+              // Truly empty days collapse to a slim row — no filler copy.
+              return (
+                <div key={day.weekday} className="flex items-center justify-between rounded-lg bg-[#f8f6ed] px-3 py-2 text-xs font-bold text-[#8a948f]">
+                  <span>{day.heading}</span>
+                  <span>Open</span>
+                </div>
+              );
+            }
             return (
-              <article key={day} className="min-h-44 rounded-lg bg-[#f8f6ed] p-3">
-                <p className="text-sm font-black text-[#17231f]">{day}</p>
+              <article key={day.weekday} className={`rounded-lg bg-[#f8f6ed] p-3 ${day.isToday ? "ring-2 ring-[#f47b20]" : ""}`}>
+                <p className="text-sm font-black text-[#17231f]">{day.heading}</p>
+                {day.isToday && (
+                  <div className="mt-2 flex flex-wrap gap-1.5" aria-label="Mission completion">
+                    {dotChildren.map((child) => {
+                      const dot = childMissionDot(child.id);
+                      if (dot === "none") return null;
+                      return (
+                        <span
+                          key={child.id}
+                          title={`${child.name}: ${dot === "full" ? "all missions approved" : "some progress"}`}
+                          className={`inline-block h-3 w-3 rounded-full ${dot === "full" ? "bg-[#165a4b]" : "border-2 border-[#165a4b] bg-transparent"}`}
+                        />
+                      );
+                    })}
+                  </div>
+                )}
                 <div className="mt-3 grid gap-2">
-                  {(dayItems.length ? dayItems : [{ id: `${day}-empty`, time: "Open", title: "No scheduled item", note: "Free family time.", childId: activeChild?.id ?? "", day, kind: "family" as const }]).map((item) => {
+                  {dayItems.map((item) => {
                     const child = childProfiles.find((profile) => profile.id === item.childId);
                     return (
                       <div key={item.id} className="rounded-lg bg-white p-3">
@@ -3175,6 +3262,12 @@ function KidPetHelperPanel({ activeChild, pets, moments }: { activeChild?: Child
     ["quote", "Give me today's kind quote."],
   ];
   const aiSuggestion = buildKidAiSuggestion(selectedQuestion, petName, activeChild?.name ?? "Kid");
+  // One suggested question per day, shown as the primary action.
+  const suggestedQuestion = kidQuestions[new Date().getDate() % kidQuestions.length];
+  const askSuggested = () => {
+    setSelectedQuestion(suggestedQuestion[0]);
+    document.getElementById("pet-helper-answer")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
   const helperCards = [
     ["Daily quote", "Small care done every day becomes a big kind habit."],
     ["Pet fact", `${petName} feels safer when food, water, sound, and handling stay calm and predictable.`],
@@ -3187,14 +3280,20 @@ function KidPetHelperPanel({ activeChild, pets, moments }: { activeChild?: Child
     <section className="space-y-4">
       <div className="rounded-lg border border-[#ded8c7] bg-[#e7f4ef] p-5 shadow-sm">
         <p className="text-xs font-black uppercase tracking-[0.18em] text-[#165a4b]">Kid-safe AI helper</p>
-        <h2 className="mt-2 text-3xl font-black">{activeChild?.name ?? "Kid"}, ask about pets without grown-up screens</h2>
+        <h2 className="mt-2 text-3xl font-black">{petName} has answers 🐹</h2>
         <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-[#4f625b]">
-          These are guided prompts, not open chat. They help kids learn pet care, curiosity, and kindness without judging them.
+          One safe question, one helpful answer — {activeChild?.name ?? "kiddo"} picks the question, the helper does the rest.
         </p>
+        <button
+          onClick={askSuggested}
+          className="tt-btn-press mt-4 min-h-14 w-full rounded-xl bg-[#165a4b] px-5 py-3 text-base font-black text-white sm:w-auto"
+        >
+          {suggestedQuestion[1]} →
+        </button>
       </div>
       <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#f47b20]">Ask with a button</p>
-        <h3 className="mt-2 text-2xl font-black">Pick a safe question</h3>
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#f47b20]">Or pick another safe question</p>
+        <h3 className="mt-2 text-2xl font-black">More questions to try</h3>
         <div className="mt-4 grid gap-2 sm:grid-cols-2">
           {kidQuestions.map(([id, question]) => (
             <button
@@ -3208,7 +3307,7 @@ function KidPetHelperPanel({ activeChild, pets, moments }: { activeChild?: Child
             </button>
           ))}
         </div>
-        <div className="mt-4 rounded-lg bg-[#e7f4ef] p-4">
+        <div id="pet-helper-answer" className="mt-4 scroll-mt-24 rounded-lg bg-[#e7f4ef] p-4">
           <p className="text-xs font-black uppercase tracking-[0.14em] text-[#165a4b]">TailTots suggestion</p>
           <p className="mt-2 text-lg font-black leading-7">{aiSuggestion.title}</p>
           <p className="mt-2 text-sm font-semibold leading-6 text-[#4f625b]">{aiSuggestion.body}</p>
@@ -3226,6 +3325,9 @@ function KidPetHelperPanel({ activeChild, pets, moments }: { activeChild?: Child
         <p className="text-xs font-black uppercase tracking-[0.18em] text-[#7c3aed]">Your care memory</p>
         <p className="mt-3 text-lg font-black">{recentMoment?.note ?? "Complete a care mission and your kind pet moment can show here."}</p>
       </section>
+      <p className="text-center text-xs font-bold text-[#69736f]">
+        For parents: guided prompts only — no open chat. Kid-safe by design.
+      </p>
     </section>
   );
 }
@@ -3265,6 +3367,7 @@ function HomeHubPanel({
   role,
   isParentUnlocked,
   pendingCount,
+  nudgedMissionIds,
   setActiveTab,
   scheduleItems,
 }: {
@@ -3280,6 +3383,7 @@ function HomeHubPanel({
   role: Role;
   isParentUnlocked: boolean;
   pendingCount: number;
+  nudgedMissionIds: string[];
   setActiveTab: (tab: string) => void;
   scheduleItems: KidScheduleItem[];
 }) {
@@ -3288,17 +3392,27 @@ function HomeHubPanel({
   const approvedCount = missions.filter((mission) => mission.status === "approved").length;
   const streakLeader = [...childProfiles].sort((a, b) => b.streakDays - a.streakDays)[0];
   const sharedGoals = goals.filter((goal) => goal.sharedWithTrustedFamilies).slice(0, 2);
+  const pendingMissions = missions.filter((mission) => mission.status === "pending" && mission.completedBy);
+  const waitingByChild = childProfiles
+    .map((child) => ({
+      child,
+      items: pendingMissions.filter((mission) => mission.completedBy === child.id),
+    }))
+    .filter((entry) => entry.items.length > 0);
+  const highFiveEta = (count: number) => (count <= 1 ? "about 30 seconds" : count === 2 ? "about 60 seconds" : "a couple of minutes");
   const reminders = isParentView
     ? [
         `Review ${pendingCount} item${pendingCount === 1 ? "" : "s"} before rewards count.`,
         "Check assignment balance so kids are not competing for the same work.",
         "Choose which neighborhood jobs are visible before kids can accept them.",
       ]
-    : [
-        `Next care idea: check what ${pets[0]?.name ?? "your pet"} needs first.`,
-        `${nextMissions[0]?.title ?? "Water check"} can be marked done after a parent looks.`,
-        "Rewards count after a grown-up review.",
-      ];
+    : (() => {
+        // Anticipation copy: waiting missions feel like a high-five on its way, not a queue.
+        const waiting = missions.filter((mission) => mission.completedBy && mission.status === "pending").slice(0, 2);
+        const lines = waiting.map((mission) => `“${mission.title}” is waiting on a parent high-five ⭐`);
+        lines.push(`Next care idea: check what ${pets[0]?.name ?? "your pet"} needs first.`);
+        return lines.slice(0, 3);
+      })();
   const visibleBadges = (isParentView ? badges : badges.filter((badge) => badge.childId === activeChild?.id)).slice(0, 4);
   const nextSchedule = scheduleItems.filter((item) => (isParentView ? true : item.childId === activeChild?.id)).slice(0, 3);
   const lifeSkillBadges = [
@@ -3308,11 +3422,71 @@ function HomeHubPanel({
     { title: "On Time", detail: "Healthy routines", color: "bg-[#eaf1ff] text-[#1d4ed8]" },
   ];
 
+  const opsCards = (
+    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+      <div className="rounded-lg bg-white/10 p-3">
+        <p className="text-xs font-black uppercase text-white/70">Fairness engine</p>
+        <p className="mt-2 text-lg font-black text-[#ffd166]">{fairnessSummary.label}</p>
+        <p className="mt-1 text-sm font-bold text-white/70">{fairnessSummary.detail}</p>
+      </div>
+      <div className="rounded-lg bg-white/10 p-3">
+        <p className="text-xs font-black uppercase text-white/70">Top value</p>
+        <p className="mt-2 text-lg font-black text-[#5eead4]">{familySkillSummary.topLabel}</p>
+        <p className="mt-1 text-sm font-bold text-white/70">{familySkillSummary.totalBadges} value badges tracked</p>
+      </div>
+    </div>
+  );
+  const petBuddyTiles = (strip: boolean) => (
+    <div className={strip ? "rounded-lg bg-white/10 p-4" : "rounded-lg bg-white/10 p-5"}>
+      <p className="text-center text-sm font-black uppercase tracking-[0.14em] text-[#ffd166]">{strip ? "Your pet buddies" : "Pet buddies"}</p>
+      <div className={strip ? "mt-3 flex gap-3 overflow-x-auto pb-1" : "mt-4 grid grid-cols-2 gap-4"}>
+        {pets.slice(0, 4).map((pet) => {
+          const look = getPetLook(pet.id, pet);
+          return (
+            <div key={pet.id} className={`grid place-items-center rounded-lg bg-white/10 p-3 ${strip ? "w-32 shrink-0" : ""}`}>
+              <ProfilePhoto
+                label={pet.name}
+                initial={look.face}
+                colors={look.colors}
+                size="md"
+                variant="pet"
+                petKind={look.kind}
+                photoUrl={pet.photoUrl}
+              />
+              <p className="mt-2 max-w-full truncate text-center text-base font-black">{pet.name}</p>
+              <p className="max-w-full truncate text-center text-xs font-bold text-white/70">{pet.species}</p>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+
   return (
     <section className="space-y-4">
+      {isParentView && waitingByChild.length > 0 && (
+        <div className="rounded-lg border-2 border-[#f4b400] bg-[#fff8e1] p-4 shadow-sm" role="status">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-[#7a4b12]">
+                👋 Your high-five is needed{waitingByChild.some((entry) => entry.items.some((item) => nudgedMissionIds.includes(item.id))) ? " — a kiddo nudged you" : ""}
+              </p>
+              {waitingByChild.map(({ child, items }) => (
+                <p key={child.id} className="mt-1 text-lg font-black text-[#17231f]">
+                  {child.name} is waiting on {items.length} high-five{items.length === 1 ? "" : "s"} — {highFiveEta(items.length)}.
+                </p>
+              ))}
+            </div>
+            <button onClick={() => setActiveTab("approvals")} className="tt-btn-press min-h-12 rounded-lg bg-[#f47b20] px-5 py-3 text-sm font-black text-white">
+              Review now →
+            </button>
+          </div>
+        </div>
+      )}
       <div className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
         <section className="overflow-hidden rounded-lg border border-[#ded8c7] bg-[#17231f] text-white shadow-sm">
-          <div className="grid min-h-[320px] gap-5 p-4 sm:p-6 2xl:grid-cols-[minmax(0,1fr)_220px] 2xl:items-center">
+          <div className={`grid min-h-[320px] gap-5 p-4 sm:p-6 ${isParentView ? "2xl:grid-cols-[minmax(0,1fr)_220px] 2xl:items-center" : ""}`}>
+            {!isParentView && petBuddyTiles(true)}
             <div className="min-w-0">
               <p className="text-sm font-black uppercase tracking-[0.18em] text-[#ffd166]">Home Hub</p>
               <p className="mt-3 inline-flex max-w-full rounded-full bg-white/10 px-3 py-2 text-sm font-black text-[#ffd166]">
@@ -3338,42 +3512,9 @@ function HomeHubPanel({
                   </div>
                 ))}
               </div>
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                <div className="rounded-lg bg-white/10 p-3">
-                  <p className="text-xs font-black uppercase text-white/70">Fairness engine</p>
-                  <p className="mt-2 text-lg font-black text-[#ffd166]">{fairnessSummary.label}</p>
-                  <p className="mt-1 text-sm font-bold text-white/70">{fairnessSummary.detail}</p>
-                </div>
-                <div className="rounded-lg bg-white/10 p-3">
-                  <p className="text-xs font-black uppercase text-white/70">Top value</p>
-                  <p className="mt-2 text-lg font-black text-[#5eead4]">{familySkillSummary.topLabel}</p>
-                  <p className="mt-1 text-sm font-bold text-white/70">{familySkillSummary.totalBadges} value badges tracked</p>
-                </div>
-              </div>
+              {isParentView ? opsCards : null}
             </div>
-            <div className="rounded-lg bg-white/10 p-5">
-              <p className="text-center text-sm font-black uppercase tracking-[0.14em] text-[#ffd166]">Pet buddies</p>
-              <div className="mt-4 grid grid-cols-2 gap-4">
-                {pets.slice(0, 4).map((pet) => {
-                  const look = getPetLook(pet.id, pet);
-                  return (
-                    <div key={pet.id} className="grid place-items-center rounded-lg bg-white/10 p-3">
-                      <ProfilePhoto
-                        label={pet.name}
-                        initial={look.face}
-                        colors={look.colors}
-                        size="md"
-                        variant="pet"
-                        petKind={look.kind}
-                        photoUrl={pet.photoUrl}
-                      />
-                      <p className="mt-2 max-w-full truncate text-center text-base font-black">{pet.name}</p>
-                      <p className="max-w-full truncate text-center text-xs font-bold text-white/70">{pet.species}</p>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+            {isParentView ? petBuddyTiles(false) : opsCards}
           </div>
         </section>
 
@@ -3593,8 +3734,16 @@ function Hero({
           </div>
         </div>
         <div className="grid gap-3 border-t border-white/15 bg-white/8 p-4 sm:grid-cols-3">
-          {familyStats.map(([label, value, color]) => (
-            <Meter key={label} label={String(label)} value={Number(value)} color={String(color)} dark />
+          {[
+            ["Missions approved", String(approvedMissionCount), "real work, parent-verified"],
+            ["Care streak", `${child?.streakDays ?? 0} day${(child?.streakDays ?? 0) === 1 ? "" : "s"}`, "one day at a time"],
+            ["Waiting on review", String(pendingCount), "a parent high-five is next"],
+          ].map(([label, value, detail]) => (
+            <div key={label} className="rounded-lg bg-white/10 p-4">
+              <p className="text-xs font-black uppercase tracking-[0.14em] text-white/70">{label}</p>
+              <p className="mt-1 text-3xl font-black text-white">{value}</p>
+              <p className="mt-1 text-xs font-bold text-white/60">{detail}</p>
+            </div>
           ))}
         </div>
       </div>
@@ -4009,7 +4158,25 @@ function MissionsPanel(props: {
   setMissionNote: (value: string) => void;
   completeMission: (missionId: string) => void;
   repeatMission: (missionId: string) => void;
+  role: Role;
+  nudgedMissionIds: string[];
+  onNudgeMission: (missionId: string) => void;
 }) {
+  const isKidView = props.role === "child";
+  const [confirmingMissionId, setConfirmingMissionId] = useState<string | null>(null);
+  const [patienceMissionId, setPatienceMissionId] = useState<string | null>(null);
+  const tapPatience = (missionId: string) => {
+    setPatienceMissionId(missionId);
+    window.setTimeout(() => setPatienceMissionId((current) => (current === missionId ? null : current)), 2600);
+  };
+  // Pet status card: the first pet is the kid's "today" companion.
+  const statusPet = props.pets[0];
+  const statusPetLook = statusPet ? getPetLook(statusPet.id, statusPet) : null;
+  const statusPetStats = statusPet ? getPetCareStats(statusPet.id, props.missions) : null;
+  const firstOpenNeed = statusPet
+    ? props.missions.find((mission) => mission.petId === statusPet.id && !mission.completedBy && mission.status !== "approved")
+    : undefined;
+  const scrollToMissions = () => document.getElementById("today-mission-list")?.scrollIntoView({ behavior: "smooth", block: "start" });
   const pawgressTotal = props.missions.length;
   const pawgressDone = props.missions.filter((mission) => mission.completedBy || mission.status === "approved").length;
   const pawgressPct = pawgressTotal === 0 ? 0 : Math.round((pawgressDone / pawgressTotal) * 100);
@@ -4030,16 +4197,51 @@ function MissionsPanel(props: {
           <p className="text-xs font-black uppercase tracking-[0.18em] text-[#0f766e]">Today</p>
           <h2 className="mt-2 text-2xl font-black sm:text-3xl">Today&apos;s care and helper missions</h2>
           <p className="mt-2 max-w-xl text-sm font-semibold leading-6 text-[#5f6a65]">
-            This is the main kid screen. Pick a pet care or helper task, answer the check-in, then wait for parent review.
+            Pick a mission, do it in the real world, then send it for a parent high-five.
           </p>
         </div>
-        <textarea
-          value={props.missionNote}
-          onChange={(event) => props.setMissionNote(event.target.value)}
-          className="min-h-24 rounded-lg border border-[#ded8c7] px-4 py-3 text-base font-semibold sm:w-80"
-          placeholder="What did you notice?"
-        />
       </div>
+      {isKidView && statusPet && statusPetStats && statusPetLook && (
+        <div className="mt-4 overflow-hidden rounded-xl border border-[#ded8c7] bg-[#fbfaf4]">
+          <div className="flex items-center gap-4 p-4">
+            <div className={`rounded-full ring-4 ring-offset-2 ring-offset-[#fbfaf4] ${statusPetStats.stageRing}`}>
+              <ProfilePhoto
+                label={statusPet.name}
+                initial={statusPetLook.face}
+                colors={statusPetLook.colors}
+                size="lg"
+                variant="pet"
+                petKind={statusPetLook.kind}
+                photoUrl={statusPet.photoUrl}
+              />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="text-xl font-black">{statusPet.name}</p>
+                <span className="rounded-full bg-white px-3 py-1 text-xs font-black ring-1 ring-[#ded8c7]">{statusPetStats.stage}</span>
+                <span className="rounded-full bg-[#e7f4ef] px-3 py-1 text-xs font-black text-[#0f513f]">{statusPetStats.mood}</span>
+              </div>
+              <p className="mt-1 text-sm font-semibold text-[#5f6a65]">
+                {firstOpenNeed ? `${statusPet.name} is waiting on: “${firstOpenNeed.title}” 🐾` : `${statusPet.name} is all cared for — nice work! 🌟`}
+              </p>
+            </div>
+          </div>
+          <button onClick={scrollToMissions} className="tt-btn-press w-full bg-[#165a4b] px-4 py-3 text-sm font-black text-white">
+            Check on {statusPet.name} →
+          </button>
+        </div>
+      )}
+      {isKidView && !statusPet && (
+        <div className="mt-4 rounded-xl border-2 border-dashed border-[#0f766e] bg-[#e7f4ef] p-4">
+          <p className="text-lg font-black text-[#0f513f]">Your future pet is waiting… 🐾</p>
+          <p className="mt-1 text-sm font-semibold text-[#4f625b]">
+            Every mission below is practice for the real thing. Finish them and you build the case for a pet of your own.
+          </p>
+          <button onClick={scrollToMissions} className="tt-btn-press mt-3 min-h-11 rounded-lg bg-[#0f766e] px-4 py-2 text-sm font-black text-white">
+            Start the readiness path →
+          </button>
+        </div>
+      )}
       <div className="mt-4 rounded-lg border border-[#e8e1cf] bg-[#fbfaf4] p-4" aria-label="Mission progress">
         <div className="flex items-center justify-between gap-2 text-sm font-black">
           <span>🐾 Pawgress</span>
@@ -4053,7 +4255,20 @@ function MissionsPanel(props: {
         </div>
         <p className="mt-2 text-sm font-bold text-[#5f6a65]">{pawgressMessage}</p>
       </div>
-      <div className="mt-5 grid gap-3">
+      <div id="today-mission-list" className="mt-5 grid gap-3 scroll-mt-24">
+        {props.missions.length === 0 && (
+          <div className="rounded-xl border-2 border-dashed border-[#0f766e] bg-[#eef7f2] p-6 text-center">
+            <p className="text-lg font-black text-[#0f513f]">No missions yet 🐾</p>
+            <p className="mx-auto mt-2 max-w-md text-sm font-semibold text-[#4f625b]">
+              {isKidView
+                ? "Your first mission is the start of the adventure."
+                : "Add the first mission so your kid has something to care for today."}
+            </p>
+            {isKidView && (
+              <p className="mt-3 text-sm font-black text-[#0f766e]">Ask a grown-up to add your first one →</p>
+            )}
+          </div>
+        )}
         {props.missions.map((mission) => {
           const pet = props.pets.find((item) => item.id === mission.petId);
           const skill = getMissionLifeSkill(mission);
@@ -4075,6 +4290,108 @@ function MissionsPanel(props: {
                   ))}
                 </div>
               )}
+              {isKidView ? (
+                <>
+                  <div>
+                    <h3 className="text-xl font-black">{mission.title}</h3>
+                    <p className="mt-1 text-sm font-semibold text-[#5f6a65]">{mission.question}</p>
+                    <div className="mt-2 flex flex-wrap items-center gap-2 text-xs font-black text-[#5f6a65]">
+                      {pet ? (
+                        <span className="inline-flex items-center gap-1.5">
+                          <ProfilePhoto
+                            label={pet.name}
+                            initial={getPetLook(pet.id, pet).face}
+                            colors={getPetLook(pet.id, pet).colors}
+                            size="xs"
+                            variant="pet"
+                            petKind={getPetLook(pet.id, pet).kind}
+                            photoUrl={pet.photoUrl}
+                          />
+                          {pet.name}
+                        </span>
+                      ) : (
+                        <span className="capitalize">{mission.category.replace("_", " ")}</span>
+                      )}
+                      <span aria-hidden="true">·</span>
+                      <span>+{mission.points} pts</span>
+                    </div>
+                    {mission.status === "rejected" && mission.note && (
+                      <p className="mt-2 rounded-lg bg-[#fff4d8] p-2 text-xs font-bold text-[#7a4b12]">↩️ Sent back: {mission.note}</p>
+                    )}
+                  </div>
+                  <div className="grid gap-2">
+                    {confirmingMissionId === mission.id ? (
+                      <div className="rounded-lg bg-white p-3 ring-1 ring-[#ded8c7]">
+                        <label className="text-xs font-black uppercase tracking-[0.12em] text-[#0f766e]">
+                          Step 2 · What did you notice?
+                          <textarea
+                            value={props.missionNote}
+                            onChange={(event) => props.setMissionNote(event.target.value)}
+                            className="mt-2 min-h-20 w-full rounded-lg border border-[#ded8c7] bg-[#fbfaf4] px-3 py-2 text-sm font-semibold"
+                            placeholder="What did you notice?"
+                          />
+                        </label>
+                        <div className="mt-2 grid grid-cols-2 gap-2">
+                          <button
+                            onClick={() => setConfirmingMissionId(null)}
+                            className="tt-btn-press min-h-11 rounded-lg border-2 border-[#ded8c7] bg-white px-4 py-2 text-sm font-black text-[#5f6a65]"
+                          >
+                            Back
+                          </button>
+                          <button
+                            onClick={() => { props.completeMission(mission.id); setConfirmingMissionId(null); }}
+                            className="tt-btn-press min-h-11 rounded-lg bg-[#f47b20] px-4 py-2 text-sm font-black text-white"
+                          >
+                            Send for high-five →
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          if (mission.status === "approved") return;
+                          if (mission.completedBy) tapPatience(mission.id);
+                          else setConfirmingMissionId(mission.id);
+                        }}
+                        disabled={!props.activeChild || mission.status === "approved"}
+                        className={`tt-btn-press min-h-14 w-full rounded-lg px-6 py-3 text-base font-black disabled:opacity-95 lg:w-auto ${
+                          mission.status === "approved"
+                            ? "bg-[#165a4b] text-white"
+                            : mission.completedBy
+                              ? "bg-[#ffd166] text-[#7a4b12]"
+                              : "bg-[#f47b20] text-white"
+                        }`}
+                      >
+                        {mission.status === "approved" ? "Approved ✓" : mission.completedBy ? "⏳ Sent for a parent high-five" : "Mark done"}
+                      </button>
+                    )}
+                    {patienceMissionId === mission.id && (
+                      <p className="text-center text-xs font-black text-[#7a4b12]">Still waiting — nice patience! 🌟</p>
+                    )}
+                    {mission.completedBy && mission.status !== "approved" && (
+                      props.nudgedMissionIds.includes(mission.id) ? (
+                        <p className="text-center text-xs font-black text-[#0f766e]">Nudged ✓ — a parent got the memo</p>
+                      ) : (
+                        <button
+                          onClick={() => props.onNudgeMission(mission.id)}
+                          className="tt-btn-press min-h-10 rounded-lg border-2 border-dashed border-[#f4b400] bg-[#fff8e1] px-4 py-2 text-xs font-black text-[#7a4b12]"
+                        >
+                          Nudge parent 👋
+                        </button>
+                      )
+                    )}
+                    {mission.status === "approved" && (
+                      <button
+                        onClick={() => props.repeatMission(mission.id)}
+                        className="min-h-11 rounded-lg border border-[#165a4b] bg-white px-4 py-2 text-sm font-black text-[#165a4b]"
+                      >
+                        Do again 🔁
+                      </button>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <>
               <div>
                 <div className="flex flex-wrap gap-2">
                   <span className="rounded-full bg-white px-3 py-1 text-xs font-black">{levelLabels[mission.difficulty]}</span>
@@ -4127,6 +4444,8 @@ function MissionsPanel(props: {
                   </button>
                 )}
               </div>
+                </>
+              )}
             </article>
           );
         })}
@@ -4438,6 +4757,7 @@ function BankPanel(props: {
     reason: "",
     goalId: childGoals[0]?.id ?? "",
   });
+  const [showGrownUpHint, setShowGrownUpHint] = useState(false);
   const saveGoalOptions = [
     ...childGoals,
     ...props.goals.filter(
@@ -4511,7 +4831,7 @@ function BankPanel(props: {
             <div>
               <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2563eb]">Kid Bank</p>
               <h2 className="mt-1 text-3xl font-black">{props.child?.name ?? "Kid"}&apos;s money choices</h2>
-              <p className="mt-1 text-sm font-semibold text-[#5f6a65]">Coins are app rewards. Dollars are parent-approved allowance money.</p>
+              <p className="mt-1 text-sm font-semibold text-[#5f6a65]">💰 Dollars are real allowance · 🪙 Coins are just for fun</p>
             </div>
           </div>
           <div className="grid grid-cols-3 gap-2 text-center">
@@ -4537,7 +4857,26 @@ function BankPanel(props: {
           <h3 className="mt-2 text-2xl font-black">What are you saving for?</h3>
           <div className="mt-4 grid gap-3">
             {!childGoals.length && (
-              <div className="rounded-lg bg-[#f8f6ed] p-4 text-sm font-semibold text-[#5f6a65]">Add one goal first, then move allowance dollars toward it.</div>
+              props.isParentView ? (
+                <div className="rounded-lg bg-[#f8f6ed] p-4 text-sm font-semibold text-[#5f6a65]">
+                  No goals yet — start the first one below 👇
+                </div>
+              ) : (
+                <div className="rounded-lg border-2 border-dashed border-[#0f766e] bg-[#eef7f2] p-4 text-center">
+                  <p className="text-sm font-black text-[#0f513f]">No goals yet — ask a parent to start one with you 🌱</p>
+                  <button
+                    onClick={() => setShowGrownUpHint((show) => !show)}
+                    className="tt-btn-press mt-3 min-h-11 rounded-lg bg-[#0f766e] px-4 py-2 text-sm font-black text-white"
+                  >
+                    Show this to a grown-up →
+                  </button>
+                  {showGrownUpHint && (
+                    <p className="mx-auto mt-2 max-w-xs text-xs font-bold text-[#4f625b]">
+                      A grown-up can start a save or give goal for you from the Parent side 🌱
+                    </p>
+                  )}
+                </div>
+              )
             )}
             {childGoals.map((goal) => {
               const percent = Math.min(100, (goal.saved / goal.target) * 100);
@@ -4589,6 +4928,7 @@ function BankPanel(props: {
             })}
           </div>
 
+          {props.isParentView && (
           <div className="mt-4 rounded-lg bg-[#fff4d8] p-4">
             <h4 className="text-lg font-black">Start a new goal</h4>
             {props.isParentView && (
@@ -4652,6 +4992,7 @@ function BankPanel(props: {
               </div>
             )}
           </div>
+          )}
         </div>
 
         <div className="space-y-4">
@@ -4751,13 +5092,24 @@ function BankPanel(props: {
 
           <div className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
           <h3 className="font-black">Waiting and history</h3>
-          {childTransactions.map((tx) => (
-            <p key={tx.id} className="mt-3 rounded-lg bg-[#f8f6ed] p-3 text-sm font-semibold">
-              <b className="capitalize">{tx.category}</b> ${tx.amount}
-              <span className="mt-1 block">{tx.description}</span>
-              <span className="mt-1 block text-xs font-black uppercase tracking-[0.12em] text-[#5f6a65]">{tx.status}</span>
-            </p>
-          ))}
+          {childTransactions.some((tx) => tx.status === "pending") && (
+            <div className="mt-3 grid gap-2">
+              {childTransactions.filter((tx) => tx.status === "pending").map((tx) => (
+                <p key={tx.id} className="rounded-lg border-2 border-[#f4b400] bg-[#fff8e1] p-3 text-sm font-semibold">
+                  <b className="capitalize">{tx.category}</b> ${tx.amount} · <span className="font-black text-[#7a4b12]">waiting</span>
+                  <span className="mt-1 block">{tx.description}</span>
+                </p>
+              ))}
+            </div>
+          )}
+          <div className="mt-2 grid gap-2">
+            {childTransactions.filter((tx) => tx.status !== "pending").map((tx) => (
+              <p key={tx.id} className="rounded-lg bg-[#f8f6ed] p-3 text-sm font-semibold text-[#5f6a65]">
+                <b className="capitalize">{tx.category}</b> ${tx.amount} · <span className="font-black">done</span>
+                <span className="mt-1 block">{tx.description}</span>
+              </p>
+            ))}
+          </div>
           {!childTransactions.length && <p className="mt-3 rounded-lg bg-[#f8f6ed] p-3 text-sm font-semibold text-[#5f6a65]">No bank moves yet.</p>}
           </div>
         </div>
@@ -4777,51 +5129,149 @@ function ApprovalsPanel(props: {
   childProfiles: Child[];
   approveMission: (missionId: string) => void;
   approveTransaction: (transactionId: string) => void;
-  rejectMission: (missionId: string) => void;
+  rejectMission: (missionId: string, reason?: string) => void;
   rejectTransaction: (transactionId: string) => void;
 }) {
   const pendingMissions = props.missions.filter((mission) => mission.completedBy && mission.status === "pending");
   const pendingTransactions = props.transactions.filter((tx) => tx.status === "pending");
+  const [sendBackFor, setSendBackFor] = useState<string | null>(null);
   return (
-    <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
-      <p className="text-xs font-black uppercase tracking-[0.18em] text-[#f47b20]">Parent dashboard</p>
-      <h2 className="mt-2 text-3xl font-black">Review before rewards count</h2>
-      <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-[#5f6a65]">
-        Parents stay in control. Completed missions and Kid Bank requests wait here until a grown-up approves them.
-      </p>
-      <div className="mt-5 grid gap-3">
-        {!pendingMissions.length && !pendingTransactions.length && (
-          <div className="rounded-lg bg-[#f8f6ed] p-4 text-sm font-semibold text-[#5f6a65]">
-            Nothing needs review right now. When kids mark missions done or request Kid Bank moves, they will appear here.
+    <section className="space-y-5">
+      <div className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-[#f47b20]">Missions</p>
+            <h2 className="mt-1 text-2xl font-black">Kid missions waiting on you</h2>
           </div>
-        )}
-        {pendingMissions.map((mission) => (
-          <article key={mission.id} className="flex flex-col justify-between gap-3 rounded-lg bg-[#f8f6ed] p-4 sm:flex-row sm:items-center">
-            <div>
-              <p className="font-semibold">
-                <b>{props.childProfiles.find((child) => child.id === mission.completedBy)?.name}</b> completed {mission.title}. Note: {mission.note}. Approval adds {mission.coins} reward coins
-                {mission.allowanceDollars ? ` and $${mission.allowanceDollars} allowance.` : " and no allowance dollars."}
-              </p>
-              <div className="mt-2 flex flex-wrap gap-2">
-                <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-[#5b21b6]">{getLifeSkillLabel(getMissionLifeSkill(mission))}</span>
-                <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-[#165a4b]">Parent approval creates value evidence</span>
-              </div>
-            </div>
-            <div className="grid gap-2 sm:grid-cols-2">
-              <button onClick={() => props.approveMission(mission.id)} className="min-h-11 rounded-lg bg-[#165a4b] px-5 py-2 text-sm font-black text-white">Approve</button>
-              <button onClick={() => props.rejectMission(mission.id)} className="min-h-11 rounded-lg bg-white px-5 py-2 text-sm font-black text-[#7a2c2c]">Send back</button>
-            </div>
-          </article>
-        ))}
-        {pendingTransactions.map((tx) => (
-          <article key={tx.id} className="flex flex-col justify-between gap-3 rounded-lg bg-[#fff4d8] p-4 sm:flex-row sm:items-center">
-            <p className="font-semibold"><b>{props.childProfiles.find((child) => child.id === tx.childId)?.name}</b> requested {tx.category} ${tx.amount}: {tx.description}</p>
-            <div className="grid gap-2 sm:grid-cols-2">
-              <button onClick={() => props.approveTransaction(tx.id)} className="min-h-11 rounded-lg bg-[#165a4b] px-5 py-2 text-sm font-black text-white">Approve</button>
-              <button onClick={() => props.rejectTransaction(tx.id)} className="min-h-11 rounded-lg bg-white px-5 py-2 text-sm font-black text-[#7a2c2c]">Decline</button>
-            </div>
-          </article>
-        ))}
+          {pendingMissions.length > 0 && (
+            <button
+              onClick={() => pendingMissions.forEach((mission) => props.approveMission(mission.id))}
+              className="tt-btn-press min-h-11 rounded-lg bg-[#165a4b] px-5 py-2 text-sm font-black text-white"
+            >
+              Approve all ({pendingMissions.length})
+            </button>
+          )}
+        </div>
+        <div className="mt-4 grid gap-3">
+          {!pendingMissions.length && (
+            <p className="rounded-lg bg-[#f8f6ed] p-4 text-sm font-semibold text-[#5f6a65]">No missions waiting right now.</p>
+          )}
+          {pendingMissions.map((mission) => {
+            const child = props.childProfiles.find((entry) => entry.id === mission.completedBy);
+            const childLook = getChildLook(child?.id);
+            return (
+              <article key={mission.id} className="flex gap-4 rounded-lg bg-[#f8f6ed] p-4">
+                <ProfilePhoto
+                  label={child?.name ?? "Kid"}
+                  initial={childLook.initial}
+                  colors={childLook.colors}
+                  size="md"
+                  variant="kid"
+                  hair={childLook.hair}
+                  photoUrl={child?.photoUrl}
+                />
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-black uppercase tracking-[0.12em] text-[#5f6a65]">{child?.name ?? "Kid"} finished</p>
+                  <h3 className="mt-1 text-xl font-black">{mission.title}</h3>
+                  {mission.note ? (
+                    <p className="mt-2 rounded-lg bg-white p-3 text-sm font-semibold leading-6 text-[#28342f]">“{mission.note}”</p>
+                  ) : (
+                    <p className="mt-2 text-sm font-semibold italic text-[#8a948f]">No note from {child?.name ?? "kid"} this time.</p>
+                  )}
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <span className="rounded-full bg-white px-3 py-1 text-xs font-black">🪙 +{mission.coins} coins</span>
+                    <span className="rounded-full bg-white px-3 py-1 text-xs font-black">🔥 {child?.streakDays ?? 0}-day streak</span>
+                    {mission.allowanceDollars ? (
+                      <span className="rounded-full bg-white px-3 py-1 text-xs font-black">💰 +${mission.allowanceDollars}</span>
+                    ) : null}
+                  </div>
+                  <div className="mt-3 flex flex-wrap items-center gap-3">
+                    <button
+                      onClick={() => props.approveMission(mission.id)}
+                      className="tt-btn-press min-h-11 rounded-lg bg-[#165a4b] px-5 py-2 text-sm font-black text-white"
+                    >
+                      Approve
+                    </button>
+                    {sendBackFor === mission.id ? (
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          onClick={() => { props.rejectMission(mission.id, "Not done yet — give it another try! 💪"); setSendBackFor(null); }}
+                          className="min-h-11 rounded-lg border border-[#d7caa9] bg-white px-4 py-2 text-sm font-black text-[#7a2c2c]"
+                        >
+                          Not done yet
+                        </button>
+                        <button
+                          onClick={() => { props.rejectMission(mission.id, "Needs a photo — snap one and send it again 📸"); setSendBackFor(null); }}
+                          className="min-h-11 rounded-lg border border-[#d7caa9] bg-white px-4 py-2 text-sm font-black text-[#7a2c2c]"
+                        >
+                          Needs a photo
+                        </button>
+                      </div>
+                    ) : (
+                      <button onClick={() => setSendBackFor(mission.id)} className="min-h-11 px-2 py-2 text-sm font-bold text-[#8a948f] underline underline-offset-2">
+                        Send back
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      </div>
+      <div className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2563eb]">Kid Bank</p>
+            <h2 className="mt-1 text-2xl font-black">Money requests</h2>
+          </div>
+          {pendingTransactions.length > 0 && (
+            <button
+              onClick={() => pendingTransactions.forEach((tx) => props.approveTransaction(tx.id))}
+              className="tt-btn-press min-h-11 rounded-lg bg-[#165a4b] px-5 py-2 text-sm font-black text-white"
+            >
+              Approve all ({pendingTransactions.length})
+            </button>
+          )}
+        </div>
+        <div className="mt-4 grid gap-3">
+          {!pendingTransactions.length && (
+            <p className="rounded-lg bg-[#f8f6ed] p-4 text-sm font-semibold text-[#5f6a65]">No money requests waiting right now.</p>
+          )}
+          {pendingTransactions.map((tx) => {
+            const child = props.childProfiles.find((entry) => entry.id === tx.childId);
+            const childLook = getChildLook(child?.id);
+            return (
+              <article key={tx.id} className="flex gap-4 rounded-lg bg-[#fff4d8] p-4">
+                <ProfilePhoto
+                  label={child?.name ?? "Kid"}
+                  initial={childLook.initial}
+                  colors={childLook.colors}
+                  size="md"
+                  variant="kid"
+                  hair={childLook.hair}
+                  photoUrl={child?.photoUrl}
+                />
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-xl font-black capitalize">{tx.category} · ${tx.amount}</h3>
+                  <p className="mt-1 text-sm font-semibold text-[#28342f]">{tx.description}</p>
+                  <p className="mt-1 text-xs font-bold text-[#5f6a65]">{child?.name ?? "Kid"} requested this</p>
+                  <div className="mt-3 flex flex-wrap items-center gap-3">
+                    <button
+                      onClick={() => props.approveTransaction(tx.id)}
+                      className="tt-btn-press min-h-11 rounded-lg bg-[#165a4b] px-5 py-2 text-sm font-black text-white"
+                    >
+                      Approve
+                    </button>
+                    <button onClick={() => props.rejectTransaction(tx.id)} className="min-h-11 px-2 py-2 text-sm font-bold text-[#8a948f] underline underline-offset-2">
+                      Decline
+                    </button>
+                  </div>
+                </div>
+              </article>
+            );
+          })}
+        </div>
       </div>
     </section>
   );
@@ -5456,32 +5906,15 @@ function GrowthPanel(props: {
   certificates: Certificate[];
   familyName: string;
   hasPets: boolean;
-  justEarnedCertId: string | null;
-  onDismissEarned: () => void;
   activeChildId?: string;
   onSelectChild?: (childId: string) => void;
   socialPracticeDone: Record<string, string[]>;
   onAnswerSocialScenario: (childId: string, scenarioId: string) => void;
 }) {
-  const justEarned = props.certificates.find((cert) => cert.id === props.justEarnedCertId);
-  const justEarnedChild = justEarned ? props.childProfiles.find((child) => child.id === justEarned.childId) : undefined;
   return (
     <section className="rounded-lg border border-[#ded8c7] bg-white p-5">
       <p className="text-xs font-black uppercase tracking-[0.18em] text-[#7c3aed]">Character growth</p>
       <h2 className="mt-2 text-3xl font-black">Responsibility, empathy, kindness, leadership</h2>
-      {justEarned && (
-        <div className="mt-4 rounded-lg border-2 border-[#7c3aed] bg-[#f0edff] p-4" role="status">
-          <p className="text-lg font-black text-[#4c1d95]">🎓 {justEarnedChild?.name ?? "Your kid"} just earned: {justEarned.title}!</p>
-          <p className="mt-1 text-sm font-semibold text-[#5f6a65]">
-            {justEarned.kind === "hero"
-              ? "Real pet care, proven over time. From pet owner to pet hero — frame it."
-              : "The pet-care journey, completed. This is the case for a real pet — framed and ready."}
-          </p>
-          <button onClick={props.onDismissEarned} className="mt-3 rounded-lg bg-[#7c3aed] px-4 py-2 text-sm font-black text-white">
-            Celebrate 🎉
-          </button>
-        </div>
-      )}
       <div className="mt-5 grid gap-4 lg:grid-cols-2">
         {props.childProfiles.map((child) => (
           <div key={child.id} className="rounded-lg bg-[#f8f6ed] p-4">
@@ -6047,7 +6480,7 @@ function AIPanel({ childProfiles, missions, parentSignedIn }: { childProfiles: C
     petAge: "2 years",
     routine: "Morning hay, fresh water, veggie treat, quick cage check",
     vetNotes: "Handle gently. Watch water bottle level. No loud noises near cage.",
-    memoryNote: "Leo remembered RB's food before school and checked the water.",
+    memoryNote: "A calm care moment today: food, water, and a gentle check-in.",
     photoMoment: "Captain basking after fresh greens",
     lifeSkill: "responsibility",
     choreGoal: "Teach responsibility through morning pet care and one family helper task",
@@ -6117,26 +6550,28 @@ function AIPanel({ childProfiles, missions, parentSignedIn }: { childProfiles: C
       setAiLoading(false);
     }
   }
-  const familyInsights = [
-    "Leo has a strong helper streak when tasks are short and before school.",
-    "Pet care missions are clearer when each one has one animal and one proof step.",
-    "Weekend helper work should be parent-scheduled because neighborhood jobs need adult details.",
-  ];
-  const socialIdeas = [
-    "Parent-controlled pet profiles and feeds",
-    "AI caption suggestions for Jack, Jamie, Captain, and RB",
-    "Weekly pet recaps and milestone cards",
-    "Badges for kindness, consistency, savings, and teamwork",
-    "Parent approval before anything is shared publicly",
-  ];
+  // Insights only from real family data — no invented identities or observations.
+  const realInsights: string[] = [];
+  const streakLeader = [...childProfiles].sort((a, b) => b.streakDays - a.streakDays)[0];
+  if (streakLeader && streakLeader.streakDays > 0) {
+    realInsights.push(`${streakLeader.name} has a ${streakLeader.streakDays}-day care streak going.`);
+  }
+  const waitingForReview = missions.filter((mission) => mission.status === "pending" && mission.completedBy).length;
+  if (waitingForReview > 0) {
+    realInsights.push(`${waitingForReview} mission${waitingForReview === 1 ? " is" : "s are"} waiting for parent review.`);
+  }
+  const approvedSoFar = missions.filter((mission) => mission.status === "approved").length;
+  if (approvedSoFar > 0) {
+    realInsights.push(`${approvedSoFar} mission${approvedSoFar === 1 ? "" : "s"} approved — the consistency is adding up.`);
+  }
 
   return (
     <section className="space-y-4">
       <div className="rounded-lg border border-[#ded8c7] bg-[#17231f] p-5 text-white shadow-sm">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#ffd166]">AI roadmap</p>
-        <h2 className="mt-2 text-3xl font-black">AI should help quietly, safely, and parent-first.</h2>
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#ffd166]">Parent tools</p>
+        <h2 className="mt-2 text-3xl font-black">Plan the week</h2>
         <p className="mt-3 max-w-3xl text-sm font-semibold leading-6 text-[#dce7e2]">
-          TailTots should not become an open-ended chatbot for kids. AI works best here as a behind-the-scenes helper for missions, memories, care summaries, insights, and parent-approved pet social features.
+          Template-powered helpers for missions, checklists, memories, summaries, and journals — plus optional AI ideas for signed-in parents. Nothing becomes a mission until a parent chooses it.
         </p>
       </div>
 
@@ -6263,27 +6698,14 @@ function AIPanel({ childProfiles, missions, parentSignedIn }: { childProfiles: C
           </section>
         </div>
 
-        <section className="mt-4 rounded-lg bg-[#eef2ff] p-4">
-          <h4 className="text-lg font-black">Family Insights</h4>
-          <div className="mt-3 grid gap-2 lg:grid-cols-3">
-            {familyInsights.map((insight) => <p key={insight} className="rounded-lg bg-white p-3 text-sm font-semibold leading-5">{insight}</p>)}
-          </div>
-        </section>
-      </section>
-
-      <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#7c3aed]">Pet social extension</p>
-        <h3 className="mt-2 text-2xl font-black">Future social media for pets</h3>
-        <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-[#5f6a65]">
-          A future TailTots social layer could let each pet have a parent-controlled profile, with kids contributing moments and AI helping turn care wins into safe posts, captions, badges, and weekly stories.
-        </p>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {socialIdeas.map((idea) => (
-            <div key={idea} className="rounded-lg bg-[#f0edff] p-4 text-sm font-black text-[#33245f]">
-              {idea}
+        {realInsights.length > 0 && (
+          <section className="mt-4 rounded-lg bg-[#eef2ff] p-4">
+            <h4 className="text-lg font-black">Family Insights</h4>
+            <div className="mt-3 grid gap-2 lg:grid-cols-3">
+              {realInsights.map((insight) => <p key={insight} className="rounded-lg bg-white p-3 text-sm font-semibold leading-5">{insight}</p>)}
             </div>
-          ))}
-        </div>
+          </section>
+        )}
       </section>
     </section>
   );
