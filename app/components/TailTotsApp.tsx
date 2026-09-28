@@ -143,6 +143,12 @@ type NeighborhoodJob = {
   status: "posted" | "accepted" | "approved" | "completed";
   acceptedBy?: string;
   missionId?: string;
+  /**
+   * Parent-side only: the parent recorded sending a thank-you/response to the
+   * posting parent after approving completion. Local-only (no cloud column).
+   * The message is always anonymized — "a neighborhood family", never kid PII.
+   */
+  posterThanked?: boolean;
 };
 
 type KidScheduleItem = {
@@ -578,6 +584,7 @@ function mergePulledJob(current: NeighborhoodJob, pulled: NeighborhoodJob): Neig
     skillFocus: current.skillFocus ?? pulled.skillFocus,
     trustSignals: current.trustSignals ?? pulled.trustSignals,
     missionId: current.missionId ?? pulled.missionId,
+    posterThanked: current.posterThanked === true,
   };
 }
 
@@ -1167,6 +1174,48 @@ export function TailTotsApp() {
     setNewChild({ name: "", age: "8" });
   }
 
+  /**
+   * COPPA/GDPR deletion right: removing a kid profile permanently deletes ALL
+   * of that child's data — missions, Kid Bank history, goals, badges, memory
+   * moments, certificates, and neighborhood-job acceptances. Neighborhood jobs
+   * the child had accepted revert to "posted" so the posting parent can offer
+   * them again; the job itself is parent/poster data, not the child's.
+   */
+  function removeChild(childId: string) {
+    const removedMissionIds = missions
+      .filter((mission) => mission.assignedChildId === childId || mission.completedBy === childId)
+      .map((mission) => mission.id);
+    const removedMissionIdSet = new Set(removedMissionIds);
+    setChildren((items) => items.filter((child) => child.id !== childId));
+    setMissions((items) => items.filter((mission) => !removedMissionIdSet.has(mission.id)));
+    setTransactions((items) => items.filter((transaction) => transaction.childId !== childId));
+    setGoals((items) => items.filter((goal) => goal.childId !== childId));
+    setBadges((items) => items.filter((badge) => badge.childId !== childId));
+    setMoments((items) => items.filter((moment) => moment.childId !== childId));
+    setCertificates((items) => items.filter((certificate) => certificate.childId !== childId));
+    setNudgedMissionIds((ids) => ids.filter((id) => !removedMissionIdSet.has(id)));
+    setNeighborhoodJobs((items) =>
+      items.map((job) => {
+        const assignedChildIds = job.assignedChildIds.filter((id) => id !== childId);
+        if (job.acceptedBy !== childId) return { ...job, assignedChildIds };
+        // The accepting kid is gone: release the job back to the parent inbox.
+        return {
+          ...job,
+          assignedChildIds,
+          acceptedBy: undefined,
+          missionId: undefined,
+          posterThanked: false,
+          status: "posted" as const,
+        };
+      }),
+    );
+    setActiveChildId((current) => {
+      if (current !== childId) return current;
+      const remaining = children.filter((child) => child.id !== childId);
+      return remaining[0]?.id ?? "";
+    });
+  }
+
   function addPet() {
     if (!newPet.name.trim() || !newPet.species.trim()) return;
     setPets((items) => [
@@ -1651,6 +1700,17 @@ export function TailTotsApp() {
     setNeighborhoodJobs((items) => items.map((item) => (item.id === jobId ? { ...item, status: "approved", missionId } : item)));
   }
 
+  /**
+   * Step 4 of the parent-gated neighborhood flow: after the parent approves
+   * the kid's completion, the parent (and only the parent) sends the
+   * response to the posting parent. The message is anonymized — no kid PII.
+   */
+  function markPosterThanked(jobId: string) {
+    setNeighborhoodJobs((items) =>
+      items.map((job) => (job.id === jobId && job.status === "completed" ? { ...job, posterThanked: true } : job)),
+    );
+  }
+
   return (
     <main className="tailtots-app min-h-screen bg-[#faf8f0] text-[#17231f]">
       <header className="sticky top-0 z-20 border-b border-[#ded8c7] bg-white/95 backdrop-blur">
@@ -1926,6 +1986,7 @@ export function TailTotsApp() {
               newChild={newChild}
               setNewChild={setNewChild}
               addChild={addChild}
+              removeChild={removeChild}
               newPet={newPet}
               setNewPet={setNewPet}
               addPet={addPet}
@@ -1968,6 +2029,7 @@ export function TailTotsApp() {
               acceptJob={acceptNeighborhoodJob}
               approveJob={approveNeighborhoodJob}
               toggleJobVisibility={toggleNeighborhoodJobVisibility}
+              markPosterThanked={markPosterThanked}
               fillJobTemplate={fillJobTemplate}
               transactions={transactions}
               setActiveTab={setActiveTab}
@@ -4023,7 +4085,25 @@ function normalizeNeighborhoodJob(job: NeighborhoodJob): NeighborhoodJob {
     minAge: job.minAge ?? 4,
     skillFocus: job.skillFocus ?? "teamwork",
     trustSignals: job.trustSignals?.length ? job.trustSignals : ["parent_gate", "age_fit", "private_child"],
+    posterThanked: job.posterThanked === true,
   };
+}
+
+/**
+ * Parent-to-parent thank-you text for a completed neighborhood job.
+ * Anonymized by design: the poster learns "a neighborhood family" completed
+ * the job — never a kid's name, photo, or age. This is the ONLY cross-family
+ * text the app generates for neighborhood jobs.
+ */
+export function buildPosterThankYou(job: Pick<NeighborhoodJob, "title" | "pet" | "time">): string {
+  return [
+    `Hi! A neighborhood family just completed your TailTots helper job: "${job.title}".`,
+    job.pet ? `Job: ${job.pet}.` : "",
+    job.time ? `When: ${job.time}.` : "",
+    "Thank you for trusting the neighborhood loop — a parent supervised every step, and your posting made a kid's day more capable and kind. — via TailTots (parent to parent)",
+  ]
+    .filter(Boolean)
+    .join("\n");
 }
 
 function normalizePetProfile(pet: Pet): Pet {
@@ -5571,6 +5651,7 @@ function FamilySetupPanel(props: {
   newChild: { name: string; age: string };
   setNewChild: (value: { name: string; age: string }) => void;
   addChild: () => void;
+  removeChild: (childId: string) => void;
   newPet: { name: string; species: string; food: string };
   setNewPet: (value: { name: string; species: string; food: string }) => void;
   addPet: () => void;
@@ -5826,6 +5907,16 @@ function FamilySetupPanel(props: {
                     Capture kid face
                     <input className="sr-only" type="file" accept="image/*" capture="user" onChange={(event) => props.updateChildPhoto(child.id, event.target.files?.[0])} />
                   </label>
+                  <button
+                    onClick={() => {
+                      if (window.confirm(`Remove ${child.name || "this kid"}'s profile? This permanently deletes their missions, Kid Bank history, goals, badges, and all other data.`)) {
+                        props.removeChild(child.id);
+                      }
+                    }}
+                    className="mt-3 min-h-11 rounded-lg border border-[#e5b8b8] bg-white px-4 py-2 text-xs font-black text-[#b44421]"
+                  >
+                    Remove profile
+                  </button>
                 </article>
               );
             })}
@@ -6156,6 +6247,7 @@ function NeighborhoodPanel({
   acceptJob,
   approveJob,
   toggleJobVisibility,
+  markPosterThanked,
   fillJobTemplate,
   transactions,
   setActiveTab,
@@ -6171,6 +6263,7 @@ function NeighborhoodPanel({
   acceptJob: (jobId: string) => void;
   approveJob: (jobId: string) => void;
   toggleJobVisibility: (jobId: string) => void;
+  markPosterThanked: (jobId: string) => void;
   fillJobTemplate: (skill: string) => void;
   transactions: BankTransaction[];
   setActiveTab: (tab: string) => void;
@@ -6180,6 +6273,25 @@ function NeighborhoodPanel({
     role === "parent"
       ? jobs
       : jobs.filter((job) => job.visibleToKids && activeChild && job.assignedChildIds.includes(activeChild.id) && activeChild.age >= (job.minAge ?? 0));
+  // Step 1 of the parent-gated flow: the parent picks from a popup which
+  // posted neighborhood jobs are allowed. Only allowed jobs reach kid profiles.
+  const [jobPickerOpen, setJobPickerOpen] = useState(false);
+  const postedJobs = jobs.filter((job) => job.status === "posted");
+  // Step 4: after approving completion, the parent sends the poster response.
+  const [thankYouJobId, setThankYouJobId] = useState<string | null>(null);
+  const [thankYouCopied, setThankYouCopied] = useState(false);
+
+  async function copyThankYou(text: string) {
+    setThankYouCopied(false);
+    try {
+      if (typeof navigator !== "undefined" && navigator.clipboard) {
+        await navigator.clipboard.writeText(text);
+        setThankYouCopied(true);
+      }
+    } catch {
+      setThankYouCopied(false);
+    }
+  }
   const skillJobTemplates = [
     ["Responsibility", "Morning pet check for a trusted neighbor", "Easy checklist, parent photo proof, 10-14 points"],
     ["Empathy", "Make a comfort card for a newly adopted pet", "Kindness badge, no money needed"],
@@ -6218,10 +6330,10 @@ function NeighborhoodPanel({
 
       <div className="grid gap-3 rounded-lg border border-[#ded8c7] bg-[#e7f4ef] p-4 sm:grid-cols-2 xl:grid-cols-4 sm:p-5">
         {[
-          "Parent posts job",
-          "Parent approves visibility for kids",
-          "Kid confirms with their profile",
-          "Parent makes it final and rewards after completion",
+          "Parent picks neighborhood jobs in the popup",
+          "Only allowed jobs appear in the kid's profile",
+          "Kid completes the job — proof goes to the parent, never the poster",
+          "Parent approves, then thanks the poster parent-to-parent",
         ].map((step, index) => (
           <div key={step} className="rounded-lg bg-white p-4">
             <p className="text-xs font-black uppercase tracking-[0.16em] text-[#165a4b]">Step {index + 1}</p>
@@ -6229,6 +6341,79 @@ function NeighborhoodPanel({
           </div>
         ))}
       </div>
+
+      {role === "parent" && (
+        <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2563eb]">Parent gate</p>
+              <h3 className="mt-2 text-2xl font-black">Choose which neighborhood jobs your kids may see</h3>
+              <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-[#4f625b]">
+                {postedJobs.length === 0
+                  ? "No posted jobs are waiting right now. New jobs from the neighborhood land here first — never directly with kids."
+                  : `${postedJobs.length} posted job${postedJobs.length === 1 ? " is" : "s are"} waiting for your pick. Only jobs you allow appear in your kid's profile.`}
+              </p>
+            </div>
+            <button
+              onClick={() => setJobPickerOpen(true)}
+              className="min-h-12 shrink-0 rounded-lg bg-[#2563eb] px-5 py-3 text-sm font-black text-white"
+            >
+              Review neighborhood jobs
+            </button>
+          </div>
+        </section>
+      )}
+
+      {role === "parent" && jobPickerOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true" aria-label="Choose neighborhood jobs">
+          <div className="max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-lg bg-white p-5 shadow-xl">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2563eb]">Neighborhood job inbox</p>
+                <h3 className="mt-2 text-2xl font-black">Allow jobs for your kids</h3>
+                <p className="mt-2 text-sm font-semibold text-[#4f625b]">
+                  Pick the jobs your kids may see. Nothing here reaches a kid profile until you allow it — and kids never see who posted.
+                </p>
+              </div>
+              <button
+                onClick={() => setJobPickerOpen(false)}
+                aria-label="Close job picker"
+                className="min-h-11 min-w-11 rounded-lg bg-[#faf8f0] px-3 py-2 text-lg font-black text-[#4f625b]"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="mt-4 grid gap-3">
+              {postedJobs.map((job) => (
+                <article key={job.id} className="rounded-lg border border-[#ded8c7] bg-[#faf8f0] p-4">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-lg font-black">{job.title}</p>
+                      <p className="mt-1 text-sm font-semibold text-[#4f625b]">{job.family} • {job.pet} • {job.time}</p>
+                      <p className="mt-1 text-sm font-black text-[#7a4b12]">{job.rewardDollars ? `$${job.rewardDollars} allowance` : job.badgeTitle}</p>
+                    </div>
+                    <button
+                      onClick={() => toggleJobVisibility(job.id)}
+                      className={`min-h-11 shrink-0 rounded-lg px-4 py-2 text-sm font-black ${job.visibleToKids ? "bg-white text-[#b44421] border border-[#ded8c7]" : "bg-[#2563eb] text-white"}`}
+                    >
+                      {job.visibleToKids ? "Remove from kids" : "Allow for kids"}
+                    </button>
+                  </div>
+                </article>
+              ))}
+              {postedJobs.length === 0 && (
+                <p className="rounded-lg bg-[#faf8f0] p-4 text-sm font-semibold text-[#4f625b]">No posted jobs waiting.</p>
+              )}
+            </div>
+            <button
+              onClick={() => setJobPickerOpen(false)}
+              className="mt-4 min-h-12 w-full rounded-lg bg-[#165a4b] px-5 py-3 text-sm font-black text-white"
+            >
+              Done — {jobs.filter((job) => job.visibleToKids).length} job{jobs.filter((job) => job.visibleToKids).length === 1 ? "" : "s"} visible to kids
+            </button>
+          </div>
+        </div>
+      )}
 
       {role === "parent" && (
         <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
@@ -6280,9 +6465,10 @@ function NeighborhoodPanel({
                 <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
                   <div>
                     <p className="text-lg font-black">{job.title}</p>
-                    <p className="mt-1 text-sm font-semibold text-[#4f625b]">{job.family} - {job.pet} - {job.time}</p>
+                    {/* Kids-data rule: kid surfaces show the job only — never the posting family's name. */}
+                    <p className="mt-1 text-sm font-semibold text-[#4f625b]">{role === "parent" ? `${job.family} • ` : ""}{job.pet} • {job.time}</p>
                     <p className="mt-1 text-sm font-black text-[#7a4b12]">{job.rewardDollars ? `$${job.rewardDollars} allowance` : job.badgeTitle}</p>
-                    {acceptedChild && <p className="mt-1 text-xs font-black text-[#165a4b]">Accepted by {acceptedChild.name}</p>}
+                    {role === "parent" && acceptedChild && <p className="mt-1 text-xs font-black text-[#165a4b]">Accepted by {acceptedChild.name}</p>}
                     <div className="mt-2 flex flex-wrap gap-2">
                       <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-[#6d3ed1]">{getLifeSkillLabel(skill)}</span>
                       <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-[#2563eb]">Age {job.minAge ?? 4}+</span>
@@ -6331,6 +6517,49 @@ function NeighborhoodPanel({
                     <button onClick={() => approveJob(job.id)} disabled={job.status !== "accepted"} className="min-h-11 rounded-lg bg-[#165a4b] px-4 py-2 text-sm font-black text-white disabled:bg-[#b9b2a2]">Make final and add to Today</button>
                     <p className="rounded-lg bg-white p-3 text-xs font-bold text-[#4f625b]">Allowed kids: {job.assignedChildIds.map((id) => childProfiles.find((child) => child.id === id)?.name).filter(Boolean).join(", ")}</p>
                   </div>
+                )}
+                {role === "parent" && job.status === "completed" && !job.posterThanked && (
+                  <div className="mt-3 rounded-lg bg-white p-4">
+                    {thankYouJobId === job.id ? (
+                      <div>
+                        <p className="text-xs font-black uppercase tracking-[0.14em] text-[#165a4b]">Thank the poster — parent to parent</p>
+                        <p className="mt-2 whitespace-pre-line rounded-lg bg-[#faf8f0] p-3 text-sm font-semibold leading-6 text-[#17231f]">{buildPosterThankYou(job)}</p>
+                        <p className="mt-2 text-xs font-bold text-[#4f625b]">
+                          Anonymized on purpose: the poster reads “a neighborhood family” — never your kid&apos;s name, photo, or age.
+                        </p>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <button
+                            onClick={() => copyThankYou(buildPosterThankYou(job))}
+                            className="min-h-11 rounded-lg bg-[#2563eb] px-4 py-2 text-sm font-black text-white"
+                          >
+                            {thankYouCopied && thankYouJobId === job.id ? "Copied ✓" : "Copy message"}
+                          </button>
+                          <button
+                            onClick={() => { markPosterThanked(job.id); setThankYouJobId(null); }}
+                            className="min-h-11 rounded-lg bg-[#165a4b] px-4 py-2 text-sm font-black text-white"
+                          >
+                            Mark as sent
+                          </button>
+                          <button
+                            onClick={() => setThankYouJobId(null)}
+                            className="min-h-11 rounded-lg bg-[#faf8f0] px-4 py-2 text-sm font-black text-[#4f625b]"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => { setThankYouJobId(job.id); setThankYouCopied(false); }}
+                        className="min-h-11 rounded-lg bg-[#7a4b12] px-4 py-2 text-sm font-black text-white"
+                      >
+                        Send thank-you to poster
+                      </button>
+                    )}
+                  </div>
+                )}
+                {role === "parent" && job.status === "completed" && job.posterThanked && (
+                  <p className="mt-3 rounded-lg bg-[#e7f4ef] p-3 text-sm font-black text-[#165a4b]">Thank-you sent to the poster ✓ — parent to parent, anonymized.</p>
                 )}
               </article>
             );
@@ -6687,9 +6916,10 @@ function AIPanel({ childProfiles, missions, parentSignedIn }: { childProfiles: C
       const response = await fetch("/api/ai/ideas", {
         method: "POST",
         headers: { "content-type": "application/json", authorization: `Bearer ${accessToken}` },
+        // Kids-data rule: the AI is parent-side only. Send the life skill and a
+        // coarse age band — never a child's name or any other kid PII.
         body: JSON.stringify({
           lifeSkill: aiDraft.lifeSkill,
-          childFirstName: child?.name.trim().split(/\s+/)[0] ?? "your child",
           ageBand: child ? ageBandForAge(child.age) : "7-9",
         }),
       });

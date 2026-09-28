@@ -5,6 +5,12 @@ export type ApprovalStatus = "pending" | "approved" | "rejected";
 
 export type Child = {
   id: string;
+  /**
+   * COPPA/GDPR data minimization: kid sub-profiles carry a nickname/first name
+   * and age ONLY. Never store surnames, birthdates, addresses, school names,
+   * or contact info on a child record. photoUrl is parent-uploaded with
+   * parental consent; secretCode powers the parent-gated kid sign-in.
+   */
   name: string;
   age: number;
   secretCode: string;
