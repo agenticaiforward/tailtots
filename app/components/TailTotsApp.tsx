@@ -7018,7 +7018,7 @@ function PetCharacter({
     return (
       <div className={`relative ${compact ? "scale-[0.42]" : size === "lg" ? "scale-110" : "scale-90"} animate-[fish-swim_2.6s_ease-in-out_infinite]`}>
         <div className="absolute -left-3 top-7 size-4 rounded-full bg-[#bae6fd] opacity-80 animate-[bubble-rise_2.4s_ease-in-out_infinite]" />
-        <div className="absolute -right-2 top-5 h-7 w-6 rounded-r-full bg-[#38bdf8] [clip-path:polygon(0_50%,100%_0,100%_100%)]" />
+        <div className="absolute -left-2 top-5 h-7 w-6 rounded-l-full bg-[#38bdf8] [clip-path:polygon(100%_50%,0_0,0_100%)] origin-right animate-[tail-wag_1.8s_ease-in-out_infinite]" />
         <div className="relative h-14 w-20 overflow-hidden rounded-[999px] bg-[#06b6d4] shadow-inner ring-2 ring-white/80">
           <div className="absolute left-2 top-1 h-12 w-12 rounded-full bg-[#67e8f9]" />
           <div className="absolute right-5 top-5 size-2 rounded-full bg-[#17231f]" />
@@ -7146,7 +7146,7 @@ function AnimatedPetBuddy({ color, delay, photoUrl, label, kind = "pet" }: { col
     return (
       <div className="relative h-20 w-20 animate-[fish-swim_2.4s_ease-in-out_infinite]" style={{ animationDelay: delay }}>
         <div className="absolute left-2 top-7 size-3 rounded-full bg-[#bae6fd] animate-[bubble-rise_2.4s_ease-in-out_infinite]" />
-        <div className="absolute right-3 top-8 h-8 w-7 bg-[#38bdf8] [clip-path:polygon(0_50%,100%_0,100%_100%)]" />
+        <div className="absolute -left-1 top-8 h-8 w-7 bg-[#38bdf8] [clip-path:polygon(100%_50%,0_0,0_100%)] origin-right animate-[tail-wag_1.8s_ease-in-out_infinite]" />
         <div className="absolute bottom-4 left-1/2 h-12 w-16 -translate-x-1/2 rounded-[999px] bg-[#06b6d4] ring-2 ring-white/80">
           <div className="absolute right-5 top-4 size-2 rounded-full bg-[#17231f]" />
         </div>
