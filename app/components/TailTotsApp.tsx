@@ -6404,14 +6404,6 @@ function NeighborhoodPanel({
         </div>
       )}
 
-      <div className="rounded-lg border border-[#ded8c7] bg-[#e7f4ef] p-5">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#165a4b]">Safety rules</p>
-        <div className="mt-3 grid gap-3 lg:grid-cols-3">
-          <p className="rounded-lg bg-white p-3 text-sm font-semibold">No child profiles are searchable or directly shown to other kids.</p>
-          <p className="rounded-lg bg-white p-3 text-sm font-semibold">Parents lead matching, messages, dates, visit details, and adult contact.</p>
-          <p className="rounded-lg bg-white p-3 text-sm font-semibold">Shared goals are opt-in and shown only to trusted families as parent-approved causes.</p>
-        </div>
-      </div>
     </section>
   );
 }
@@ -6604,14 +6596,6 @@ function LegacyNeighborhoodPanel({ goals, childProfiles }: { goals: SavingsGoal[
         </div>
       </div>
 
-      <div className="rounded-lg border border-[#ded8c7] bg-[#e7f4ef] p-5">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#165a4b]">Safety rules</p>
-        <div className="mt-3 grid gap-3 lg:grid-cols-3">
-          <p className="rounded-lg bg-white p-3 text-sm font-semibold">No child profiles are searchable or directly shown to other kids.</p>
-          <p className="rounded-lg bg-white p-3 text-sm font-semibold">Parents lead matching, messages, dates, visit details, and adult contact.</p>
-          <p className="rounded-lg bg-white p-3 text-sm font-semibold">Shared goals are opt-in and shown only to trusted families as parent-approved causes.</p>
-        </div>
-      </div>
     </section>
   );
 }
