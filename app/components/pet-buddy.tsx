@@ -276,8 +276,8 @@ const tortoiseKit: SpeciesKit = {
 const fishKit: SpeciesKit = {
   behind: (animated) => (
     <>
-      <div className={`absolute -right-[12%] top-[30%] z-0 h-[40%] w-[30%] origin-left ${wagFast(animated)}`}>
-        <svg viewBox="0 0 100 100" className={svgWrap}>
+      <div className={`absolute -left-[12%] top-[30%] z-0 h-[40%] w-[30%] origin-right ${wagFast(animated)}`}>
+        <svg viewBox="0 0 100 100" className={`${svgWrap} -scale-x-100`}>
           <path d="M8 50 L92 6 L70 50 L92 94 Z" fill="#38bdf8" />
           <path d="M8 50 L60 28 L52 50 L60 72 Z" fill="#0ea5e9" opacity="0.8" />
         </svg>
@@ -397,9 +397,10 @@ export function PetBuddyFace({
   className?: string;
 }) {
   const kit = PET_KITS[kind] ?? PET_KITS.pet;
-  // The fish portrait photo is stored rotated counter-clockwise; correct it at
-  // render time so the fish swims level. Targets only the fish image.
-  const photoRotationClass = kind === "fish" ? " rotate-90" : "";
+  // The fish photo (public/pets/pet-fish.png) already swims level with its
+  // head on the right and tail on the left — no rotation needed. The animated
+  // tail fin above sits on the left to match the photo's tail.
+  const photoRotationClass = "";
   return (
     <div
       aria-label={`${label} pet buddy`}
