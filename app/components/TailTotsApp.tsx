@@ -2956,16 +2956,16 @@ function SchedulePanel({
   return (
     <section className="space-y-4">
       <div className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2563eb]">Schedule \u00b7 parent tool</p>
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2563eb]">Schedule · parent tool</p>
         <h2 className="mt-2 text-3xl font-black">Playdate availability</h2>
         <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-[#4f625b]">
-          Set each kid&apos;s free windows, share one link with another parent, and confirm a time. Demo only \u2014 no real
+          Set each kid&apos;s free windows, share one link with another parent, and confirm a time. Demo only — no real
           messages are sent and no child details ever leave this screen.
         </p>
       </div>
 
       <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#165a4b]">Step 1 \u00b7 free time per kid</p>
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#165a4b]">Step 1 · free time per kid</p>
         <h3 className="mt-2 text-2xl font-black">When is each kid free for a playdate?</h3>
         <div className="mt-4 grid gap-3 md:grid-cols-2">
           {childProfiles.map((child) => {
@@ -2998,7 +2998,7 @@ function SchedulePanel({
       </section>
 
       <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2563eb]">Step 2 \u00b7 share</p>
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2563eb]">Step 2 · share</p>
         <h3 className="mt-2 text-2xl font-black">One link for the other parent</h3>
         <p className="mt-2 break-all rounded-lg bg-[#eef2ff] p-3 text-sm font-black text-[#17231f]">{familyAvailabilityLink}</p>
         <div className="mt-3 flex flex-wrap gap-2">
@@ -3015,15 +3015,15 @@ function SchedulePanel({
             {simOpen ? "Hide other-parent preview" : "\uD83D\uDC40 Preview what the other parent sees"}
           </button>
         </div>
-        <p className="mt-2 text-xs font-semibold text-[#4f625b]">Demo: the link is a preview \u2014 it does not go anywhere real.</p>
+        <p className="mt-2 text-xs font-semibold text-[#4f625b]">Demo: the link is a preview — it does not go anywhere real.</p>
       </section>
 
       {simOpen && (
         <section className="rounded-lg border-2 border-dashed border-[#2563eb] bg-[#f4f7ff] p-5 shadow-sm">
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2563eb]">Simulated other-parent view \u00b7 demo</p>
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2563eb]">Simulated other-parent view · demo</p>
           <h3 className="mt-2 text-2xl font-black">Pick a playdate time</h3>
           <p className="mt-1 text-sm font-semibold text-[#4f625b]">
-            This is what the other parent would see. They pick a slot \u2014 no names, addresses, or contact details shown.
+            This is what the other parent would see. They pick a slot — no names, addresses, or contact details shown.
           </p>
           <div className="mt-4 grid gap-3 md:grid-cols-2">
             {childProfiles.map((child) => {
@@ -3052,7 +3052,7 @@ function SchedulePanel({
           </div>
           {!childProfiles.some((child) => (kidAvailability[child.id] ?? []).some((slot) => !closedKeys.has(`${child.id}|${slot}`))) && (
             <p className="mt-3 rounded-lg bg-white p-3 text-sm font-bold text-[#4f625b]">
-              No open times right now \u2014 set availability in Step 1 above.
+              No open times right now — set availability in Step 1 above.
             </p>
           )}
           {simPick && (
@@ -3068,22 +3068,22 @@ function SchedulePanel({
 
       {confirmedBooking && (
         <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-[#165a4b]">Booked \u00b7 demo</p>
-          <h3 className="mt-2 text-2xl font-black">\u2705 {confirmedBooking.slot} is now closed</h3>
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-[#165a4b]">Booked · demo</p>
+          <h3 className="mt-2 text-2xl font-black">✅ {confirmedBooking.slot} is now closed</h3>
           <p className="mt-1 text-sm font-semibold text-[#4f625b]">
-            That time can&apos;t be double-booked \u2014 it shows as booked everywhere in this demo.
+            That time can&apos;t be double-booked — it shows as booked everywhere in this demo.
           </p>
           <div className="mt-4 rounded-lg bg-[#faf8f0] p-4">
-            <p className="text-xs font-black uppercase tracking-[0.14em] text-[#4f625b]">Email preview \u2014 \u201csent\u201d to both parents (demo, nothing was actually sent)</p>
+            <p className="text-xs font-black uppercase tracking-[0.14em] text-[#4f625b]">Email preview — "sent" to both parents (demo, nothing was actually sent)</p>
             <div className="mt-2 rounded-lg border border-[#ded8c7] bg-white p-4 text-sm leading-6">
               <p><b>To:</b> you + the other parent</p>
-              <p><b>Subject:</b> Playdate confirmed \u2014 {confirmedChild?.name ?? "your kid"} \u00b7 {confirmedBooking.slot}</p>
+              <p><b>Subject:</b> Playdate confirmed — {confirmedChild?.name ?? "your kid"} · {confirmedBooking.slot}</p>
               <hr className="my-2 border-[#ded8c7]" />
               <p className="font-semibold text-[#4f625b]">
                 Hi! You&apos;re confirmed for a playdate: <b className="text-[#17231f]">{confirmedBooking.slot}</b>.
-                A parent from each family will be present. Reply here to coordinate pickup \u2014 kids don&apos;t see this thread.
+                A parent from each family will be present. Reply here to coordinate pickup — kids don&apos;t see this thread.
               </p>
-              <p className="mt-2 text-xs font-bold text-[#a09a8c]">Demo email \u2014 TailTots didn&apos;t send anything.</p>
+              <p className="mt-2 text-xs font-bold text-[#a09a8c]">Demo email — TailTots didn&apos;t send anything.</p>
             </div>
           </div>
           <button
