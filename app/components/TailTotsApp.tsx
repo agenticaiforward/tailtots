@@ -2527,9 +2527,6 @@ function VisionLandingPanel({
         </svg>
         <div className="relative grid gap-6 p-5 sm:p-8 lg:grid-cols-[1.05fr_0.95fr] lg:items-center xl:p-10">
           <div className="min-w-0">
-            <p className="inline-flex items-center gap-2 rounded-full border border-tt-pine/30 bg-tt-pine-tint px-4 py-2 text-xs font-black uppercase tracking-[0.12em] text-tt-pine">
-              <span className="tt-animate-sparkle" aria-hidden="true">✨</span> Free for families · Launching soon
-            </p>
             <h2 className="tt-display mt-4 max-w-2xl text-[2.75rem] font-black leading-[1.04] text-tt-navy sm:text-6xl">
               The pet is the <span className="relative inline-block px-1"><span className="absolute inset-0 -rotate-1 rounded bg-tt-sun/70" aria-hidden="true" /><span className="relative italic">hook.</span></span> The skills are the point.
             </h2>
