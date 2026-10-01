@@ -5991,6 +5991,7 @@ function NeighborhoodPanel({
 
   return (
     <section className="space-y-4">
+      {role === "parent" && (
       <div className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
         <p className="text-xs font-black uppercase tracking-[0.18em] text-[#165a4b]">Neighborhood</p>
         <h2 className="mt-2 text-3xl font-black">Parent-led pet jobs and safe playdates</h2>
@@ -5998,6 +5999,7 @@ function NeighborhoodPanel({
           Parents post and approve every detail before kids can see anything. Kids only see parent-approved helper jobs, simple checklists, and rewards that teach responsibility, empathy, teamwork, leadership, and time management.
         </p>
       </div>
+      )}
 
       {role === "parent" && (
         <div className="grid gap-3 rounded-lg border border-[#ded8c7] bg-[#e7f4ef] p-4 sm:grid-cols-2 xl:grid-cols-4 sm:p-5">
