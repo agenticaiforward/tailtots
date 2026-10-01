@@ -5658,44 +5658,11 @@ function FamilySetupPanel(props: {
           </div>
         </div>
       </div>
-      <ReferralBlock />
     </section>
   );
 }
 
 /** Parent-to-parent referral: copy a shareable message. Never shown to kids. */
-function ReferralBlock() {
-  const [referralCopied, setReferralCopied] = useState(false);
-  async function copyReferral() {
-    const message =
-      "Know a parent who heard \"can we get a puppy?!\" 🐾 TailTots turns that begging into real-world responsibility: kids earn pet care through AI-guided missions while parents stay in control. Parent-to-parent invite — no kid accounts needed to start.";
-    try {
-      await navigator.clipboard.writeText(message);
-    } catch {
-      const area = document.createElement("textarea");
-      area.value = message;
-      document.body.appendChild(area);
-      area.select();
-      document.execCommand("copy");
-      document.body.removeChild(area);
-    }
-    setReferralCopied(true);
-    window.setTimeout(() => setReferralCopied(false), 2500);
-  }
-  return (
-    <div className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
-      <p className="text-xs font-black uppercase tracking-[0.18em] text-[#f47b20]">Spread the word</p>
-      <h3 className="mt-2 text-2xl font-black">Know a parent who heard &ldquo;can we get a puppy?!&rdquo;</h3>
-      <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-[#4f625b]">
-        Copy this parent-to-parent invite and send it their way. TailTots turns &ldquo;can we get a puppy?!&rdquo; into real-world responsibility — kids earn pet care through AI-guided missions while parents stay in control.
-      </p>
-      <button onClick={copyReferral} className="mt-4 min-h-12 rounded-lg bg-[#165a4b] px-5 py-3 text-sm font-black text-white">
-        {referralCopied ? "Invite copied ✓" : "Copy referral invite"}
-      </button>
-    </div>
-  );
-}
-
 function CertificateCard(props: {
   child: Child;
   missions: Mission[];
@@ -6293,17 +6260,7 @@ function NeighborhoodPanel({
         </div>
       </section>
 
-      {role === "parent" && (
-        <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-[#165a4b]">Privacy and trust</p>
-          <h3 className="mt-2 text-2xl font-black">Why families can safely apply for jobs</h3>
-          <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-            {privacyRules.map((rule) => (
-              <p key={rule} className="rounded-lg bg-[#e7f4ef] p-4 text-sm font-black leading-5 text-[#165a4b]">{rule}</p>
-            ))}
-          </div>
-        </section>
-      )}
+
 
 
       {role === "parent" && (
