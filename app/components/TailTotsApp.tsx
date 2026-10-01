@@ -5,6 +5,9 @@ import Image from "next/image";
 import Cropper, { type Area } from "react-easy-crop";
 import { PetBuddyFace } from "./pet-buddy";
 import type { PetKind } from "./pet-buddy";
+import { PlaydateClaimView } from "./PlaydateClaimView";
+import { parsePlaydateHash, playdateClaimUrl, playdateStore } from "@/lib/playdate-store";
+import type { PlaydateInvite } from "@/lib/playdate-store";
 import {
   isSupabaseConfigured,
   loadFamilyAccountSnapshot,
@@ -623,6 +626,16 @@ function getCertificateProgress(
 
 export function TailTotsApp() {
   const [role, setRole] = useState<Role>("parent");
+  // Playdate claim route: `#playdate/<inviteId>` renders the other parent's
+  // claim view instead of the app.
+  const [playdateRouteId, setPlaydateRouteId] = useState<string | null>(() =>
+    typeof window !== "undefined" ? parsePlaydateHash(window.location.hash) : null
+  );
+  useEffect(() => {
+    const onHashChange = () => setPlaydateRouteId(parsePlaydateHash(window.location.hash));
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
+  }, []);
   const [activeTab, setActiveTab] = useState("vision");
   const [isParentUnlocked, setIsParentUnlocked] = useState(true);
   const [parentGateOpen, setParentGateOpen] = useState(false);
@@ -637,10 +650,10 @@ export function TailTotsApp() {
   const [pointsPerDollar, setPointsPerDollar] = useState(20);
   const [dailyChecksEnabled, setDailyChecksEnabled] = useState(true);
   const [maxDailyChecks, setMaxDailyChecks] = useState(10);
-  // Playdate availability demo (parent-only Schedule tab): per-kid free-time
-  // windows plus demo bookings that close a slot to prevent double-booking.
+  // Playdate availability (parent-only Schedule tab): per-kid free-time
+  // windows. Real invites live in the playdate store (lib/playdate-store.ts);
+  // claimed slots are read back from the family's invites below.
   const [kidAvailability, setKidAvailability] = useState<Record<string, string[]>>({});
-  const [playdateBookings, setPlaydateBookings] = useState<PlaydateBooking[]>([]);
   // Parent controls for the kid's AI Buddy: which predefined question
   // categories the kid may ask, and whether new questions rotate daily.
   const [aiBuddyCategories, setAiBuddyCategories] = useState<string[]>([
@@ -1808,6 +1821,11 @@ export function TailTotsApp() {
     );
   }
 
+  // Other-parent playdate claim view: a dedicated screen, not the app.
+  if (playdateRouteId) {
+    return <PlaydateClaimView inviteId={playdateRouteId} />;
+  }
+
   return (
     <main className="tailtots-app min-h-screen bg-[#faf8f0] text-[#17231f]">
       <header className="sticky top-0 z-20 border-b border-[#ded8c7] bg-white/95 backdrop-blur">
@@ -2012,8 +2030,6 @@ export function TailTotsApp() {
               childProfiles={children}
               kidAvailability={kidAvailability}
               setKidAvailability={setKidAvailability}
-              playdateBookings={playdateBookings}
-              setPlaydateBookings={setPlaydateBookings}
             />
           )}
           {visibleActiveTab === "pets" && (
@@ -2880,8 +2896,6 @@ function VisionLandingPanel({
   );
 }
 
-type PlaydateBooking = { id: string; childId: string; slot: string };
-
 const PLAYDATE_SLOT_OPTIONS = [
   "Tuesday 4:30\u20136:00 PM",
   "Thursday 4:30\u20136:00 PM",
@@ -2889,30 +2903,75 @@ const PLAYDATE_SLOT_OPTIONS = [
   "Sunday afternoon",
 ];
 
+function formatClaimedAt(ts?: number): string {
+  if (!ts) return "";
+  try {
+    return new Date(ts).toLocaleString(undefined, {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  } catch {
+    return "";
+  }
+}
+
 function SchedulePanel({
   familyName,
   childProfiles,
   kidAvailability,
   setKidAvailability,
-  playdateBookings,
-  setPlaydateBookings,
 }: {
   familyName: string;
   childProfiles: Child[];
   kidAvailability: Record<string, string[]>;
   setKidAvailability: (value: Record<string, string[]>) => void;
-  playdateBookings: PlaydateBooking[];
-  setPlaydateBookings: (value: PlaydateBooking[]) => void;
 }) {
-  const [availabilityCopied, setAvailabilityCopied] = useState(false);
-  const [simOpen, setSimOpen] = useState(false);
-  const [simPick, setSimPick] = useState<{ childId: string; slot: string } | null>(null);
-  const [confirmedBooking, setConfirmedBooking] = useState<PlaydateBooking | null>(null);
-  const familyCode = familyName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "family";
-  // Demo share link. No kid names, addresses, or contact details go in the
-  // link \u2014 the other parent sees only the time windows you checked below.
-  const familyAvailabilityLink = `tailtots.com/availability/${familyCode}`;
-  const closedKeys = new Set(playdateBookings.map((booking) => `${booking.childId}|${booking.slot}`));
+  const [invites, setInvites] = useState<PlaydateInvite[]>([]);
+  const [hostName, setHostName] = useState("");
+  const [linkCopiedId, setLinkCopiedId] = useState<string | null>(null);
+  const [justCreatedId, setJustCreatedId] = useState<string | null>(null);
+  const [createError, setCreateError] = useState("");
+
+  // Live list of this family's invites; refreshes when another tab (the
+  // other parent's claim view) writes to the store.
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      const all = await playdateStore.listInvites();
+      if (!cancelled) setInvites(all);
+    }
+    load();
+    const unsubscribe = playdateStore.subscribe(load);
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, []);
+
+  // Slots already claimed across this family's invites can't be picked again.
+  const claimedKeys = useMemo(
+    () =>
+      new Set(
+        invites.flatMap((invite) =>
+          invite.slots
+            .filter((slot) => slot.status === "claimed")
+            .map((slot) => `${slot.childId}|${slot.slot}`)
+        )
+      ),
+    [invites]
+  );
+
+  const openSelections = useMemo(
+    () =>
+      childProfiles.flatMap((child) =>
+        (kidAvailability[child.id] ?? [])
+          .filter((slot) => !claimedKeys.has(`${child.id}|${slot}`))
+          .map((slot) => ({ childId: child.id, childName: child.name.split(" ")[0], slot }))
+      ),
+    [childProfiles, kidAvailability, claimedKeys]
+  );
 
   function toggleSlot(childId: string, slot: string) {
     const current = kidAvailability[childId] ?? [];
@@ -2920,38 +2979,34 @@ function SchedulePanel({
     setKidAvailability({ ...kidAvailability, [childId]: next });
   }
 
-  function copyShareText() {
-    const lines = [
-      `${familyName} \u2014 playdate availability (via TailTots)`,
-      ...childProfiles.flatMap((child) =>
-        (kidAvailability[child.id] ?? [])
-          .filter((slot) => !closedKeys.has(`${child.id}|${slot}`))
-          .map((slot) => `\u2022 ${slot} (ask for ${child.name}\u2019s playdate)`)
-      ),
-      "Parent approves every plan before kids hear about it. No addresses or kid details shared here.",
-    ];
-    navigator.clipboard?.writeText(lines.join("\n")).then(
+  async function createInvite() {
+    setCreateError("");
+    if (openSelections.length === 0) {
+      setCreateError("Check at least one free time in Step 1 first.");
+      return;
+    }
+    const invite = await playdateStore.createInvite(familyName, hostName || "A TailTots parent", openSelections);
+    setInvites(await playdateStore.listInvites());
+    setJustCreatedId(invite.id);
+  }
+
+  function copyInviteLink(invite: PlaydateInvite) {
+    const url = playdateClaimUrl(invite.id);
+    navigator.clipboard?.writeText(url).then(
       () => {
-        setAvailabilityCopied(true);
-        window.setTimeout(() => setAvailabilityCopied(false), 2500);
+        setLinkCopiedId(invite.id);
+        window.setTimeout(() => setLinkCopiedId((id) => (id === invite.id ? null : id)), 2500);
       },
-      () => setAvailabilityCopied(false)
+      () => setLinkCopiedId(null)
     );
   }
 
-  function confirmPick() {
-    if (!simPick) return;
-    const booking: PlaydateBooking = {
-      id: `pb-${Date.now()}`,
-      childId: simPick.childId,
-      slot: simPick.slot,
-    };
-    setPlaydateBookings([...playdateBookings, booking]);
-    setConfirmedBooking(booking);
-    setSimPick(null);
-  }
-
-  const confirmedChild = confirmedBooking ? childProfiles.find((child) => child.id === confirmedBooking.childId) : undefined;
+  const latestClaim = useMemo(() => {
+    const booked = invites.filter((i) => i.status === "booked" && i.claimedBy);
+    booked.sort((a, b) => (b.claimedAt ?? 0) - (a.claimedAt ?? 0));
+    return booked[0];
+  }, [invites]);
+  const latestClaimedSlot = latestClaim?.slots.find((s) => s.status === "claimed");
 
   return (
     <section className="space-y-4">
@@ -2959,8 +3014,9 @@ function SchedulePanel({
         <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2563eb]">Schedule · parent tool</p>
         <h2 className="mt-2 text-3xl font-black">Playdate availability</h2>
         <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-[#4f625b]">
-          Set each kid&apos;s free windows, share one link with another parent, and confirm a time. Demo only — no real
-          messages are sent and no child details ever leave this screen.
+          Set each kid&apos;s free windows, create a real invite link, and send it to the other parent. They pick one
+          time — you&apos;ll see their choice here the moment they confirm. Only first names and time windows are ever
+          shared; parent approves every plan before kids hear about it.
         </p>
       </div>
 
@@ -2976,17 +3032,17 @@ function SchedulePanel({
                 <div className="mt-2 grid gap-2">
                   {PLAYDATE_SLOT_OPTIONS.map((slot) => {
                     const checked = selected.includes(slot);
-                    const closed = closedKeys.has(`${child.id}|${slot}`);
+                    const claimed = claimedKeys.has(`${child.id}|${slot}`);
                     return (
-                      <label key={slot} className={`flex items-center gap-2 rounded-lg border-2 p-2 text-sm font-bold ${closed ? "border-[#ded8c7] bg-white/60 text-[#a09a8c]" : checked ? "border-[#165a4b] bg-[#e7f4ef]" : "border-[#ded8c7] bg-white"}`}>
+                      <label key={slot} className={`flex items-center gap-2 rounded-lg border-2 p-2 text-sm font-bold ${claimed ? "border-[#ded8c7] bg-white/60 text-[#a09a8c]" : checked ? "border-[#165a4b] bg-[#e7f4ef]" : "border-[#ded8c7] bg-white"}`}>
                         <input
                           type="checkbox"
                           checked={checked}
-                          disabled={closed}
+                          disabled={claimed}
                           onChange={() => toggleSlot(child.id, slot)}
                           className="size-5 accent-[#165a4b]"
                         />
-                        <span>{slot}{closed ? " \u00b7 booked" : ""}</span>
+                        <span>{slot}{claimed ? " \u00b7 booked" : ""}</span>
                       </label>
                     );
                   })}
@@ -2998,100 +3054,94 @@ function SchedulePanel({
       </section>
 
       <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2563eb]">Step 2 · share</p>
-        <h3 className="mt-2 text-2xl font-black">One link for the other parent</h3>
-        <p className="mt-2 break-all rounded-lg bg-[#eef2ff] p-3 text-sm font-black text-[#17231f]">{familyAvailabilityLink}</p>
-        <div className="mt-3 flex flex-wrap gap-2">
-          <button
-            onClick={copyShareText}
-            className="min-h-11 rounded-lg bg-[#2563eb] px-4 py-2 text-sm font-black text-white"
-          >
-            {availabilityCopied ? "Copied! Paste it to the other parent \u2713" : "Copy share text"}
-          </button>
-          <button
-            onClick={() => setSimOpen((open) => !open)}
-            className="min-h-11 rounded-lg bg-white px-4 py-2 text-sm font-black text-[#17231f] ring-2 ring-[#ded8c7]"
-          >
-            {simOpen ? "Hide other-parent preview" : "\uD83D\uDC40 Preview what the other parent sees"}
-          </button>
-        </div>
-        <p className="mt-2 text-xs font-semibold text-[#4f625b]">Demo: the link is a preview — it does not go anywhere real.</p>
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2563eb]">Step 2 · invite the other parent</p>
+        <h3 className="mt-2 text-2xl font-black">Create a playdate invite</h3>
+        <p className="mt-1 text-sm font-semibold text-[#4f625b]">
+          {openSelections.length > 0
+            ? `${openSelections.length} open time${openSelections.length === 1 ? "" : "s"} will go on the invite.`
+            : "Check free times in Step 1 — they'll go on the invite."}
+        </p>
+        <label className="mt-3 block max-w-sm">
+          <span className="text-sm font-black">Your first name (shown to the other parent)</span>
+          <input
+            value={hostName}
+            onChange={(e) => setHostName(e.target.value)}
+            placeholder="e.g. Naveen"
+            maxLength={40}
+            className="mt-1 min-h-11 w-full rounded-lg border-2 border-[#ded8c7] bg-white px-3 py-2 text-sm font-bold"
+          />
+        </label>
+        {createError && (
+          <p className="mt-2 max-w-sm rounded-lg bg-[#fdeee4] p-3 text-sm font-bold text-[#b3541e]">{createError}</p>
+        )}
+        <button
+          onClick={createInvite}
+          disabled={openSelections.length === 0}
+          className="mt-3 min-h-11 rounded-lg bg-[#2563eb] px-4 py-2 text-sm font-black text-white disabled:opacity-40"
+        >
+          Create playdate invite
+        </button>
+        <p className="mt-2 text-xs font-semibold text-[#4f625b]">
+          The link opens a claim page for the other parent — first names and time windows only. No addresses, no kid
+          last names, no contact details.
+        </p>
       </section>
 
-      {simOpen && (
-        <section className="rounded-lg border-2 border-dashed border-[#2563eb] bg-[#f4f7ff] p-5 shadow-sm">
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2563eb]">Simulated other-parent view · demo</p>
-          <h3 className="mt-2 text-2xl font-black">Pick a playdate time</h3>
-          <p className="mt-1 text-sm font-semibold text-[#4f625b]">
-            This is what the other parent would see. They pick a slot — no names, addresses, or contact details shown.
-          </p>
-          <div className="mt-4 grid gap-3 md:grid-cols-2">
-            {childProfiles.map((child) => {
-              const openSlots = (kidAvailability[child.id] ?? []).filter((slot) => !closedKeys.has(`${child.id}|${slot}`));
-              if (!openSlots.length) return null;
+      {invites.length > 0 && (
+        <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-[#165a4b]">Your invites</p>
+          <h3 className="mt-2 text-2xl font-black">Share &amp; track</h3>
+          <div className="mt-3 grid gap-3">
+            {invites.map((invite) => {
+              const url = playdateClaimUrl(invite.id);
+              const claimedSlot = invite.slots.find((s) => s.status === "claimed");
+              const isNew = justCreatedId === invite.id;
               return (
-                <div key={child.id} className="rounded-lg bg-white p-4">
-                  <p className="text-sm font-black text-[#4f625b]">A playdate with {child.name}</p>
-                  <div className="mt-2 grid gap-2">
-                    {openSlots.map((slot) => {
-                      const picked = simPick?.childId === child.id && simPick?.slot === slot;
-                      return (
-                        <button
-                          key={slot}
-                          onClick={() => setSimPick(picked ? null : { childId: child.id, slot })}
-                          className={`min-h-11 rounded-lg px-4 py-2 text-left text-sm font-black ring-2 ${picked ? "bg-[#2563eb] text-white ring-[#2563eb]" : "bg-white text-[#17231f] ring-[#ded8c7]"}`}
-                        >
-                          {slot}{picked ? " \u2713" : ""}
-                        </button>
-                      );
-                    })}
+                <div key={invite.id} className={`rounded-lg border-2 p-4 ${isNew ? "border-[#2563eb] bg-[#f4f7ff]" : "border-[#ded8c7] bg-[#faf8f0]"}`}>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-sm font-black">
+                      Invite · {invite.slots.length} time{invite.slots.length === 1 ? "" : "s"}
+                      <span className={`ml-2 rounded-full px-2 py-0.5 text-xs ${invite.status === "booked" ? "bg-[#e7f4ef] text-[#165a4b]" : "bg-[#eef2ff] text-[#2563eb]"}`}>
+                        {invite.status === "booked" ? "Booked" : "Open"}
+                      </span>
+                    </p>
+                    <p className="text-xs font-semibold text-[#a09a8c]">{formatClaimedAt(invite.createdAt)} created</p>
                   </div>
+                  {invite.status === "booked" && claimedSlot && (
+                    <p className="mt-2 rounded-lg bg-[#e7f4ef] p-3 text-sm font-bold text-[#165a4b]">
+                      ✅ {invite.claimedBy} claimed {claimedSlot.slot} for {claimedSlot.childName}
+                      {invite.claimedAt ? ` · ${formatClaimedAt(invite.claimedAt)}` : ""}
+                    </p>
+                  )}
+                  {invite.status === "open" && (
+                    <>
+                      <p className="mt-2 break-all rounded-lg bg-white p-3 text-sm font-black text-[#17231f] ring-1 ring-[#ded8c7]">{url}</p>
+                      <button
+                        onClick={() => copyInviteLink(invite)}
+                        className="mt-2 min-h-11 rounded-lg bg-[#165a4b] px-4 py-2 text-sm font-black text-white"
+                      >
+                        {linkCopiedId === invite.id ? "Copied! Send it to the other parent ✓" : "Copy invite link"}
+                      </button>
+                    </>
+                  )}
                 </div>
               );
             })}
           </div>
-          {!childProfiles.some((child) => (kidAvailability[child.id] ?? []).some((slot) => !closedKeys.has(`${child.id}|${slot}`))) && (
-            <p className="mt-3 rounded-lg bg-white p-3 text-sm font-bold text-[#4f625b]">
-              No open times right now — set availability in Step 1 above.
-            </p>
-          )}
-          {simPick && (
-            <button
-              onClick={confirmPick}
-              className="mt-4 min-h-12 w-full rounded-lg bg-[#165a4b] px-4 py-3 text-sm font-black text-white"
-            >
-              Confirm this time (demo)
-            </button>
-          )}
         </section>
       )}
 
-      {confirmedBooking && (
-        <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-[#165a4b]">Booked · demo</p>
-          <h3 className="mt-2 text-2xl font-black">✅ {confirmedBooking.slot} is now closed</h3>
+      {latestClaim && latestClaimedSlot && (
+        <section className="rounded-lg border-2 border-[#165a4b] bg-[#e7f4ef] p-5 shadow-sm">
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-[#165a4b]">Latest confirmation</p>
+          <h3 className="mt-2 text-2xl font-black">
+            ✅ {latestClaim.claimedBy} claimed {latestClaimedSlot.slot} for {latestClaimedSlot.childName}
+          </h3>
           <p className="mt-1 text-sm font-semibold text-[#4f625b]">
-            That time can&apos;t be double-booked — it shows as booked everywhere in this demo.
+            {latestClaim.claimedAt ? `Confirmed ${formatClaimedAt(latestClaim.claimedAt)}. ` : ""}
+            That time is now closed everywhere — it can&apos;t be double-booked. Reach out parent-to-parent to
+            coordinate pickup; kids don&apos;t see this thread.
           </p>
-          <div className="mt-4 rounded-lg bg-[#faf8f0] p-4">
-            <p className="text-xs font-black uppercase tracking-[0.14em] text-[#4f625b]">Email preview — "sent" to both parents (demo, nothing was actually sent)</p>
-            <div className="mt-2 rounded-lg border border-[#ded8c7] bg-white p-4 text-sm leading-6">
-              <p><b>To:</b> you + the other parent</p>
-              <p><b>Subject:</b> Playdate confirmed — {confirmedChild?.name ?? "your kid"} · {confirmedBooking.slot}</p>
-              <hr className="my-2 border-[#ded8c7]" />
-              <p className="font-semibold text-[#4f625b]">
-                Hi! You&apos;re confirmed for a playdate: <b className="text-[#17231f]">{confirmedBooking.slot}</b>.
-                A parent from each family will be present. Reply here to coordinate pickup — kids don&apos;t see this thread.
-              </p>
-              <p className="mt-2 text-xs font-bold text-[#a09a8c]">Demo email — TailTots didn&apos;t send anything.</p>
-            </div>
-          </div>
-          <button
-            onClick={() => setConfirmedBooking(null)}
-            className="mt-3 min-h-11 rounded-lg bg-white px-4 py-2 text-sm font-black text-[#17231f] ring-2 ring-[#ded8c7]"
-          >
-            Dismiss
-          </button>
         </section>
       )}
     </section>
