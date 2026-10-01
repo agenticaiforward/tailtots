@@ -1796,7 +1796,6 @@ export function TailTotsApp() {
           <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto sm:gap-3">
             <img src="/tailtots-logo.png" alt="TailTots logo" className="h-12 w-auto shrink-0 rounded-lg object-contain sm:h-14" />
             <div className="min-w-0">
-              <h1 className="text-lg font-black leading-tight sm:text-xl">TailTots</h1>
               <p className="hidden text-xs font-bold text-[#69736f] sm:block">Parent-guided real-world growth.</p>
               {!isRouteChooser && (
                 <p className="mt-1 inline-flex max-w-full items-center rounded-full bg-[#fff4d8] px-2 py-1 text-[11px] font-black leading-4 text-[#7a4b12] sm:hidden">
