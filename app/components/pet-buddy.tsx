@@ -397,6 +397,9 @@ export function PetBuddyFace({
   className?: string;
 }) {
   const kit = PET_KITS[kind] ?? PET_KITS.pet;
+  // The fish portrait photo is stored rotated counter-clockwise; correct it at
+  // render time so the fish swims level. Targets only the fish image.
+  const photoRotationClass = kind === "fish" ? " rotate-90" : "";
   return (
     <div
       aria-label={`${label} pet buddy`}
@@ -411,7 +414,7 @@ export function PetBuddyFace({
             alt={`${label} pet photo`}
             fill
             sizes={PHOTO_SIZES[size]}
-            className="object-cover object-center"
+            className={`object-cover object-center${photoRotationClass}`}
             unoptimized
           />
         ) : (

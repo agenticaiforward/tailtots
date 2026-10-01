@@ -48,6 +48,8 @@ export type Mission = {
   status: ApprovalStatus;
   completedBy?: string;
   note?: string;
+  /** Parent control: when false, the mission is hidden from kid views. Defaults to visible. */
+  visibleToKids?: boolean;
 };
 
 export type BankTransaction = {
@@ -76,6 +78,8 @@ export type SavingsGoal = {
   completedAt?: string;
   /** ISO date when a parent confirmed the real-world donation happened. */
   donationConfirmedAt?: string;
+  /** Parent control: when false, the goal is hidden from kid views. Defaults to visible. */
+  visibleToKids?: boolean;
 };
 
 export type MemoryMoment = {
