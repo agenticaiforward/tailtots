@@ -2527,17 +2527,20 @@ function VisionLandingPanel({
         </svg>
         <div className="relative grid gap-6 p-5 sm:p-8 lg:grid-cols-[1.05fr_0.95fr] lg:items-center xl:p-10">
           <div className="min-w-0">
-            <h2 className="tt-display mt-4 max-w-2xl text-[2.75rem] font-black leading-[1.04] text-tt-navy sm:text-6xl">
-              The pet is the <span className="relative inline-block px-1"><span className="absolute inset-0 -rotate-1 rounded bg-tt-sun/70" aria-hidden="true" /><span className="relative italic">hook.</span></span> The skills are the point.
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-tt-pine">
+              For parents of kids 5–12
+            </p>
+            <h2 className="tt-display mt-3 max-w-2xl text-[2.75rem] font-black leading-[1.04] text-tt-navy sm:text-6xl">
+              Get your evenings back. Raise a kid who <span className="relative inline-block px-1"><span className="absolute inset-0 -rotate-1 rounded bg-tt-sun/70" aria-hidden="true" /><span className="relative italic">handles it.</span></span>
             </h2>
             <p className="mt-4 max-w-xl text-lg font-bold leading-7 text-tt-navy-soft">
-              It starts with the question you’ve heard 47 times — “Can we get a puppy?!” — and turns into real life skills you can actually see: responsibility kept, empathy grown, confidence earned.
+              TailTots gives your child one simple daily checklist — pet care, chores, savings goals — they track themselves in about a minute a day. You approve in 30 seconds. Less nagging, more doing.
             </p>
             <p className="mt-2 max-w-xl text-[15px] font-semibold leading-6 text-tt-ink-soft">
-              Three doors in: kids who <strong className="font-black text-tt-navy">have</strong> a pet, kids <strong className="font-black text-tt-navy">earning</strong> the right to get one, and kids growing through <strong className="font-black text-tt-navy">shelter giving and life skills</strong>. Parent-approved missions, about 30 seconds of your day — and a kid who starts stepping up on their own.
+              They earn real <strong className="font-black text-tt-navy">independence</strong> and real <strong className="font-black text-tt-navy">responsibility</strong> at the same time — and you get the lightest parenting win there is: your me-time back.
             </p>
             <p className="mt-2 max-w-xl text-[15px] font-semibold leading-6 text-tt-ink-soft">
-              No strangers, no chats, no doomscroll. Just capable kids, lighter parenting — and a little of your evening back, including that cup of coffee, finally finished hot.
+              Heard “Can we get a puppy?!” 47 times? Wait till you hear “I already fed her.” Have a pet, want one, or raising an animal lover — there’s a door for each. Parent-approved and closed: no strangers, no chats, no doomscroll.
             </p>
 
             {/* PRIMARY: launch capture. SECONDARY: kid demo. Never equal weight. */}
@@ -2551,7 +2554,7 @@ function VisionLandingPanel({
               onSubmit={(event) => { event.preventDefault(); joinLaunchList(); }}
             >
               <label htmlFor="hero-launch-email" className="text-xs font-black uppercase tracking-[0.14em] text-tt-pine">
-                👨‍👩‍👧 Get your family on the launch list
+                👨‍👩‍👧 Join the first 500 founding families
               </label>
               <div className="mt-2 grid gap-2 sm:grid-cols-[1fr_auto]">
                 <input
@@ -2565,7 +2568,7 @@ function VisionLandingPanel({
                   required
                 />
                 <button type="submit" disabled={launchInterestStatus === "saving"} className="tt-btn-press min-h-12 rounded-xl bg-tt-tang px-6 py-3 text-sm font-black text-white shadow-md disabled:opacity-60">
-                  {launchInterestStatus === "saving" ? "Saving…" : "Join free 🚀"}
+                  {launchInterestStatus === "saving" ? "Saving…" : "Claim our spot 🚀"}
                 </button>
               </div>
               {launchInterestMessage && (
