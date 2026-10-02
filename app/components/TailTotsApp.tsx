@@ -2587,97 +2587,22 @@ function VisionLandingPanel({
         </div>
       </section>
 
-      {/* ============ FOMO STRIP: founding-family window, directly under the hero ============ */}
-      <section aria-label="Founding families" className="relative -mx-3 overflow-hidden border-y border-tt-pine/30 bg-tt-night p-5 text-white shadow-sm sm:mx-0 sm:rounded-3xl sm:border sm:p-6">
-        <div className="pointer-events-none absolute -right-16 -top-16 size-56 rounded-full bg-tt-sun/20 blur-3xl" aria-hidden="true" />
-        <div className="pointer-events-none absolute -bottom-20 -left-10 size-56 rounded-full bg-tt-tang/20 blur-3xl" aria-hidden="true" />
-        <div className="relative flex flex-col items-start gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="min-w-0">
-            <p className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-xs font-black uppercase tracking-[0.14em] text-tt-sun ring-1 ring-white/15">
-              <span className="tt-animate-sparkle" aria-hidden="true">🔥</span> Founding 500 · strictly optional, extremely tempting
-            </p>
-            <h3 className="mt-3 max-w-xl text-2xl font-black tracking-tight sm:text-3xl">
-              We’re opening TailTots to our first 500 founding families.
-            </h3>
-            <p className="mt-2 max-w-xl text-sm font-semibold leading-6 text-white/70">
-              Founders get early access, a founding-family badge their kids will absolutely brag about, and first dibs on shelter-giving goals.
-              The window closes at launch — no fake countdown, just a real door that shuts when we ship.
-            </p>
-          </div>
-          {launchJoined ? (
-            <p className="w-full max-w-md shrink-0 rounded-2xl border border-white/15 bg-white/10 p-4 text-sm font-black text-tt-sun backdrop-blur">
-              🎉 You’re in! Your founding-family spot is claimed.
-            </p>
-          ) : (
-          <form
-            className="w-full max-w-md shrink-0 rounded-2xl border border-white/15 bg-white/10 p-3 backdrop-blur sm:p-4"
-            onSubmit={(event) => { event.preventDefault(); joinLaunchList(); }}
-          >
-            <label htmlFor="fomo-launch-email" className="text-xs font-black uppercase tracking-[0.14em] text-tt-sun">
-              🐾 Claim a founding-family spot
-            </label>
-            <div className="mt-2 grid gap-2 sm:grid-cols-[1fr_auto]">
-              <input
-                id="fomo-launch-email"
-                value={launchInterest.email}
-                onChange={(event) => setLaunchInterest({ email: event.target.value })}
-                className="min-h-12 rounded-xl border border-white/20 bg-white/10 px-4 text-sm font-bold text-white placeholder:text-white/50"
-                inputMode="email"
-                placeholder="Parent email"
-                type="email"
-                required
-              />
-              <button type="submit" disabled={launchInterestStatus === "saving"} className="tt-btn-press tt-animate-wiggle-hover min-h-12 rounded-xl bg-tt-tang px-6 py-3 text-sm font-black text-white shadow-md disabled:opacity-60">
-                {launchInterestStatus === "saving" ? "Saving…" : "Save my spot"}
-              </button>
-            </div>
-            {launchInterestMessage && (
-              <p className={`mt-2 text-sm font-bold ${launchInterestStatus === "error" ? "text-tt-sun" : "text-white"}`} role="status">
-                {launchInterestMessage}
-              </p>
-            )}
-            <p className="mt-2 text-[11px] font-semibold text-white/55">Free for families. One email. Zero spam, only tail wags.</p>
-          </form>
-          )}
-        </div>
-      </section>
-
-      {/* ============ PET PROMISE: photos + the required language ============ */}
-      <section className="-mx-3 border-y border-tt-line bg-white p-4 shadow-sm sm:mx-0 sm:rounded-3xl sm:border sm:p-6">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-tang">Exhibit A: your camera roll 📸</p>
-        <div className="mt-2 flex flex-wrap items-end justify-between gap-2">
-          <h3 className="text-2xl tt-display font-black text-tt-navy sm:text-3xl">Built around the bond kids already have with animals.</h3>
-          <p className="text-sm font-bold text-tt-ink-faint">Several households, different backgrounds — the same bond</p>
-        </div>
-        <p className="mt-2 max-w-3xl text-[15px] font-semibold leading-6 text-tt-ink-soft">
-          That bond is the doorway. On the other side: kids doing <span className="font-black text-tt-ink">real good in the real world</span> —
-          caring for shelter dogs, helping neighbors, and earning the giving they choose. Cuteness in, character out.
-        </p>
-        <div className="mt-4 grid max-w-md grid-cols-2 gap-2">
-          {kidsPetPhotos.map(([label, src]) => (
-            <div key={label} className="tt-card-lift group overflow-hidden rounded-2xl bg-tt-sand shadow-sm">
-              <img src={src} alt={`${label} learning responsibility with TailTots`} className="aspect-[4/3] w-full object-cover transition duration-300 group-hover:scale-[1.04]" loading="lazy" />
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ============ FAST TRACK: three doorways in ============ */}
+      {/* ============ WHO IT'S FOR: strong habits, three kinds of kids ============ */}
       <section className="-mx-3 border-y-2 border-tt-pine/40 bg-tt-pine p-5 text-white shadow-sm sm:mx-0 sm:rounded-3xl sm:border sm:p-6">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-sun">Three doorways in 🐾</p>
-        <h3 className="mt-1 text-2xl font-black tracking-tight sm:text-3xl">Every family gets a doorway.</h3>
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-sun">Who TailTots is for 🐾</p>
+        <h3 className="mt-1 text-2xl font-black tracking-tight sm:text-3xl">Strong habits. Real responsibility. Whichever kid you’ve got.</h3>
         <div className="mt-4 grid gap-3 md:grid-cols-3">
           <div className="rounded-2xl bg-white/10 p-4 ring-1 ring-white/15">
             <p className="text-2xl" aria-hidden="true">🐾</p>
-            <p className="mt-1 text-base font-black">Have a pet? You’re the fast track.</p>
+            <p className="mt-1 text-base font-black">Kids who have pets</p>
             <p className="mt-1 text-sm font-semibold leading-6 text-white/80">
-              The biggest crowd. Your kid takes over the real routine — feeding schedules they actually follow, training missions, vet-visit prep —
-              and levels up to shelter-hero giving. From “we have a dog” to “my kid <em>runs</em> the dog.”
+              The biggest crowd. Your kid takes over the real routine — feeding schedules they actually follow, training missions, vet-visit prep.
+              From “we have a dog” to “my kid <em>runs</em> the dog.”
             </p>
           </div>
           <div className="rounded-2xl bg-white/10 p-4 ring-1 ring-white/15">
             <p className="text-2xl" aria-hidden="true">🎓</p>
-            <p className="mt-1 text-base font-black">Want a pet? Earn the case for one.</p>
+            <p className="mt-1 text-base font-black">Kids who want a pet</p>
             <p className="mt-1 text-sm font-semibold leading-6 text-white/80">
               Parent-set home and community missions build the proof record — day after day — toward the Pet Readiness Certificate.
               The real question it answers: will they stick with it?
@@ -2685,16 +2610,16 @@ function VisionLandingPanel({
           </div>
           <div className="rounded-2xl bg-white/10 p-4 ring-1 ring-white/15">
             <p className="text-2xl" aria-hidden="true">💛</p>
-            <p className="mt-1 text-base font-black">Giving hearts & skill builders.</p>
+            <p className="mt-1 text-base font-black">Kids who can’t have pets</p>
             <p className="mt-1 text-sm font-semibold leading-6 text-white/80">
-              No pet needed. Kids fund real shelter dogs and learn non-pet life skills — money smarts, chores, neighborhood kindness —
-              with certificates marking every milestone.
+              They can still be animal lovers. Set donation goals for real animal shelters, cheer on rescue dogs —
+              and get the full skill builder every other kid gets: money smarts, chores, kindness missions, certificates at every milestone.
             </p>
           </div>
         </div>
         <div className="mt-4 flex flex-wrap items-center justify-between gap-4">
           <p className="max-w-2xl text-sm font-semibold leading-6 text-white/80">
-            All three doorways open onto the same giving loop — every crowd can fund real shelter dogs. 🐶
+            Same habits, same responsibility, same nag-free mornings — whichever kid you’ve got.
           </p>
           <a href="#landing-demo" className="tt-btn-press min-h-12 shrink-0 rounded-xl bg-tt-sun px-6 py-3 text-sm font-black text-tt-ink">
             See it in action →
@@ -2770,20 +2695,11 @@ function VisionLandingPanel({
       {/* ============ THE JOURNEY: how it actually works, three doorways ============ */}
       <section className="-mx-3 border-y border-tt-line bg-white p-4 shadow-sm sm:mx-0 sm:rounded-3xl sm:border sm:p-6">
         <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-pine">How it actually works 🗺️</p>
-        <h3 className="mt-2 max-w-2xl text-2xl tt-display font-black text-tt-navy sm:text-3xl">From “already done, Mom” to “we funded a shelter dog.”</h3>
+        <h3 className="mt-2 max-w-2xl text-2xl tt-display font-black text-tt-navy sm:text-3xl">From “already done, Mom” to “done — check my streak.”</h3>
         <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-tt-ink-soft">
-          Every kid walks the same road — mission, action, your approval, streak. Three doorways open onto it: kids who already have a pet (the big crowd,
-          real routine from day one), kids who want one (parent-set missions building toward the Pet Readiness Certificate), and kids who donate to shelters
-          while learning non-pet life skills. Same road. Same nag-free mornings for you.
+          Every kid walks the same road — mission, action, your approval, streak. Whether they have a pet, want one, or can’t have one,
+          the habits are the same: responsibility they practice daily, proof you can see. Same road. Same nag-free mornings for you.
         </p>
-        <aside className="mt-4 max-w-3xl rounded-2xl border-2 border-tt-pine/30 bg-tt-pine-tint p-4">
-          <p className="text-sm font-bold leading-6 text-tt-ink-soft">
-            <span aria-hidden="true">🐾 </span><span className="font-black text-tt-navy">Have a pet?</span> Start at step 2 — and it’s not practice. It’s the real routine,
-            transferred from you to your kid, with streaks proving it stuck.
-            <span aria-hidden="true"> 💛 </span><span className="font-black text-tt-navy">No pet?</span> Every doorway includes shelter-giving missions —
-            all three crowds fund real dogs. 🐶
-          </p>
-        </aside>
         <ol className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5 lg:gap-4">
           {journeySteps.map(([emoji, title, body], index) => (
             <li key={title} className="tt-card-lift relative overflow-hidden rounded-2xl bg-tt-cream p-5">
