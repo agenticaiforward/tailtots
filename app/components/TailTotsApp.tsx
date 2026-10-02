@@ -2557,36 +2557,6 @@ function VisionLandingPanel({
       </section>
 
       {/* ============ DOCTRINE: the 10-second parent version ============ */}
-      <section aria-label="The TailTots doctrine" className="relative -mx-3 overflow-hidden border-y border-tt-line bg-tt-night text-white shadow-sm sm:mx-0 sm:rounded-3xl sm:border">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(70%_50%_at_50%_0%,rgba(255,209,102,0.08),transparent_70%)]" aria-hidden="true" />
-        <div className="relative p-5 sm:p-8 lg:p-10">
-          <p className="text-xs font-black uppercase tracking-[0.22em] text-tt-sun">The TailTots doctrine</p>
-          <h3 className="tt-display mt-3 max-w-3xl text-4xl font-black leading-[1.05] sm:text-5xl">
-            The 10-second version,<br />in plain parent language.
-          </h3>
-          <p className="mt-4 max-w-3xl text-[15px] font-semibold leading-7 text-white/70">
-            No lectures. No sticker charts you’ll forget by Friday. Just small daily missions that quietly build a capable, caring kid — with proof you can actually see.
-          </p>
-
-          <ol className="mt-8">
-            {[
-              ["What changes", "A more responsible, empathetic, confident kid — grown one small daily mission at a time."],
-              ["How it happens", "Pet care, kindness, chores, and giving missions your kid actually wants to do — about 30 seconds of your day."],
-              ["How you’ll see it", "One-tap approval from you. Streaks and certificates built from real effort — no nagging required."],
-              ["Where it all lives", "Character, money skills, shelter giving, and neighborhood missions — one safe place, no strangers, no extra apps."],
-            ].map(([title, body], index) => (
-              <li key={title} className="grid grid-cols-[3rem_1fr] items-baseline gap-4 border-t border-white/15 py-5 last:border-b sm:grid-cols-[4rem_1fr]">
-                <span className="tt-display text-3xl font-black text-[#ff8a65] sm:text-4xl" aria-hidden="true">{index + 1}</span>
-                <div>
-                  <p className="tt-display text-2xl font-black sm:text-3xl">{title}</p>
-                  <p className="mt-1 text-[15px] font-semibold text-white/65">{body}</p>
-                </div>
-              </li>
-            ))}
-          </ol>
-        </div>
-      </section>
-
       {/* ============ WHO IT'S FOR: strong habits, three kinds of kids ============ */}
       <section className="-mx-3 border-y-2 border-tt-pine/40 bg-tt-pine p-5 text-white shadow-sm sm:mx-0 sm:rounded-3xl sm:border sm:p-6">
         <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-sun">Who TailTots is for 🐾</p>
@@ -2700,58 +2670,28 @@ function VisionLandingPanel({
           Every kid walks the same road — mission, action, your approval, streak. Whether they have a pet, want one, or can’t have one,
           the habits are the same: responsibility they practice daily, proof you can see. Same road. Same nag-free mornings for you.
         </p>
-        <ol className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5 lg:gap-4">
-          {journeySteps.map(([emoji, title, body], index) => (
-            <li key={title} className="tt-card-lift relative overflow-hidden rounded-2xl bg-tt-cream p-5">
-              <span className="pointer-events-none absolute -right-2 -top-4 select-none text-[5rem] font-black text-tt-pine/10" aria-hidden="true">{index + 1}</span>
-              <span className="relative z-10 grid size-10 place-items-center rounded-full bg-tt-pine text-base" aria-hidden="true">{emoji}</span>
-              <p className="mt-3 text-base font-black text-tt-ink">{index + 1}. {title}</p>
-              <p className="mt-1 text-[13px] font-semibold leading-5 text-tt-ink-soft">{body}</p>
-            </li>
-          ))}
+        <ol className="mt-5 grid gap-3 md:grid-cols-3">
+          <li className="tt-card-lift relative overflow-hidden rounded-2xl bg-tt-cream p-5">
+            <span className="pointer-events-none absolute -right-2 -top-4 select-none text-[5rem] font-black text-tt-pine/10" aria-hidden="true">1</span>
+            <span className="relative z-10 grid size-10 place-items-center rounded-full bg-tt-pine text-base" aria-hidden="true">🐾</span>
+            <p className="mt-3 text-base font-black text-tt-ink">They run the checklist</p>
+            <p className="mt-1 text-[13px] font-semibold leading-5 text-tt-ink-soft">One daily list — pet care, chores, kindness, giving. About a minute. Kids actually want to do it.</p>
+          </li>
+          <li className="tt-card-lift relative overflow-hidden rounded-2xl bg-tt-cream p-5">
+            <span className="pointer-events-none absolute -right-2 -top-4 select-none text-[5rem] font-black text-tt-pine/10" aria-hidden="true">2</span>
+            <span className="relative z-10 grid size-10 place-items-center rounded-full bg-tt-pine text-base" aria-hidden="true">✅</span>
+            <p className="mt-3 text-base font-black text-tt-ink">You tap approve</p>
+            <p className="mt-1 text-[13px] font-semibold leading-5 text-tt-ink-soft">30 seconds a day. No nagging, no sticker charts. Streaks and certificates turn effort into proof you can see.</p>
+          </li>
+          <li className="tt-card-lift relative overflow-hidden rounded-2xl bg-tt-cream p-5">
+            <span className="pointer-events-none absolute -right-2 -top-4 select-none text-[5rem] font-black text-tt-pine/10" aria-hidden="true">3</span>
+            <span className="relative z-10 grid size-10 place-items-center rounded-full bg-tt-pine text-base" aria-hidden="true">🚀</span>
+            <p className="mt-3 text-base font-black text-tt-ink">They level up</p>
+            <p className="mt-1 text-[13px] font-semibold leading-5 text-tt-ink-soft">Responsibility, money smarts, character, real giving — all in one safe place. No strangers, no extra apps.</p>
+          </li>
         </ol>
-        <p className="mt-5 max-w-3xl text-sm font-semibold leading-6 text-tt-ink-soft">
-          Your job? Approve missions — about 30 seconds a day. TailTots does the nagging, so daily pet care, chores, and giving
-          turn into great habits — and great habits turn into responsible kids. It works whether your family has pets, is working
-          toward one, or simply wants to raise animal lovers and givers.
-        </p>
       </section>
 
-      {/* ============ PLATFORM: pet care is the hook, this is the one-stop ============ */}
-      <section id="landing-platform" className="relative -mx-3 scroll-mt-36 overflow-hidden border-y border-tt-line bg-tt-night p-5 text-white shadow-sm sm:mx-0 sm:rounded-3xl sm:border sm:p-8">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(80%_60%_at_50%_0%,rgba(255,209,102,0.10),transparent_70%)]" aria-hidden="true" />
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/40 to-transparent" aria-hidden="true" />
-        <div className="pointer-events-none absolute -left-24 -top-24 size-72 rounded-full bg-tt-pine/40 blur-3xl" aria-hidden="true" />
-        <div className="pointer-events-none absolute -bottom-24 -right-24 size-72 rounded-full bg-tt-grape/30 blur-3xl" aria-hidden="true" />
-        <div className="relative">
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-sun">One app · The whole childhood</p>
-          <h3 className="mt-2 max-w-2xl text-2xl font-black tracking-tight sm:text-3xl">Pet care is the hook. This is the platform.</h3>
-          <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-white/75">
-            TailTots is the one stop for raising capable, kind kids — safe social practice, character, skills, chores, neighborhood adventures,
-            and giving goals for real shelter dogs. Each arrives as the next chapter of the same loop — never feature sprawl. Crisp on the surface, deep underneath.
-          </p>
-          <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {platformPillars.map(([emoji, title, body]) => (
-              <article key={title} className="tt-card-lift rounded-2xl bg-white/10 p-5 ring-1 ring-white/15">
-                <p className="text-2xl" aria-hidden="true">{emoji}</p>
-                <p className="mt-2 text-lg font-black">{title}</p>
-                <p className="mt-1 text-sm font-semibold leading-6 text-white/70">{body}</p>
-              </article>
-            ))}
-          </div>
-          <div className="mt-6 rounded-2xl border border-white/15 bg-white/5 p-4 sm:p-5">
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-sun">Every mission grows something real</p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {["🐾 Responsibility", "❤️ Kindness & Empathy", "💰 Money Skills", "🤝 Teamwork & Leadership", "🌎 Community", "🎁 Bragging rights"].map((chip) => (
-                <span key={chip} className="rounded-full bg-white/10 px-4 py-2 text-xs font-black text-white ring-1 ring-white/15">{chip}</span>
-              ))}
-            </div>
-            <p className="mt-3 text-xs font-semibold text-white/60">Start with pet care. End up with a kid who budgets. Funny how that works.</p>
-          </div>
-        </div>
-      </section>
-
-      
       <section id="landing-contact" className="-mx-3 scroll-mt-36 border-y border-tt-line bg-[#eef2ff] p-4 shadow-sm sm:mx-0 sm:rounded-3xl sm:border sm:p-6">
         <div className="grid gap-5 lg:grid-cols-[0.85fr_1.15fr]">
           <div>
