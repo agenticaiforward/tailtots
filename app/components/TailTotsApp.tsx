@@ -6,7 +6,7 @@ import Cropper, { type Area } from "react-easy-crop";
 import { PetBuddyFace } from "./pet-buddy";
 import type { PetKind } from "./pet-buddy";
 import { PlaydateClaimView } from "./PlaydateClaimView";
-import { parsePlaydateHash, playdateClaimUrl, playdateStore } from "@/lib/playdate-store";
+import { parsePlaydateHash, playdateClaimUrl, playdateStore, configurePlaydateStore } from "@/lib/playdate-store";
 import type { PlaydateInvite } from "@/lib/playdate-store";
 import {
   isSupabaseConfigured,
@@ -391,6 +391,8 @@ const defaultParentPasscode = "4321";
 
 const savedFamilyStateKey = "tailtots-family-state-v1";
 const legacySavedFamilyStateKey = "pawpal-family-state-v1";
+// Stream B: playdate free-time windows (Schedule tab, Step 1) survive reload.
+const PLAYDATE_AVAILABILITY_KEY = "tailtots-playdate-availability-v1";
 
 type SavedFamilyState = {
   familyName?: string;
@@ -653,7 +655,32 @@ export function TailTotsApp() {
   // Playdate availability (parent-only Schedule tab): per-kid free-time
   // windows. Real invites live in the playdate store (lib/playdate-store.ts);
   // claimed slots are read back from the family's invites below.
-  const [kidAvailability, setKidAvailability] = useState<Record<string, string[]>>({});
+  // Stream B: availability survives reload via localStorage.
+  const [kidAvailability, setKidAvailability] = useState<Record<string, string[]>>(() => {
+    if (typeof window === "undefined") return {};
+    try {
+      const raw = localStorage.getItem(PLAYDATE_AVAILABILITY_KEY);
+      if (!raw) return {};
+      const parsed = JSON.parse(raw) as unknown;
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+      const clean: Record<string, string[]> = {};
+      for (const [key, value] of Object.entries(parsed)) {
+        if (typeof key === "string" && Array.isArray(value) && value.every((s) => typeof s === "string")) {
+          clean[key] = value;
+        }
+      }
+      return clean;
+    } catch {
+      return {};
+    }
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem(PLAYDATE_AVAILABILITY_KEY, JSON.stringify(kidAvailability));
+    } catch {
+      /* quota — availability still works for this session */
+    }
+  }, [kidAvailability]);
   // Parent controls for the kid's AI Buddy: which predefined question
   // categories the kid may ask, and whether new questions rotate daily.
   const [aiBuddyCategories, setAiBuddyCategories] = useState<string[]>([
@@ -894,6 +921,9 @@ export function TailTotsApp() {
     const handleSession = (userId: string | null, email: string) => {
       if (!isMounted) return;
       setCloudAccountEmail(email);
+      // Stream B: signed-in parents get cloud-backed playdate invites
+      // (cross-device); signed-out keeps the localStorage behavior.
+      configurePlaydateStore({ client: supabase, signedIn: userId !== null });
       if (userId) {
         setMagicLinkSent(false);
         if (cloudUserIdRef.current !== userId) {
@@ -2841,9 +2871,14 @@ function SchedulePanel({
       setCreateError("Check at least one free time in Step 1 first.");
       return;
     }
-    const invite = await playdateStore.createInvite(familyName, hostName || "A TailTots parent", openSelections);
-    setInvites(await playdateStore.listInvites());
-    setJustCreatedId(invite.id);
+    try {
+      const invite = await playdateStore.createInvite(familyName, hostName || "A TailTots parent", openSelections);
+      setInvites(await playdateStore.listInvites());
+      setJustCreatedId(invite.id);
+    } catch (error) {
+      // Cloud write failed (e.g. offline) — stay local-safe and say so.
+      setCreateError(error instanceof Error ? error.message : "Couldn't create the invite. Please try again.");
+    }
   }
 
   function copyInviteLink(invite: PlaydateInvite) {
