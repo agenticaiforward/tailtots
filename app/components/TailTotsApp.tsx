@@ -21,6 +21,7 @@ import {
 import type {
   BankCategory,
   BankTransaction,
+  CharacterTraitKey,
   Child,
   LevelKey,
   MemoryMoment,
@@ -35,6 +36,16 @@ import {
   pushFamilyState,
   type FamilySyncState,
 } from "@/lib/family-cloud";
+import {
+  buildCurriculumLevelBadge,
+  CHARACTER_TRAITS,
+  curriculumLevelBadgeId,
+  detectNewlyCompletedCurriculumLevels,
+  getChildCurriculumSummary,
+  instantiateCurriculumMissions,
+  openCurriculumMissionKeys,
+  traitByKey,
+} from "@/lib/character-curriculum";
 
 const levelLabels: Record<LevelKey, string> = {
   easy: "Easy",
@@ -1025,6 +1036,27 @@ export function TailTotsApp() {
     });
   }, [badges, certificates, children, hasLoadedSavedState, missions, pets]);
 
+  // Character curriculum progression: when every mission in a trait level is
+  // parent-approved, award the trait-level badge (e.g. "Responsibility Sprout").
+  // Detection is idempotent — levels with a badge already awarded are skipped —
+  // and the badge's skill feeds the existing skill meters in the Growth Log.
+  useEffect(() => {
+    if (!hasLoadedSavedState) return;
+    const completions = detectNewlyCompletedCurriculumLevels(missions, badges, children.map((child) => child.id));
+    if (completions.length === 0) return;
+    queueMicrotask(() => {
+      setBadges((prev) => {
+        const awards = completions
+          .filter((completion) => !prev.some((badge) => badge.id === curriculumLevelBadgeId(completion.childId, completion.traitKey, completion.levelIndex)))
+          .map((completion) => {
+            const child = children.find((kid) => kid.id === completion.childId);
+            return buildCurriculumLevelBadge(completion.childId, child?.name ?? "Your kid", completion.traitKey, completion.levelIndex);
+          });
+        return awards.length ? [...awards, ...prev] : prev;
+      });
+    });
+  }, [badges, children, hasLoadedSavedState, missions]);
+
   useEffect(() => {
     queueMicrotask(() => {
       const requestedTab = new URLSearchParams(window.location.search).get("tab");
@@ -1589,6 +1621,21 @@ export function TailTotsApp() {
     );
   }
 
+  /**
+   * Character curriculum: one-tap assignment of a trait+level mission pack.
+   * Missions are real Mission objects tagged with `curriculum`, so they flow
+   * through the normal kid checklist → complete → parent approve pipeline.
+   * Templates whose missionKey already has an open (non-approved) instance
+   * for the kid are skipped, so re-tapping never duplicates missions.
+   */
+  function assignCurriculumMissions(traitKey: CharacterTraitKey, levelIndex: number, childId: string) {
+    const openKeys = openCurriculumMissionKeys(childId, traitKey, levelIndex, missions);
+    const pack = instantiateCurriculumMissions(traitKey, levelIndex, childId, { hasPet: pets.length > 0 });
+    const fresh = pack.filter((mission) => !openKeys.has(mission.curriculum!.missionKey));
+    if (fresh.length === 0) return;
+    setMissions((items) => [...fresh, ...items]);
+  }
+
   function autoBalanceMissions() {
     if (!children.length) return;
     setMissions((items) => {
@@ -2044,6 +2091,7 @@ export function TailTotsApp() {
                 missions={role === "parent" ? activeChildMissions : kidVisibleMissions}
                 pets={pets}
                 allChildren={children}
+                badges={badges}
                 missionNote={missionNote}
                 setMissionNote={setMissionNote}
                 completeMission={completeMission}
@@ -2191,6 +2239,7 @@ export function TailTotsApp() {
               hasPets={pets.length > 0}
               activeChildId={activeChild?.id}
               onSelectChild={role === "parent" ? setActiveChildId : undefined}
+              assignCurriculumMissions={assignCurriculumMissions}
             />
           )}
           {visibleActiveTab === "neighborhood" && (
@@ -3080,12 +3129,7 @@ function KidAiBuddyPanel({
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        // NOTE: must be one of IDEA_LIFE_SKILLS in lib/ai/ideas.ts
-        // ("responsibility" | "empathy" | "teamwork" | "leadership" | "time").
-        // The buddy's exploration questions previously sent "curiosity", which
-        // always failed validation with a silent fallback. "responsibility"
-        // is the closest valid skill for the pet-care exploration questions.
-        lifeSkill: "responsibility",
+        lifeSkill: "curiosity",
         ageBand,
         context: {
           petKinds: [...new Set(pets.map((item) => item.species))].slice(0, 4),
@@ -3876,6 +3920,7 @@ function MissionsPanel(props: {
   missions: Mission[];
   pets: Pet[];
   allChildren: Child[];
+  badges: BadgeAward[];
   missionNote: string;
   setMissionNote: (value: string) => void;
   completeMission: (missionId: string) => void;
@@ -3973,6 +4018,29 @@ function MissionsPanel(props: {
         </div>
         <p className="mt-2 text-sm font-bold text-[#4f625b]">{pawgressMessage}</p>
       </div>
+      {isKidView && props.activeChild && (
+        <div className="mt-4 rounded-lg border border-[#ded8c7] bg-[#f0edff] p-4" aria-label="Character progress">
+          <p className="text-sm font-black text-[#17231f]">🦸 Your character journey</p>
+          <p className="mt-1 text-xs font-bold text-[#4f625b]">
+            Finish every mission in a level and a grown-up&apos;s approval earns you a star.
+          </p>
+          <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {getChildCurriculumSummary(props.activeChild.id, props.missions, props.badges).map((entry) => (
+              <div key={entry.traitKey} className="rounded-lg bg-white p-3 text-center">
+                <p className="text-2xl" aria-hidden="true">{entry.emoji}</p>
+                <p className="mt-1 text-xs font-black">{entry.label}</p>
+                <p className="mt-1 text-sm tracking-widest" aria-label={`${entry.levelsDone} of 3 ${entry.label} levels complete`}>
+                  {entry.levels.map((levelEntry) => (
+                    <span key={levelEntry.levelIndex} className={levelEntry.done ? "text-[#6d3ed1]" : "text-[#c9c2b2]"}>
+                      {levelEntry.done ? "★" : "☆"}
+                    </span>
+                  ))}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
       <div id="today-mission-list" className="mt-5 grid gap-3 scroll-mt-24">
         {props.missions.length === 0 && (
           <div className="rounded-xl border-2 border-dashed border-[#165a4b] bg-[#e7f4ef] p-6 text-center">
@@ -4032,6 +4100,12 @@ function MissionsPanel(props: {
                       )}
                       <span aria-hidden="true">·</span>
                       <span>+{mission.points} pts</span>
+                      {curriculumMissionLabel(mission) && (
+                        <>
+                          <span aria-hidden="true">·</span>
+                          <span className="text-[#6d3ed1]">{curriculumMissionLabel(mission)}</span>
+                        </>
+                      )}
                     </div>
                     {mission.status === "rejected" && mission.note && (
                       <p className="mt-2 rounded-lg bg-[#fff4d8] p-2 text-xs font-bold text-[#7a4b12]">↩️ Sent back: {mission.note}</p>
@@ -4128,6 +4202,11 @@ function MissionsPanel(props: {
                   <span className="rounded-full bg-[#f0edff] px-3 py-1 text-xs font-black text-[#6d3ed1]">
                     {getLifeSkillLabel(skill)}
                   </span>
+                  {curriculumMissionLabel(mission) && (
+                    <span className="rounded-full bg-[#6d3ed1] px-3 py-1 text-xs font-black text-white">
+                      {curriculumMissionLabel(mission)}
+                    </span>
+                  )}
                 </div>
                 <h3 className="mt-3 text-xl font-black">{mission.title}</h3>
                 <p className="mt-1 text-sm font-semibold text-[#4f625b]">{mission.question}</p>
@@ -5701,6 +5780,174 @@ function SocialPracticeSection({ childProfiles, activeChildId, onSelectChild, do
   );
 }
 
+/**
+ * Character curriculum picker (parent view, Growth tab). The parent picks a
+ * kid, a trait, and a level, previews the level's real-world missions, and
+ * assigns them all with one tap. Per-trait progress (levels completed) is
+ * derived from mission + badge state, so it stays in sync automatically.
+ */
+function CharacterCurriculumPanel(props: {
+  childProfiles: Child[];
+  missions: Mission[];
+  badges: BadgeAward[];
+  activeChildId?: string;
+  onSelectChild?: (childId: string) => void;
+  hasPets: boolean;
+  assignCurriculumMissions: (traitKey: CharacterTraitKey, levelIndex: number, childId: string) => void;
+}) {
+  const [selectedTrait, setSelectedTrait] = useState<CharacterTraitKey>("responsibility");
+  const [selectedLevel, setSelectedLevel] = useState(0);
+  const child = props.childProfiles.find((kid) => kid.id === props.activeChildId) ?? props.childProfiles[0];
+  const trait = traitByKey(selectedTrait);
+  const level = trait.levels[selectedLevel];
+  const summary = child ? getChildCurriculumSummary(child.id, props.missions, props.badges) : [];
+  const levelStatus = child
+    ? summary.find((entry) => entry.traitKey === selectedTrait)?.levels[selectedLevel]
+    : undefined;
+  const openKeysForLevel = child ? openCurriculumMissionKeys(child.id, selectedTrait, selectedLevel, props.missions) : new Set<string>();
+  const openCount = openKeysForLevel.size;
+
+  return (
+    <section className="mt-5 rounded-lg border border-[#ded8c7] bg-white p-5">
+      <p className="text-xs font-black uppercase tracking-[0.18em] text-[#6d3ed1]">Character curriculum</p>
+      <h2 className="mt-2 text-2xl font-black sm:text-3xl">Character, on purpose — taught through missions</h2>
+      <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-[#4f625b]">
+        Pick a trait and a level, then assign the whole mission pack with one tap. Missions land in your kid&apos;s
+        normal Today checklist; when every mission in a level is approved, they earn a trait-level badge and their
+        skill meters grow.
+      </p>
+
+      {props.childProfiles.length > 1 && (
+        <div className="mt-4 flex flex-wrap gap-2">
+          {props.childProfiles.map((kid) => (
+            <button
+              key={kid.id}
+              onClick={() => props.onSelectChild?.(kid.id)}
+              className={`min-h-11 rounded-full px-4 py-2 text-sm font-black ${
+                child?.id === kid.id ? "bg-[#6d3ed1] text-white" : "bg-[#f0edff] text-[#6d3ed1]"
+              }`}
+            >
+              {kid.name}
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {CHARACTER_TRAITS.map((entry) => {
+          const entrySummary = summary.find((item) => item.traitKey === entry.key);
+          const isActive = entry.key === selectedTrait;
+          return (
+            <button
+              key={entry.key}
+              onClick={() => { setSelectedTrait(entry.key); setSelectedLevel(0); }}
+              className={`rounded-lg border p-4 text-left ${isActive ? "border-[#6d3ed1] ring-2 ring-[#6d3ed1]/30" : "border-[#ded8c7]"}`}
+            >
+              <div className={`flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br text-2xl ${entry.colors}`}>
+                <span aria-hidden="true">{entry.emoji}</span>
+              </div>
+              <p className="mt-2 text-lg font-black">{entry.label}</p>
+              <p className="mt-1 text-xs font-bold text-[#4f625b]">{entry.blurb}</p>
+              <p className="mt-2 text-xs font-black text-[#6d3ed1]">
+                {entrySummary ? `${entrySummary.levelsDone} of 3 levels complete` : "No kid selected"}
+              </p>
+              <div className="mt-2 flex gap-1">
+                {entrySummary?.levels.map((levelEntry) => (
+                  <span
+                    key={levelEntry.levelIndex}
+                    title={`${levelEntry.levelName}: ${levelEntry.done ? "complete" : `${levelEntry.approvedCount}/${levelEntry.total} missions approved`}`}
+                    className={`flex h-6 w-6 items-center justify-center rounded-full text-xs ${
+                      levelEntry.done ? "bg-[#6d3ed1] text-white" : "bg-[#ede8db] text-[#69736f]"
+                    }`}
+                  >
+                    {levelEntry.done ? "★" : levelEntry.levelIndex + 1}
+                  </span>
+                ))}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="mt-4 flex flex-wrap gap-2">
+        {trait.levels.map((levelEntry) => (
+          <button
+            key={levelEntry.index}
+            onClick={() => setSelectedLevel(levelEntry.index)}
+            className={`min-h-11 rounded-full px-4 py-2 text-sm font-black ${
+              levelEntry.index === selectedLevel ? "bg-[#165a4b] text-white" : "bg-[#e7f4ef] text-[#165a4b]"
+            }`}
+          >
+            {levelEntry.name} · {levelEntry.ageBand}
+          </button>
+        ))}
+      </div>
+
+      <div className="mt-4 rounded-lg bg-[#faf8f0] p-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-lg font-black">
+              {trait.emoji} {trait.label} — {level.name}
+            </p>
+            <p className="mt-1 text-sm font-semibold text-[#4f625b]">{level.tagline}</p>
+            {levelStatus && (
+              <p className="mt-1 text-xs font-black text-[#6d3ed1]">
+                {levelStatus.done
+                  ? "★ Level complete — badge earned"
+                  : `${levelStatus.approvedCount} of ${levelStatus.total} missions approved`}
+                {openCount > 0 && !levelStatus.done ? ` · ${openCount} already on the checklist` : ""}
+              </p>
+            )}
+          </div>
+          <button
+            onClick={() => child && props.assignCurriculumMissions(selectedTrait, selectedLevel, child.id)}
+            disabled={!child || (levelStatus?.done ?? false)}
+            className="min-h-11 shrink-0 rounded-lg bg-[#6d3ed1] px-5 py-2 text-sm font-black text-white disabled:bg-[#ede8db] disabled:text-[#69736f]"
+          >
+            {levelStatus?.done
+              ? "Level complete ★"
+              : child
+                ? `Assign all ${level.missions.length} to ${child.name}`
+                : "Add a kid first"}
+          </button>
+        </div>
+        {!props.hasPets && (
+          <p className="mt-3 rounded-lg bg-[#e7f4ef] p-3 text-xs font-bold text-[#165a4b]">
+            No-pet family: pet missions automatically use their no-pet alternative, so every mission is doable.
+          </p>
+        )}
+        <div className="mt-3 grid gap-2">
+          {level.missions.map((missionTemplate) => {
+            const useNoPet = !props.hasPets && Boolean(missionTemplate.noPetTitle);
+            const ageFit = child
+              ? child.age >= missionTemplate.minAge && child.age <= missionTemplate.maxAge
+              : true;
+            return (
+              <div key={missionTemplate.key} className="rounded-lg border border-[#ded8c7] bg-white p-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="rounded-full bg-white px-3 py-1 text-xs font-black ring-1 ring-[#ded8c7]">{levelLabels[missionTemplate.difficulty]}</span>
+                  <span className="rounded-full bg-[#fff4d8] px-3 py-1 text-xs font-black">+{missionTemplate.points} pts</span>
+                  <span className={`rounded-full px-3 py-1 text-xs font-black ${ageFit ? "bg-[#e7f4ef] text-[#165a4b]" : "bg-[#fff4d8] text-[#7a4b12]"}`}>
+                    Ages {missionTemplate.minAge}–{missionTemplate.maxAge}{ageFit ? "" : " · parent help"}
+                  </span>
+                  {useNoPet && (
+                    <span className="rounded-full bg-[#eef2ff] px-3 py-1 text-xs font-black text-[#2563eb]">No-pet version</span>
+                  )}
+                  {openKeysForLevel.has(missionTemplate.key) && (
+                    <span className="rounded-full bg-[#f0edff] px-3 py-1 text-xs font-black text-[#6d3ed1]">On checklist</span>
+                  )}
+                </div>
+                <p className="mt-2 text-sm font-black">{useNoPet ? missionTemplate.noPetTitle : missionTemplate.title}</p>
+                <p className="mt-1 text-xs font-semibold text-[#4f625b]">{useNoPet ? missionTemplate.noPetQuestion : missionTemplate.question}</p>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function GrowthPanel(props: {
   childProfiles: Child[];
   badges: BadgeAward[];
@@ -5714,11 +5961,21 @@ function GrowthPanel(props: {
   hasPets: boolean;
   activeChildId?: string;
   onSelectChild?: (childId: string) => void;
+  assignCurriculumMissions: (traitKey: CharacterTraitKey, levelIndex: number, childId: string) => void;
 }) {
   return (
     <section className="rounded-lg border border-[#ded8c7] bg-white p-5">
       <p className="text-xs font-black uppercase tracking-[0.18em] text-[#6d3ed1]">Character growth</p>
       <h2 className="mt-2 text-3xl font-black">Responsibility, empathy, kindness, leadership</h2>
+      <CharacterCurriculumPanel
+        childProfiles={props.childProfiles}
+        missions={props.missions}
+        badges={props.badges}
+        activeChildId={props.activeChildId}
+        onSelectChild={props.onSelectChild}
+        hasPets={props.hasPets}
+        assignCurriculumMissions={props.assignCurriculumMissions}
+      />
       <div className="mt-5 grid gap-4 lg:grid-cols-2">
         {props.childProfiles.map((child) => (
           <div key={child.id} className="rounded-lg bg-[#faf8f0] p-4">
@@ -6252,12 +6509,70 @@ function NeighborhoodPanel({
                   Contribute in Kid Bank →
                 </button>
                 {role === "parent" && (
-                  <button
-                    onClick={() => shareGoalWithFamily(goal)}
-                    className="mt-2 min-h-11 w-full rounded-lg border border-[#165a4b] bg-white px-4 py-2 text-sm font-black text-[#165a4b]"
-                  >
-                    {shareCopiedId === goal.id ? "Family share message copied ✓" : "Copy family share message"}
-                  </button>
+                  <>
+                    <button
+                      onClick={() => (shareComposerFor === goal.id ? setShareComposerFor(null) : openShareComposer(goal))}
+                      className="mt-2 min-h-11 w-full rounded-lg border border-[#165a4b] bg-white px-4 py-2 text-sm font-black text-[#165a4b]"
+                    >
+                      {shareComposerFor === goal.id ? "Cancel sharing" : "Share this goal with family"}
+                    </button>
+                    {shareComposerFor === goal.id && (
+                      <div className="mt-2 rounded-lg border-2 border-[#165a4b] bg-white p-3">
+                        <p className="text-xs font-black text-[#165a4b]">
+                          Family sees exactly what you write below — no kid names, no kid details.
+                        </p>
+                        <label className="mt-2 block">
+                          <span className="text-xs font-black">Goal name (what family sees)</span>
+                          <input
+                            value={shareForm.goalTitle}
+                            onChange={(e) => setShareForm((f) => ({ ...f, goalTitle: e.target.value }))}
+                            maxLength={80}
+                            className="mt-1 min-h-11 w-full rounded-lg border-2 border-[#ded8c7] px-3 py-2 text-sm font-bold"
+                          />
+                        </label>
+                        <label className="mt-2 block">
+                          <span className="text-xs font-black">Cause (what family sees)</span>
+                          <input
+                            value={shareForm.cause}
+                            onChange={(e) => setShareForm((f) => ({ ...f, cause: e.target.value }))}
+                            maxLength={80}
+                            className="mt-1 min-h-11 w-full rounded-lg border-2 border-[#ded8c7] px-3 py-2 text-sm font-bold"
+                          />
+                        </label>
+                        <label className="mt-2 block">
+                          <span className="text-xs font-black">Your first name (what family sees)</span>
+                          <input
+                            value={shareForm.parentName}
+                            onChange={(e) => setShareForm((f) => ({ ...f, parentName: e.target.value }))}
+                            placeholder="e.g. Priya"
+                            maxLength={40}
+                            className="mt-1 min-h-11 w-full rounded-lg border-2 border-[#ded8c7] px-3 py-2 text-sm font-bold"
+                          />
+                        </label>
+                        <label className="mt-2 block">
+                          <span className="text-xs font-black">A warm note to family</span>
+                          <textarea
+                            value={shareForm.parentMessage}
+                            onChange={(e) => setShareForm((f) => ({ ...f, parentMessage: e.target.value }))}
+                            maxLength={280}
+                            rows={3}
+                            className="mt-1 w-full rounded-lg border-2 border-[#ded8c7] px-3 py-2 text-sm font-bold"
+                          />
+                        </label>
+                        <button
+                          onClick={() => createGoalShare(goal)}
+                          disabled={!shareForm.goalTitle.trim()}
+                          className="mt-3 min-h-11 w-full rounded-lg bg-[#165a4b] px-4 py-2 text-sm font-black text-white disabled:opacity-40"
+                        >
+                          Create family share link
+                        </button>
+                        <p className="mt-1 text-center text-[11px] font-semibold text-[#a09a8c]">
+                          Unguessable link · you can revoke it any time
+                        </p>
+                      </div>
+                    )}
+                    <GoalFamilyShareLinks goalId={goal.id} />
+                  </>
                 )}
               </article>
             );
@@ -6265,7 +6580,7 @@ function NeighborhoodPanel({
           {sharedGoals.length === 0 && (
             <p className="rounded-lg bg-[#faf8f0] p-4 text-sm font-semibold text-[#4f625b]">
               {role === "parent"
-                ? "No shared goals yet. Create a giving goal in Kid Bank, share it, then copy a family message so grandparents can chip in."
+                ? "No shared goals yet. Create a giving goal in Kid Bank, share it, then create a family share link so grandparents can chip in."
                 : "No shared goals yet — ask a grown-up to share one with the family."}
             </p>
           )}
@@ -6308,6 +6623,104 @@ function NeighborhoodPanel({
       )}
 
     </section>
+  );
+}
+
+/**
+ * Parent-side list of active family share links for one goal: copy the
+ * link or a warm family message, or revoke a link. Revoked links stop
+ * working everywhere (cross-tab sync) and show a friendly inactive state.
+ */
+function GoalFamilyShareLinks({ goalId }: { goalId: string }) {
+  const [shares, setShares] = useState<GivingShareRecord[]>([]);
+  const [linkCopiedId, setLinkCopiedId] = useState<string | null>(null);
+  const [messageCopiedId, setMessageCopiedId] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      const list = await givingShareStore.listShares(goalId);
+      if (!cancelled) setShares(list.filter((share) => share.status === "active"));
+    }
+    load();
+    const unsubscribe = givingShareStore.subscribe(load);
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, [goalId]);
+
+  async function copyText(text: string): Promise<boolean> {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {
+      try {
+        const area = document.createElement("textarea");
+        area.value = text;
+        document.body.appendChild(area);
+        area.select();
+        document.execCommand("copy");
+        document.body.removeChild(area);
+        return true;
+      } catch {
+        return false;
+      }
+    }
+  }
+
+  function flash(setter: React.Dispatch<React.SetStateAction<string | null>>, id: string) {
+    setter(id);
+    window.setTimeout(() => setter((current) => (current === id ? null : current)), 2500);
+  }
+
+  async function revokeShare(id: string) {
+    if (!window.confirm("Stop sharing this link? Family will see that it is no longer active.")) return;
+    await givingShareStore.revokeShare(id);
+  }
+
+  if (shares.length === 0) return null;
+
+  return (
+    <div className="mt-2 rounded-lg bg-[#faf8f0] p-3">
+      <p className="text-xs font-black uppercase tracking-[0.14em] text-[#165a4b]">
+        Family share links ({shares.length})
+      </p>
+      <div className="mt-2 space-y-2">
+        {shares.map((share) => (
+          <div key={share.id} className="rounded-lg border border-[#ded8c7] bg-white p-3">
+            <p className="break-all text-xs font-bold text-[#4f625b]">{givingShareUrl(share.id)}</p>
+            <p className="mt-1 text-[11px] font-semibold text-[#a09a8c]">
+              Created {new Date(share.createdAt).toLocaleDateString()} · &ldquo;{share.goalTitle}&rdquo;
+            </p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <button
+                onClick={async () => {
+                  if (await copyText(givingShareUrl(share.id))) flash(setLinkCopiedId, share.id);
+                }}
+                className="min-h-10 rounded-lg bg-[#165a4b] px-3 py-1.5 text-xs font-black text-white"
+              >
+                {linkCopiedId === share.id ? "Link copied ✓" : "Copy link"}
+              </button>
+              <button
+                onClick={async () => {
+                  if (await copyText(familyShareMessage(share))) flash(setMessageCopiedId, share.id);
+                }}
+                className="min-h-10 rounded-lg border border-[#165a4b] px-3 py-1.5 text-xs font-black text-[#165a4b]"
+              >
+                {messageCopiedId === share.id ? "Message copied ✓" : "Copy family message"}
+              </button>
+              <button
+                onClick={() => revokeShare(share.id)}
+                className="min-h-10 rounded-lg px-3 py-1.5 text-xs font-black text-[#b3541e] hover:bg-[#fdeee4]"
+              >
+                Revoke
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -7196,4 +7609,13 @@ function getBadgeTitle(skill: LifeSkillKey) {
     time: "On-Time Helper",
   };
   return titles[skill];
+}
+
+/** Kid-friendly chip label for a curriculum-tagged mission, e.g. "🌱 Responsibility · Sprout". */
+function curriculumMissionLabel(mission: Mission): string | null {
+  if (!mission.curriculum) return null;
+  const trait = traitByKey(mission.curriculum.trait);
+  const level = trait.levels[mission.curriculum.level];
+  if (!level) return null;
+  return `${trait.emoji} ${trait.label} · ${level.name}`;
 }
