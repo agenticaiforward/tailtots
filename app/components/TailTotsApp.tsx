@@ -3045,7 +3045,12 @@ function KidAiBuddyPanel({
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        lifeSkill: "curiosity",
+        // NOTE: must be one of IDEA_LIFE_SKILLS in lib/ai/ideas.ts
+        // ("responsibility" | "empathy" | "teamwork" | "leadership" | "time").
+        // The buddy's exploration questions previously sent "curiosity", which
+        // always failed validation with a silent fallback. "responsibility"
+        // is the closest valid skill for the pet-care exploration questions.
+        lifeSkill: "responsibility",
         ageBand,
         context: {
           petKinds: [...new Set(pets.map((item) => item.species))].slice(0, 4),
