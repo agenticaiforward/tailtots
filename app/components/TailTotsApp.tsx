@@ -6,8 +6,17 @@ import Cropper, { type Area } from "react-easy-crop";
 import { PetBuddyFace } from "./pet-buddy";
 import type { PetKind } from "./pet-buddy";
 import { PlaydateClaimView } from "./PlaydateClaimView";
+import { GivingShareView } from "./GivingShareView";
 import { parsePlaydateHash, playdateClaimUrl, playdateStore, configurePlaydateStore } from "@/lib/playdate-store";
 import type { PlaydateInvite } from "@/lib/playdate-store";
+import {
+  buildShareInputFromGoal,
+  familyShareMessage,
+  givingShareStore,
+  givingShareUrl,
+  parseGivingHash,
+} from "@/lib/giving-share-store";
+import type { GivingShareRecord } from "@/lib/giving-share-store";
 import {
   isSupabaseConfigured,
   loadFamilyAccountSnapshot,
@@ -644,8 +653,16 @@ export function TailTotsApp() {
   const [playdateRouteId, setPlaydateRouteId] = useState<string | null>(() =>
     typeof window !== "undefined" ? parsePlaydateHash(window.location.hash) : null
   );
+  // Giving-goal family share route: `#giving/<shareId>` renders the family
+  // member's view instead of the app.
+  const [givingRouteId, setGivingRouteId] = useState<string | null>(() =>
+    typeof window !== "undefined" ? parseGivingHash(window.location.hash) : null
+  );
   useEffect(() => {
-    const onHashChange = () => setPlaydateRouteId(parsePlaydateHash(window.location.hash));
+    const onHashChange = () => {
+      setPlaydateRouteId(parsePlaydateHash(window.location.hash));
+      setGivingRouteId(parseGivingHash(window.location.hash));
+    };
     window.addEventListener("hashchange", onHashChange);
     return () => window.removeEventListener("hashchange", onHashChange);
   }, []);
@@ -925,6 +942,14 @@ export function TailTotsApp() {
       setHasLoadedSavedState(true);
     });
   }, []);
+
+  // Keep active giving-goal share links' progress snapshots fresh as the
+  // parent's goals change (approvals, contributions, seeds).
+  useEffect(() => {
+    for (const goal of goals) {
+      void givingShareStore.syncGoalProgress(goal.id, goal.saved, goal.target);
+    }
+  }, [goals]);
 
   useEffect(() => {
     if (!supabase) return;
@@ -1901,6 +1926,12 @@ export function TailTotsApp() {
   // Other-parent playdate claim view: a dedicated screen, not the app.
   if (playdateRouteId) {
     return <PlaydateClaimView inviteId={playdateRouteId} />;
+  }
+
+  // Family member's giving-goal view: a dedicated screen, not the app.
+  // Shows only the parent-curated snapshot — never kid details.
+  if (givingRouteId) {
+    return <GivingShareView shareId={givingRouteId} />;
   }
 
   return (
@@ -6090,23 +6121,28 @@ function NeighborhoodPanel({
   setFamilyZip: (zip: string) => void;
 }) {
   const sharedGoals = goals.filter((goal) => goal.sharedWithTrustedFamilies && (role === "parent" || goal.visibleToKids !== false));
-  const [shareCopiedId, setShareCopiedId] = useState<string | null>(null);
+  // Family share-link composer (parent only): the parent reviews the exact
+  // goal name / cause / message family will see before a link is created.
+  const [shareComposerFor, setShareComposerFor] = useState<string | null>(null);
+  const [shareForm, setShareForm] = useState({ goalTitle: "", cause: "", parentName: "", parentMessage: "" });
 
-  /** Copy a parent-to-parent share message for a goal — grandparents chip in; no kid accounts, no kid details. */
-  async function shareGoalWithFamily(goal: SavingsGoal) {
-    const message = `${activeChild?.name ?? "Our kid"} is saving $${goal.saved} of $${goal.target} for "${goal.title}" via TailTots 🐾 — reply here if you'd like to chip in! (Shared by a parent; kids can't share or see contacts.)`;
-    try {
-      await navigator.clipboard.writeText(message);
-    } catch {
-      const area = document.createElement("textarea");
-      area.value = message;
-      document.body.appendChild(area);
-      area.select();
-      document.execCommand("copy");
-      document.body.removeChild(area);
-    }
-    setShareCopiedId(goal.id);
-    window.setTimeout(() => setShareCopiedId((current) => (current === goal.id ? null : current)), 2500);
+  function openShareComposer(goal: SavingsGoal) {
+    const defaults = buildShareInputFromGoal(goal);
+    setShareForm({ goalTitle: defaults.goalTitle, cause: defaults.cause, parentName: "", parentMessage: defaults.parentMessage });
+    setShareComposerFor(goal.id);
+  }
+
+  /** Generate the family share link — parent-initiated, unguessable id, no kid details stored. */
+  async function createGoalShare(goal: SavingsGoal) {
+    await givingShareStore.createShare(
+      buildShareInputFromGoal(goal, {
+        goalTitle: shareForm.goalTitle,
+        cause: shareForm.cause,
+        parentName: shareForm.parentName,
+        parentMessage: shareForm.parentMessage,
+      })
+    );
+    setShareComposerFor(null);
   }
 
   /** Anonymized demo families derived deterministically from the ZIP — no child data, labeled demo. */
