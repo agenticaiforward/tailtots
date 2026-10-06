@@ -38,10 +38,10 @@
 | # | Promise | Status | Notes |
 |---|---|---|---|
 | 15 | Kid-safe AI Buddy: predefined questions, no open chat, one safe Q&A | ✅ | As designed (safety promise = predefined Q&A) |
-| 16 | "✨ AI-generated for today" daily buddy boost | 🔴 | Date-rotated **hardcoded** arrays labeled AI-generated. **→ Stream C** (make genuinely AI-generated via parent-side planner when signed in, local fallback otherwise) |
-| 17 | Kid AI Buddy fetch sends `lifeSkill: "curiosity"` — invalid, always 400 | 🔴 | Bug: silent fallback. **→ Stream A** (fix to valid skill) |
+| 16 | "✨ AI-generated for today" daily buddy boost | ✅ | Now genuinely AI-generated via POST /api/ai/daily-boost when parent signed in (cached per day, category-gated); honest "Today's buddy boost" label on local fallback. Stream C. |
+| 17 | Kid AI Buddy fetch sends `lifeSkill: "curiosity"` — invalid, always 400 | ✅ | Fixed → "responsibility" (Stream A; re-applied after merge collision). |
 | 18 | Life Skill Chore Planner generates ideas with Workers AI, parent reviews before mission | 🟡 | Attempts `POST /api/ai/ideas`, always falls back to templates (no route in dev build; 503 in prod = missing env vars). **→ Stream A** |
-| 19 | "Ask your kid with AI" — AI writes a conversation prompt | 🔴 | Hardcoded random prompts labeled "Demo prompt". **→ Stream C** (real AI via `/api/ai/ideas`-style prompt endpoint when signed in) |
+| 19 | "Ask your kid with AI" — AI writes a conversation prompt | ✅ | Real via POST /api/ai/conversation-prompt when signed in (labeled "✨ AI-generated prompt"); honest "Demo prompt · generated locally" fallback. Stream C. |
 
 ## Growth, character, social
 | # | Promise | Status | Notes |
@@ -49,13 +49,13 @@
 | 20 | Growth Log: per-child skill meters (responsibility, empathy, teamwork, leadership, time mgmt) | ✅ | Derived + persisted |
 | 21 | Memory moments (parent-saved; kid actions auto-log) | ✅ | `memory_moments` table + UI |
 | 22 | Safe social practice: "training wheels", 6 scenarios, instant coaching, Safe Social Star badge | ✅ | Functional client-side, persisted `socialPracticeDone` |
-| 23 | Character curriculum "taught through missions, not lectures" | 🔴 | Copy-only; no code. **→ Stream D** (real curriculum: traits × levels → mission packs, progression wired to existing approval/badge/skill-meter system) |
+| 23 | Character curriculum "taught through missions, not lectures" | ✅ | Real 48-mission curriculum: 4 traits × 3 levels, one-tap assignment, progression → badges + Growth Log skill meters, no-pet alternatives. Stream D. |
 
 ## Neighborhood, playdates, jobs
 | # | Promise | Status | Notes |
 |---|---|---|---|
 | 24 | Parent posts jobs → visibility gate → kid accepts → parent finalizes → proof to parent → Kid Bank payout | ✅ | Full 4-step pipeline, client-side |
-| 25 | Playdates: availability grid, real invite link, other parent picks a slot, host sees confirmation live | 🟡 | Works **same-browser only** (`tailtots-playdate-invites-v1` localStorage). `playdate_invites` table + RLS migration exists but **no client wiring**. **→ Stream B** (Supabase-backed invites for signed-in parents, localStorage fallback) |
+| 25 | Playdates: availability grid, real invite link, other parent picks a slot, host sees confirmation live | ✅ | Supabase-backed for signed-in parents (cross-device), localStorage fallback for demo. `kidAvailability` now persisted. Stream B. |
 | 26 | "Nearby families" from ZIP | 🟡 | Deterministic ZIP-hash **demo data**, labeled demo in code. Acceptable as demo; no change unless product wants real directory (privacy-sensitive — keep demo) |
 | 27 | Parent thank-you to posting parent | ✅ | `markPosterThanked` + clipboard note |
 
