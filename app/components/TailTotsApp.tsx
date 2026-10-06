@@ -46,6 +46,17 @@ import {
   type FamilySyncState,
 } from "@/lib/family-cloud";
 import {
+  dailyBoostCacheKey,
+  fetchDailyBoost,
+  gatedBoostSlot,
+  readDailyBoostCache,
+  todayLocalDateKey,
+  writeDailyBoostCache,
+  type CachedDailyBoost,
+} from "@/lib/ai/daily-boost";
+import { ageBandForAge as domainAgeBandForAge } from "@/lib/ai/ideas";
+import { fetchConversationPrompt } from "@/lib/ai/conversation-prompt";
+import {
   buildCurriculumLevelBadge,
   CHARACTER_TRAITS,
   curriculumLevelBadgeId,
@@ -990,6 +1001,50 @@ export function TailTotsApp() {
       listener.subscription.unsubscribe();
     };
   }, [bootstrapCloudFamily]);
+
+  // Stream C: parent-authenticated daily buddy-boost prefetch. Once per day,
+  // when a parent Supabase session exists, fetch a genuinely AI-generated
+  // buddy boost and cache it in localStorage keyed by date. The kid UI only
+  // ever reads the cached value — predefined content, no open chat. The
+  // request carries no kid PII: only the date, a coarse age band (from the
+  // youngest child's age, so it is safe for every kid), and the parent-set
+  // buddy categories (parent config, not kid data). Signed out / offline /
+  // on failure, the kid panel keeps its local date-rotation fallback.
+  const [aiDailyBoost, setAiDailyBoost] = useState<CachedDailyBoost | null>(null);
+  useEffect(() => {
+    if (!supabase) return;
+    const client = supabase;
+    let cancelled = false;
+    const ensureDailyBoost = async () => {
+      const dateKey = todayLocalDateKey();
+      try {
+        const cached = readDailyBoostCache(dailyBoostCacheKey(dateKey), dateKey);
+        if (cached) {
+          if (!cancelled) setAiDailyBoost(cached);
+          return;
+        }
+        const { data } = await client.auth.getSession();
+        const token = data.session?.access_token;
+        if (!token) return;
+        const youngest = [...children].sort((a, b) => a.age - b.age)[0];
+        const boost = await fetchDailyBoost({
+          token,
+          date: dateKey,
+          ageBand: youngest ? domainAgeBandForAge(youngest.age) : "7-9",
+          categories: aiBuddyCategories,
+        });
+        if (!boost) return;
+        writeDailyBoostCache(dailyBoostCacheKey(dateKey), boost);
+        if (!cancelled) setAiDailyBoost(boost);
+      } catch {
+        // Offline or unavailable: the kid panel's local fallback stands in.
+      }
+    };
+    void ensureDailyBoost();
+    return () => {
+      cancelled = true;
+    };
+  }, [children, aiBuddyCategories, cloudAccountEmail]);
 
   useEffect(() => {
     if (!hasLoadedSavedState) return;
@@ -2163,6 +2218,7 @@ export function TailTotsApp() {
               onHelperUse={logHelperUse}
               aiBuddyCategories={aiBuddyCategories}
               aiBuddyDailyRotate={aiBuddyDailyRotate}
+              aiDailyBoost={aiDailyBoost}
             />
           )}
           {visibleActiveTab === "bank" && (
@@ -3129,6 +3185,7 @@ function KidAiBuddyPanel({
   onHelperUse,
   aiBuddyCategories,
   aiBuddyDailyRotate,
+  aiDailyBoost,
 }: {
   activeChild?: Child;
   pets: Pet[];
@@ -3139,6 +3196,9 @@ function KidAiBuddyPanel({
   onHelperUse: (topic: string) => void;
   aiBuddyCategories: string[];
   aiBuddyDailyRotate: boolean;
+  /** Today's parent-fetched AI boost, or null when signed out/offline — then
+   *  the local date-rotation fallback renders instead. */
+  aiDailyBoost?: CachedDailyBoost | null;
 }) {
   const pet = pets[0];
   const petName = pet?.name ?? "your pet";
@@ -3212,8 +3272,13 @@ function KidAiBuddyPanel({
     if (!suggestedQuestion) return;
     askQuestion(suggestedQuestion[0], suggestedQuestion[1]);
   };
-  // Daily AI-driven content: deterministic rotation by calendar date — a fresh
-  // question, tiny mission, and encouragement every day. Labeled as AI-generated.
+  // Daily buddy boost: when a parent is signed in, today's genuinely
+  // AI-generated boost (parent-side fetch, cached per day) renders here —
+  // each item only if its category is in the parent's allowed list. Signed
+  // out / offline / on failure, the honest local date-rotation fallback
+  // renders instead. The kid only ever sees predefined content: no open chat.
+  const aiBoostForToday =
+    aiDailyBoost && aiDailyBoost.date === todayLocalDateKey() ? aiDailyBoost : null;
   const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000);
   const dayIndex = aiBuddyDailyRotate ? dayOfYear : 0;
   const dailyQuestions = [
@@ -3243,9 +3308,16 @@ function KidAiBuddyPanel({
     "Grown-ups notice your effort, even on the quiet days. 👀",
     "You're becoming someone people can count on. That's huge. 🏆",
   ];
-  const dailyQuestion = dailyQuestions[dayIndex % dailyQuestions.length];
-  const dailyMission = dailyMissions[dayIndex % dailyMissions.length];
-  const dailyEncouragement = dailyEncouragements[dayIndex % dailyEncouragements.length];
+  const dailyQuestion =
+    gatedBoostSlot(aiBoostForToday, aiBuddyCategories, "question") ??
+    dailyQuestions[dayIndex % dailyQuestions.length];
+  const dailyMission =
+    gatedBoostSlot(aiBoostForToday, aiBuddyCategories, "mission") ??
+    dailyMissions[dayIndex % dailyMissions.length];
+  const dailyEncouragement =
+    gatedBoostSlot(aiBoostForToday, aiBuddyCategories, "encouragement") ??
+    dailyEncouragements[dayIndex % dailyEncouragements.length];
+  const boostIsAiGenerated = aiBoostForToday !== null;
 
   return (
     <section className="space-y-4">
@@ -3266,7 +3338,9 @@ function KidAiBuddyPanel({
       </div>
 
       <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#6d3ed1]">✨ AI-generated for today</p>
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#6d3ed1]">
+          {boostIsAiGenerated ? "✨ AI-generated for today" : "Today's buddy boost"}
+        </p>
         <h3 className="mt-2 text-2xl font-black">Today&apos;s buddy boost</h3>
         <div className="mt-4 grid gap-3">
           <article className="rounded-lg bg-[#f4efff] p-4">
@@ -6975,10 +7049,13 @@ function AIPanel({ childProfiles, missions, parentSignedIn }: { childProfiles: C
   // build, so the demo path is the one that runs here — labeled honestly).
   const [aiIdeasSource, setAiIdeasSource] = useState<"live" | "demo" | null>(null);
   const [aiIdeasNote, setAiIdeasNote] = useState<string | null>(null);
-  // "Ask your kid with AI": parent picks a topic, demo generates one
-  // conversation prompt locally (labeled as demo).
+  // "Ask your kid with AI": parent picks a topic. When a parent is signed in,
+  // a genuinely AI-written prompt comes from the parent-side AI endpoint;
+  // signed out (or on any failure) the honest local demo fallback is used.
   const [askTopic, setAskTopic] = useState("kindness");
   const [askPrompt, setAskPrompt] = useState<string | null>(null);
+  const [askPromptSource, setAskPromptSource] = useState<"live" | "demo" | null>(null);
+  const [askLoading, setAskLoading] = useState(false);
   const askKidPrompts: Record<string, string[]> = {
     kindness: [
       "Tell me about a time you were kind to someone this week — how did it make you feel?",
@@ -7001,9 +7078,37 @@ function AIPanel({ childProfiles, missions, parentSignedIn }: { childProfiles: C
       "What is something you want to be trusted with when you are older, and how are you earning it now?",
     ],
   };
-  function generateAskPrompt() {
-    const options = askKidPrompts[askTopic] ?? askKidPrompts.kindness;
-    setAskPrompt(options[Math.floor(Math.random() * options.length)]);
+  async function generateAskPrompt() {
+    const useLocalFallback = () => {
+      const options = askKidPrompts[askTopic] ?? askKidPrompts.kindness;
+      setAskPrompt(options[Math.floor(Math.random() * options.length)]);
+      setAskPromptSource("demo");
+    };
+    setAskLoading(true);
+    try {
+      const accessToken = await getParentAccessToken();
+      if (!accessToken) {
+        // No signed-in parent: honest local demo fallback instead of a dead button.
+        useLocalFallback();
+        return;
+      }
+      const child = childProfiles[0];
+      const result = await fetchConversationPrompt({
+        token: accessToken,
+        topic: askTopic,
+        ageBand: child ? ageBandForAge(child.age) : "7-9",
+      });
+      if (result.ok) {
+        setAskPrompt(result.prompt);
+        setAskPromptSource("live");
+      } else {
+        useLocalFallback();
+      }
+    } catch {
+      useLocalFallback();
+    } finally {
+      setAskLoading(false);
+    }
   }
 
   function ageBandForAge(age: number): "4-6" | "7-9" | "10-12" {
@@ -7166,13 +7271,13 @@ function AIPanel({ childProfiles, missions, parentSignedIn }: { childProfiles: C
           <section className="rounded-lg bg-[#f4efff] p-4">
             <h4 className="text-lg font-black">Ask your kid with AI 💬</h4>
             <p className="mt-1 text-sm font-semibold text-[#4f625b]">
-              Pick a topic — AI writes one conversation prompt you can ask your kid tonight. Demo generates it locally.
+              Pick a topic — AI writes one conversation prompt you can ask your kid tonight. Signed-in parents get a fresh AI-written prompt; otherwise a built-in demo prompt.
             </p>
             <div className="mt-3 flex flex-wrap gap-2" role="group" aria-label="Conversation topic">
               {["kindness", "patience", "honesty", "responsibility"].map((topic) => (
                 <button
                   key={topic}
-                  onClick={() => { setAskTopic(topic); setAskPrompt(null); }}
+                  onClick={() => { setAskTopic(topic); setAskPrompt(null); setAskPromptSource(null); }}
                   className={`min-h-11 rounded-lg px-4 py-2 text-sm font-black capitalize ${askTopic === topic ? "bg-[#6d3ed1] text-white" : "bg-white text-[#17231f] ring-2 ring-[#ded8c7]"}`}
                 >
                   {topic}
@@ -7181,13 +7286,21 @@ function AIPanel({ childProfiles, missions, parentSignedIn }: { childProfiles: C
             </div>
             <button
               onClick={generateAskPrompt}
-              className="mt-3 min-h-11 rounded-lg bg-[#6d3ed1] px-4 py-2 text-sm font-black text-white"
+              disabled={askLoading}
+              className="mt-3 min-h-11 rounded-lg bg-[#6d3ed1] px-4 py-2 text-sm font-black text-white disabled:opacity-50"
             >
-              Generate a prompt
+              {askLoading ? "Generating prompt…" : "Generate a prompt"}
             </button>
+            {!parentSignedIn && (
+              <p className="mt-2 text-xs font-semibold text-[#7a4b12]">
+                AI prompts need a signed-in parent account — set one up in Family Setup, under Parent account. Until then you get the built-in demo prompts.
+              </p>
+            )}
             {askPrompt && (
               <div className="mt-3 rounded-lg bg-white p-4">
-                <p className="text-xs font-black uppercase tracking-[0.14em] text-[#6d3ed1]">Demo prompt · generated locally</p>
+                <p className="text-xs font-black uppercase tracking-[0.14em] text-[#6d3ed1]">
+                  {askPromptSource === "live" ? "✨ AI-generated prompt" : "Demo prompt · generated locally"}
+                </p>
                 <p className="mt-2 text-base font-black leading-6">“{askPrompt}”</p>
                 <p className="mt-2 text-xs font-semibold text-[#4f625b]">
                   Tip: ask it at dinner, listen fully, then share your own answer first next time.

@@ -8,10 +8,24 @@ import {
   parseIdeasResponse,
   validateIdeasInput,
 } from "../lib/ai/ideas";
+import {
+  CONVERSATION_MODEL_ID,
+  buildConversationPromptMessages,
+  parseConversationPromptResponse,
+  validateConversationPromptInput,
+} from "../lib/ai/conversation-prompt";
+import {
+  DAILY_BOOST_MODEL_ID,
+  buildDailyBoostMessages,
+  parseDailyBoostResponse,
+  validateDailyBoostInput,
+} from "../lib/ai/daily-boost";
 import { InMemoryRateLimiter } from "../lib/ai/rate-limit";
 import { authenticateParentRequest } from "../lib/ai/supabase-auth";
 
 const log = createLogger("worker:ai-ideas");
+const conversationLog = createLogger("worker:ai-conversation-prompt");
+const dailyBoostLog = createLogger("worker:ai-daily-boost");
 
 interface Env {
   ASSETS: Fetcher;
@@ -51,6 +65,11 @@ interface ExecutionContext {
 
 // Parent-side AI activity ideas: 20 requests/hour per client IP.
 const ideasRateLimiter = new InMemoryRateLimiter(20, 60 * 60 * 1000);
+// Parent-side AI conversation prompts: 20 requests/hour per client IP.
+const conversationPromptRateLimiter = new InMemoryRateLimiter(20, 60 * 60 * 1000);
+// Parent-side daily buddy boost: fetched once per day per family, so a small
+// per-IP allowance is plenty.
+const dailyBoostRateLimiter = new InMemoryRateLimiter(10, 60 * 60 * 1000);
 
 function jsonResponse(data: unknown, status: number): Response {
   return new Response(JSON.stringify(data), {
@@ -123,6 +142,122 @@ async function handleAiIdeas(request: Request, env: Env): Promise<Response> {
   }
 }
 
+/**
+ * POST /api/ai/conversation-prompt — parent-facing "Ask your kid with AI".
+ * Only reachable from the parent-gated AI panel; the body is strictly
+ * validated and only the character topic + age band ever reach the model.
+ * Returns `{ prompt }`: ONE predefined conversation prompt the parent asks
+ * the kid — never open chat.
+ */
+async function handleAiConversationPrompt(request: Request, env: Env): Promise<Response> {
+  if (conversationPromptRateLimiter.isLimited(`ai-conversation-prompt:${clientIp(request)}`)) {
+    return jsonResponse({ error: "Too many requests. Please try again later." }, 429);
+  }
+  if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) {
+    conversationLog.warn("Supabase env vars missing for /api/ai/conversation-prompt");
+    return jsonResponse(
+      { error: "Parent sign-in is not configured yet. Please try again later." },
+      503,
+    );
+  }
+  const parent = await authenticateParentRequest({
+    supabaseUrl: env.SUPABASE_URL,
+    anonKey: env.SUPABASE_ANON_KEY,
+    authorizationHeader: request.headers.get("Authorization"),
+  });
+  if (!parent) {
+    return jsonResponse({ error: "Parent sign-in required." }, 401);
+  }
+  conversationLog.info("AI conversation-prompt request from parent", { userId: parent.userId });
+  if (!env.AI) {
+    conversationLog.warn("AI binding missing for /api/ai/conversation-prompt");
+    return jsonResponse({ error: "The AI helper is not configured yet." }, 503);
+  }
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonResponse({ error: "Request body must be valid JSON." }, 400);
+  }
+  const validated = validateConversationPromptInput(body);
+  if (!validated.ok) {
+    return jsonResponse({ error: validated.error }, 400);
+  }
+  try {
+    const output = await env.AI.run(CONVERSATION_MODEL_ID, {
+      messages: buildConversationPromptMessages(validated.value),
+      max_tokens: 200,
+      temperature: 0.7,
+    });
+    const prompt = parseConversationPromptResponse(output?.response ?? "");
+    if (!prompt) {
+      throw new Error("AI returned no usable conversation prompt");
+    }
+    return jsonResponse({ prompt }, 200);
+  } catch (error) {
+    conversationLog.error("Workers AI conversation-prompt request failed", { error });
+    return jsonResponse({ error: "The AI helper is unavailable right now." }, 502);
+  }
+}
+
+/**
+ * POST /api/ai/daily-boost — parent-side fetch for the kid's daily buddy
+ * boost. The client caches the result per day in localStorage; the kid UI
+ * only ever renders the cached predefined content (no open chat). The body
+ * is strictly validated: date + age band + parent-set categories, never kid
+ * PII. Returns the boost content plus its date.
+ */
+async function handleAiDailyBoost(request: Request, env: Env): Promise<Response> {
+  if (dailyBoostRateLimiter.isLimited(`ai-daily-boost:${clientIp(request)}`)) {
+    return jsonResponse({ error: "Too many requests. Please try again later." }, 429);
+  }
+  if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) {
+    dailyBoostLog.warn("Supabase env vars missing for /api/ai/daily-boost");
+    return jsonResponse(
+      { error: "Parent sign-in is not configured yet. Please try again later." },
+      503,
+    );
+  }
+  const parent = await authenticateParentRequest({
+    supabaseUrl: env.SUPABASE_URL,
+    anonKey: env.SUPABASE_ANON_KEY,
+    authorizationHeader: request.headers.get("Authorization"),
+  });
+  if (!parent) {
+    return jsonResponse({ error: "Parent sign-in required." }, 401);
+  }
+  dailyBoostLog.info("AI daily-boost request from parent", { userId: parent.userId });
+  if (!env.AI) {
+    dailyBoostLog.warn("AI binding missing for /api/ai/daily-boost");
+    return jsonResponse({ error: "The AI helper is not configured yet." }, 503);
+  }
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonResponse({ error: "Request body must be valid JSON." }, 400);
+  }
+  const validated = validateDailyBoostInput(body);
+  if (!validated.ok) {
+    return jsonResponse({ error: validated.error }, 400);
+  }
+  try {
+    const output = await env.AI.run(DAILY_BOOST_MODEL_ID, {
+      messages: buildDailyBoostMessages(validated.value),
+      max_tokens: 400,
+      temperature: 0.7,
+    });
+    const boost = parseDailyBoostResponse(output?.response ?? "");
+    if (!boost) {
+      throw new Error("AI returned no usable daily boost");
+    }
+    return jsonResponse({ ...boost, date: validated.value.date }, 200);
+  } catch (error) {
+    dailyBoostLog.error("Workers AI daily-boost request failed", { error });
+    return jsonResponse({ error: "The AI helper is unavailable right now." }, 502);
+  }
+}
+
 const worker = {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
@@ -132,6 +267,20 @@ const worker = {
         return new Response("Method Not Allowed", { status: 405 });
       }
       return handleAiIdeas(request, env);
+    }
+
+    if (url.pathname === "/api/ai/conversation-prompt") {
+      if (request.method !== "POST") {
+        return new Response("Method Not Allowed", { status: 405 });
+      }
+      return handleAiConversationPrompt(request, env);
+    }
+
+    if (url.pathname === "/api/ai/daily-boost") {
+      if (request.method !== "POST") {
+        return new Response("Method Not Allowed", { status: 405 });
+      }
+      return handleAiDailyBoost(request, env);
     }
 
     if (url.pathname === "/_vinext/image") {
