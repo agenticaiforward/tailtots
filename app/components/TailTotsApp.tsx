@@ -7081,7 +7081,7 @@ function AIPanel({ childProfiles, missions, parentSignedIn }: { childProfiles: C
     ],
   };
   async function generateAskPrompt() {
-    const useLocalFallback = () => {
+    const applyLocalFallback = () => {
       const options = askKidPrompts[askTopic] ?? askKidPrompts.kindness;
       setAskPrompt(options[Math.floor(Math.random() * options.length)]);
       setAskPromptSource("demo");
@@ -7091,7 +7091,7 @@ function AIPanel({ childProfiles, missions, parentSignedIn }: { childProfiles: C
       const accessToken = await getParentAccessToken();
       if (!accessToken) {
         // No signed-in parent: honest local demo fallback instead of a dead button.
-        useLocalFallback();
+        applyLocalFallback();
         return;
       }
       const child = childProfiles[0];
@@ -7104,10 +7104,10 @@ function AIPanel({ childProfiles, missions, parentSignedIn }: { childProfiles: C
         setAskPrompt(result.prompt);
         setAskPromptSource("live");
       } else {
-        useLocalFallback();
+        applyLocalFallback();
       }
     } catch {
-      useLocalFallback();
+      applyLocalFallback();
     } finally {
       setAskLoading(false);
     }
