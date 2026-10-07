@@ -3161,8 +3161,8 @@ function VisionLandingPanel({
               </div>
             </div>
             <ul className="mt-3 grid gap-1.5 text-sm font-semibold leading-5 text-white/85">
-              <li className="flex gap-2"><span aria-hidden="true">•</span> Runs the real routine — feeding schedules, training missions, vet-visit prep</li>
-              <li className="flex gap-2"><span aria-hidden="true">•</span> From “we have a dog” to “my kid <em>runs</em> the dog”</li>
+              <li className="flex gap-2"><span aria-hidden="true" className="shrink-0">•</span><span>Runs the real routine — feeding schedules, training missions, vet-visit prep</span></li>
+              <li className="flex gap-2"><span aria-hidden="true" className="shrink-0">•</span><span>From ‘we have a dog’ to ‘my kid runs the dog’</span></li>
             </ul>
           </div>
           <div className="rounded-2xl bg-white/10 p-4 ring-1 ring-white/15">
@@ -3174,8 +3174,8 @@ function VisionLandingPanel({
               </div>
             </div>
             <ul className="mt-3 grid gap-1.5 text-sm font-semibold leading-5 text-white/85">
-              <li className="flex gap-2"><span aria-hidden="true">•</span> Daily home + community missions build the proof record</li>
-              <li className="flex gap-2"><span aria-hidden="true">•</span> Earns the Pet Readiness Certificate — proof they’ll stick with it</li>
+              <li className="flex gap-2"><span aria-hidden="true" className="shrink-0">•</span><span>Daily home + community missions build the proof record</span></li>
+              <li className="flex gap-2"><span aria-hidden="true" className="shrink-0">•</span><span>Earns the Pet Readiness Certificate — proof they’ll stick with it</span></li>
             </ul>
           </div>
           <div className="rounded-2xl bg-white/10 p-4 ring-1 ring-white/15">
@@ -3187,8 +3187,8 @@ function VisionLandingPanel({
               </div>
             </div>
             <ul className="mt-3 grid gap-1.5 text-sm font-semibold leading-5 text-white/85">
-              <li className="flex gap-2"><span aria-hidden="true">•</span> Donation goals for real shelters, cheer on rescue dogs</li>
-              <li className="flex gap-2"><span aria-hidden="true">•</span> Full skill builder — money smarts, chores, kindness missions</li>
+              <li className="flex gap-2"><span aria-hidden="true" className="shrink-0">•</span><span>Donation goals for real shelters, cheer on rescue dogs</span></li>
+              <li className="flex gap-2"><span aria-hidden="true" className="shrink-0">•</span><span>Full skill builder — money smarts, chores, kindness missions</span></li>
             </ul>
           </div>
         </div>
