@@ -17,6 +17,12 @@ export type Child = {
   name: string;
   age: number;
   secretCode: string;
+  /**
+   * Parent-set gate for the kid profile: chosen by the parent at profile
+   * creation or later from Parent Review. Local-only (never synced to the
+   * cloud row); additive and optional.
+   */
+  passcode?: string;
   photoUrl?: string;
   points: number;
   coins: number;

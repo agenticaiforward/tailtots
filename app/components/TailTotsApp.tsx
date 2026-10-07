@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import Image from "next/image";
 import Cropper, { type Area } from "react-easy-crop";
 import { PetBuddyFace } from "./pet-buddy";
@@ -17,6 +18,7 @@ import {
   parseGivingHash,
 } from "@/lib/giving-share-store";
 import type { GivingShareRecord } from "@/lib/giving-share-store";
+import { buildJobFamilySummary, jobVisibleInZip } from "@/lib/neighborhood-helpers";
 import {
   isSupabaseConfigured,
   loadFamilyAccountSnapshot,
@@ -46,6 +48,7 @@ import {
   type FamilySyncState,
 } from "@/lib/family-cloud";
 import {
+  BUDDY_BOOST_CATEGORIES,
   dailyBoostCacheKey,
   fetchDailyBoost,
   gatedBoostSlot,
@@ -56,6 +59,23 @@ import {
 } from "@/lib/ai/daily-boost";
 import { ageBandForAge as domainAgeBandForAge } from "@/lib/ai/ideas";
 import { fetchConversationPrompt } from "@/lib/ai/conversation-prompt";
+import { normalizeZip, neighborhoodSuggestionsForZip } from "@/lib/neighborhoods";
+import {
+  PET_CHORE_SKILLS,
+  buildLocalPetChoreSet,
+  fetchPetChores,
+  loadChoreHistory,
+  saveChoreHistory,
+  type ChoreSetRecord,
+  type PetChoreDraft,
+  type PetChoreSkill,
+} from "@/lib/ai/pet-chores";
+import {
+  analyzeFairness,
+  fairnessCoachFallback,
+  fetchFairnessCoaching,
+  type RebalanceMove,
+} from "@/lib/ai/fairness";
 import {
   buildCurriculumLevelBadge,
   CHARACTER_TRAITS,
@@ -66,6 +86,25 @@ import {
   openCurriculumMissionKeys,
   traitByKey,
 } from "@/lib/character-curriculum";
+import {
+  DRIVE_KIND_META,
+  buildJarMoveTx,
+  defaultKidBankSettings,
+  driveKindFromGoal,
+  driveProgress,
+  featuredDrive,
+  isUndoableJarMove,
+  jarFillPercent,
+  jarMoveGuardrails,
+  kidJarBalances,
+  kidVisibleDrives,
+  pointsToDollars,
+  reverseJarMove,
+  type DriveKind,
+  type JarBalances,
+  type KidBankSettings,
+  type KidJarKey,
+} from "@/lib/kid-bank";
 
 const levelLabels: Record<LevelKey, string> = {
   easy: "Easy",
@@ -133,6 +172,12 @@ type ParentProfile = {
   id: string;
   name: string;
   photoUrl?: string;
+  /**
+   * Feedback R2 (Kid Bank): guardrails the parent sets UPFRONT so kids can
+   * allocate their own earnings into jars with no per-move approval.
+   * Additive + optional — old snapshots simply get the defaults.
+   */
+  bankSettings?: KidBankSettings;
 };
 
 type PhotoCropDraft = {
@@ -177,6 +222,11 @@ type NeighborhoodJob = {
   status: "posted" | "accepted" | "approved" | "completed";
   acceptedBy?: string;
   missionId?: string;
+  /**
+   * R2-29: ZIP the job belongs to. Jobs without a ZIP are the family's own
+   * posts (or legacy demo data) and always show to the parent.
+   */
+  zip?: string;
   /**
    * Parent-side only: the parent recorded sending a thank-you/response to the
    * posting parent after approving completion. Local-only (no cloud column).
@@ -311,6 +361,7 @@ const starterNeighborhoodJobs: NeighborhoodJob[] = [
     minAge: 8,
     skillFocus: "empathy",
     trustSignals: ["parent_gate", "age_fit", "adult_nearby", "private_child"],
+    zip: "75034",
     status: "posted",
   },
   {
@@ -328,6 +379,7 @@ const starterNeighborhoodJobs: NeighborhoodJob[] = [
     minAge: 10,
     skillFocus: "responsibility",
     trustSignals: ["parent_gate", "age_fit", "no_messaging", "private_child"],
+    zip: "75034",
     status: "posted",
   },
 ];
@@ -413,11 +465,10 @@ const tabItems = [
   { id: "setup", label: "Family Setup" },
   { id: "neighborhood", label: "Neighborhood" },
   { id: "growth", label: "Growth Log" },
-  { id: "ai", label: "AI" },
 ];
 
 const kidTabIds = ["missions", "pets", "pet-helper", "bank", "neighborhood"];
-const parentTabIds = ["vision", "approvals", "setup", "schedule", "pets", "neighborhood", "growth", "ai"];
+const parentTabIds = ["vision", "approvals", "setup", "schedule", "pets", "neighborhood", "growth"];
 const defaultParentPasscode = "4321";
 
 const savedFamilyStateKey = "tailtots-family-state-v1";
@@ -446,8 +497,49 @@ type SavedFamilyState = {
   dailyChecksEnabled?: boolean;
   maxDailyChecks?: number;
   familyZip?: string;
+  // Stream: R2 family-setup — chosen neighborhood/apartment for job/chore discovery.
+  familyNeighborhood?: string;
   aiBuddyCategories?: string[];
   aiBuddyDailyRotate?: boolean;
+  /** Feedback R2 — AI buddy stream: parent-authored AI Buddy questions that surface as chips. */
+  buddyParentQuestions?: BuddyParentQuestion[];
+  /** Feedback R2 — AI buddy stream: parent override of the safe-social heading + content (null = default). */
+  socialPracticeOverride?: SocialPracticeOverride | null;
+};
+
+/**
+ * Feedback R2 — AI Buddy: a parent-authored question that surfaces in the
+ * kid's AI Buddy as a predefined chip (no open chat). Gated against the
+ * parent's aiBuddyCategories at render time, same as the built-in chips.
+ */
+type BuddyParentQuestion = {
+  id: string;
+  question: string;
+  answerTitle: string;
+  answerBody: string;
+  /** One of the buddy categories ("Pet care" | "Chores & routine" | "Kindness & feelings" | "Money & saving"). */
+  category: string;
+  createdAt: string; // ISO
+};
+
+/**
+ * Feedback R2 — Safe social practice: one parent-authored practice scenario.
+ * The parent overrides both the section heading and the scenario content; the
+ * kid view renders these instead of the built-in scenarios, with the built-in
+ * set as the permanent default fallback.
+ */
+type SocialPracticeParentScenario = {
+  title: string;
+  situation: string;
+  /** The "what to do" coaching the kid reveals for this scenario. */
+  coaching: string;
+};
+
+type SocialPracticeOverride = {
+  heading: string;
+  intro: string;
+  scenarios: SocialPracticeParentScenario[];
+  updatedAt: string; // ISO
 };
 
 /** An earned end-of-journey honor. One per child; a readiness certificate can upgrade to hero. */
@@ -551,7 +643,7 @@ function goalKidSaved(goal: SavingsGoal): number {
 /**
  * Add dollars to a goal and stamp completion the moment it is fully funded.
  */
-function withGoalProgress(goal: SavingsGoal, added: number, now = new Date().toISOString()): SavingsGoal {  const saved = Math.min(goal.target, goal.saved + added);
+function withGoalProgress(goal: SavingsGoal, added: number, now = new Date().toISOString()): SavingsGoal {  const saved = Math.max(0, Math.min(goal.target, goal.saved + added));
   return {
     ...goal,
     saved,
@@ -730,6 +822,10 @@ export function TailTotsApp() {
   ]);
   const [aiBuddyDailyRotate, setAiBuddyDailyRotate] = useState(true);
   const [familyZip, setFamilyZip] = useState("");
+  // Stream: R2 — chosen neighborhood/apartment from the family-setup ZIP picker.
+  const [familyNeighborhood, setFamilyNeighborhood] = useState("");
+  // Stream: R2 — dedicated signup/signin pages ("signup" | "signin" | null).
+  const [authPage, setAuthPage] = useState<null | "signup" | "signin">(null);
   // Anti-addiction pacing: count kid check-ins per calendar day (localStorage so
   // the count survives reloads; ~1-minute sessions keep TailTots a helper, not a habit).
   const dailyChecksStorageKey = "tailtots-daily-checks-v1";
@@ -768,6 +864,10 @@ export function TailTotsApp() {
   const [transactions, setTransactions] = useState(starterTransactions);
   const [goals, setGoals] = useState(starterGoals);
   const [badges, setBadges] = useState(starterBadges);
+  // Playdate invites live in the Schedule tab's store, but Parent Review's
+  // notification badge counts claimed (booked) invites too — subscribe here.
+  const [playdateInvites, setPlaydateInvites] = useState<PlaydateInvite[]>([]);
+  const [ackPlaydateIds, setAckPlaydateIds] = useState<string[]>(() => loadAckedPlaydateIds());
   const [neighborhoodJobs, setNeighborhoodJobs] = useState(starterNeighborhoodJobs);
   const [scheduleItems] = useState(starterScheduleItems);
   const [moments, setMoments] = useState<MemoryMoment[]>(starterMoments);
@@ -921,6 +1021,37 @@ export function TailTotsApp() {
     ],
     [missions, transactions],
   );
+  useEffect(() => {
+    let cancelled = false;
+    async function loadInvites() {
+      try {
+        const all = await playdateStore.listInvites();
+        if (!cancelled) setPlaydateInvites(all);
+      } catch {
+        if (!cancelled) setPlaydateInvites([]);
+      }
+    }
+    loadInvites();
+    const unsubscribe = playdateStore.subscribe(loadInvites);
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, []);
+  /** Playdate claims needing parent eyes: booked by the other family, not yet reviewed. */
+  const pendingPlaydates = useMemo(
+    () => playdateInvites.filter((invite) => invite.status === "booked" && !ackPlaydateIds.includes(invite.id)),
+    [playdateInvites, ackPlaydateIds],
+  );
+  const parentPendingCount = pendingApprovals.length + pendingPlaydates.length;
+  function acknowledgePlaydate(inviteId: string) {
+    setAckPlaydateIds((ids) => {
+      if (ids.includes(inviteId)) return ids;
+      const next = [...ids, inviteId];
+      saveAckedPlaydateIds(next);
+      return next;
+    });
+  }
   const visibleTabs = useMemo(
     () => tabItems.filter((tab) => (role === "parent" ? parentTabIds.includes(tab.id) : kidTabIds.includes(tab.id))),
     [role],
@@ -1046,11 +1177,25 @@ export function TailTotsApp() {
     };
   }, [children, aiBuddyCategories, cloudAccountEmail]);
 
+  // Stream R2: after a magic-link sign-in completes on a dedicated auth page,
+  // close the page and land the parent on Family Setup in real mode. The
+  // sign-in bootstrap above already pulled (or prepared) their cloud family.
+  useEffect(() => {
+    if (!cloudAccountEmail || !authPage) return;
+    setAuthPage(null);
+    setAppMode("real");
+    setRole("parent");
+    setIsParentUnlocked(true);
+    setActiveTab("setup");
+    requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "smooth" }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cloudAccountEmail]);
+
   useEffect(() => {
     if (!hasLoadedSavedState) return;
-    saveFamilyState({ familyName, parentPasscode, parents, children, pets, missions, transactions, goals, badges, neighborhoodJobs, moments, studiedAnimals, socialPracticeDone, familyPhotoUrl, activeChildId, certificates, pointsPerDollar, dailyChecksEnabled, maxDailyChecks, familyZip, aiBuddyCategories, aiBuddyDailyRotate });
+    saveFamilyState({ familyName, parentPasscode, parents, children, pets, missions, transactions, goals, badges, neighborhoodJobs, moments, studiedAnimals, socialPracticeDone, familyPhotoUrl, activeChildId, certificates, pointsPerDollar, dailyChecksEnabled, maxDailyChecks, familyZip, familyNeighborhood, aiBuddyCategories, aiBuddyDailyRotate });
     setLastSavedAt(new Date());
-  }, [activeChildId, aiBuddyCategories, aiBuddyDailyRotate, badges, certificates, children, dailyChecksEnabled, familyName, familyPhotoUrl, familyZip, goals, hasLoadedSavedState, maxDailyChecks, missions, moments, neighborhoodJobs, parentPasscode, parents, pets, pointsPerDollar, studiedAnimals, socialPracticeDone, transactions]);
+  }, [activeChildId, aiBuddyCategories, aiBuddyDailyRotate, badges, certificates, children, dailyChecksEnabled, familyName, familyPhotoUrl, familyZip, familyNeighborhood, goals, hasLoadedSavedState, maxDailyChecks, missions, moments, neighborhoodJobs, parentPasscode, parents, pets, pointsPerDollar, studiedAnimals, socialPracticeDone, transactions]);
 
   // Debounced relational cloud push: mirrors family state into the Supabase
   // tables a couple of seconds after any change, while cloud sync is on.
@@ -1167,6 +1312,7 @@ export function TailTotsApp() {
       dailyChecksEnabled,
       maxDailyChecks,
       familyZip,
+      familyNeighborhood,
       aiBuddyCategories,
       aiBuddyDailyRotate,
     };
@@ -1193,6 +1339,7 @@ export function TailTotsApp() {
     setDailyChecksEnabled(snapshot.dailyChecksEnabled ?? true);
     setMaxDailyChecks(snapshot.maxDailyChecks ?? 10);
     setFamilyZip(snapshot.familyZip ?? "");
+    setFamilyNeighborhood(snapshot.familyNeighborhood ?? "");
     setAiBuddyCategories(snapshot.aiBuddyCategories ?? ["Pet care", "Chores & routine", "Kindness & feelings", "Money & saving"]);
     setAiBuddyDailyRotate(snapshot.aiBuddyDailyRotate ?? true);
   }
@@ -1268,6 +1415,40 @@ export function TailTotsApp() {
     recordCheckIn();
     setActiveChildId(saved?.activeChildId ?? starterChildren[0]?.id ?? "");
     setActiveTab("missions");
+    requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "smooth" }));
+  }
+
+  /**
+   * Stream R2: the real-path entry. A new parent leaves the demo behind and
+   * lands on Family Setup with a fresh, empty family — never the sample data.
+   * If this device already has a saved family with kids, restore that instead
+   * of blanking it (signing in later pulls their cloud family anyway).
+   */
+  function startFreshFamilySetup() {
+    const saved = loadSavedFamilyState();
+    if (saved && saved.children.length > 0) {
+      applyFamilySnapshot(saved);
+    } else {
+      applyFamilySnapshot({
+        familyName: "My Family",
+        parentPasscode: defaultParentPasscode,
+        parents: starterParents,
+        children: [],
+        pets: [],
+        missions: [],
+        transactions: [],
+        goals: [],
+        badges: [],
+        neighborhoodJobs: [],
+        moments: [],
+        activeChildId: "",
+      });
+    }
+    setAppMode("real");
+    setRole("parent");
+    setIsParentUnlocked(true);
+    setActiveTab("setup");
+    setAuthPage(null);
     requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "smooth" }));
   }
 
@@ -1393,6 +1574,18 @@ export function TailTotsApp() {
     setChildren((items) => [...items, child]);
     setActiveChildId(child.id);
     setNewChild({ name: "", age: "8" });
+  }
+
+  /**
+   * Parent Review: set or change a kid profile's passcode (additive Child
+   * field, settable at profile creation or later). Empty clears it.
+   * Parent-only — the passcode card lives on the parent tab.
+   */
+  function setChildPasscode(childId: string, passcode: string) {
+    const clean = passcode.trim();
+    setChildren((items) =>
+      items.map((child) => (child.id === childId ? { ...child, passcode: clean || undefined } : child)),
+    );
   }
 
   /**
@@ -1716,6 +1909,29 @@ export function TailTotsApp() {
     setMissions((items) => [...fresh, ...items]);
   }
 
+  /**
+   * Parent Review → AI pet-chores builder: turn a generated chore set into
+   * real missions for one kid. Skill tags map to mission categories so the
+   * life-skill labels (and badge flow) track them like any other mission.
+   */
+  function addChoreMissions(drafts: PetChoreDraft[], childId: string) {
+    if (!drafts.length || !childId) return;
+    const now = Date.now();
+    const fresh: Mission[] = drafts.map((draft, index) => ({
+      id: `mission-chore-${now}-${index}`,
+      title: draft.title,
+      category: choreSkillToCategory(draft.skill),
+      difficulty: draft.difficulty,
+      points: draft.points,
+      coins: Math.max(1, Math.round(draft.points / 6)),
+      petId: draft.petId,
+      assignedChildId: childId,
+      question: draft.detail || `Skill focus: ${getLifeSkillLabel(draft.skill)}. What did you notice while doing it?`,
+      status: "pending",
+    }));
+    setMissions((items) => [...fresh, ...items]);
+  }
+
   function autoBalanceMissions() {
     if (!children.length) return;
     setMissions((items) => {
@@ -1765,24 +1981,101 @@ export function TailTotsApp() {
   }
 
   function addSavingsGoal() {
-    if (!activeChild || !newGoal.title.trim()) return;
-    const isGiving = newGoal.kind === "give";
-    const seed = isGiving ? Math.max(0, Math.floor(Number(newGoal.seed) || 0)) : 0;
-    const target = Math.max(1, Math.floor(Number(newGoal.target) || 25));
+    createBankGoal({
+      title: newGoal.title,
+      target: Number(newGoal.target) || 25,
+      kind: newGoal.kind,
+      cause: newGoal.cause,
+      seed: Number(newGoal.seed) || 0,
+    });
+    setNewGoal({ title: "", target: "25", kind: "save", cause: "Animal shelter", seed: "" });
+  }
+
+  /**
+   * Feedback R2 — Kid Bank decided flow (additive; nothing else changed).
+   * Parent approves a completed job → dollars AUTO-CREDIT as an approved
+   * "earn" transaction (see approveMission). The KID then chooses which jar
+   * (save/spend/give) it goes into via kidAllocateJar — INSTANT, no second
+   * parent approval. Parents set the points-to-dollar rate + guardrails
+   * UPFRONT (ParentProfile.bankSettings); this function only enforces them.
+   * Returns the new transaction id (for the kid's undo list) or null.
+   */
+  const activeBankSettings: KidBankSettings = { ...defaultKidBankSettings, ...(parents[0]?.bankSettings ?? {}) };
+
+  function updateBankSettings(next: KidBankSettings) {
+    setParents((items) =>
+      items.length
+        ? items.map((parent, index) => (index === 0 ? { ...parent, bankSettings: next } : parent))
+        : [{ ...starterParents[0], bankSettings: next }],
+    );
+  }
+
+  function kidAllocateJar(category: KidJarKey, amount: number, goalId?: string): string | null {
+    if (!activeChild) return null;
+    const balances = kidJarBalances(activeChild.id, transactions);
+    const blocked = jarMoveGuardrails({ balances, settings: activeBankSettings, request: { category, amount, goalId } });
+    if (blocked) return null;
+    const txId = `tx-${Date.now()}`;
+    const created = buildJarMoveTx(activeChild.id, { category, amount, goalId }, activeChild.name, txId);
+    setTransactions((items) => [created, ...items]);
+    if (goalId && (category === "save" || category === "give")) {
+      setGoals((items) => items.map((item) => (item.id === goalId ? withGoalProgress(item, created.amount) : item)));
+    }
+    return txId;
+  }
+
+  /** Undo one of the kid's own jar moves: exact reversal, also backs out goal progress. */
+  function undoKidJarMove(txId: string): boolean {
+    const original = transactions.find((item) => item.id === txId);
+    if (!original || !activeChild || !isUndoableJarMove(original, activeChild.id)) return false;
+    const undo = reverseJarMove(original, `tx-${Date.now()}`);
+    setTransactions((items) => [undo, ...items]);
+    if (undo.goalId) {
+      setGoals((items) => items.map((item) => (item.id === undo.goalId ? withGoalProgress(item, undo.amount) : item)));
+    }
+    return true;
+  }
+
+  /** Kid turns points into dollars at the parent-set rate (approval happened upfront, via the rate). */
+  function convertPointsToDollars(): void {
+    if (!activeChild) return;
+    const { dollars, pointsUsed } = pointsToDollars(activeChild.points, pointsPerDollar);
+    if (dollars < 1) return;
+    setChildren((items) =>
+      items.map((child) => (child.id === activeChild.id ? { ...child, points: child.points - pointsUsed } : child)),
+    );
+    setTransactions((items) => [
+      {
+        id: `tx-${Date.now()}`,
+        childId: activeChild.id,
+        category: "earn",
+        amount: dollars,
+        description: `${activeChild.name} turned ${pointsUsed} points into dollars`,
+        status: "approved",
+      },
+      ...items,
+    ]);
+  }
+
+  /** Parameterized goal creator behind both the parent drive-enrollment form and the kid's own goal creator. */
+  function createBankGoal(draft: { title: string; target: number; kind: "save" | "give"; cause: string; seed?: number }) {
+    if (!activeChild || !draft.title.trim()) return;
+    const isGiving = draft.kind === "give";
+    const target = Math.max(1, Math.floor(draft.target || 25));
+    const seed = isGiving ? Math.max(0, Math.floor(draft.seed ?? 0)) : 0;
     const now = new Date().toISOString();
-    const goal: SavingsGoal = {
+    const created: SavingsGoal = {
       id: `goal-${Date.now()}`,
       childId: activeChild.id,
-      title: newGoal.title.trim(),
+      title: draft.title.trim(),
       target,
       saved: 0,
       type: isGiving ? "donation" : "family_reward",
       sharedWithTrustedFamilies: isGiving,
-      causeNote: isGiving ? newGoal.cause : "Parent can choose to share this goal with trusted families.",
+      causeNote: isGiving ? draft.cause : "Parent can choose to share this goal with trusted families.",
       seededByParent: isGiving && seed > 0 ? seed : undefined,
     };
-    setGoals((items) => [seed > 0 ? withGoalProgress(goal, seed, now) : goal, ...items]);
-    setNewGoal({ title: "", target: "25", kind: "save", cause: "Animal shelter", seed: "" });
+    setGoals((items) => [seed > 0 ? withGoalProgress(created, seed, now) : created, ...items]);
   }
 
   /** Parent confirms the real-world donation for a fully funded giving goal. */
@@ -1834,8 +2127,12 @@ export function TailTotsApp() {
     if (done.includes(scenarioId)) return;
     const updated = [...done, scenarioId];
     setSocialPracticeDone((prev) => ({ ...prev, [childId]: updated }));
+    // Feedback R2: parent-authored practice ids (parent-social-*) are tracked
+    // in the same map but never count toward the built-in Safe Social Star —
+    // that badge is for completing the TailTots default scenario set.
+    const defaultDone = updated.filter((id) => !id.startsWith("parent-social-"));
     if (
-      updated.length >= socialScenarios.length &&
+      defaultDone.length >= socialScenarios.length &&
       !badges.some((badge) => badge.childId === childId && badge.title === "Safe Social Star")
     ) {
       setBadges((items) => [
@@ -1989,6 +2286,29 @@ export function TailTotsApp() {
     return <GivingShareView shareId={givingRouteId} />;
   }
 
+  // Stream R2: dedicated parent signup / signin pages — full screens, not a
+  // modal buried in setup. Built on the same magic-link flow.
+  if (authPage) {
+    return (
+      <ParentAuthView
+        mode={authPage}
+        accountDraft={accountDraft}
+        setAccountDraft={setAccountDraft}
+        accountStatus={accountStatus}
+        accountMessage={accountMessage}
+        sendParentSignInLink={sendParentSignInLink}
+        magicLinkSent={magicLinkSent}
+        onSwitchMode={() => {
+          setMagicLinkSent(false);
+          setAccountMessage("");
+          setAuthPage(authPage === "signup" ? "signin" : "signup");
+        }}
+        onBack={() => setAuthPage(null)}
+        onSkip={startFreshFamilySetup}
+      />
+    );
+  }
+
   return (
     <main className="tailtots-app min-h-screen bg-[#faf8f0] text-[#17231f]">
       <header className="sticky top-0 z-20 border-b border-[#ded8c7] bg-white/95 backdrop-blur">
@@ -2043,6 +2363,40 @@ export function TailTotsApp() {
             <button onClick={openContactSection} className="min-h-10 rounded-lg bg-[#165a4b] px-3 py-2 text-xs font-black text-white">
               Contact us
             </button>
+            {/* Stream R2: persistent demo/real mode banner with one-tap path switching. */}
+            <div
+              role="status"
+              aria-live="polite"
+              className={`flex min-h-10 flex-wrap items-center gap-2 rounded-lg border px-3 py-2 text-xs font-black ${
+                appMode === "demo" ? "border-[#f0c96a] bg-[#fff4d8] text-[#7a4b12]" : "border-[#165a4b]/30 bg-[#e7f4ef] text-[#0d3b30]"
+              }`}
+            >
+              {appMode === "demo" ? (
+                <>
+                  <span aria-hidden="true">🧪</span>
+                  <span>Demo mode — you&apos;re exploring the sample family. Nothing here is real.</span>
+                  <button onClick={startFreshFamilySetup} className="tt-btn-press min-h-9 rounded-lg bg-[#17231f] px-3 py-1.5 text-xs font-black text-white">
+                    Set up my family →
+                  </button>
+                </>
+              ) : (
+                <>
+                  <span aria-hidden="true">🏠</span>
+                  <span>
+                    Your family — real setup{cloudAccountEmail ? ` · signed in as ${cloudAccountEmail}` : " · saved on this device"}
+                    {cloudSyncOn ? " · cloud sync on" : ""}.
+                  </span>
+                  <button onClick={openParentDemo} className="tt-btn-press min-h-9 rounded-lg border-2 border-[#165a4b]/40 bg-white px-3 py-1.5 text-xs font-black text-[#0d3b30]">
+                    Explore the demo
+                  </button>
+                  {!cloudAccountEmail && (
+                    <button onClick={() => setAuthPage("signin")} className="tt-btn-press min-h-9 rounded-lg px-3 py-1.5 text-xs font-black text-[#165a4b] underline">
+                      Have an account? Sign in
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -2115,6 +2469,15 @@ export function TailTotsApp() {
                 }`}
               >
                 {tab.label}
+                {tab.id === "approvals" && role === "parent" && parentPendingCount > 0 && (
+                  <span
+                    className="ml-2 inline-flex min-h-5 min-w-5 items-center justify-center rounded-full bg-[#d92626] px-1.5 text-[11px] font-black text-white"
+                    role="status"
+                    aria-label={`${parentPendingCount} items need your review`}
+                  >
+                    {parentPendingCount}
+                  </span>
+                )}
               </button>
             ))}
           </nav>
@@ -2126,6 +2489,8 @@ export function TailTotsApp() {
             <VisionLandingPanel
               openParentDemo={openParentDemo}
               openKidDemo={openKidDemo}
+              openSignup={() => setAuthPage("signup")}
+              openSignin={() => setAuthPage("signin")}
               previewChildName={children[0]?.name ?? "Demo Kid"}
               previewFamilyName={familyName || "Demo Crew"}
             />
@@ -2236,10 +2601,25 @@ export function TailTotsApp() {
               isParentView={role === "parent"}
               setActiveTab={setActiveTab}
               pointsPerDollar={pointsPerDollar}
+              setPointsPerDollar={setPointsPerDollar}
+              bankSettings={activeBankSettings}
+              onBankSettingsChange={updateBankSettings}
+              allocateToJar={kidAllocateJar}
+              undoJarMove={undoKidJarMove}
+              convertPointsToDollars={convertPointsToDollars}
+              createBankGoal={createBankGoal}
             />
           )}
           {visibleActiveTab === "approvals" && (
             <div className="space-y-4">
+              <NotificationsCard
+                missions={missions}
+                transactions={transactions}
+                childProfiles={children}
+                pendingPlaydates={pendingPlaydates}
+                acknowledgePlaydate={acknowledgePlaydate}
+                setActiveTab={setActiveTab}
+              />
               <MissionAssignmentPanel
                 missions={missions}
                 childProfiles={children}
@@ -2247,6 +2627,13 @@ export function TailTotsApp() {
                 assignMission={assignMission}
                 autoBalanceMissions={autoBalanceMissions}
               />
+              <PetChoreBuilderCard
+                pets={pets}
+                childProfiles={children}
+                parentSignedIn={Boolean(cloudAccountEmail)}
+                addChoreMissions={addChoreMissions}
+              />
+              <AskKidPromptCard childProfiles={children} parentSignedIn={Boolean(cloudAccountEmail)} />
               <ApprovalsPanel
                 missions={missions}
                 transactions={transactions}
@@ -2255,7 +2642,10 @@ export function TailTotsApp() {
                 approveTransaction={approveTransaction}
                 rejectMission={rejectMission}
                 rejectTransaction={rejectTransaction}
+                fillJobTemplate={fillJobTemplate}
+                onTemplateUsed={() => setActiveTab("neighborhood")}
               />
+              <KidPasscodeCard childProfiles={children} setChildPasscode={setChildPasscode} />
             </div>
           )}
           {visibleActiveTab === "setup" && (
@@ -2353,7 +2743,6 @@ export function TailTotsApp() {
               setFamilyZip={setFamilyZip}
             />
           )}
-          {visibleActiveTab === "ai" && <AIPanel childProfiles={children} missions={missions} parentSignedIn={Boolean(cloudAccountEmail)} />}
           </>
           ))}
         </div>
@@ -2452,11 +2841,15 @@ export function TailTotsApp() {
 function VisionLandingPanel({
   openParentDemo,
   openKidDemo,
+  openSignup,
+  openSignin,
   previewChildName,
   previewFamilyName,
 }: {
   openParentDemo: () => void;
   openKidDemo: () => void;
+  openSignup: () => void;
+  openSignin: () => void;
   previewChildName: string;
   previewFamilyName: string;
 }) {
@@ -2790,15 +3183,33 @@ function VisionLandingPanel({
               One glance tells your kid what’s next — and you, without a single nag, whether it’s done. Every “done” is parent-approved
               and feeds streaks, savings goals, and certificates. Have a pet? Missions run on your real one. Don’t? They build toward it.
             </p>
-            <div className="mt-5 flex flex-wrap gap-3">
-              <button onClick={openKidDemo} className="tt-btn-press min-h-12 rounded-xl bg-tt-sun px-6 py-3 text-sm font-black text-tt-ink shadow-lg">
-                🧒 Try the kid demo
-              </button>
-              <button onClick={openParentDemo} className="tt-btn-press min-h-12 rounded-xl border-2 border-white/30 bg-white/10 px-6 py-3 text-sm font-black text-white">
-                🧑‍💼 See the parent side
-              </button>
+            {/* Stream R2: explicit entry choice — demo path vs real path. */}
+            <div className="mt-5 grid gap-3 sm:grid-cols-2">
+              <div className="rounded-2xl bg-white/10 p-4 ring-1 ring-white/15">
+                <p className="text-sm font-black text-white">🧪 Explore the demo</p>
+                <p className="mt-1 text-xs font-semibold leading-5 text-white/60">Sample family included. Nothing leaves your device in the demo.</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button onClick={openKidDemo} className="tt-btn-press min-h-12 rounded-xl bg-tt-sun px-5 py-3 text-sm font-black text-tt-ink shadow-lg">
+                    🧒 Kid demo
+                  </button>
+                  <button onClick={openParentDemo} className="tt-btn-press min-h-12 rounded-xl border-2 border-white/30 bg-white/10 px-5 py-3 text-sm font-black text-white">
+                    🧑‍💼 Parent side
+                  </button>
+                </div>
+              </div>
+              <div className="rounded-2xl bg-tt-sun/15 p-4 ring-1 ring-tt-sun/40">
+                <p className="text-sm font-black text-white">🏠 Set up my family</p>
+                <p className="mt-1 text-xs font-semibold leading-5 text-white/60">Your real family — kids, pets, photos. Parent account optional.</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button onClick={openSignup} className="tt-btn-press min-h-12 rounded-xl bg-tt-sun px-5 py-3 text-sm font-black text-tt-ink shadow-lg">
+                    Create parent account
+                  </button>
+                  <button onClick={openSignin} className="tt-btn-press min-h-12 rounded-xl border-2 border-tt-sun/50 bg-transparent px-5 py-3 text-sm font-black text-tt-sun">
+                    Sign in
+                  </button>
+                </div>
+              </div>
             </div>
-            <p className="mt-3 text-xs font-semibold text-white/60">Sample family included. Nothing leaves your device in the demo.</p>
           </div>
           <div className="rounded-2xl bg-white/10 p-4 ring-1 ring-white/15 sm:p-5">
             <p className="text-xs font-black uppercase tracking-[0.16em] text-tt-sun">Today’s plan · {previewChildName}</p>
@@ -3164,6 +3575,38 @@ function SchedulePanel({
   );
 }
 
+/**
+ * Feedback R2 — AI Buddy daily content: stable 32-bit seed from the local
+ * calendar day (localDayKey) so the featured pet and the daily question /
+ * mission / encouragement rotate once per day — deterministically per pet per
+ * day — rather than per render.
+ */
+function hashDayKey(dayKey: string): number {
+  let hash = 0;
+  for (let i = 0; i < dayKey.length; i += 1) {
+    hash = (Math.imul(hash, 31) + dayKey.charCodeAt(i)) | 0;
+  }
+  return Math.abs(hash);
+}
+
+/**
+ * Feedback R2 — AI Buddy guardrails: kids-related knowledge only. The Buddy
+ * is chip-based Q&A (never open chat), and anything returned by the
+ * parent-side AI endpoint is screened before it can become a chip label:
+ * plain kid-safe text only — no links, emails, phone numbers, or essays.
+ * Kid PII is never sent to the endpoint (species, counts, age band only).
+ */
+const BUDDY_GUARDRAIL_NOTE =
+  "Safe topics only: pets, kindness, chores, saving, and growing up. The Buddy answers picked questions — there is no open chat.";
+
+function isBuddySafeIdea(label: string): boolean {
+  const text = label.trim();
+  if (text.length === 0 || text.length > 140) return false;
+  if (/https?:\/\/|www\.|[\w.+-]+@[\w-]+\.[\w-]+/.test(text)) return false;
+  if (/(^|\D)\+?\d[\d\s().-]{7,}\d/.test(text)) return false;
+  return true;
+}
+
 function KidAiBuddyPanel({
   activeChild,
   pets,
@@ -3175,6 +3618,8 @@ function KidAiBuddyPanel({
   aiBuddyCategories,
   aiBuddyDailyRotate,
   aiDailyBoost,
+  parentQuestions,
+  socialOverride,
 }: {
   activeChild?: Child;
   pets: Pet[];
@@ -3188,20 +3633,34 @@ function KidAiBuddyPanel({
   /** Today's parent-fetched AI boost, or null when signed out/offline — then
    *  the local date-rotation fallback renders instead. */
   aiDailyBoost?: CachedDailyBoost | null;
+  /** Feedback R2: parent-authored questions that surface as buddy chips. */
+  parentQuestions?: BuddyParentQuestion[];
+  /** Feedback R2: parent override of the safe-social heading + content. */
+  socialOverride?: SocialPracticeOverride | null;
 }) {
-  const pet = pets[0];
-  const petName = pet?.name ?? "your pet";
+  const dayKey = localDayKey();
+  // Feedback R2: the featured pet rotates daily across the family's ACTUAL
+  // pets — buddy content changes every day, per pet per day. No pets on file
+  // falls back to the pet-neutral "your pet" phrasing below.
+  const daySeed = hashDayKey(dayKey);
+  const petOfDay = pets.length > 0 ? pets[daySeed % pets.length] : undefined;
+  const petName = petOfDay?.name ?? "your pet";
+  const petKind = petOfDay?.species ? ` the ${petOfDay.species.toLowerCase()}` : "";
   const childName = activeChild?.name ?? "Kid";
   const [selectedQuestion, setSelectedQuestion] = useState<string | null>(null);
   const [aiChipLabels, setAiChipLabels] = useState<string[] | null>(null);
   // Predefined question suggestions generated from family data: (a) the pets
   // the family onboarded, (b) non-pet topics, (c) the kid's interests from
   // hobby schedule items, (d) classes from school schedule items.
-  const localChips = buildBuddyQuestionChips({ pets, scheduleItems, childId: activeChild?.id, childName });
+  const localChips = buildBuddyQuestionChips({ pets, scheduleItems, childId: activeChild?.id, childName, dayKey });
   // AI path: the parent-side /api/ai/ideas endpoint may craft question ideas
   // from non-identifying context only (species, counts, age band) — never kid
   // PII, and only with a parent session. Unreachable from the kid view, so the
   // local builder above is the graceful fallback that always works.
+  // GUARDRAIL (Feedback R2): every returned idea is screened by
+  // isBuddySafeIdea before it can become a chip — kids-related plain text
+  // only, no links/contacts, and it still becomes a predefined chip (no open
+  // chat), gated against the parent's aiBuddyCategories below.
   useEffect(() => {
     let cancelled = false;
     const ageBand = !activeChild ? "7-9" : activeChild.age <= 6 ? "4-6" : activeChild.age <= 9 ? "7-9" : "10-12";
@@ -3224,7 +3683,7 @@ function KidAiBuddyPanel({
       .then((data: { ideas?: unknown } | null) => {
         if (cancelled) return;
         const ideas = Array.isArray(data?.ideas)
-          ? data.ideas.filter((item): item is string => typeof item === "string" && item.trim().length > 0)
+          ? data.ideas.filter((item): item is string => typeof item === "string" && isBuddySafeIdea(item))
           : [];
         if (ideas.length > 0) setAiChipLabels(ideas.slice(0, 6));
       })
@@ -3235,15 +3694,21 @@ function KidAiBuddyPanel({
       cancelled = true;
     };
   }, [activeChild, pets, scheduleItems]);
-  const chips: BuddyChip[] = aiChipLabels
-    ? aiChipLabels.map((label, index) => ({
-        id: `ai-${index}`,
-        label,
-        answerTitle: "Great question to explore!",
-        answerBody: `Talk through "${label}" with a parent — wondering together is where the learning happens.`,
-        category: "Pet care",
-      }))
-    : localChips;
+  // Feedback R2: parent-authored questions surface FIRST as buddy chips
+  // (they follow the same category gating as built-in chips, below).
+  const parentChips = parentQuestionChips(parentQuestions);
+  const chips: BuddyChip[] = [
+    ...parentChips,
+    ...(aiChipLabels
+      ? aiChipLabels.map((label, index) => ({
+          id: `ai-${index}`,
+          label,
+          answerTitle: "Great question to explore!",
+          answerBody: `Talk through "${label}" with a parent — wondering together is where the learning happens.`,
+          category: "Pet care",
+        }))
+      : localChips),
+  ].slice(0, 8);
   // Parent setting: only show question categories the parent allowed.
   const visibleChips = chips.filter((chip) => aiBuddyCategories.includes(chip.category));
   const kidQuestions: [string, string][] = visibleChips.map((chip) => [chip.id, chip.label]);
@@ -3270,11 +3735,14 @@ function KidAiBuddyPanel({
   // renders instead. The kid only ever sees predefined content: no open chat.
   const aiBoostForToday =
     aiDailyBoost && aiDailyBoost.date === todayLocalDateKey() ? aiDailyBoost : null;
-  const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000);
-  const dayIndex = aiBuddyDailyRotate ? dayOfYear : 0;
+  // Feedback R2: rotation is driven by the day seed (localDayKey), so the
+  // question/mission/encouragement change together with the featured pet.
+  const dayIndex = aiBuddyDailyRotate ? daySeed : 0;
   const dailyQuestions = [
-    `What is one thing ${petName} did today that made you smile?`,
-    `If ${petName} could talk, what would they thank you for this week?`,
+    `What is one thing ${petName}${petKind} did today that made you smile?`,
+    petOfDay
+      ? `If ${petName} could talk, what would they thank you for this week?`
+      : "If you had a pet, what is the first kind thing you would do for it?",
     "What is the kindest thing you did today — big or tiny?",
     "What chore felt easiest today, and what made it easy?",
     "What is one thing you want to get better at this week?",
@@ -3282,12 +3750,18 @@ function KidAiBuddyPanel({
     "What are you most proud of doing by yourself lately?",
   ];
   const dailyMissions = [
-    `Give ${petName} a 10-second calm check: food, water, cozy spot.`,
+    petOfDay
+      ? `Give ${petName} a 10-second calm check: food, water, cozy spot.`
+      : "Do a 10-second calm check of your room: one thing to tidy, one thing to put away.",
     "Tidy one shared space without being asked — then tell a parent.",
     "Teach someone one thing you learned this week.",
-    "Draw your pet's dream home and label three things it needs.",
+    petOfDay
+      ? `Draw ${petName}'s dream home and label three things it needs.`
+      : "Draw your dream pet's home and label three things it would need.",
     "Do a 2-minute kindness sprint: thank, help, or tidy.",
-    `Watch ${petName} quietly for ten seconds. Tell a parent one thing you noticed.`,
+    petOfDay
+      ? `Watch ${petName} quietly for ten seconds. Tell a parent one thing you noticed.`
+      : "Watch the sky or trees quietly for ten seconds. Tell a parent one thing you noticed.",
     "Put one coin or dollar toward your savings goal today.",
   ];
   const dailyEncouragements = [
@@ -3318,6 +3792,7 @@ function KidAiBuddyPanel({
         <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-[#4f625b]">
           One safe question, one helpful answer — {activeChild?.name ?? "kiddo"} picks the question, the helper does the rest.
         </p>
+        <p className="mt-2 max-w-2xl text-xs font-bold leading-5 text-[#165a4b]">🛡️ {BUDDY_GUARDRAIL_NOTE}</p>
         {suggestedQuestion && (
           <button
             onClick={askSuggested}
@@ -3389,6 +3864,11 @@ function KidAiBuddyPanel({
         onSelectChild={undefined}
         done={socialPracticeDone}
         onAnswer={onAnswerSocialScenario}
+        headingOverride={socialOverride?.heading}
+        introOverride={socialOverride?.intro}
+        overrideScenarios={
+          socialOverride && socialOverride.scenarios.length > 0 ? socialOverride.scenarios : undefined
+        }
       />
     </section>
   );
@@ -3407,11 +3887,17 @@ function buildBuddyQuestionChips(args: {
   scheduleItems: KidScheduleItem[];
   childId?: string;
   childName: string;
+  /** Local YYYY-MM-DD — rotates which of the family's pets get chips each day. */
+  dayKey?: string;
 }): BuddyChip[] {
-  const { pets, scheduleItems, childId, childName } = args;
+  const { pets, scheduleItems, childId, childName, dayKey } = args;
   const chips: BuddyChip[] = [];
-  // (a) pets the family onboarded.
-  for (const item of pets.slice(0, 2)) {
+  // (a) pets the family onboarded — rotated daily (Feedback R2) so every pet
+  // gets featured in turn; with no pets the non-pet topics below are the
+  // sensible default.
+  const petOffset = dayKey && pets.length > 0 ? hashDayKey(dayKey) % pets.length : 0;
+  const orderedPets = [...pets.slice(petOffset), ...pets.slice(0, petOffset)];
+  for (const item of orderedPets.slice(0, 2)) {
     chips.push({
       id: `pet-${item.id}`,
       label: `How can I help ${item.name} today?`,
@@ -3482,6 +3968,144 @@ function buildBuddyQuestionChips(args: {
     chips.push(topic);
   }
   return chips.slice(0, 6);
+}
+
+/**
+ * Feedback R2: parent-authored questions become buddy chips. The parent wrote
+ * them, so they are parent-approved by construction — still trimmed and capped
+ * like every other chip, and gated against the parent's aiBuddyCategories at
+ * render time in KidAiBuddyPanel.
+ */
+function parentQuestionChips(questions: BuddyParentQuestion[] | undefined): BuddyChip[] {
+  if (!questions) return [];
+  return questions
+    .filter((item) => item.question.trim().length > 0 && item.answerBody.trim().length > 0)
+    .slice(0, 3)
+    .map((item) => ({
+      id: `parent-q-${item.id}`,
+      label: item.question.trim().slice(0, 140),
+      answerTitle: item.answerTitle.trim() || "Picked by your parent!",
+      answerBody: item.answerBody.trim(),
+      category: item.category,
+    }));
+}
+
+/**
+ * Feedback R2 — parent-only sub-panel: parents set custom questions to track
+ * from their parent profile, and the questions surface in the kid's AI Buddy
+ * as predefined chips (no open chat). Rendered on the parent-only AI tab —
+ * never in the kid view.
+ */
+function BuddyParentQuestionsEditor({
+  questions,
+  onChange,
+  categories,
+}: {
+  questions: BuddyParentQuestion[];
+  onChange: (next: BuddyParentQuestion[]) => void;
+  categories: string[];
+}) {
+  const [draft, setDraft] = useState({ question: "", category: categories[0] ?? "Pet care", answerTitle: "", answerBody: "" });
+  const canAdd = draft.question.trim().length > 0 && draft.answerBody.trim().length > 0;
+  const addQuestion = () => {
+    if (!canAdd) return;
+    const next: BuddyParentQuestion = {
+      id: `pq-${Date.now()}`,
+      question: draft.question.trim().slice(0, 140),
+      answerTitle: draft.answerTitle.trim().slice(0, 80),
+      answerBody: draft.answerBody.trim().slice(0, 500),
+      category: categories.includes(draft.category) ? draft.category : (categories[0] ?? "Pet care"),
+      createdAt: new Date().toISOString(),
+    };
+    onChange([...questions, next]);
+    setDraft({ question: "", category: categories[0] ?? "Pet care", answerTitle: "", answerBody: "" });
+  };
+  return (
+    <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
+      <p className="text-xs font-black uppercase tracking-[0.18em] text-[#6d3ed1]">Parent only · AI Buddy</p>
+      <h3 className="mt-2 text-2xl font-black">Questions you want your kid to explore</h3>
+      <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-[#4f625b]">
+        Add a question and the answer you&apos;d like the Buddy to give. It appears in your kid&apos;s AI Buddy as a
+        predefined question — no open chat — and follows the same topic filters as the built-in questions. When your
+        kid asks it, the moment is logged in the activity feed so you can track it.
+      </p>
+      {questions.length > 0 && (
+        <ul className="mt-4 grid gap-2">
+          {questions.map((item) => (
+            <li key={item.id} className="flex items-start justify-between gap-3 rounded-lg bg-[#f4efff] p-3">
+              <div className="min-w-0">
+                <p className="text-sm font-black text-[#17231f]">{item.question}</p>
+                <p className="mt-1 text-xs font-bold text-[#6d3ed1]">
+                  {item.category} · {item.answerTitle || "Picked by your parent!"}
+                </p>
+              </div>
+              <button
+                onClick={() => onChange(questions.filter((entry) => entry.id !== item.id))}
+                className="min-h-10 shrink-0 rounded-lg border border-[#ded8c7] bg-white px-3 py-2 text-xs font-black text-[#7a4b12]"
+                aria-label={`Remove question: ${item.question}`}
+              >
+                Remove
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      <div className="mt-4 grid gap-3 rounded-lg bg-[#faf8f0] p-4">
+        <label className="block text-sm font-black text-[#17231f]">
+          Question for the Buddy
+          <input
+            value={draft.question}
+            onChange={(event) => setDraft({ ...draft, question: event.target.value })}
+            maxLength={140}
+            placeholder="e.g. What should I do when Jack seems bored?"
+            className="mt-2 w-full rounded-lg border border-[#ded8c7] px-4 py-3 text-base font-semibold"
+          />
+        </label>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="block text-sm font-black text-[#17231f]">
+            Topic
+            <select
+              value={draft.category}
+              onChange={(event) => setDraft({ ...draft, category: event.target.value })}
+              className="mt-2 w-full rounded-lg border border-[#ded8c7] bg-white px-4 py-3 text-base font-semibold"
+            >
+              {categories.map((category) => (
+                <option key={category} value={category}>{category}</option>
+              ))}
+            </select>
+          </label>
+          <label className="block text-sm font-black text-[#17231f]">
+            Answer headline (optional)
+            <input
+              value={draft.answerTitle}
+              onChange={(event) => setDraft({ ...draft, answerTitle: event.target.value })}
+              maxLength={80}
+              placeholder="Picked by your parent!"
+              className="mt-2 w-full rounded-lg border border-[#ded8c7] px-4 py-3 text-base font-semibold"
+            />
+          </label>
+        </div>
+        <label className="block text-sm font-black text-[#17231f]">
+          The answer the Buddy gives
+          <textarea
+            value={draft.answerBody}
+            onChange={(event) => setDraft({ ...draft, answerBody: event.target.value })}
+            maxLength={500}
+            rows={3}
+            placeholder="Write the guidance you'd give — the Buddy shows it when your kid taps the question."
+            className="mt-2 w-full rounded-lg border border-[#ded8c7] px-4 py-3 text-base font-semibold"
+          />
+        </label>
+        <button
+          onClick={addQuestion}
+          disabled={!canAdd}
+          className="min-h-11 justify-self-start rounded-lg bg-[#6d3ed1] px-5 py-2 text-sm font-black text-white disabled:opacity-40"
+        >
+          Add to my kid&apos;s Buddy
+        </button>
+      </div>
+    </section>
+  );
 }
 
 function ChildProfileSwitcher({
@@ -3636,24 +4260,12 @@ function Hero({
               <span className="rounded-lg bg-[#fff4d8] p-3 text-[#7a4b12]"><b className="block text-lg">{approvedMissionCount}</b>approved</span>
               <span className="rounded-lg bg-[#eef4ff] p-3 text-[#1e3a8a]"><b className="block text-lg">{pendingCount}</b>pending</span>
             </div>
-            <div className="mt-4 grid gap-3">
-              <Meter label="Loving the app" value={childLook.love} color="#6d3ed1" />
-              <Meter label="Happiness today" value={childLook.joy} color="#165a4b" />
-            </div>
-          </div>
-        </div>
-        <div className="mt-4 rounded-lg bg-[#faf8f0] p-3">
-          <p className="text-xs font-black uppercase tracking-[0.14em] text-[#165a4b]">Active pets</p>
-          <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
-            {pets.map((item) => {
-              const look = getPetLook(item.id, item);
-              return (
-                <div key={item.id} className="grid place-items-center gap-1 rounded-lg bg-white p-2 text-center text-[11px] font-black">
-                  <ProfilePhoto label={item.name} initial={look.face} colors={look.colors} size="xs" variant="pet" petKind={look.kind} photoUrl={item.photoUrl} />
-                  <span className="max-w-full truncate">{item.name}</span>
-                </div>
-              );
-            })}
+            {role === "parent" && (
+              <div className="mt-4 grid gap-3">
+                <Meter label="Loving the app" value={childLook.love} color="#6d3ed1" />
+                <Meter label="Happiness today" value={childLook.joy} color="#165a4b" />
+              </div>
+            )}
           </div>
         </div>
         <button onClick={() => setActiveTab("pets")} className="mt-auto min-h-11 rounded-lg bg-[#17231f] px-4 py-2 text-sm font-black text-white">
@@ -4011,6 +4623,17 @@ function FamilyFaceParade({
   );
 }
 
+/**
+ * Feedback R2 (kid In Today): the old chore-vs-pet-work differentiation (pet
+ * photo + name vs. a "Chore" label) is gone from the mission list. The only
+ * context tag that remains is for neighborhood/school tasks, which are the
+ * missions created from neighborhood jobs and community drives
+ * (`category: "community"`).
+ */
+function isNeighborhoodSchoolMission(mission: Mission): boolean {
+  return mission.category === "community";
+}
+
 function MissionsPanel(props: {
   activeChild?: Child;
   missions: Mission[];
@@ -4040,19 +4663,6 @@ function MissionsPanel(props: {
     ? props.missions.find((mission) => mission.petId === statusPet.id && !mission.completedBy && mission.status !== "approved")
     : undefined;
   const scrollToMissions = () => document.getElementById("today-mission-list")?.scrollIntoView({ behavior: "smooth", block: "start" });
-  const pawgressTotal = props.missions.length;
-  const pawgressDone = props.missions.filter((mission) => mission.completedBy || mission.status === "approved").length;
-  const pawgressPct = pawgressTotal === 0 ? 0 : Math.round((pawgressDone / pawgressTotal) * 100);
-  const pawgressMessage =
-    pawgressTotal === 0
-      ? "No missions yet — the paws are napping. 😴"
-      : pawgressPct === 100
-        ? "All paws accounted for! Legendary status: achieved. 🏆"
-        : pawgressPct >= 50
-          ? "Over halfway! Somewhere, a guinea pig is impressed. 🐹"
-          : pawgressPct > 0
-            ? "Paws warming up… the treat jar is watching. 🦴"
-            : "The paws are idle. Suspiciously idle. 🐾";
   return (
     <section className="rounded-lg border border-[#ded8c7] bg-white p-4 shadow-sm sm:p-5">
       <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
@@ -4101,24 +4711,11 @@ function MissionsPanel(props: {
           </button>
         </div>
       )}
-      <div className="mt-4 rounded-lg border border-[#ded8c7] bg-[#faf8f0] p-4" aria-label="Mission progress">
-        <div className="flex items-center justify-between gap-2 text-sm font-black">
-          <span>🐾 Pawgress</span>
-          <span>{pawgressDone}/{pawgressTotal} · {pawgressPct}%</span>
-        </div>
-        <div className="mt-2 h-4 overflow-hidden rounded-full bg-[#f5f1e5]" role="progressbar" aria-valuenow={pawgressPct} aria-valuemin={0} aria-valuemax={100} aria-label="Pawgress">
-          <div
-            className="h-4 rounded-full bg-gradient-to-r from-[#f47b20] to-[#ffd166] transition-[width] duration-700"
-            style={{ width: `${pawgressPct}%` }}
-          />
-        </div>
-        <p className="mt-2 text-sm font-bold text-[#4f625b]">{pawgressMessage}</p>
-      </div>
-      {isKidView && props.activeChild && (
+      {!isKidView && props.activeChild && (
         <div className="mt-4 rounded-lg border border-[#ded8c7] bg-[#f0edff] p-4" aria-label="Character progress">
-          <p className="text-sm font-black text-[#17231f]">🦸 Your character journey</p>
+          <p className="text-sm font-black text-[#17231f]">🦸 Character journey</p>
           <p className="mt-1 text-xs font-bold text-[#4f625b]">
-            Finish every mission in a level and a grown-up&apos;s approval earns you a star.
+            {props.activeChild.name}&apos;s character track — grown-ups only, never shown to kids. Approve every mission in a level to award a star.
           </p>
           <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
             {getChildCurriculumSummary(props.activeChild.id, props.missions, props.badges).map((entry) => (
@@ -4152,7 +4749,6 @@ function MissionsPanel(props: {
           </div>
         )}
         {props.missions.map((mission) => {
-          const pet = props.pets.find((item) => item.id === mission.petId);
           const skill = getMissionLifeSkill(mission);
           const assignedChild = props.allChildren.find((child) => child.id === mission.assignedChildId);
           const missionDone = Boolean(mission.completedBy) || mission.status === "approved";
@@ -4178,23 +4774,12 @@ function MissionsPanel(props: {
                     <h3 className="text-xl font-black">{mission.title}</h3>
                     <p className="mt-1 text-sm font-semibold text-[#4f625b]">{mission.question}</p>
                     <div className="mt-2 flex flex-wrap items-center gap-2 text-xs font-black text-[#4f625b]">
-                      {pet ? (
-                        <span className="inline-flex items-center gap-1.5">
-                          <ProfilePhoto
-                            label={pet.name}
-                            initial={getPetLook(pet.id, pet).face}
-                            colors={getPetLook(pet.id, pet).colors}
-                            size="xs"
-                            variant="pet"
-                            petKind={getPetLook(pet.id, pet).kind}
-                            photoUrl={pet.photoUrl}
-                          />
-                          {pet.name}
-                        </span>
-                      ) : (
-                        <span className="capitalize">{mission.category.replace("_", " ")}</span>
+                      {isNeighborhoodSchoolMission(mission) && (
+                        <>
+                          <span className="rounded-full bg-[#eef2ff] px-2.5 py-1 text-xs font-black">Neighborhood</span>
+                          <span aria-hidden="true">·</span>
+                        </>
                       )}
-                      <span aria-hidden="true">·</span>
                       <span>+{mission.points} pts</span>
                       {curriculumMissionLabel(mission) && (
                         <>
@@ -4283,13 +4868,8 @@ function MissionsPanel(props: {
               <div>
                 <div className="flex flex-wrap gap-2">
                   <span className="rounded-full bg-white px-3 py-1 text-xs font-black">{levelLabels[mission.difficulty]}</span>
-                  {pet ? (
-                    <span className="inline-flex items-center gap-2 rounded-full bg-[#e7f4ef] py-1 pl-1 pr-3 text-xs font-black">
-                      <ProfilePhoto label={pet.name} initial={getPetLook(pet.id, pet).face} colors={getPetLook(pet.id, pet).colors} size="xs" variant="pet" petKind={getPetLook(pet.id, pet).kind} photoUrl={pet.photoUrl} />
-                      {pet.name}
-                    </span>
-                  ) : (
-                    <span className="rounded-full bg-[#eef2ff] px-3 py-1 text-xs font-black capitalize">{mission.category.replace("_", " ")}</span>
+                  {isNeighborhoodSchoolMission(mission) && (
+                    <span className="rounded-full bg-[#eef2ff] px-3 py-1 text-xs font-black">Neighborhood</span>
                   )}
                   <span className="rounded-full bg-[#fff4d8] px-3 py-1 text-xs font-black">+{mission.points} pts</span>
                   <span className="rounded-full bg-white px-3 py-1 text-xs font-black">
@@ -4617,6 +5197,736 @@ function goalContributions(
   }));
 }
 
+/* ==================================================================
+ * Kid Bank — jar-metaphor redesign (Feedback R2).
+ *
+ * Three jars — SAVE / SPEND / GIVE — with animated blue-liquid fills.
+ * The decided flow: parent approves a completed job → dollars AUTO-CREDIT
+ * as an approved "earn" transaction → the KID chooses which jar it goes
+ * into, instantly, with NO second parent approval. Parents set the
+ * points-to-dollar rate and guardrails UPFRONT (ParentProfile.bankSettings).
+ *
+ * Data model: unchanged BankTransaction / SavingsGoal shapes. Kid jar moves
+ * are approved transactions (save/spend/give); the kid's own undo is a
+ * negative-amount reversal with the same goalId, so goal progress stays
+ * exact. Legacy pending save/give requests still work through the
+ * Approvals panel — migrate, don't break.
+ * ================================================================== */
+
+type JarVisual = {
+  key: KidJarKey;
+  emoji: string;
+  label: string;
+  caption: string;
+  liquidFrom: string;
+  liquidTo: string;
+};
+
+const JAR_VISUALS: JarVisual[] = [
+  {
+    key: "save",
+    emoji: "🏦",
+    label: "SAVE jar",
+    caption: "For your goals — toys, treats, big dreams!",
+    liquidFrom: "#7dd3fc",
+    liquidTo: "#2563eb",
+  },
+  {
+    key: "spend",
+    emoji: "🛍️",
+    label: "SPEND jar",
+    caption: "Money you can spend with your family.",
+    liquidFrom: "#6ee7b7",
+    liquidTo: "#059669",
+  },
+  {
+    key: "give",
+    emoji: "💛",
+    label: "GIVE jar",
+    caption: "Money helping others feel happy.",
+    liquidFrom: "#fcd34d",
+    liquidTo: "#f59e0b",
+  },
+];
+
+const JAR_KEY_TO_VISUAL: Record<KidJarKey, JarVisual> = {
+  save: JAR_VISUALS[0],
+  spend: JAR_VISUALS[1],
+  give: JAR_VISUALS[2],
+};
+
+function JarMeter({
+  visual,
+  balance,
+  scale,
+  ring,
+}: {
+  visual: JarVisual;
+  balance: number;
+  scale: number;
+  ring?: ReactNode;
+}) {
+  const pct = jarFillPercent(balance, scale);
+  return (
+    <div className="flex flex-col items-center text-center">
+      <p className="text-3xl font-black text-[#17231f]">${balance}</p>
+      <div className="relative mt-2">
+        <div className="relative mx-auto h-48 w-32 overflow-hidden rounded-b-[2.5rem] rounded-t-[1rem] border-4 border-[#aec6dc] bg-[#eef5fb] shadow-[inset_0_2px_8px_rgba(23,35,31,0.12)]">
+          {/* blue liquid */}
+          <div
+            className="absolute inset-x-0 bottom-0 transition-[height] duration-700 ease-out"
+            style={{ height: `${pct}%` }}
+            aria-hidden="true"
+          >
+            <div
+              className="absolute inset-0"
+              style={{ background: `linear-gradient(to top, ${visual.liquidTo}, ${visual.liquidFrom})` }}
+            />
+            <svg className="absolute -top-3 left-0 h-4 w-full" viewBox="0 0 100 12" preserveAspectRatio="none">
+              <path d="M0 6 Q 12.5 0, 25 6 T 50 6 T 75 6 T 100 6 L100 12 L0 12 Z" fill={visual.liquidFrom} />
+            </svg>
+            {pct > 25 && <span className="absolute left-1/4 top-1/4 h-2 w-2 rounded-full bg-white/50" />}
+            {pct > 45 && <span className="absolute right-1/4 top-1/2 h-1.5 w-1.5 rounded-full bg-white/40" />}
+            {pct > 65 && <span className="absolute left-1/2 top-2/3 h-1 w-1 rounded-full bg-white/40" />}
+          </div>
+          {/* jar rim */}
+          <div className="absolute inset-x-2 top-1 h-2 rounded-full bg-white/60" aria-hidden="true" />
+        </div>
+        {ring && <div className="absolute -right-7 -top-3">{ring}</div>}
+      </div>
+      <p className="mt-3 text-2xl" aria-hidden="true">{visual.emoji}</p>
+      <p className="text-lg font-black text-[#17231f]">{visual.label}</p>
+      <p className="max-w-40 text-xs font-bold leading-4 text-[#4f625b]">{visual.caption}</p>
+    </div>
+  );
+}
+
+/** Progress ring shown on the GIVE jar for the featured drive; taps scroll to the drive cards. */
+function DriveProgressRing({ percent, label }: { percent: number; label: string }) {
+  const radius = 15.9155;
+  return (
+    <a
+      href="#kid-bank-drives"
+      title={label}
+      aria-label={label}
+      className="tt-btn-press relative block h-14 w-14 rounded-full bg-white shadow-md ring-2 ring-[#f4b400]"
+    >
+      <svg viewBox="0 0 42 42" className="h-14 w-14 -rotate-90">
+        <circle cx="21" cy="21" r={radius} fill="none" stroke="#f1e8d2" strokeWidth="5" />
+        <circle
+          cx="21"
+          cy="21"
+          r={radius}
+          fill="none"
+          stroke="#f4b400"
+          strokeWidth="5"
+          strokeLinecap="round"
+          strokeDasharray={`${Math.round(percent * 100)} 100`}
+          className="transition-[stroke-dasharray] duration-700"
+        />
+      </svg>
+      <span className="absolute inset-0 flex items-center justify-center text-[11px] font-black text-[#7a4b12]">
+        {Math.round(percent * 100)}%
+      </span>
+    </a>
+  );
+}
+
+/**
+ * The kid's money-sorting station: "money you earned → you decide where it goes."
+ * Amount chips → tap a jar → (pick a goal/drive for SAVE/GIVE) → confirm.
+ * Every move is instant and approved; the parent's guardrails are enforced.
+ */
+function JarAllocator({
+  childName,
+  balances,
+  settings,
+  saveGoals,
+  drives,
+  transactions,
+  onAllocate,
+  onUndo,
+}: {
+  childName: string;
+  balances: JarBalances;
+  settings: KidBankSettings;
+  saveGoals: SavingsGoal[];
+  drives: SavingsGoal[];
+  transactions: BankTransaction[];
+  onAllocate: (category: KidJarKey, amount: number, goalId?: string) => string | null;
+  onUndo: (txId: string) => boolean;
+}) {
+  const maxPerTap = settings.maxSingleJarMove > 0 ? Math.min(balances.unallocated, settings.maxSingleJarMove) : balances.unallocated;
+  const [amount, setAmount] = useState(5);
+  const [pendingJar, setPendingJar] = useState<KidJarKey | null>(null);
+  const [pickedGoalId, setPickedGoalId] = useState("");
+  const [blockReason, setBlockReason] = useState<string | null>(null);
+  const [celebration, setCelebration] = useState<string | null>(null);
+  const [sessionMoves, setSessionMoves] = useState<string[]>([]);
+
+  const effectiveAmount = Math.max(1, Math.min(amount, Math.max(1, maxPerTap)));
+  const pendingVisual = pendingJar ? JAR_KEY_TO_VISUAL[pendingJar] : null;
+  const goalChoices = pendingJar === "save" ? saveGoals : pendingJar === "give" ? drives : [];
+  const pickedGoal = goalChoices.find((goal) => goal.id === pickedGoalId);
+
+  const startJar = (category: KidJarKey) => {
+    setPendingJar(category);
+    setPickedGoalId("");
+    setBlockReason(null);
+    setCelebration(null);
+  };
+
+  const confirmMove = () => {
+    if (!pendingJar) return;
+    const reason = jarMoveGuardrails({
+      balances,
+      settings,
+      request: { category: pendingJar, amount: effectiveAmount, goalId: pickedGoalId || undefined },
+    });
+    if (reason) {
+      setBlockReason(reason);
+      return;
+    }
+    const txId = onAllocate(pendingJar, effectiveAmount, pickedGoalId || undefined);
+    if (!txId) {
+      setBlockReason("Hmm, that didn't go through — try again!");
+      return;
+    }
+    setSessionMoves((ids) => [txId, ...ids].slice(0, 5));
+    setCelebration(
+      `🎉 You put $${effectiveAmount} in your ${pendingVisual!.label.toUpperCase()}${pickedGoal ? ` for “${pickedGoal.title}”` : ""}! Great choosing, ${childName}!`,
+    );
+    setPendingJar(null);
+    setPickedGoalId("");
+    setBlockReason(null);
+  };
+
+  const undoMove = (txId: string) => {
+    if (onUndo(txId)) setSessionMoves((ids) => ids.filter((id) => id !== txId));
+  };
+
+  if (balances.unallocated <= 0 && sessionMoves.length === 0) {
+    return (
+      <div className="rounded-lg border-2 border-dashed border-[#aec6dc] bg-[#f2f8fd] p-5 text-center">
+        <p className="text-lg font-black text-[#17231f]">🫙 Your jars are all sorted!</p>
+        <p className="mt-1 text-sm font-bold text-[#4f625b]">
+          Finish a parent-approved mission to earn new money, then come back and sort it into jars.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
+      <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2563eb]">Sort your money</p>
+      <h3 className="mt-2 text-2xl font-black text-[#17231f]">
+        🪙 ${balances.unallocated} waiting — <span className="text-[#2563eb]">you decide where it goes!</span>
+      </h3>
+
+      <p className="mt-4 text-sm font-black text-[#17231f]">1️⃣ How much?</p>
+      <div className="mt-2 flex flex-wrap gap-2">
+        {[1, 2, 5].map((choice) => (
+          <button
+            key={choice}
+            onClick={() => { setAmount(choice); setBlockReason(null); }}
+            disabled={choice > maxPerTap}
+            className={`min-h-12 rounded-lg px-5 py-2 text-lg font-black disabled:cursor-not-allowed disabled:opacity-40 ${
+              amount === choice && effectiveAmount !== maxPerTap ? "bg-[#2563eb] text-white" : "border-2 border-[#aec6dc] bg-white text-[#17231f]"
+            }`}
+          >
+            ${choice}
+          </button>
+        ))}
+        <button
+          onClick={() => { setAmount(maxPerTap); setBlockReason(null); }}
+          disabled={maxPerTap < 1}
+          className={`min-h-12 rounded-lg px-5 py-2 text-lg font-black disabled:cursor-not-allowed disabled:opacity-40 ${
+            amount === maxPerTap ? "bg-[#2563eb] text-white" : "border-2 border-[#aec6dc] bg-white text-[#17231f]"
+          }`}
+        >
+          All ${maxPerTap}
+        </button>
+      </div>
+      {settings.maxSingleJarMove > 0 && (
+        <p className="mt-2 text-xs font-bold text-[#4f625b]">A grown-up set the biggest single move to ${settings.maxSingleJarMove}.</p>
+      )}
+
+      <p className="mt-5 text-sm font-black text-[#17231f]">2️⃣ Which jar?</p>
+      <div className="mt-2 grid grid-cols-3 gap-2">
+        {JAR_VISUALS.map((visual) => (
+          <button
+            key={visual.key}
+            onClick={() => startJar(visual.key)}
+            className={`tt-btn-press min-h-16 rounded-xl border-2 px-2 py-3 text-center ${
+              pendingJar === visual.key ? "border-[#17231f] bg-[#17231f] text-white" : "border-[#ded8c7] bg-[#faf8f0] text-[#17231f]"
+            }`}
+          >
+            <span className="block text-2xl" aria-hidden="true">{visual.emoji}</span>
+            <span className="block text-sm font-black">{visual.label}</span>
+          </button>
+        ))}
+      </div>
+
+      {pendingJar && (pendingJar === "save" || pendingJar === "give") && (
+        <div className="mt-4">
+          <p className="text-sm font-black text-[#17231f]">
+            {pendingJar === "save" ? "3️⃣ Which goal should it grow?" : "3️⃣ Which kindness drive should it help?"}
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <button
+              onClick={() => setPickedGoalId("")}
+              className={`min-h-11 rounded-full px-4 py-2 text-sm font-black ${
+                pickedGoalId === "" ? "bg-[#17231f] text-white" : "border border-[#ded8c7] bg-white text-[#17231f]"
+              }`}
+            >
+              {pendingJar === "save" ? "🫙 Just my jar" : "💛 Just kindness"}
+            </button>
+            {goalChoices.map((goal) => (
+              <button
+                key={goal.id}
+                onClick={() => setPickedGoalId(goal.id)}
+                className={`min-h-11 rounded-full px-4 py-2 text-sm font-black ${
+                  pickedGoalId === goal.id ? "bg-[#17231f] text-white" : "border border-[#ded8c7] bg-white text-[#17231f]"
+                }`}
+              >
+                {goal.title} (${goal.saved}/${goal.target})
+              </button>
+            ))}
+          </div>
+          {!goalChoices.length && (
+            <p className="mt-2 text-xs font-bold text-[#4f625b]">
+              {pendingJar === "save" ? "No goals yet — your money will wait safely in the jar." : "No drives yet — your kindness will wait in the jar."}
+            </p>
+          )}
+        </div>
+      )}
+
+      {pendingJar && (
+        <div className="mt-4 rounded-lg bg-[#eef5fd] p-4">
+          <p className="text-base font-black text-[#17231f]">
+            Put ${effectiveAmount} in your {pendingVisual!.label.toUpperCase()}
+            {pickedGoal ? ` for “${pickedGoal.title}”?` : "?"}
+          </p>
+          <div className="mt-3 flex gap-2">
+            <button
+              onClick={confirmMove}
+              className="tt-btn-press min-h-12 flex-1 rounded-lg bg-[#165a4b] px-5 py-3 text-base font-black text-white"
+            >
+              Yes, do it! 🎉
+            </button>
+            <button
+              onClick={() => { setPendingJar(null); setBlockReason(null); }}
+              className="min-h-12 rounded-lg border-2 border-[#ded8c7] bg-white px-5 py-3 text-base font-black text-[#4f625b]"
+            >
+              Wait
+            </button>
+          </div>
+          {blockReason && <p className="mt-2 text-sm font-bold text-[#7a4b12]">{blockReason}</p>}
+        </div>
+      )}
+
+      {celebration && (
+        <p className="mt-4 rounded-lg bg-[#e7f4ef] p-4 text-center text-base font-black text-[#0d3b30]" role="status">
+          {celebration}
+        </p>
+      )}
+
+      {settings.allowKidUndo && sessionMoves.length > 0 && (
+        <div className="mt-4">
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-[#4f625b]">Changed your mind?</p>
+          <div className="mt-2 grid gap-2">
+            {sessionMoves.map((txId) => {
+              const moved = transactions.find((tx) => tx.id === txId);
+              if (!moved) return null;
+              return (
+                <div key={txId} className="flex items-center justify-between gap-3 rounded-lg bg-[#faf8f0] p-3">
+                  <p className="text-sm font-bold text-[#4f625b]">{moved.description}</p>
+                  <button
+                    onClick={() => undoMove(txId)}
+                    className="min-h-10 shrink-0 rounded-lg border border-[#ded8c7] bg-white px-4 py-2 text-sm font-black text-[#17231f]"
+                  >
+                    Undo ↩️
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** A kid's own savings goal card with a friendly progress bar. */
+function SaveGoalCard({ goal }: { goal: SavingsGoal }) {
+  const percent = Math.min(100, (goal.saved / Math.max(1, goal.target)) * 100);
+  return (
+    <article className="rounded-lg bg-[#faf8f0] p-4">
+      <div className="flex items-start justify-between gap-3">
+        <p className="text-lg font-black text-[#17231f]">🎯 {goal.title}</p>
+        <span className="rounded-full bg-white px-3 py-1 text-sm font-black text-[#17231f]">${goal.saved}/${goal.target}</span>
+      </div>
+      <div className="mt-3 h-4 overflow-hidden rounded-full bg-white">
+        <div className="h-4 rounded-full bg-[#165a4b] transition-[width] duration-700" style={{ width: `${percent}%` }} />
+      </div>
+      <p className="mt-2 text-sm font-bold text-[#4f625b]">
+        {goal.completedAt ? "🎉 Goal reached — amazing saving!" : `$${goal.target - goal.saved} left to go — your SAVE jar feeds this!`}
+      </p>
+    </article>
+  );
+}
+
+/** A giving-drive card: progress anyone can read at a glance. */
+function DriveCard({
+  goal,
+  transactions,
+  childProfiles,
+  isParentView,
+  onConfirmDonation,
+}: {
+  goal: SavingsGoal;
+  transactions: BankTransaction[];
+  childProfiles: Child[];
+  isParentView: boolean;
+  onConfirmDonation: (goalId: string) => void;
+}) {
+  const kind = driveKindFromGoal(goal);
+  const meta = kind === "save" ? null : DRIVE_KIND_META[kind];
+  const percent = driveProgress(goal) * 100;
+  const contributions = goalContributions(goal.id, transactions, childProfiles);
+  return (
+    <article className="rounded-lg bg-[#fff8ef] p-4 ring-1 ring-[#f4b400]/40">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-lg font-black text-[#17231f]">{meta?.emoji ?? "💛"} {goal.title}</p>
+          {meta && (
+            <p className="mt-1 inline-block rounded-full bg-[#ffe9a8] px-2 py-0.5 text-xs font-black text-[#7a4b12]">{meta.label}</p>
+          )}
+          {goal.causeNote && meta && goal.causeNote !== meta.causeNote && (
+            <p className="mt-1 text-xs font-bold text-[#69736f]">{goal.causeNote}</p>
+          )}
+        </div>
+        <span className="rounded-full bg-white px-3 py-1 text-sm font-black text-[#17231f]">${goal.saved}/${goal.target}</span>
+      </div>
+      <div className="mt-3 h-4 overflow-hidden rounded-full bg-white">
+        <div className="h-4 rounded-full bg-[#f4b400] transition-[width] duration-700" style={{ width: `${percent}%` }} />
+      </div>
+      <p className="mt-2 text-sm font-bold text-[#4f625b]">
+        {goal.donationConfirmedAt
+          ? "🎉 Donated — thank you for the real-world kindness!"
+          : goal.completedAt
+            ? "Goal reached! Waiting for a grown-up to make the real donation."
+            : `$${goal.target - goal.saved} left — your GIVE jar feeds this drive!`}
+      </p>
+      {goal.seededByParent ? (
+        <p className="mt-1 text-xs font-bold text-[#69736f]">Grown-ups started it with ${goal.seededByParent} 🌱</p>
+      ) : null}
+      {contributions.length > 0 && (
+        <p className="mt-1 text-xs font-bold text-[#69736f]">
+          {contributions.map((entry) => `${entry.name} gave $${entry.amount}`).join(" · ")}
+        </p>
+      )}
+      {goal.completedAt && !goal.donationConfirmedAt && isParentView && (
+        <button
+          onClick={() => onConfirmDonation(goal.id)}
+          className="tt-btn-press mt-3 min-h-11 w-full rounded-lg bg-[#165a4b] px-4 py-2 text-sm font-black text-white"
+        >
+          Confirm: we donated ${goal.target} ✓
+        </button>
+      )}
+    </article>
+  );
+}
+
+/**
+ * Drive progress strip for OTHER tabs (the neighborhood stream renders this).
+ * Pure presentational: goals in, drive cards out. No hooks, no side effects.
+ */
+export function DriveProgressMini({
+  goals,
+  childId,
+  title = "💛 Kindness drives",
+  maxItems = 3,
+}: {
+  goals: SavingsGoal[];
+  childId?: string;
+  title?: string;
+  maxItems?: number;
+}) {
+  const drives = goals
+    .filter(
+      (goal) =>
+        goal.type === "donation" &&
+        goal.visibleToKids !== false &&
+        (!childId || goal.childId === childId || goal.sharedWithTrustedFamilies),
+    )
+    .sort((a, b) => driveProgress(b) - driveProgress(a))
+    .slice(0, Math.max(1, maxItems));
+  if (!drives.length) return null;
+  return (
+    <section className="rounded-lg border border-[#ded8c7] bg-white p-4 shadow-sm" aria-label={title}>
+      <p className="text-xs font-black uppercase tracking-[0.18em] text-[#f4b400]">{title}</p>
+      <div className="mt-3 grid gap-2">
+        {drives.map((goal) => {
+          const kind = driveKindFromGoal(goal);
+          const emoji = kind === "save" ? "💛" : DRIVE_KIND_META[kind].emoji;
+          const percent = driveProgress(goal) * 100;
+          return (
+            <div key={goal.id} className="rounded-lg bg-[#fff8ef] p-3 ring-1 ring-[#f4b400]/30">
+              <div className="flex items-center justify-between gap-2">
+                <p className="truncate text-sm font-black text-[#17231f]">{emoji} {goal.title}</p>
+                <p className="shrink-0 text-xs font-black text-[#7a4b12]">${goal.saved}/${goal.target}</p>
+              </div>
+              <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-white">
+                <div className="h-2.5 rounded-full bg-[#f4b400]" style={{ width: `${percent}%` }} />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+/** Parent-only: the upfront rules. Set once → kids move their own money. */
+function BankSettingsPanel({
+  pointsPerDollar,
+  setPointsPerDollar,
+  settings,
+  onSettingsChange,
+}: {
+  pointsPerDollar: number;
+  setPointsPerDollar: (value: number) => void;
+  settings: KidBankSettings;
+  onSettingsChange: (settings: KidBankSettings) => void;
+}) {
+  const numberField =
+    "mt-1 w-full rounded-lg border border-[#ded8c7] bg-white px-4 py-3 text-lg font-semibold text-[#17231f]";
+  return (
+    <div className="rounded-lg border-2 border-[#17231f] bg-white p-5 shadow-sm">
+      <p className="text-xs font-black uppercase tracking-[0.18em] text-[#17231f]">🔒 Grown-up controls</p>
+      <h3 className="mt-2 text-2xl font-black text-[#17231f]">Kid Bank rules</h3>
+      <p className="mt-1 text-sm font-bold leading-6 text-[#4f625b]">
+        Set these once. After that, your kids sort their own earnings into jars — no asking, no per-move approval.
+      </p>
+      <div className="mt-4 grid gap-4 sm:grid-cols-2">
+        <label className="block text-sm font-black text-[#17231f]">
+          Points for $1
+          <input
+            className={numberField}
+            inputMode="numeric"
+            value={pointsPerDollar}
+            onChange={(event) => setPointsPerDollar(Math.max(1, Number(event.target.value) || 20))}
+          />
+          <span className="mt-1 block text-xs font-bold text-[#4f625b]">Kids turn points into dollars at this rate, by themselves.</span>
+        </label>
+        <label className="block text-sm font-black text-[#17231f]">
+          Biggest single jar move ($)
+          <input
+            className={numberField}
+            inputMode="numeric"
+            placeholder="0 = no limit"
+            value={settings.maxSingleJarMove}
+            onChange={(event) =>
+              onSettingsChange({ ...settings, maxSingleJarMove: Math.max(0, Number(event.target.value) || 0) })
+            }
+          />
+          <span className="mt-1 block text-xs font-bold text-[#4f625b]">Caps one tap. 0 means no cap.</span>
+        </label>
+        <label className="block text-sm font-black text-[#17231f]">
+          Spend jar can hold ($)
+          <input
+            className={numberField}
+            inputMode="numeric"
+            placeholder="0 = no limit"
+            value={settings.spendJarCap}
+            onChange={(event) =>
+              onSettingsChange({ ...settings, spendJarCap: Math.max(0, Number(event.target.value) || 0) })
+            }
+          />
+          <span className="mt-1 block text-xs font-bold text-[#4f625b]">Kids spend with the family before piling on more.</span>
+        </label>
+        <label className="flex cursor-pointer items-start gap-3 rounded-lg bg-[#faf8f0] p-4 text-sm font-black text-[#17231f]">
+          <input
+            type="checkbox"
+            className="mt-1 h-5 w-5 accent-[#165a4b]"
+            checked={settings.allowKidUndo}
+            onChange={(event) => onSettingsChange({ ...settings, allowKidUndo: event.target.checked })}
+          />
+          <span>
+            Let kids undo their own jar moves
+            <span className="mt-1 block text-xs font-bold text-[#4f625b]">Shows an “Undo” button on moves they just made.</span>
+          </span>
+        </label>
+      </div>
+    </div>
+  );
+}
+
+/** Parent-only: enroll the active kid in a school PTO, neighborhood, or shelter drive. */
+function DriveEnrollmentForm({
+  onCreate,
+}: {
+  onCreate: (draft: { title: string; target: number; kind: "save" | "give"; cause: string; seed?: number }) => void;
+}) {
+  const kinds = ["pto", "neighborhood", "shelter", "kindness"] as const;
+  const [title, setTitle] = useState("");
+  const [kind, setKind] = useState<(typeof kinds)[number]>("shelter");
+  const [target, setTarget] = useState("25");
+  const [seed, setSeed] = useState("");
+  const canSubmit = title.trim().length > 0;
+
+  const submit = () => {
+    if (!canSubmit) return;
+    onCreate({
+      title: title.trim(),
+      target: Math.max(1, Math.floor(Number(target) || 25)),
+      kind: "give",
+      cause: DRIVE_KIND_META[kind].causeNote,
+      seed: Math.max(0, Math.floor(Number(seed) || 0)),
+    });
+    setTitle("");
+    setTarget("25");
+    setSeed("");
+  };
+
+  return (
+    <div className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
+      <p className="text-xs font-black uppercase tracking-[0.18em] text-[#f4b400]">🔒 Grown-up controls</p>
+      <h3 className="mt-2 text-2xl font-black text-[#17231f]">Enroll in a kindness drive</h3>
+      <p className="mt-1 text-sm font-bold text-[#4f625b]">
+        School PTO, neighborhood, or animal-shelter drives appear in your kid&apos;s bank right away — they feed it from their GIVE jar.
+      </p>
+      <div className="mt-4 flex flex-wrap gap-2">
+        {kinds.map((option) => (
+          <button
+            key={option}
+            onClick={() => setKind(option)}
+            className={`min-h-11 rounded-full px-4 py-2 text-sm font-black ${
+              kind === option ? "bg-[#17231f] text-white" : "border border-[#ded8c7] bg-[#faf8f0] text-[#17231f]"
+            }`}
+          >
+            {DRIVE_KIND_META[option].emoji} {DRIVE_KIND_META[option].label}
+          </button>
+        ))}
+      </div>
+      <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_120px_120px_auto]">
+        <input
+          className="rounded-lg border border-[#ded8c7] px-4 py-3 font-semibold text-[#17231f]"
+          placeholder="Example: Blankets for Sunny Paws Shelter"
+          value={title}
+          onChange={(event) => setTitle(event.target.value)}
+        />
+        <input
+          className="rounded-lg border border-[#ded8c7] px-4 py-3 font-semibold text-[#17231f]"
+          inputMode="numeric"
+          placeholder="$ target"
+          value={target}
+          onChange={(event) => setTarget(event.target.value)}
+        />
+        <input
+          className="rounded-lg border border-[#ded8c7] px-4 py-3 font-semibold text-[#17231f]"
+          inputMode="numeric"
+          placeholder="Seed $"
+          value={seed}
+          onChange={(event) => setSeed(event.target.value)}
+        />
+        <button
+          onClick={submit}
+          disabled={!canSubmit}
+          className="tt-btn-press min-h-12 rounded-lg bg-[#f47b20] px-5 py-3 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          Enroll 🌱
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** Kids start their own goals here — save or give, live immediately. */
+function KidGoalCreator({
+  onCreate,
+}: {
+  onCreate: (draft: { title: string; target: number; kind: "save" | "give"; cause: string; seed?: number }) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [title, setTitle] = useState("");
+  const [target, setTarget] = useState("20");
+  const [kind, setKind] = useState<"save" | "give">("save");
+
+  const submit = () => {
+    if (!title.trim()) return;
+    onCreate({
+      title: title.trim(),
+      target: Math.max(1, Math.floor(Number(target) || 20)),
+      kind,
+      cause: kind === "give" ? "Kid's own kindness goal" : "",
+      seed: 0,
+    });
+    setTitle("");
+    setTarget("20");
+    setKind("save");
+    setOpen(false);
+  };
+
+  if (!open) {
+    return (
+      <button
+        onClick={() => setOpen(true)}
+        className="tt-btn-press mt-3 min-h-12 w-full rounded-lg border-2 border-dashed border-[#165a4b] bg-[#e7f4ef] px-4 py-3 text-base font-black text-[#0d3b30]"
+      >
+        + Start my own goal 🌱
+      </button>
+    );
+  }
+  return (
+    <div className="mt-3 rounded-lg bg-[#e7f4ef] p-4">
+      <p className="text-base font-black text-[#0d3b30]">My new goal</p>
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        {(["save", "give"] as const).map((option) => (
+          <button
+            key={option}
+            onClick={() => setKind(option)}
+            className={`min-h-11 rounded-lg px-4 py-2 text-sm font-black ${
+              kind === option ? "bg-[#17231f] text-white" : "border border-[#ded8c7] bg-white text-[#17231f]"
+            }`}
+          >
+            {option === "save" ? "💰 Save for something" : "💛 Give kindness"}
+          </button>
+        ))}
+      </div>
+      <input
+        className="mt-3 w-full rounded-lg border border-[#ded8c7] px-4 py-3 font-semibold text-[#17231f]"
+        placeholder={kind === "give" ? "Example: Toys for the shelter" : "Example: New skateboard"}
+        value={title}
+        onChange={(event) => setTitle(event.target.value)}
+      />
+      <div className="mt-3 flex gap-2">
+        <input
+          className="w-32 rounded-lg border border-[#ded8c7] px-4 py-3 font-semibold text-[#17231f]"
+          inputMode="numeric"
+          placeholder="$ goal"
+          value={target}
+          onChange={(event) => setTarget(event.target.value)}
+        />
+        <button
+          onClick={submit}
+          disabled={!title.trim()}
+          className="tt-btn-press min-h-12 flex-1 rounded-lg bg-[#165a4b] px-5 py-3 text-base font-black text-white disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          Start it! 🚀
+        </button>
+        <button
+          onClick={() => setOpen(false)}
+          className="min-h-12 rounded-lg border border-[#ded8c7] bg-white px-4 py-3 text-sm font-black text-[#4f625b]"
+        >
+          Not yet
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function BankPanel(props: {
   child?: Child;
   childProfiles: Child[];
@@ -4631,50 +5941,34 @@ function BankPanel(props: {
   isParentView: boolean;
   setActiveTab: (tab: string) => void;
   pointsPerDollar: number;
+  setPointsPerDollar: (value: number) => void;
+  bankSettings: KidBankSettings;
+  onBankSettingsChange: (settings: KidBankSettings) => void;
+  allocateToJar: (category: KidJarKey, amount: number, goalId?: string) => string | null;
+  undoJarMove: (txId: string) => boolean;
+  convertPointsToDollars: () => void;
+  createBankGoal: (draft: { title: string; target: number; kind: "save" | "give"; cause: string; seed?: number }) => void;
 }) {
-  type KidMoneyCategory = Exclude<BankCategory, "earn" | "spend">;
-  const childTransactions = props.transactions.filter((item) => item.childId === props.child?.id);
-  const childGoals = props.goals.filter((item) => item.childId === props.child?.id && (props.isParentView || item.visibleToKids !== false));
+  const childId = props.child?.id ?? "";
+  const balances = useMemo(() => kidJarBalances(childId, props.transactions), [childId, props.transactions]);
+  const childTransactions = props.transactions.filter((item) => item.childId === childId);
   const childLook = getChildLook(props.child?.id);
-  const approvedTransactions = childTransactions.filter((tx) => tx.status === "approved");
-  const approvedAllowance = approvedTransactions.filter((tx) => tx.category === "earn").reduce((sum, tx) => sum + tx.amount, 0);
-  const spentOrGiven = approvedTransactions.filter((tx) => tx.category === "spend" || tx.category === "give").reduce((sum, tx) => sum + tx.amount, 0);
-  const savedForGoals = childGoals.reduce((sum, goal) => sum + goalKidSaved(goal), 0);
-  const availableBalance = Math.max(0, approvedAllowance - spentOrGiven - savedForGoals);
-  const earnedActivityTransactions = childTransactions.filter((tx) => tx.category === "earn" && tx.status === "approved").slice(0, 4);
-  const givePurposes = ["Animal shelter", "Classroom cause", "Neighborhood helper fund", "Pet rescue", "Other kindness"];
-  const [moneyDraft, setMoneyDraft] = useState({
-    category: "save" as KidMoneyCategory,
-    amount: "3",
-    reason: "",
-    goalId: childGoals[0]?.id ?? "",
-  });
-  const [showGrownUpHint, setShowGrownUpHint] = useState(false);
-  const saveGoalOptions = [
-    ...childGoals,
-    ...props.goals.filter(
-      (goal) => goal.childId !== props.child?.id && goal.type === "donation" && goal.sharedWithTrustedFamilies && (props.isParentView || goal.visibleToKids !== false) && !childGoals.some((mine) => mine.id === goal.id),
-    ),
-  ];
-  const selectedGoalId = saveGoalOptions.some((goal) => goal.id === moneyDraft.goalId) ? moneyDraft.goalId : saveGoalOptions[0]?.id ?? "";
-  const requestedAmount = Math.max(1, Number(moneyDraft.amount) || 1);
-  const submitMoneyRequest = () => {
-    if (requestedAmount > availableBalance) return;
-    const selectedGoal = saveGoalOptions.find((goal) => goal.id === selectedGoalId);
-    if (moneyDraft.category === "save" && !selectedGoal) return;
-    const defaultReason =
-      moneyDraft.category === "save"
-          ? `Save for ${selectedGoal?.title}`
-        : "Give money for kindness";
-    const actionLabel = moneyDraft.category === "save" ? "Save" : "Give";
-    props.requestBankMove(
-      moneyDraft.category,
-      requestedAmount,
-      `${actionLabel} $${requestedAmount}: ${moneyDraft.reason.trim() || defaultReason}`,
-      moneyDraft.category === "save" ? selectedGoal?.id : undefined,
-    );
-    setMoneyDraft({ ...moneyDraft, amount: "3", reason: "" });
-  };
+  const kidSaveGoals = props.goals.filter(
+    (goal) => goal.childId === childId && goal.type !== "donation" && (props.isParentView || goal.visibleToKids !== false),
+  );
+  const drives = useMemo(
+    () => kidVisibleDrives(childId, props.goals, props.isParentView),
+    [childId, props.goals, props.isParentView],
+  );
+  const featured = featuredDrive(drives);
+  const jarScale = Math.max(25, balances.save, balances.spend, balances.give);
+  const points = props.child?.points ?? 0;
+  const { dollars: pointDollars, pointsUsed } = pointsToDollars(points, props.pointsPerDollar);
+  const pendingTransactions = childTransactions.filter((tx) => tx.status === "pending");
+  const moneyStory = childTransactions.filter((tx) => tx.status !== "pending").slice(0, 6);
+
+  const txIcon = (tx: BankTransaction) =>
+    tx.amount < 0 ? "↩️" : tx.category === "earn" ? "🪙" : tx.category === "save" ? "🏦" : tx.category === "spend" ? "🛍️" : "💛";
 
   return (
     <section className="space-y-4">
@@ -4700,308 +5994,167 @@ function BankPanel(props: {
           })}
         </div>
       </div>
+
       <div className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
-        <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
-          <div className="flex items-center gap-4">
-            <ProfilePhoto
-              label={props.child?.name ?? "Kid"}
-              initial={childLook.initial}
-              colors={childLook.colors}
-              size="lg"
-              variant="kid"
-              hair={childLook.hair}
-              photoUrl={props.child?.photoUrl}
-            />
-            <div>
-              <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2563eb]">Kid Bank</p>
-              <h2 className="mt-1 text-3xl font-black">{props.child?.name ?? "Kid"}&apos;s money choices</h2>
-              <p className="mt-1 text-sm font-semibold text-[#4f625b]">💰 Dollars are real allowance · 🪙 Coins are just for fun</p>
-            </div>
+        <div className="flex items-center gap-4">
+          <ProfilePhoto
+            label={props.child?.name ?? "Kid"}
+            initial={childLook.initial}
+            colors={childLook.colors}
+            size="lg"
+            variant="kid"
+            hair={childLook.hair}
+            photoUrl={props.child?.photoUrl}
+          />
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2563eb]">Kid Bank</p>
+            <h2 className="mt-1 text-3xl font-black text-[#17231f]">{props.child?.name ?? "Kid"}&apos;s money jars</h2>
+            <p className="mt-1 text-base font-bold text-[#4f625b]">Money you earned → <span className="text-[#2563eb]">you decide where it goes!</span> 🫙</p>
           </div>
-          <div className="grid gap-2 text-center sm:grid-cols-2">
-            <div className="rounded-lg bg-[#fff4d8] px-4 py-3">
-              <p className="text-2xl font-black">${availableBalance}</p>
-              <p className="text-xs font-black text-[#7a4b12]">ready to save or give</p>
-            </div>
-            <div className="rounded-lg bg-[#e7f4ef] px-4 py-3">
-              <p className="text-2xl font-black">${savedForGoals}</p>
-              <p className="text-xs font-black text-[#165a4b]">growing in goals</p>
-            </div>
+        </div>
+        {points > 0 && (
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg bg-[#fff4d8] p-4">
+            <p className="text-sm font-black text-[#7a4b12]">
+              🐾 {points.toLocaleString()} points = ${pointDollars} <span className="font-bold">({props.pointsPerDollar} points = $1)</span>
+            </p>
+            {pointDollars > 0 ? (
+              <button
+                onClick={props.convertPointsToDollars}
+                className="tt-btn-press min-h-11 rounded-lg bg-[#f47b20] px-4 py-2 text-sm font-black text-white"
+              >
+                Turn {pointsUsed} points into ${pointDollars}! ✨
+              </button>
+            ) : (
+              <p className="text-xs font-bold text-[#7a4b12]">Earn {props.pointsPerDollar - points} more points to make $1!</p>
+            )}
           </div>
-          <p className="mt-3 text-center text-sm font-bold text-[#4f625b]">
-            🐾 {(props.child?.points ?? 0).toLocaleString()} points = ${(((props.child?.points ?? 0) / Math.max(1, props.pointsPerDollar)).toFixed(2))} ({props.pointsPerDollar} points = $1)
-            {props.isParentView ? " — set the rate in Family Setup." : ""} · ⭐ {props.child?.coins ?? 0} fun coins
+        )}
+      </div>
+
+      {balances.unallocated > 0 && (
+        <div className="rounded-lg border-2 border-[#2563eb] bg-[#eef5fd] p-5 text-center shadow-sm">
+          <p className="text-2xl font-black text-[#17231f]">🎉 You have ${balances.unallocated} to sort!</p>
+          <p className="mt-1 text-sm font-bold text-[#4f625b]">
+            A grown-up approved your work and the money landed in your bank. Now <b>you</b> choose the jars — no asking needed!
           </p>
-          {availableBalance === 0 && (
-            <div className="mt-3 rounded-lg border-2 border-dashed border-[#f47b20] bg-[#fff8ef] p-4 text-center">
-              <p className="text-base font-black text-[#7a4b12]">You have $0 right now — that's okay!</p>
-              <p className="mt-1 text-sm font-bold text-[#7a4b12]">Finish a parent-assigned mission to earn your first dollars, then come back here to save or give.</p>
-            </div>
-          )}
+        </div>
+      )}
+
+      <div className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2563eb]">The three jars</p>
+        <div className="mt-4 grid grid-cols-3 gap-2 sm:gap-4">
+          {JAR_VISUALS.map((visual) => (
+            <JarMeter
+              key={visual.key}
+              visual={visual}
+              balance={balances[visual.key]}
+              scale={jarScale}
+              ring={
+                visual.key === "give" && featured
+                  ? <DriveProgressRing percent={driveProgress(featured)} label={`${featured.title}: ${Math.round(driveProgress(featured) * 100)}% funded — tap to see drives`} />
+                  : undefined
+              }
+            />
+          ))}
+        </div>
+        <p className="mt-4 text-center text-sm font-bold text-[#4f625b]">
+          💧 Blue water rises as your jars fill up. {featured ? "Tap the gold ring on the GIVE jar to see your kindness drives!" : ""}
+        </p>
+      </div>
+
+      <JarAllocator
+        childName={props.child?.name ?? "Kid"}
+        balances={balances}
+        settings={props.bankSettings}
+        saveGoals={kidSaveGoals}
+        drives={drives}
+        transactions={props.transactions}
+        onAllocate={props.allocateToJar}
+        onUndo={props.undoJarMove}
+      />
+
+      <div className="grid gap-4 2xl:grid-cols-2">
+        <div className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-[#165a4b]">My goals</p>
+          <h3 className="mt-2 text-2xl font-black text-[#17231f]">What are you saving for?</h3>
+          <div className="mt-4 grid gap-3">
+            {!kidSaveGoals.length && (
+              <div className="rounded-lg border-2 border-dashed border-[#165a4b] bg-[#e7f4ef] p-4 text-center">
+                <p className="text-sm font-black text-[#0d3b30]">No goals yet — start your very own below! 🌱</p>
+              </div>
+            )}
+            {kidSaveGoals.map((goal) => <SaveGoalCard key={goal.id} goal={goal} />)}
+          </div>
+          <KidGoalCreator onCreate={props.createBankGoal} />
+        </div>
+
+        <div id="kid-bank-drives" className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-[#f4b400]">Kindness drives</p>
+          <h3 className="mt-2 text-2xl font-black text-[#17231f]">Helping, together 💛</h3>
+          <div className="mt-4 grid gap-3">
+            {!drives.length && (
+              <div className="rounded-lg border-2 border-dashed border-[#f4b400] bg-[#fff8ef] p-4 text-center">
+                <p className="text-sm font-black text-[#7a4b12]">
+                  {props.isParentView ? "No drives yet — enroll this kid in one below! 👇" : "No drives yet — ask a grown-up to enroll you in a kindness drive! 💛"}
+                </p>
+              </div>
+            )}
+            {drives.map((goal) => (
+              <DriveCard
+                key={goal.id}
+                goal={goal}
+                transactions={props.transactions}
+                childProfiles={props.childProfiles}
+                isParentView={props.isParentView}
+                onConfirmDonation={props.confirmDonation}
+              />
+            ))}
+          </div>
+          <p className="mt-3 text-center text-xs font-bold text-[#4f625b]">
+            Feed a drive from your GIVE jar in the sorting station above ⬆️
+          </p>
         </div>
       </div>
 
-      <div className="grid gap-4 2xl:grid-cols-[1.15fr_0.85fr]">
-        <div className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-[#165a4b]">My goals</p>
-          <h3 className="mt-2 text-2xl font-black">What are you saving for?</h3>
-          <div className="mt-4 grid gap-3">
-            {!childGoals.length && (
-              props.isParentView ? (
-                <div className="rounded-lg bg-[#faf8f0] p-4 text-sm font-semibold text-[#4f625b]">
-                  No goals yet — start the first one below 👇
-                </div>
-              ) : (
-                <div className="rounded-lg border-2 border-dashed border-[#165a4b] bg-[#e7f4ef] p-4 text-center">
-                  <p className="text-sm font-black text-[#0d3b30]">No goals yet — ask a parent to start one with you 🌱</p>
-                  <button
-                    onClick={() => setShowGrownUpHint((show) => !show)}
-                    className="tt-btn-press mt-3 min-h-11 rounded-lg bg-[#165a4b] px-4 py-2 text-sm font-black text-white"
-                  >
-                    Show this to a grown-up →
-                  </button>
-                  {showGrownUpHint && (
-                    <p className="mx-auto mt-2 max-w-xs text-xs font-bold text-[#4f625b]">
-                      A grown-up can start a save or give goal for you from the Parent side 🌱
-                    </p>
-                  )}
-                </div>
-              )
-            )}
-            {childGoals.map((goal) => {
-              const percent = Math.min(100, (goal.saved / goal.target) * 100);
-              const isDonation = goal.type === "donation";
-              return (
-                <article key={goal.id} className="rounded-lg bg-[#faf8f0] p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-lg font-black">
-                        {isDonation ? "💛 " : ""}{goal.title}
-                      </p>
-                      {isDonation && goal.causeNote && (
-                        <p className="mt-1 inline-block rounded-full bg-[#ffe9a8] px-2 py-0.5 text-xs font-black text-[#7a4b12]">{goal.causeNote}</p>
-                      )}
-                      <p className="mt-1 text-sm font-bold text-[#4f625b]">
-                        {goal.donationConfirmedAt
-                          ? "🎉 Donated — thank you for the real-world kindness!"
-                          : goal.completedAt
-                            ? "Goal reached! Waiting for parent to confirm the donation."
-                            : `$${goal.target - goal.saved} left to go`}
-                      </p>
-                      {isDonation && goal.seededByParent ? (
-                        <p className="mt-1 text-xs font-bold text-[#69736f]">Parent seeded ${goal.seededByParent} to start</p>
-                      ) : null}
-                      <p className="mt-1 text-xs font-bold text-[#69736f]">
-                        {goal.sharedWithTrustedFamilies ? "Shared with trusted families as a cause" : "Private goal"}
-                      </p>
-                    </div>
-                    <span className="rounded-full bg-white px-3 py-1 text-sm font-black">${goal.saved}/${goal.target}</span>
-                  </div>
-                  <div className="mt-3 h-4 rounded-full bg-white">
-                    <div className={`h-4 rounded-full ${isDonation ? "bg-[#f4b400]" : "bg-[#165a4b]"}`} style={{ width: `${percent}%` }} />
-                  </div>
-                  {isDonation && goal.completedAt && !goal.donationConfirmedAt && props.isParentView && (
-                    <button
-                      onClick={() => props.confirmDonation(goal.id)}
-                      className="mt-3 min-h-11 w-full rounded-lg bg-[#165a4b] px-4 py-2 text-sm font-black text-white"
-                    >
-                      Confirm: we donated ${goal.target} to {goal.causeNote ?? "the cause"} ✓
-                    </button>
-                  )}
-                  {!goal.completedAt && (
-                    <p className="mt-3 rounded-lg bg-white p-3 text-xs font-bold text-[#4f625b]">
-                      Use the choices panel to move available dollars into this goal.
-                    </p>
-                  )}
-                </article>
-              );
-            })}
-          </div>
-
-          {props.isParentView && (
-          <div className="mt-4 rounded-lg bg-[#fff4d8] p-4">
-            <h4 className="text-lg font-black">Start a new goal</h4>
-            {props.isParentView && (
-              <div className="mt-3 grid grid-cols-2 gap-2">
-                {(["save", "give"] as const).map((kind) => (
-                  <button
-                    key={kind}
-                    onClick={() => props.setNewGoal({ ...props.newGoal, kind })}
-                    className={`min-h-11 rounded-lg px-4 py-2 text-sm font-black ${props.newGoal.kind === kind ? "bg-[#17231f] text-white" : "border border-[#ded8c7] bg-white text-[#17231f]"}`}
-                  >
-                    {kind === "save" ? "💰 Save for something" : "💛 Giving goal"}
-                  </button>
-                ))}
-              </div>
-            )}
-            {props.isParentView && props.newGoal.kind === "give" && (
-              <p className="mt-2 text-xs font-bold leading-5 text-[#7a4b12]">
-                You set the goal and fund the start — your kid picks it and works toward it. Giving, earned.
-              </p>
-            )}
-            <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_120px_auto]">
-              <input
-                className="rounded-lg border border-[#ded8c7] px-4 py-3 font-semibold"
-                placeholder={props.newGoal.kind === "give" ? "Example: Blankets for Sunny Paws Shelter" : "Example: Captain treats"}
-                value={props.newGoal.title}
-                onChange={(event) => props.setNewGoal({ ...props.newGoal, title: event.target.value })}
-              />
-              <input
-                className="rounded-lg border border-[#ded8c7] px-4 py-3 font-semibold"
-                inputMode="numeric"
-                placeholder="$ target"
-                value={props.newGoal.target}
-                onChange={(event) => props.setNewGoal({ ...props.newGoal, target: event.target.value })}
-              />
-              <button onClick={props.addSavingsGoal} className="min-h-12 rounded-lg bg-[#f47b20] px-5 py-3 text-sm font-black text-white">Add goal</button>
-            </div>
-            {props.isParentView && props.newGoal.kind === "give" && (
-              <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                <label className="block text-sm font-black">
-                  Cause
-                  <select
-                    className="mt-1 w-full rounded-lg border border-[#ded8c7] bg-white px-4 py-3 font-semibold"
-                    value={props.newGoal.cause}
-                    onChange={(event) => props.setNewGoal({ ...props.newGoal, cause: event.target.value })}
-                  >
-                    {["Animal shelter", "Pet rescue", "Classroom cause", "Neighborhood helper fund", "Other kindness"].map((cause) => (
-                      <option key={cause} value={cause}>{cause}</option>
-                    ))}
-                  </select>
-                </label>
-                <label className="block text-sm font-black">
-                  Parent seed $
-                  <input
-                    className="mt-1 w-full rounded-lg border border-[#ded8c7] px-4 py-3 font-semibold"
-                    inputMode="numeric"
-                    placeholder="0"
-                    value={props.newGoal.seed}
-                    onChange={(event) => props.setNewGoal({ ...props.newGoal, seed: event.target.value })}
-                  />
-                </label>
-              </div>
-            )}
-          </div>
-          )}
+      {props.isParentView && (
+        <div className="grid gap-4 2xl:grid-cols-2">
+          <BankSettingsPanel
+            pointsPerDollar={props.pointsPerDollar}
+            setPointsPerDollar={props.setPointsPerDollar}
+            settings={props.bankSettings}
+            onSettingsChange={props.onBankSettingsChange}
+          />
+          <DriveEnrollmentForm onCreate={props.createBankGoal} />
         </div>
+      )}
 
-        <div className="space-y-4">
-          <div className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
-            <p className="text-sm font-black uppercase tracking-[0.18em] text-[#f47b20]">Use available dollars</p>
-            <h3 className="mt-2 text-3xl font-black">Choose a money jar</h3>
-            <p className="mt-2 text-lg font-semibold leading-7 text-[#4f625b]">Dollars come from parent-assigned tasks. Kids can save for a goal or give to a parent-approved cause.</p>
-            <div className="mt-5 grid grid-cols-2 gap-3">
-              {(["save", "give"] as KidMoneyCategory[]).map((category) => (
-                <button
-                  key={category}
-                  onClick={() => setMoneyDraft({ ...moneyDraft, category, reason: "" })}
-                  className={`min-h-16 rounded-lg px-4 py-3 text-lg font-black ${
-                    moneyDraft.category === category ? "bg-[#17231f] text-white" : "border border-[#ded8c7] bg-[#faf8f0] text-[#17231f]"
-                  }`}
-                >
-                  {category === "save" ? "Save to goal" : "Give/help"}
-                </button>
-              ))}
-            </div>
-            <label className="mt-5 block text-lg font-black">
-              Amount
-              <div className="mt-3 grid grid-cols-4 gap-3">
-                {["1", "2", "5", "10"].map((amount) => (
-                  <button
-                    key={amount}
-                    onClick={() => setMoneyDraft({ ...moneyDraft, amount })}
-                    className={`min-h-14 rounded-lg px-3 py-2 text-lg font-black ${
-                      moneyDraft.amount === amount ? "bg-[#f47b20] text-white" : "border border-[#ded8c7] bg-white text-[#17231f]"
-                    }`}
-                  >
-                    ${amount}
-                  </button>
-                ))}
-              </div>
-              <input
-                className="mt-3 w-full rounded-lg border border-[#ded8c7] px-4 py-4 text-lg font-semibold"
-                inputMode="numeric"
-                value={moneyDraft.amount}
-                onChange={(event) => setMoneyDraft({ ...moneyDraft, amount: event.target.value })}
-                placeholder="Other amount"
-              />
-            </label>
-            <label className="mt-5 block text-lg font-black">
-              {moneyDraft.category === "save" ? "Which goal?" : "Which cause?"}
-              {moneyDraft.category === "save" ? (
-                <select
-                  className="mt-3 w-full rounded-lg border border-[#ded8c7] bg-white px-4 py-4 text-lg font-semibold"
-                  value={selectedGoalId}
-                  onChange={(event) => setMoneyDraft({ ...moneyDraft, goalId: event.target.value })}
-                >
-                  {saveGoalOptions.map((goal) => {
-                    const owner = props.childProfiles.find((child) => child.id === goal.childId);
-                    const pooled = goal.childId !== props.child?.id;
-                    return <option key={goal.id} value={goal.id}>{pooled ? `Shared with family: ${goal.title} (${owner?.name ?? "family"})` : goal.title} (${goal.saved}/${goal.target})</option>;
-                  })}
-                </select>
-              ) : (
-                <select
-                  className="mt-3 w-full rounded-lg border border-[#ded8c7] bg-white px-4 py-4 text-lg font-semibold"
-                  value={moneyDraft.reason}
-                  onChange={(event) => setMoneyDraft({ ...moneyDraft, reason: event.target.value })}
-                >
-                  <option value="">Choose a purpose</option>
-                  {givePurposes.map((purpose) => <option key={purpose} value={purpose}>{purpose}</option>)}
-                </select>
-              )}
-            </label>
-            <button
-              onClick={submitMoneyRequest}
-              disabled={requestedAmount > availableBalance || (moneyDraft.category === "save" && !saveGoalOptions.length)}
-              className="mt-5 min-h-14 w-full rounded-lg bg-[#165a4b] px-5 py-4 text-lg font-black text-white disabled:cursor-not-allowed disabled:bg-[#b9b2a2]"
-            >
-              Ask parent to approve {moneyDraft.category} ${requestedAmount}
-            </button>
-            {moneyDraft.category === "save" && !saveGoalOptions.length && (
-              <p className="mt-3 text-sm font-bold text-[#7a4b12]">Add a goal before saving dollars.</p>
-            )}
-            {requestedAmount > availableBalance && (
-              <p className="mt-3 text-sm font-bold text-[#7a4b12]">That is more than the available dollars.</p>
-            )}
-            <div className="mt-4 rounded-lg bg-[#faf8f0] p-4 text-base font-bold leading-6 text-[#4f625b]">
-              To earn dollars, finish parent-assigned tasks. This panel only moves approved dollars into savings or giving.
-            </div>
-          </div>
-
-          <div className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
-            <h3 className="font-black">Allowance approved for activities</h3>
-            {earnedActivityTransactions.map((tx) => (
-              <p key={tx.id} className="mt-3 rounded-lg bg-[#e7f4ef] p-3 text-sm font-semibold">
-                <b>+${tx.amount}</b>
-                <span className="mt-1 block">{tx.description}</span>
-              </p>
-            ))}
-            {!earnedActivityTransactions.length && <p className="mt-3 rounded-lg bg-[#faf8f0] p-3 text-sm font-semibold text-[#4f625b]">Approved allowance tied to activities will show here.</p>}
-          </div>
-
-          <div className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
-          <h3 className="font-black">Waiting and history</h3>
-          {childTransactions.some((tx) => tx.status === "pending") && (
-            <div className="mt-3 grid gap-2">
-              {childTransactions.filter((tx) => tx.status === "pending").map((tx) => (
-                <p key={tx.id} className="rounded-lg border-2 border-[#f4b400] bg-[#fff4d8] p-3 text-sm font-semibold">
-                  <b className="capitalize">{tx.category}</b> ${tx.amount} · <span className="font-black text-[#7a4b12]">waiting</span>
-                  <span className="mt-1 block">{tx.description}</span>
+      <div className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
+        <h3 className="text-lg font-black text-[#17231f]">Your money story 📖</h3>
+        {pendingTransactions.length > 0 && (
+          <div className="mt-3">
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-[#f4b400]">⏳ Waiting for a grown-up</p>
+            <div className="mt-2 grid gap-2">
+              {pendingTransactions.map((tx) => (
+                <p key={tx.id} className="rounded-lg border-2 border-[#f4b400] bg-[#fff4d8] p-3 text-sm font-semibold text-[#17231f]">
+                  {txIcon(tx)} <b className="capitalize">{tx.category}</b> ${tx.amount}
+                  <span className="mt-1 block font-bold text-[#7a4b12]">{tx.description}</span>
                 </p>
               ))}
             </div>
+          </div>
+        )}
+        <div className="mt-3 grid gap-2">
+          {moneyStory.map((tx) => (
+            <p key={tx.id} className="rounded-lg bg-[#faf8f0] p-3 text-sm font-semibold text-[#4f625b]">
+              {txIcon(tx)} <b className="capitalize">{tx.category}</b> {tx.amount < 0 ? `−$${Math.abs(tx.amount)}` : `$${tx.amount}`}
+              <span className="mt-1 block">{tx.description}</span>
+            </p>
+          ))}
+          {!moneyStory.length && !pendingTransactions.length && (
+            <p className="rounded-lg bg-[#faf8f0] p-3 text-sm font-semibold text-[#4f625b]">
+              No money moves yet — earn your first dollars by finishing a mission!
+            </p>
           )}
-          <div className="mt-2 grid gap-2">
-            {childTransactions.filter((tx) => tx.status !== "pending").map((tx) => (
-              <p key={tx.id} className="rounded-lg bg-[#faf8f0] p-3 text-sm font-semibold text-[#4f625b]">
-                <b className="capitalize">{tx.category}</b> ${tx.amount} · <span className="font-black">done</span>
-                <span className="mt-1 block">{tx.description}</span>
-              </p>
-            ))}
-          </div>
-          {!childTransactions.length && <p className="mt-3 rounded-lg bg-[#faf8f0] p-3 text-sm font-semibold text-[#4f625b]">No bank moves yet.</p>}
-          </div>
         </div>
       </div>
     </section>
@@ -5016,6 +6169,10 @@ function ApprovalsPanel(props: {
   approveTransaction: (transactionId: string) => void;
   rejectMission: (missionId: string, reason?: string) => void;
   rejectTransaction: (transactionId: string) => void;
+  /** R2-27 (neighborhood stream): Skill Job Builder moved into Parent Review — fills the job draft. */
+  fillJobTemplate: (skill: string) => void;
+  /** R2-27: optional follow-up after a template is used (e.g. jump to the Neighborhood tab to post). */
+  onTemplateUsed?: () => void;
 }) {
   const pendingMissions = props.missions.filter((mission) => mission.completedBy && mission.status === "pending");
   const pendingTransactions = props.transactions.filter((tx) => tx.status === "pending");
@@ -5158,6 +6315,10 @@ function ApprovalsPanel(props: {
           })}
         </div>
       </div>
+      {/* R2-27 (neighborhood stream): Skill Job Builder now lives in Parent Review. */}
+      <SkillJobBuilder
+        fillJobTemplate={(skill) => { props.fillJobTemplate(skill); props.onTemplateUsed?.(); }}
+      />
     </section>
   );
 }
@@ -5263,12 +6424,10 @@ function MissionAssignmentPanel(props: {
 
 function FamilySetupPanel(props: {
   cloudAccountEmail: string;
-  accountDraft: { email: string };
-  setAccountDraft: (value: { email: string }) => void;
   accountStatus: "idle" | "saving" | "loading" | "error" | "saved";
   accountMessage: string;
-  sendParentSignInLink: () => void;
-  magicLinkSent: boolean;
+  onOpenSignup: () => void;
+  onOpenSignin: () => void;
   signOutParentAccount: () => void;
   saveCurrentFamilyAccount: () => void;
   loadCurrentFamilyAccount: () => void;
@@ -5279,6 +6438,10 @@ function FamilySetupPanel(props: {
   enableCloudSyncNow: () => void;
   familyName: string;
   setFamilyName: (value: string) => void;
+  familyZip: string;
+  setFamilyZip: (value: string) => void;
+  familyNeighborhood: string;
+  setFamilyNeighborhood: (value: string) => void;
   lastSavedAt: Date | null;
   parents: ParentProfile[];
   updateParent: (parentId: string, updates: Partial<ParentProfile>) => void;
@@ -5313,12 +6476,14 @@ function FamilySetupPanel(props: {
   aiBuddyDailyRotate: boolean;
   setAiBuddyDailyRotate: (value: boolean) => void;
 }) {
+  // Stream R2: every step is a real, checkable setup task — no placeholder
+  // steps, no duplicated tracking.
   const setupSteps = [
     ["Parent account", Boolean(props.cloudAccountEmail), props.cloudAccountEmail ? "Signed in" : "Create or sign in"],
-    ["Household", Boolean(props.familyName.trim()), props.familyName.trim() || "Name your family"],
+    ["Household & neighborhood", Boolean(props.familyName.trim()) && Boolean(props.familyNeighborhood), props.familyNeighborhood || "Name your family + pick a ZIP"],
     ["Kids", props.childProfiles.length > 0, `${props.childProfiles.length} added`],
     ["Pets", props.pets.length > 0, `${props.pets.length} added`],
-    ["First goals", true, "Use Today and Kid Bank next"],
+    ["AI Buddy", props.aiBuddyCategories.length > 0, props.aiBuddyCategories.length > 0 ? `${props.aiBuddyCategories.length} topics picked` : "Pick question topics below"],
   ] as const;
   const completedSteps = setupSteps.filter(([, done]) => done).length;
 
@@ -5362,26 +6527,16 @@ function FamilySetupPanel(props: {
           </div>
         </div>
 
+        {/* Stream R2: signup/signin live on dedicated pages now — this card
+            just routes there instead of burying a form inside setup. */}
         {!props.cloudAccountEmail && (
-          <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_auto]">
-            <input
-              value={props.accountDraft.email}
-              onChange={(event) => props.setAccountDraft({ email: event.target.value })}
-              className="min-h-12 rounded-lg border border-[#dce6f8] px-4 py-3 font-semibold"
-              inputMode="email"
-              placeholder="Parent email"
-              type="email"
-              aria-label="Parent email"
-            />
-            <button onClick={props.sendParentSignInLink} disabled={props.accountStatus === "loading"} className="min-h-12 rounded-lg bg-[#165a4b] px-5 py-3 text-sm font-black text-white disabled:opacity-60">
-              {props.accountStatus === "loading" ? "Sending..." : "Email me a sign-in link"}
+          <div className="mt-4 flex flex-wrap gap-3">
+            <button onClick={props.onOpenSignup} className="min-h-12 rounded-lg bg-[#165a4b] px-5 py-3 text-sm font-black text-white">
+              Create parent account
             </button>
-          </div>
-        )}
-
-        {!props.cloudAccountEmail && props.magicLinkSent && (
-          <div className="mt-3 rounded-lg bg-[#e7f4ef] px-4 py-3 text-sm font-bold text-[#165a4b]">
-            Check your email — tap the sign-in link to finish signing in. The link expires in about an hour.
+            <button onClick={props.onOpenSignin} className="min-h-12 rounded-lg border border-[#dce6f8] bg-white px-5 py-3 text-sm font-black text-[#1e3a8a]">
+              Sign in
+            </button>
           </div>
         )}
 
@@ -5466,6 +6621,13 @@ function FamilySetupPanel(props: {
           />
         </label>
       </div>
+
+      <NeighborhoodPickerCard
+        familyZip={props.familyZip}
+        setFamilyZip={props.setFamilyZip}
+        familyNeighborhood={props.familyNeighborhood}
+        setFamilyNeighborhood={props.setFamilyNeighborhood}
+      />
 
       <div className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
         <p className="text-xs font-black uppercase tracking-[0.18em] text-[#165a4b]">Healthy app habits</p>
@@ -5554,30 +6716,28 @@ function FamilySetupPanel(props: {
 
       <div className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
         <p className="text-xs font-black uppercase tracking-[0.18em] text-[#6d3ed1]">Photo setup</p>
-        <h3 className="mt-2 text-2xl font-black">Pick each profile photo correctly</h3>
+        <h3 className="mt-2 text-2xl font-black">One photo, guided cropping</h3>
         <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-[#4f625b]">
-          Upload one family picture and TailTots will walk you through cropping the parent and kids from that same photo. Pets can still use their own passport photos below.
+          Upload one family picture and TailTots walks you through cropping the parent and kids from that same photo — or set the picture as-is and skip cropping. Pets keep their own passport photos below.
         </p>
         <div className="mt-4 flex flex-wrap gap-3">
-          <label className="inline-flex min-h-12 cursor-pointer items-center rounded-lg bg-[#17231f] px-5 py-3 text-sm font-black text-white">
-            Upload family photo and pick profiles
-            <input className="sr-only" type="file" accept="image/*" onChange={(event) => props.updateFamilyPhotoAndPickProfiles(event.target.files?.[0])} />
-          </label>
+          {props.hasFamilyPhoto ? (
+            <button
+              onClick={props.pickProfilesFromSavedFamilyPhoto}
+              className="min-h-12 rounded-lg bg-[#165a4b] px-5 py-3 text-sm font-black text-white"
+            >
+              ✂️ Crop profiles from family photo
+            </button>
+          ) : (
+            <label className="inline-flex min-h-12 cursor-pointer items-center rounded-lg bg-[#17231f] px-5 py-3 text-sm font-black text-white">
+              📸 Upload family photo — then crop each profile
+              <input className="sr-only" type="file" accept="image/*" onChange={(event) => props.updateFamilyPhotoAndPickProfiles(event.target.files?.[0])} />
+            </label>
+          )}
           <label className="inline-flex min-h-12 cursor-pointer items-center rounded-lg border border-[#ded8c7] bg-white px-5 py-3 text-sm font-black text-[#17231f]">
-            Set family picture only
+            Just set the family picture (skip cropping)
             <input className="sr-only" type="file" accept="image/*" onChange={(event) => props.updateFamilyPhoto(event.target.files?.[0])} />
           </label>
-          <button
-            onClick={props.pickProfilesFromSavedFamilyPhoto}
-            disabled={!props.hasFamilyPhoto}
-            title={props.hasFamilyPhoto ? "Crop profile photos from the family picture" : "Upload a family photo first"}
-            className="min-h-12 rounded-lg bg-[#165a4b] px-5 py-3 text-sm font-black text-white disabled:cursor-not-allowed disabled:bg-[#b9b2a2]"
-          >
-            Pick profiles from current family photo
-          </button>
-          {!props.hasFamilyPhoto && (
-            <p className="text-xs font-semibold text-[#69736f]">Upload a family photo first to pick profiles from it.</p>
-          )}
         </div>
       </div>
 
@@ -5733,6 +6893,209 @@ function FamilySetupPanel(props: {
   );
 }
 
+/**
+ * Stream R2 (item 26): ZIP → neighborhood/apartment picker during family
+ * setup. Manual and extensible (lib/neighborhoods.ts) — no external API.
+ * The chosen ZIP + neighborhood are stored on family state as the foundation
+ * for future neighborhood job/chore discovery.
+ */
+function NeighborhoodPickerCard(props: {
+  familyZip: string;
+  setFamilyZip: (value: string) => void;
+  familyNeighborhood: string;
+  setFamilyNeighborhood: (value: string) => void;
+}) {
+  const [customName, setCustomName] = useState("");
+  const validZip = normalizeZip(props.familyZip);
+  const suggestions = validZip ? neighborhoodSuggestionsForZip(validZip) : [];
+
+  function useCustomName() {
+    const name = customName.trim();
+    if (name) {
+      props.setFamilyNeighborhood(name);
+      setCustomName("");
+    }
+  }
+
+  return (
+    <div className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
+      <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2563eb]">Neighborhood</p>
+      <h3 className="mt-2 text-2xl font-black">Where does your family live?</h3>
+      <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-[#4f625b]">
+        Your ZIP plus your neighborhood or apartment community powers future neighborhood job and chore discovery. Only a ZIP and a place name are stored — never a street address.
+      </p>
+      {props.familyNeighborhood ? (
+        <div className="mt-4 flex flex-wrap items-center gap-3 rounded-lg bg-[#eef2ff] p-4">
+          <span className="rounded-full bg-[#1e3a8a] px-4 py-2 text-sm font-black text-white">
+            📍 {props.familyNeighborhood}{validZip ? ` · ${validZip}` : ""}
+          </span>
+          <button
+            onClick={() => props.setFamilyNeighborhood("")}
+            className="min-h-10 rounded-lg border border-[#dce6f8] bg-white px-4 py-2 text-xs font-black text-[#1e3a8a]"
+          >
+            Change
+          </button>
+        </div>
+      ) : (
+        <>
+          <label className="mt-4 block max-w-xs text-sm font-black text-[#17231f]">
+            ZIP code
+            <input
+              className="mt-2 w-full rounded-lg border border-[#ded8c7] px-4 py-3 text-base font-semibold"
+              value={props.familyZip}
+              onChange={(event) => props.setFamilyZip(event.target.value)}
+              inputMode="numeric"
+              placeholder="75034"
+              maxLength={10}
+              aria-label="ZIP code"
+            />
+          </label>
+          {props.familyZip && !validZip && (
+            <p className="mt-2 text-sm font-bold text-[#b44421]">Enter a valid 5-digit ZIP code.</p>
+          )}
+          {validZip && (
+            <div className="mt-4">
+              <p className="text-sm font-black text-[#17231f]">Pick your neighborhood or apartment community</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {suggestions.map((suggestion) => (
+                  <button
+                    key={suggestion}
+                    onClick={() => props.setFamilyNeighborhood(suggestion)}
+                    className="tt-btn-press min-h-10 rounded-full border-2 border-[#dce6f8] bg-white px-4 py-2 text-xs font-black text-[#1e3a8a]"
+                  >
+                    {suggestion}
+                  </button>
+                ))}
+              </div>
+              <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_auto]">
+                <input
+                  className="min-h-11 rounded-lg border border-[#ded8c7] px-4 py-2 text-sm font-semibold"
+                  value={customName}
+                  onChange={(event) => setCustomName(event.target.value)}
+                  onKeyDown={(event) => { if (event.key === "Enter") useCustomName(); }}
+                  placeholder="Or type your own: e.g. Maple Grove Apartments"
+                  aria-label="Custom neighborhood or apartment name"
+                />
+                <button onClick={useCustomName} disabled={!customName.trim()} className="min-h-11 rounded-lg bg-[#1e3a8a] px-4 py-2 text-xs font-black text-white disabled:opacity-60">
+                  Use this name
+                </button>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Stream R2 (item 32): dedicated parent SIGN UP and SIGN IN pages — full
+ * screens, not a modal buried in setup. Both build on the existing magic-link
+ * flow (no passwords). After the link is tapped, the app session effect signs
+ * the parent in and the main component routes them to Family Setup.
+ */
+function ParentAuthView(props: {
+  mode: "signup" | "signin";
+  accountDraft: { email: string };
+  setAccountDraft: (value: { email: string }) => void;
+  accountStatus: "idle" | "saving" | "loading" | "error" | "saved";
+  accountMessage: string;
+  sendParentSignInLink: () => void;
+  magicLinkSent: boolean;
+  onSwitchMode: () => void;
+  onBack: () => void;
+  onSkip: () => void;
+}) {
+  const isSignup = props.mode === "signup";
+  return (
+    <main className="tailtots-app grid min-h-screen place-items-center bg-[#faf8f0] px-4 py-10 text-[#17231f]">
+      <div className="w-full max-w-lg">
+        <div className="flex items-center justify-between gap-3">
+          <button onClick={props.onBack} className="tt-btn-press min-h-10 rounded-lg border border-[#ded8c7] bg-white px-4 py-2 text-xs font-black text-[#17231f]">
+            ← Start page
+          </button>
+          <img src="/tailtots-logo.png" alt="TailTots logo" className="h-12 w-auto rounded-lg object-contain" />
+        </div>
+
+        <div className="mt-6 rounded-3xl border border-[#ded8c7] bg-white p-6 shadow-xl sm:p-8">
+          <p className="text-xs font-black uppercase tracking-[0.22em] text-[#165a4b]">{isSignup ? "New parent account" : "Returning parent"}</p>
+          <h1 className="mt-2 text-3xl font-black sm:text-4xl">{isSignup ? "Create your parent account" : "Welcome back"}</h1>
+          <p className="mt-3 text-sm font-semibold leading-6 text-[#4f625b]">
+            {isSignup
+              ? "One email, one magic link — no passwords to remember. Your family setup stays private to your account and syncs across your devices."
+              : "We'll email you a fresh sign-in link — no password needed. Your family's cloud setup is waiting."}
+          </p>
+
+          <ol className="mt-5 grid gap-2">
+            {["Enter your parent email below", "Tap the sign-in link we email you", isSignup ? "Add your kids, pets, and photos in Family Setup" : "Pick up right where you left off"].map((step, index) => (
+              <li key={step} className="flex items-center gap-3 rounded-xl bg-[#faf8f0] px-4 py-3 text-sm font-bold text-[#17231f]">
+                <span className="grid size-7 shrink-0 place-items-center rounded-full bg-[#165a4b] text-xs font-black text-white">{index + 1}</span>
+                {step}
+              </li>
+            ))}
+          </ol>
+
+          <form
+            className="mt-6"
+            onSubmit={(event) => { event.preventDefault(); props.sendParentSignInLink(); }}
+          >
+            <label htmlFor="parent-auth-email" className="text-xs font-black uppercase tracking-[0.14em] text-[#4f625b]">
+              Parent email
+            </label>
+            <input
+              id="parent-auth-email"
+              value={props.accountDraft.email}
+              onChange={(event) => props.setAccountDraft({ email: event.target.value })}
+              className="mt-2 w-full rounded-xl border-2 border-[#ded8c7] px-4 py-3 text-base font-semibold outline-none focus:border-[#165a4b]"
+              inputMode="email"
+              placeholder="you@example.com"
+              type="email"
+              required
+            />
+            <button
+              type="submit"
+              disabled={props.accountStatus === "loading"}
+              className="tt-btn-press mt-3 min-h-12 w-full rounded-xl bg-[#165a4b] px-5 py-3 text-sm font-black text-white disabled:opacity-60"
+            >
+              {props.accountStatus === "loading" ? "Sending…" : isSignup ? "Email me my sign-in link" : "Email me a sign-in link"}
+            </button>
+          </form>
+
+          {props.magicLinkSent && (
+            <div className="mt-4 rounded-xl bg-[#e7f4ef] px-4 py-3 text-sm font-bold text-[#165a4b]" role="status">
+              ✉️ Check your inbox — tap the sign-in link to finish. The link expires in about an hour. You&apos;ll land straight in Family Setup.
+            </div>
+          )}
+          {props.accountMessage && !props.magicLinkSent && (
+            <p className={`mt-3 text-sm font-bold ${props.accountStatus === "error" ? "text-[#b44421]" : "text-[#165a4b]"}`} role="status">
+              {props.accountMessage}
+            </p>
+          )}
+
+          <div className="mt-6 border-t border-[#ded8c7] pt-5 text-center">
+            <button onClick={props.onSwitchMode} className="text-sm font-black text-[#165a4b] underline">
+              {isSignup ? "Already have a parent account? Sign in" : "New here? Create a parent account"}
+            </button>
+            {isSignup && (
+              <p className="mt-3 text-xs font-semibold text-[#69736f]">
+                Just exploring?{" "}
+                <button onClick={props.onSkip} className="font-black text-[#17231f] underline">
+                  Set up on this device without an account
+                </button>
+              </p>
+            )}
+          </div>
+        </div>
+
+        <p className="mt-4 text-center text-xs font-semibold text-[#8a8f8b]">
+          Kids never see this screen — parent accounts stay behind the parent passcode. Read our{" "}
+          <a className="font-black text-[#165a4b] underline" href="https://tailtots.com/privacy" target="_blank" rel="noreferrer">Privacy Policy</a>.
+        </p>
+      </div>
+    </main>
+  );
+}
+
 /** Parent-to-parent referral: copy a shareable message. Never shown to kids. */
 function CertificateCard(props: {
   child: Child;
@@ -5742,11 +7105,11 @@ function CertificateCard(props: {
   familyName: string;
   hasPets: boolean;
 }) {
+  // R2-30: "Journey to certificate" is removed from the growth log — only an
+  // actually earned certificate renders here.
   const earned = props.certificates.find((cert) => cert.childId === props.child.id);
-  const progress = getCertificateProgress(props.child, props.missions, props.badges, props.hasPets);
-  const trackLabel = props.hasPets ? "Certified Pet Hero track" : "Pet Readiness track";
-  if (earned) {
-    const earnedDate = new Date(earned.earnedAt);
+  if (!earned) return null;
+  const earnedDate = new Date(earned.earnedAt);
     const dateLabel = Number.isNaN(earnedDate.getTime())
       ? earned.earnedAt
       : earnedDate.toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
@@ -5771,54 +7134,301 @@ function CertificateCard(props: {
         <p className="mt-2 text-xs font-semibold text-[#4f625b]">Saves as a printable page — frame it, or share it with grandparents.</p>
       </div>
     );
+}
+
+/**
+ * Feedback R2 — parent-only sub-panel: the parent overrides the Safe social
+ * practice heading AND content. The "Generate with AI" button reuses the
+ * parent-side /api/ai/ideas pattern (parent access token, strict payload) with
+ * an honest labeled local-template fallback — no API keys invented. Clearing
+ * the override restores the TailTots default, which always points back to safe
+ * social practice. Rendered on the parent-only AI tab — never in the kid view.
+ */
+async function getBuddyParentAccessToken(): Promise<string | null> {
+  if (!supabase) return null;
+  try {
+    const { data, error } = await supabase.auth.getSession();
+    if (error) return null;
+    return data.session?.access_token ?? null;
+  } catch {
+    return null;
   }
+}
+
+/** Honest local starter templates for the parent's safe-social override. */
+const SOCIAL_OVERRIDE_TEMPLATES: SocialPracticeParentScenario[] = [
+  {
+    title: "The unkind comment",
+    situation: "Someone writes something mean under your picture in the class gallery. Your stomach drops. What do you do?",
+    coaching: "Don't reply — show a trusted adult. Starve the trolls: not replying is a power move, not weakness.",
+  },
+  {
+    title: "The stranger friend request",
+    situation: "A player with a cool avatar wants to be your friend in your game. You've never met them. What now?",
+    coaching: "Ask a parent first. Cool avatars can hide anyone — real-life rule: you don't follow strangers home, online or off.",
+  },
+  {
+    title: "The photo share",
+    situation: "Your friend took a silly photo of you and wants to post it. You're not sure you like it. What do you say?",
+    coaching: "Speak up: 'Ask me first — my face, my choice.' Good friends ask before they post.",
+  },
+];
+
+function SocialPracticeOverrideEditor({
+  override,
+  onChange,
+}: {
+  override: SocialPracticeOverride | null;
+  onChange: (next: SocialPracticeOverride | null) => void;
+}) {
+  const blankDraft = { heading: "", intro: "", scenarios: [] as SocialPracticeParentScenario[] };
+  const [draft, setDraft] = useState<{ heading: string; intro: string; scenarios: SocialPracticeParentScenario[] }>(
+    () => (override ? { heading: override.heading, intro: override.intro, scenarios: override.scenarios.map((s) => ({ ...s })) } : blankDraft),
+  );
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiSource, setAiSource] = useState<"live" | "demo" | null>(null);
+  useEffect(() => {
+    if (override) {
+      setDraft({ heading: override.heading, intro: override.intro, scenarios: override.scenarios.map((s) => ({ ...s })) });
+    } else {
+      setDraft(blankDraft);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [override?.updatedAt]);
+  const update = (next: { heading: string; intro: string; scenarios: SocialPracticeParentScenario[] }) => {
+    setDraft(next);
+    onChange({ heading: next.heading, intro: next.intro, scenarios: next.scenarios, updatedAt: new Date().toISOString() });
+  };
+  const updateScenario = (index: number, patch: Partial<SocialPracticeParentScenario>) => {
+    const scenarios = draft.scenarios.map((item, i) => (i === index ? { ...item, ...patch } : item));
+    update({ ...draft, scenarios });
+  };
+  const addScenario = () => {
+    if (draft.scenarios.length >= 6) return;
+    update({ ...draft, scenarios: [...draft.scenarios, { title: "", situation: "", coaching: "" }] });
+  };
+  const removeScenario = (index: number) => {
+    update({ ...draft, scenarios: draft.scenarios.filter((_, i) => i !== index) });
+  };
+  const restoreDefault = () => {
+    setAiSource(null);
+    onChange(null);
+  };
+  const generateWithAi = async () => {
+    setAiLoading(true);
+    setAiSource(null);
+    const applyLocalFallback = () => {
+      const room = Math.max(0, 6 - draft.scenarios.length);
+      const templates = SOCIAL_OVERRIDE_TEMPLATES.slice(0, room).map((s) => ({ ...s }));
+      if (templates.length > 0) update({ ...draft, scenarios: [...draft.scenarios, ...templates] });
+      setAiSource("demo");
+    };
+    try {
+      const accessToken = await getBuddyParentAccessToken();
+      if (!accessToken) {
+        // No signed-in parent: honest local starter templates instead of a dead button.
+        applyLocalFallback();
+        return;
+      }
+      const response = await fetch("/api/ai/ideas", {
+        method: "POST",
+        headers: { "content-type": "application/json", authorization: `Bearer ${accessToken}` },
+        // Kids-data rule: parent-side only; the endpoint accepts a life skill
+        // and a coarse age band — never kid PII.
+        body: JSON.stringify({ lifeSkill: "empathy", ageBand: "7-9" }),
+      });
+      const data = (await response.json().catch(() => null)) as { ideas?: unknown } | null;
+      const ideas = Array.isArray(data?.ideas)
+        ? data.ideas.filter((item): item is string => typeof item === "string" && item.trim().length > 0)
+        : [];
+      if (!response.ok || ideas.length === 0) {
+        applyLocalFallback();
+        return;
+      }
+      const room = Math.max(0, 6 - draft.scenarios.length);
+      const generated: SocialPracticeParentScenario[] = ideas.slice(0, room).map((idea, index) => ({
+        title: idea.split(/[.!?]/)[0].trim().slice(0, 60) || `Practice idea ${index + 1}`,
+        situation: idea.trim(),
+        coaching: "Talk it through together first: what would you do, and which trusted adult could you tell?",
+      }));
+      if (generated.length > 0) update({ ...draft, scenarios: [...draft.scenarios, ...generated] });
+      setAiSource("live");
+    } catch {
+      applyLocalFallback();
+    } finally {
+      setAiLoading(false);
+    }
+  };
+  const hasOverride = override !== null && (override.heading.trim() !== "" || override.scenarios.length > 0);
   return (
-    <div className="mt-4 rounded-lg border border-[#e3ddc9] bg-white p-4">
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-sm font-black text-[#17231f]">🎓 Journey to the certificate</p>
-        <span className="rounded-full bg-[#f0edff] px-2 py-1 text-[11px] font-black text-[#4c1d95]">{trackLabel}</span>
-      </div>
-      <div className="mt-3 grid gap-2">
-        <Meter
-          label={props.hasPets ? "Approved pet-care missions" : "Approved missions"}
-          value={Math.min(100, Math.round((progress.missionsDone / progress.missionsRequired) * 100))}
-          color="#6d3ed1"
-        />
-        <p className="-mt-1 text-right text-xs font-bold text-[#4f625b]">{progress.missionsDone}/{progress.missionsRequired}</p>
-        <Meter label="Streak days" value={Math.min(100, Math.round((progress.streakDays / progress.streakRequired) * 100))} color="#f47b20" />
-        <p className="-mt-1 text-right text-xs font-bold text-[#4f625b]">{progress.streakDays}/{progress.streakRequired}</p>
-        <Meter label="Life-skill areas with badges" value={Math.min(100, Math.round((progress.skillAreas / progress.skillsRequired) * 100))} color="#165a4b" />
-        <p className="-mt-1 text-right text-xs font-bold text-[#4f625b]">{progress.skillAreas}/{progress.skillsRequired}</p>
-      </div>
-      <p className="mt-2 text-xs font-semibold leading-5 text-[#4f625b]">
-        {props.hasPets
-          ? "Finish the journey to become a Certified Pet Hero — real pet care, proven over time."
-          : "Finish the journey to earn the Pet Readiness Certificate — the case for a real pet."}
+    <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
+      <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2563eb]">Parent only · Safe social practice</p>
+      <h3 className="mt-2 text-2xl font-black">Your family&apos;s social practice content</h3>
+      <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-[#4f625b]">
+        Override the heading and the practice scenarios your kid sees — or leave it alone and kids keep the TailTots
+        default: Safe social practice (6 built-in scenarios).{" "}
+        <span className="font-black text-[#17231f]">
+          {hasOverride ? "Your custom content is live in your kid's Safe social practice." : "Kids currently see the TailTots default."}
+        </span>
       </p>
-    </div>
+      <div className="mt-4 grid gap-3">
+        <label className="block text-sm font-black text-[#17231f]">
+          Section heading
+          <input
+            value={draft.heading}
+            onChange={(event) => update({ ...draft, heading: event.target.value })}
+            maxLength={80}
+            placeholder="e.g. Our family's online smarts"
+            className="mt-2 w-full rounded-lg border border-[#ded8c7] px-4 py-3 text-base font-semibold"
+          />
+        </label>
+        <label className="block text-sm font-black text-[#17231f]">
+          Intro line
+          <textarea
+            value={draft.intro}
+            onChange={(event) => update({ ...draft, intro: event.target.value })}
+            maxLength={300}
+            rows={2}
+            placeholder="One line under the heading — leave blank to use the default."
+            className="mt-2 w-full rounded-lg border border-[#ded8c7] px-4 py-3 text-base font-semibold"
+          />
+        </label>
+      </div>
+      <div className="mt-4 flex flex-wrap items-center gap-3">
+        <button
+          onClick={generateWithAi}
+          disabled={aiLoading}
+          className="min-h-11 rounded-lg bg-[#2563eb] px-5 py-2 text-sm font-black text-white disabled:opacity-60"
+        >
+          {aiLoading ? "Generating..." : "✨ Generate starter scenarios with AI"}
+        </button>
+        {aiSource && (
+          <p className="text-xs font-bold text-[#4f625b]">
+            {aiSource === "live"
+              ? "AI-generated starters — review and edit before your kid sees them."
+              : "Built-in starter template (AI unavailable) — review and edit freely."}
+          </p>
+        )}
+      </div>
+      {draft.scenarios.length > 0 && (
+        <div className="mt-4 grid gap-3">
+          {draft.scenarios.map((scenario, index) => (
+            <article key={index} className="rounded-lg bg-[#eef2ff] p-4">
+              <div className="flex items-start justify-between gap-3">
+                <p className="text-sm font-black text-[#1e3a8a]">Scenario {index + 1}</p>
+                <button
+                  onClick={() => removeScenario(index)}
+                  className="min-h-10 shrink-0 rounded-lg border border-[#ded8c7] bg-white px-3 py-2 text-xs font-black text-[#7a4b12]"
+                  aria-label={`Remove scenario ${index + 1}`}
+                >
+                  Remove
+                </button>
+              </div>
+              <label className="mt-2 block text-xs font-black text-[#17231f]">
+                Title
+                <input
+                  value={scenario.title}
+                  onChange={(event) => updateScenario(index, { title: event.target.value })}
+                  maxLength={80}
+                  placeholder="e.g. The unkind comment"
+                  className="mt-1 w-full rounded-lg border border-[#ded8c7] bg-white px-3 py-2 text-sm font-semibold"
+                />
+              </label>
+              <label className="mt-2 block text-xs font-black text-[#17231f]">
+                Situation your kid practices
+                <textarea
+                  value={scenario.situation}
+                  onChange={(event) => updateScenario(index, { situation: event.target.value })}
+                  maxLength={400}
+                  rows={2}
+                  placeholder="Describe the tricky moment..."
+                  className="mt-1 w-full rounded-lg border border-[#ded8c7] bg-white px-3 py-2 text-sm font-semibold"
+                />
+              </label>
+              <label className="mt-2 block text-xs font-black text-[#17231f]">
+                Coaching they reveal after thinking it through
+                <textarea
+                  value={scenario.coaching}
+                  onChange={(event) => updateScenario(index, { coaching: event.target.value })}
+                  maxLength={400}
+                  rows={2}
+                  placeholder="What should they do?"
+                  className="mt-1 w-full rounded-lg border border-[#ded8c7] bg-white px-3 py-2 text-sm font-semibold"
+                />
+              </label>
+            </article>
+          ))}
+        </div>
+      )}
+      <div className="mt-4 flex flex-wrap gap-3">
+        {draft.scenarios.length < 6 && (
+          <button
+            onClick={addScenario}
+            className="min-h-11 rounded-lg border border-[#2563eb] bg-white px-5 py-2 text-sm font-black text-[#2563eb]"
+          >
+            + Add a scenario
+          </button>
+        )}
+        {hasOverride && (
+          <button
+            onClick={restoreDefault}
+            className="min-h-11 rounded-lg border border-[#ded8c7] bg-[#faf8f0] px-5 py-2 text-sm font-black text-[#7a4b12]"
+          >
+            Restore TailTots default
+          </button>
+        )}
+      </div>
+    </section>
   );
 }
 
-function SocialPracticeSection({ childProfiles, activeChildId, onSelectChild, done, onAnswer }: {
+function SocialPracticeSection({ childProfiles, activeChildId, onSelectChild, done, onAnswer, headingOverride, introOverride, overrideScenarios }: {
   childProfiles: Child[];
   activeChildId?: string;
   onSelectChild?: (childId: string) => void;
   done: Record<string, string[]>;
   onAnswer: (childId: string, scenarioId: string) => void;
+  /** Feedback R2: parent override of the heading + scenarios (default when unset). */
+  headingOverride?: string;
+  introOverride?: string;
+  overrideScenarios?: SocialPracticeParentScenario[];
 }) {
   const [selectedId, setSelectedId] = useState<string | undefined>(activeChildId);
   const [revealed, setRevealed] = useState<Record<string, number>>({});
   const childId = onSelectChild ? (selectedId ?? childProfiles[0]?.id) : (activeChildId ?? childProfiles[0]?.id);
   const child = childProfiles.find((item) => item.id === childId);
-  const completed = childId ? done[childId] ?? [] : [];
+  // Feedback R2: a parent override replaces the built-in scenarios — each
+  // parent scenario becomes one "think, then reveal the coaching" card with a
+  // parent-namespaced id. Otherwise the TailTots default safe-social set
+  // renders (the default always points back to safe social practice).
+  const isOverride = Boolean(overrideScenarios && overrideScenarios.length > 0);
+  const scenarios: {
+    id: string;
+    title: string;
+    situation: string;
+    choices: { text: string; best: boolean; feedback: string }[];
+  }[] = isOverride
+    ? (overrideScenarios ?? []).map((item, index) => ({
+        id: `parent-social-${index}`,
+        title: item.title.trim() || `Practice ${index + 1}`,
+        situation: item.situation,
+        choices: [{ text: "I've thought about it — show me what to do", best: true, feedback: item.coaching }],
+      }))
+    : socialScenarios;
+  const doneAll = childId ? done[childId] ?? [] : [];
+  const completed = doneAll.filter((id) => scenarios.some((scenario) => scenario.id === id));
+  const intro = introOverride?.trim() || (isOverride
+    ? `Practice tricky online moments with zero strangers, zero feeds, zero DMs — picked by your parent. ${child?.name ?? "Your kid"} thinks about what they'd do, then reveals the coaching.`
+    : `Practice tricky online moments with zero strangers, zero feeds, zero DMs. Pick what you'd do, get instant coaching, and earn the Safe Social Star badge when ${child?.name ?? "your kid"} finishes all ${scenarios.length}.`);
   if (!child) return null;
   return (
     <section className="mt-5 rounded-lg border border-[#ded8c7] bg-white p-5">
-      <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2563eb]">🌐 Safe social practice</p>
-      <h3 className="mt-2 text-2xl font-black">Training wheels for real-world social life</h3>
+      <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2563eb]">
+        🌐 Safe social practice{isOverride && <span className="ml-2 rounded-full bg-[#eef2ff] px-2 py-0.5 text-[#1e3a8a]">Picked by your parent</span>}
+      </p>
+      <h3 className="mt-2 text-2xl font-black">{headingOverride?.trim() || "Training wheels for real-world social life"}</h3>
       <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-[#4f625b]">
-        Practice tricky online moments with zero strangers, zero feeds, zero DMs. Pick what you&apos;d do, get instant coaching,
-        and earn the Safe Social Star badge when {child.name} finishes all {socialScenarios.length}.
+        {intro}
       </p>
       {onSelectChild && childProfiles.length > 1 && (
         <div className="mt-3 flex flex-wrap gap-2">
@@ -5835,12 +7445,12 @@ function SocialPracticeSection({ childProfiles, activeChildId, onSelectChild, do
       )}
       <div className="mt-3 flex items-center gap-3">
         <div className="h-2 flex-1 rounded-full bg-[#eef2ff]">
-          <div className="h-2 rounded-full bg-[#2563eb]" style={{ width: `${Math.round((completed.length / socialScenarios.length) * 100)}%` }} />
+          <div className="h-2 rounded-full bg-[#2563eb]" style={{ width: `${Math.round((completed.length / scenarios.length) * 100)}%` }} />
         </div>
-        <span className="text-xs font-black text-[#1e3a8a]">{completed.length}/{socialScenarios.length} practiced</span>
+        <span className="text-xs font-black text-[#1e3a8a]">{completed.length}/{scenarios.length} practiced</span>
       </div>
       <div className="mt-4 grid gap-3 lg:grid-cols-2">
-        {socialScenarios.map((scenario) => {
+        {scenarios.map((scenario) => {
           const isDone = completed.includes(scenario.id);
           const picked = revealed[scenario.id];
           const shownFeedback = picked !== undefined
@@ -6044,6 +7654,15 @@ function CharacterCurriculumPanel(props: {
   );
 }
 
+/** R2-30: mood emoji for memory-moment cards in the growth log. */
+const MOOD_EMOJI: Record<MemoryMoment["mood"], string> = {
+  kind: "💛",
+  silly: "😄",
+  cranky: "😤",
+  proud: "🏆",
+  helper: "🤝",
+};
+
 function GrowthPanel(props: {
   childProfiles: Child[];
   badges: BadgeAward[];
@@ -6059,10 +7678,71 @@ function GrowthPanel(props: {
   onSelectChild?: (childId: string) => void;
   assignCurriculumMissions: (traitKey: CharacterTraitKey, levelIndex: number, childId: string) => void;
 }) {
+  // R2-30: life skills summarized per family (getFamilySkillSummary is read-only).
+  const familySkills = getFamilySkillSummary(props.badges, props.childProfiles);
+  const skillCounts = (["responsibility", "empathy", "teamwork", "leadership", "time"] as LifeSkillKey[]).map((skill) => ({
+    skill,
+    label: skill === "time" ? "Time mgmt" : skill,
+    count: props.badges.filter((badge) => badge.skill === skill && props.childProfiles.some((child) => child.id === badge.childId)).length,
+  }));
   return (
     <section className="rounded-lg border border-[#ded8c7] bg-white p-5">
       <p className="text-xs font-black uppercase tracking-[0.18em] text-[#6d3ed1]">Character growth</p>
       <h2 className="mt-2 text-3xl font-black">Responsibility, empathy, kindness, leadership</h2>
+      {/* R2-30: memory moments are the hero of the growth log. */}
+      <div className="mt-5 overflow-hidden rounded-2xl border-2 border-[#6d3ed1]/25 bg-gradient-to-br from-[#f0edff] via-white to-[#faf8f0]">
+        <div className="p-5">
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-[#6d3ed1]">🌟 Relive memory moments</p>
+          <h3 className="mt-2 text-2xl font-black">The moments that made them proud</h3>
+          <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-[#4f625b]">
+            {props.moments.length === 0
+              ? "No moments saved yet — capture the first proud, kind, or silly moment below."
+              : `${props.moments.length} moment${props.moments.length === 1 ? "" : "s"} worth reliving, saved by your family.`}
+          </p>
+          <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+            <input
+              placeholder="e.g. Maya waited calmly while Jack drank water…"
+              className="min-w-0 flex-1 rounded-lg border border-[#ded8c7] bg-white px-3 py-3 font-semibold"
+              value={props.momentDraft}
+              onChange={(event) => props.setMomentDraft(event.target.value)}
+            />
+            <button onClick={props.addMoment} className="rounded-lg bg-[#6d3ed1] px-5 py-3 text-sm font-black text-white">Save moment</button>
+          </div>
+        </div>
+        {props.moments.length > 0 && (
+          <div className="grid gap-3 border-t border-[#6d3ed1]/15 bg-white/60 p-5 sm:grid-cols-2">
+            {props.moments.map((moment) => {
+              const child = props.childProfiles.find((entry) => entry.id === moment.childId);
+              return (
+                <article key={moment.id} className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-[#ded8c7]">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl" aria-hidden="true">{MOOD_EMOJI[moment.mood]}</span>
+                    <p className="text-xs font-black uppercase tracking-[0.12em] text-[#4f625b]">
+                      {child?.name ?? "Family"} · feeling {moment.mood}
+                    </p>
+                  </div>
+                  <p className="mt-2 text-sm font-semibold leading-6 text-[#17231f]">“{moment.note}”</p>
+                </article>
+              );
+            })}
+          </div>
+        )}
+      </div>
+      {/* R2-30: life skills, summarized per family. */}
+      <div className="mt-5 rounded-lg bg-[#faf8f0] p-4">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-[#165a4b]">Family life skills</p>
+          <p className="text-sm font-black text-[#17231f]">{familySkills.topLabel} · {familySkills.totalBadges} badge{familySkills.totalBadges === 1 ? "" : "s"} earned</p>
+        </div>
+        <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-5">
+          {skillCounts.map(({ skill, label, count }) => (
+            <div key={skill} className="rounded-lg bg-white p-3 text-center">
+              <p className="text-2xl font-black text-[#6d3ed1]">{count}</p>
+              <p className="mt-1 text-xs font-black capitalize text-[#4f625b]">{label}</p>
+            </div>
+          ))}
+        </div>
+      </div>
       <CharacterCurriculumPanel
         childProfiles={props.childProfiles}
         missions={props.missions}
@@ -6128,17 +7808,73 @@ function GrowthPanel(props: {
         ))}
       </div>
       {/* Safe social practice now lives in the kid's AI Buddy tab (parent-visible). */}
-      <div className="mt-5 rounded-lg bg-[#f0edff] p-4">
-        <h3 className="font-black">Memory moments</h3>
-        <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-          <input className="min-w-0 flex-1 rounded-lg border border-[#ded8c7] px-3 py-3 font-semibold" value={props.momentDraft} onChange={(event) => props.setMomentDraft(event.target.value)} />
-          <button onClick={props.addMoment} className="rounded-lg bg-[#6d3ed1] px-5 py-3 text-sm font-black text-white">Save moment</button>
-        </div>
-        {props.moments.map((moment) => (
-          <p key={moment.id} className="mt-3 rounded-lg bg-white p-3 text-sm font-semibold">{moment.note}</p>
+    </section>
+  );
+}
+
+/**
+ * R2-27: Skill Job Builder — extracted from NeighborhoodPanel into a
+ * standalone component so it can live in Parent Review (ApprovalsPanel).
+ * Parents start from the life skill they want to teach; "Use template" fills
+ * the job draft, and the parent finishes + posts it from the Neighborhood tab.
+ */
+const SKILL_JOB_TEMPLATES: Array<[skill: string, title: string, detail: string]> = [
+  ["Responsibility", "Morning pet check for a trusted neighbor", "Easy checklist, parent photo proof, 10-14 points"],
+  ["Empathy", "Make a comfort card for a newly adopted pet", "Kindness badge, no money needed"],
+  ["Teamwork", "Two-kid supply sorting task with parent", "Split points fairly, one shared family badge"],
+  ["Leadership", "Older kid teaches a younger kid safe pet observation", "Higher points, parent nearby"],
+];
+
+function SkillJobBuilder({ fillJobTemplate, onUseTemplate }: {
+  fillJobTemplate: (skill: string) => void;
+  onUseTemplate?: () => void;
+}) {
+  return (
+    <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
+      <p className="text-xs font-black uppercase tracking-[0.18em] text-[#6d3ed1]">Skill job builder</p>
+      <h3 className="mt-2 text-2xl font-black">Post a job around the life skill you want to teach</h3>
+      <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-[#4f625b]">
+        Parents can start from a value, not just a task. TailTots can suggest checklist, points, money, and badge language before anything is visible to kids or neighbors.
+        Using a template fills the job draft — finish and post it from the Neighborhood tab.
+      </p>
+      <div className="mt-4 grid gap-3 lg:grid-cols-4">
+        {SKILL_JOB_TEMPLATES.map(([skill, title, detail]) => (
+          <article key={skill} className="rounded-lg bg-[#f0edff] p-4">
+            <p className="text-xs font-black uppercase tracking-[0.14em] text-[#6d3ed1]">{skill}</p>
+            <p className="mt-2 text-base font-black leading-5">{title}</p>
+            <p className="mt-2 text-xs font-semibold leading-5 text-[#4f625b]">{detail}</p>
+            <button
+              onClick={() => { fillJobTemplate(skill); onUseTemplate?.(); }}
+              className="mt-3 min-h-10 rounded-lg bg-white px-3 py-2 text-xs font-black text-[#4c1d95]"
+            >
+              Use template
+            </button>
+          </article>
         ))}
       </div>
     </section>
+  );
+}
+
+/**
+ * R2-28: "Share with family", defined once and shown wherever sharing happens.
+ * Sharing means: the parent picks a giving goal or a neighborhood job, and
+ * TailTots builds a family-safe summary — the title, the cause, and the
+ * parent's first name only. No kid names, photos, ages, or addresses ever
+ * leave this device. Extended family (grandparents, aunts, uncles) sees the
+ * summary and chips in through the parent. Sharing is always
+ * parent-initiated; goal links can be revoked any time.
+ */
+function ShareWithFamilyExplainer({ role }: { role: Role }) {
+  return (
+    <div className="rounded-lg bg-[#faf8f0] p-4">
+      <p className="text-xs font-black uppercase tracking-[0.14em] text-[#165a4b]">What “share with family” means</p>
+      <p className="mt-2 text-sm font-semibold leading-6 text-[#17231f]">
+        {role === "parent"
+          ? "You pick a giving goal or a neighborhood job. TailTots makes a family-safe summary — the title, the cause, and your first name. Nothing else leaves this app: no kid names, photos, ages, or addresses. Grandparents, aunts, and uncles see the summary and chip in through you. Sharing is always started by you, and a goal link can be revoked any time."
+          : "Grown-ups can share some goals with grandparents and family so they can cheer you on and chip in. Family never sees your name, photo, or details — only what your grown-up wrote."}
+      </p>
+    </div>
   );
 }
 
@@ -6155,14 +7891,12 @@ function NeighborhoodPanel({
   approveJob,
   toggleJobVisibility,
   markPosterThanked,
-  fillJobTemplate,
   transactions,
   setActiveTab,
   allMissions,
   toggleMissionVisibility,
   toggleGoalVisibility,
   familyZip,
-  setFamilyZip,
 }: {
   goals: SavingsGoal[];
   childProfiles: Child[];
@@ -6224,14 +7958,24 @@ function NeighborhoodPanel({
       detail: `${pets[(hash + i) % pets.length]} · into ${interests[(hash + i * 3) % interests.length]}`,
     }));
   }
-  const visibleJobs =
+  // R2-29: zipcode-based jobs — when the family's ZIP is set, only jobs in
+  // that ZIP show. Jobs without a ZIP are the family's own posts (or legacy
+  // demo data) and always show.
+  const zipReady = familyZip.length === 5;
+  const visibleJobs = (
     role === "parent"
       ? jobs
-      : jobs.filter((job) => job.visibleToKids && activeChild && job.assignedChildIds.includes(activeChild.id) && activeChild.age >= (job.minAge ?? 0));
+      : jobs.filter((job) => job.visibleToKids && activeChild && job.assignedChildIds.includes(activeChild.id) && activeChild.age >= (job.minAge ?? 0))
+  ).filter((job) => jobVisibleInZip(job.zip, familyZip));
   // Step 1 of the parent-gated flow: the parent picks from a popup which
   // posted neighborhood jobs are allowed. Only allowed jobs reach kid profiles.
   const [jobPickerOpen, setJobPickerOpen] = useState(false);
-  const postedJobs = jobs.filter((job) => job.status === "posted");
+  const postedJobs = jobs.filter((job) => job.status === "posted").filter((job) => jobVisibleInZip(job.zip, familyZip));
+  // R2-28: "share with family" on jobs — copies a sanitized summary (no kid
+  // details) for the parent to paste into their own family chat.
+  const [jobShareCopiedId, setJobShareCopiedId] = useState<string | null>(null);
+  // R2-29: neighborhood friends — local-first demo, saved on this device only.
+  const [neighborFriendIds, setNeighborFriendIds] = useState<string[]>([]);
   // Step 4: after approving completion, the parent sends the poster response.
   const [thankYouJobId, setThankYouJobId] = useState<string | null>(null);
   const [thankYouCopied, setThankYouCopied] = useState(false);
@@ -6247,12 +7991,34 @@ function NeighborhoodPanel({
       setThankYouCopied(false);
     }
   }
-  const skillJobTemplates = [
-    ["Responsibility", "Morning pet check for a trusted neighbor", "Easy checklist, parent photo proof, 10-14 points"],
-    ["Empathy", "Make a comfort card for a newly adopted pet", "Kindness badge, no money needed"],
-    ["Teamwork", "Two-kid supply sorting task with parent", "Split points fairly, one shared family badge"],
-    ["Leadership", "Older kid teaches a younger kid safe pet observation", "Higher points, parent nearby"],
-  ];
+  /** R2-28: copy a sanitized, family-safe job summary — never kid/family PII. */
+  async function shareJobWithFamily(job: NeighborhoodJob) {
+    const text = buildJobFamilySummary({
+      title: job.title,
+      pet: job.pet,
+      time: job.time,
+      rewardDollars: job.rewardDollars,
+      badgeTitle: job.badgeTitle,
+      skillLabel: getLifeSkillLabel(job.skillFocus ?? "teamwork"),
+      safety: job.safety,
+    });
+    try {
+      if (typeof navigator !== "undefined" && navigator.clipboard) {
+        await navigator.clipboard.writeText(text);
+        setJobShareCopiedId(job.id);
+        window.setTimeout(() => setJobShareCopiedId((current) => (current === job.id ? null : current)), 2500);
+      }
+    } catch {
+      /* clipboard unavailable — the goal share links still work */
+    }
+  }
+  /** R2-29: local-first friends toggle for the demo nearby-families list. */
+  function toggleNeighborFriend(id: string) {
+    setNeighborFriendIds((ids) => (ids.includes(id) ? ids.filter((entry) => entry !== id) : [...ids, id]));
+  }
+  const friendFamilies = zipReady
+    ? nearbyFamilies(familyZip).filter((family) => neighborFriendIds.includes(family.id))
+    : [];
   const privacyRules = [
     "Parents approve every job before it appears to kids.",
     "Kids do not see addresses, phone numbers, or adult contact details.",
@@ -6379,29 +8145,12 @@ function NeighborhoodPanel({
         </section>
       )}
 
-      {role === "parent" && (
-        <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-[#6d3ed1]">Skill job builder</p>
-          <h3 className="mt-2 text-2xl font-black">Post a job around the life skill you want to teach</h3>
-          <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-[#4f625b]">
-            Parents can start from a value, not just a task. TailTots can suggest checklist, points, money, and badge language before anything is visible to kids or neighbors.
-          </p>
-          <div className="mt-4 grid gap-3 lg:grid-cols-4">
-            {skillJobTemplates.map(([skill, title, detail]) => (
-              <article key={skill} className="rounded-lg bg-[#f0edff] p-4">
-                <p className="text-xs font-black uppercase tracking-[0.14em] text-[#6d3ed1]">{skill}</p>
-                <p className="mt-2 text-base font-black leading-5">{title}</p>
-                <p className="mt-2 text-xs font-semibold leading-5 text-[#4f625b]">{detail}</p>
-                <button onClick={() => fillJobTemplate(skill)} className="mt-3 min-h-10 rounded-lg bg-white px-3 py-2 text-xs font-black text-[#4c1d95]">Use template</button>
-              </article>
-            ))}
-          </div>
-        </section>
-      )}
-
       <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
         <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2563eb]">{role === "parent" ? "Job pipeline" : "Jobs for you"}</p>
         <h3 className="mt-2 text-2xl font-black">{role === "parent" ? "Kid confirmations waiting for final approval" : "Confirm a job, then wait for grown-up approval"}</h3>
+        {zipReady && (
+          <p className="mt-2 text-xs font-black uppercase tracking-[0.14em] text-[#2563eb]">Showing jobs in {familyZip} — your area</p>
+        )}
         <div className="mt-4 grid gap-3">
           {visibleJobs.map((job) => {
             const acceptedChild = childProfiles.find((child) => child.id === job.acceptedBy);
@@ -6453,7 +8202,7 @@ function NeighborhoodPanel({
                   <p className="mt-3 rounded-lg bg-white p-3 text-sm font-black text-[#4f625b]">{job.status === "accepted" ? "Waiting for a parent to make it final." : job.status === "approved" ? "Added to Today. Money goes to Kid Bank after parent approves completion." : "Completed and paid if this job had allowance."}</p>
                 )}
                 {role === "parent" && (
-                  <div className="mt-3 grid gap-2 sm:grid-cols-[auto_auto_1fr]">
+                  <div className="mt-3 grid gap-2 sm:grid-cols-[auto_auto_auto_1fr]">
                     <button
                       onClick={() => toggleJobVisibility(job.id)}
                       className={`min-h-11 rounded-lg px-4 py-2 text-sm font-black ${job.visibleToKids ? "bg-white text-[#b44421]" : "bg-[#2563eb] text-white"}`}
@@ -6461,6 +8210,13 @@ function NeighborhoodPanel({
                       {job.visibleToKids ? "Remove kid visibility" : "Approve for kids to see"}
                     </button>
                     <button onClick={() => approveJob(job.id)} disabled={job.status !== "accepted"} className="min-h-11 rounded-lg bg-[#165a4b] px-4 py-2 text-sm font-black text-white disabled:bg-[#b9b2a2]">Make final and add to Today</button>
+                    <button
+                      onClick={() => shareJobWithFamily(job)}
+                      title="Copy a family-safe summary (no kid details) to paste into your family chat"
+                      className="min-h-11 rounded-lg border border-[#165a4b] bg-white px-4 py-2 text-sm font-black text-[#165a4b]"
+                    >
+                      {jobShareCopiedId === job.id ? "Summary copied ✓" : "Share with family"}
+                    </button>
                     <p className="rounded-lg bg-white p-3 text-xs font-bold text-[#4f625b]">Allowed kids: {job.assignedChildIds.map((id) => childProfiles.find((child) => child.id === id)?.name).filter(Boolean).join(", ")}</p>
                   </div>
                 )}
@@ -6577,6 +8333,9 @@ function NeighborhoodPanel({
             ? "Pick a goal your kid is working toward and share it with family — grandparents, aunts, uncles. They see the goal (never kid details) and chip in through you. Sharing is always parent-initiated, and no child is publicly searchable."
             : "These are donation goals your grown-up shared with the family — shelters, schools, and neighborhood causes. Every dollar moves only after a parent approves."}
         </p>
+        <div className="mt-4">
+          <ShareWithFamilyExplainer role={role} />
+        </div>
         <div className="mt-4 grid gap-3 lg:grid-cols-2">
           {sharedGoals.map((goal) => {
             const child = childProfiles.find((item) => item.id === goal.childId);
@@ -6693,32 +8452,62 @@ function NeighborhoodPanel({
           <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2563eb]">Nearby families</p>
           <h3 className="mt-2 text-2xl font-black">Discover families near you</h3>
           <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-[#4f625b]">
-            Enter your ZIP code to preview nearby TailTots families. Demo preview: families are anonymized and parent-gated — in the real app only opted-in families appear, and no child information is ever shown.
+            Make friends with TailTots families in your ZIP code. Demo preview: families are anonymized and parent-gated — in the real app only opted-in families appear, and no child information is ever shown.
           </p>
-          <div className="mt-4 max-w-xs">
-            <label htmlFor="family-zip" className="text-xs font-black uppercase tracking-[0.14em] text-[#4f625b]">ZIP code</label>
-            <input
-              id="family-zip"
-              value={familyZip}
-              onChange={(e) => setFamilyZip(e.target.value.replace(/[^0-9]/g, "").slice(0, 5))}
-              placeholder="e.g. 75034"
-              inputMode="numeric"
-              className="mt-2 min-h-11 w-full rounded-lg border border-[#ded8c7] bg-[#faf8f0] px-3 py-2 text-sm font-bold"
-            />
-          </div>
-          {familyZip.length === 5 ? (
-            <div className="mt-4 grid gap-3 md:grid-cols-3">
-              {nearbyFamilies(familyZip).map((family) => (
-                <article key={family.id} className="rounded-lg bg-[#faf8f0] p-4">
-                  <p className="text-base font-black">{family.name}</p>
-                  <p className="mt-1 text-xs font-black text-[#2563eb]">{family.distance}</p>
-                  <p className="mt-1 text-sm font-semibold text-[#4f625b]">{family.detail}</p>
-                  <p className="mt-2 text-[11px] font-black uppercase tracking-[0.12em] text-[#69736f]">Demo family · anonymized</p>
-                </article>
-              ))}
+          {!zipReady ? (
+            <div className="mt-4 rounded-lg bg-[#faf8f0] p-4">
+              <p className="text-sm font-black text-[#17231f]">🗺️ Set your ZIP code in Family setup</p>
+              <p className="mt-1 text-sm font-semibold text-[#4f625b]">
+                Add your ZIP in Family setup to discover nearby families and see neighborhood jobs in your area.
+              </p>
             </div>
           ) : (
-            <p className="mt-3 text-sm font-semibold text-[#4f625b]">Enter all 5 digits to see nearby families.</p>
+            <>
+              <p className="mt-4 text-xs font-black uppercase tracking-[0.14em] text-[#2563eb]">Families near {familyZip}</p>
+              {friendFamilies.length > 0 && (
+                <div className="mt-3 rounded-lg bg-[#e7f4ef] p-4">
+                  <p className="text-xs font-black uppercase tracking-[0.14em] text-[#165a4b]">
+                    Your neighborhood friends ({friendFamilies.length})
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {friendFamilies.map((family) => (
+                      <span key={family.id} className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-xs font-black text-[#17231f]">
+                        🤝 {family.name}
+                        <button
+                          onClick={() => toggleNeighborFriend(family.id)}
+                          aria-label={`Remove ${family.name} from friends`}
+                          className="rounded-full bg-[#faf8f0] px-2 py-0.5 text-[#b44421]"
+                        >
+                          ✕
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                  <p className="mt-2 text-[11px] font-semibold text-[#4f625b]">
+                    Demo: friends are saved on this device only. In the real app both families opt in — and no child details are ever shown.
+                  </p>
+                </div>
+              )}
+              <div className="mt-3 grid gap-3 md:grid-cols-3">
+                {nearbyFamilies(familyZip).map((family) => {
+                  const isFriend = neighborFriendIds.includes(family.id);
+                  return (
+                    <article key={family.id} className="rounded-lg bg-[#faf8f0] p-4">
+                      <p className="text-base font-black">{family.name}</p>
+                      <p className="mt-1 text-xs font-black text-[#2563eb]">{family.distance}</p>
+                      <p className="mt-1 text-sm font-semibold text-[#4f625b]">{family.detail}</p>
+                      <p className="mt-2 text-[11px] font-black uppercase tracking-[0.12em] text-[#69736f]">Demo family · anonymized</p>
+                      <button
+                        onClick={() => toggleNeighborFriend(family.id)}
+                        className={`mt-3 min-h-10 w-full rounded-lg px-3 py-2 text-xs font-black ${isFriend ? "bg-[#e7f4ef] text-[#165a4b]" : "bg-[#2563eb] text-white"}`}
+                      >
+                        {isFriend ? "✓ Friends" : "＋ Add as friend"}
+                      </button>
+                    </article>
+                  );
+                })}
+              </div>
+            </>
           )}
         </div>
       )}
