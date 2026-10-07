@@ -3045,10 +3045,10 @@ function VisionLandingPanel({
               For parents of kids 5–12
             </p>
             <h2 className="tt-display mt-3 max-w-2xl text-[2.75rem] font-black leading-[1.04] text-tt-navy sm:text-6xl">
-              Raising <span className="relative inline-block px-1"><span className="absolute inset-0 -rotate-1 rounded bg-tt-sun/70" aria-hidden="true" /><span className="relative italic">responsible, empathetic humans</span></span> takes ten minutes a day.
+              Raising <span className="relative inline-block px-1"><span className="absolute inset-0 -rotate-1 rounded bg-tt-sun/70" aria-hidden="true" /><span className="relative italic">happy, responsible, empathetic humans</span></span> takes ten minutes a day.
             </h2>
             <p className="mt-4 max-w-xl text-lg font-bold leading-7 text-tt-navy-soft">
-              TailTots turns everyday moments — feeding the dog, finishing chores, choosing kindness — into the responsibility, empathy, and life skills you’ll actually see grow. They live it all day; you track it in minutes.
+              TailTots turns everyday moments — feeding the dog, finishing chores, choosing kindness — into the happiness, responsibility, empathy, and life skills you’ll actually see grow. They live it all day; you track it in minutes.
             </p>
             <p className="mt-2 max-w-xl text-[15px] font-semibold leading-6 text-tt-ink-soft">
               The child who cares for animals grows up caring for people. Parent-approved and closed: no strangers, no chats, no doomscroll.
