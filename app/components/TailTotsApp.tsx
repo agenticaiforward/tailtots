@@ -10,6 +10,34 @@ import { PlaydateClaimView } from "./PlaydateClaimView";
 import { GivingShareView } from "./GivingShareView";
 import { parsePlaydateHash, playdateClaimUrl, playdateStore, configurePlaydateStore } from "@/lib/playdate-store";
 import type { PlaydateInvite } from "@/lib/playdate-store";
+// Feedback R2 — schedule stream: 15-min week grid, calendar import, claim notifications.
+import {
+  GRID_START_HOUR,
+  GRID_END_HOUR,
+  SCHEDULE_DAYS,
+  SCHEDULE_GOOGLE_OAUTH_CONFIGURED,
+  SCHEDULE_APPLE_CALENDAR_CONFIGURED,
+  eventToBusySlotKeys,
+  expandSlotLabel,
+  formatEventWhen,
+  formatHourLabel,
+  formatTime12,
+  isCanonicalSlotKey,
+  mergeSlotKeys,
+  parseIcs,
+  slotKey,
+  type ParsedCalendarEvent,
+  type ScheduleDay,
+} from "@/lib/schedule-calendar";
+import {
+  appendPlaydateNotifications,
+  buildClaimNotification,
+  markAllPlaydateNotificationsRead,
+  readPlaydateNotifications,
+  unreadPlaydateNotificationCount,
+  type NewPlaydateNotification,
+  type PlaydateNotification,
+} from "@/lib/playdate-notifications";
 import {
   buildShareInputFromGoal,
   familyShareMessage,
@@ -2533,7 +2561,6 @@ export function TailTotsApp() {
                 pendingCount={pendingApprovals.length}
                 taskProgress={taskProgress}
                 approvedMissionCount={activeApprovedMissionCount}
-                pets={pets}
                 setActiveTab={setActiveTab}
                 role={role}
               />
@@ -2651,12 +2678,10 @@ export function TailTotsApp() {
           {visibleActiveTab === "setup" && (
             <FamilySetupPanel
               cloudAccountEmail={cloudAccountEmail}
-              accountDraft={accountDraft}
-              setAccountDraft={setAccountDraft}
               accountStatus={accountStatus}
               accountMessage={accountMessage}
-              sendParentSignInLink={sendParentSignInLink}
-              magicLinkSent={magicLinkSent}
+              onOpenSignup={() => setAuthPage("signup")}
+              onOpenSignin={() => setAuthPage("signin")}
               signOutParentAccount={signOutParentAccountFromApp}
               saveCurrentFamilyAccount={saveCurrentFamilyAccount}
               loadCurrentFamilyAccount={loadCurrentFamilyAccount}
@@ -2667,6 +2692,10 @@ export function TailTotsApp() {
               enableCloudSyncNow={enableCloudSyncNow}
               familyName={familyName}
               setFamilyName={setFamilyName}
+              familyZip={familyZip}
+              setFamilyZip={setFamilyZip}
+              familyNeighborhood={familyNeighborhood}
+              setFamilyNeighborhood={setFamilyNeighborhood}
               lastSavedAt={lastSavedAt}
               parents={parents}
               updateParent={updateParent}
@@ -2998,12 +3027,10 @@ function VisionLandingPanel({
               For parents of kids 5–12
             </p>
             <h2 className="tt-display mt-3 max-w-2xl text-[2.75rem] font-black leading-[1.04] text-tt-navy sm:text-6xl">
-              Raise the <span className="relative inline-block px-1"><span className="absolute inset-0 -rotate-1 rounded bg-tt-sun/70" aria-hidden="true" /><span className="relative italic">kind, responsible kid</span></span> the world needs — in just 10 minutes a day.
+              Raising <span className="relative inline-block px-1"><span className="absolute inset-0 -rotate-1 rounded bg-tt-sun/70" aria-hidden="true" /><span className="relative italic">responsible, empathetic humans</span></span> takes ten minutes a day.
             </h2>
             <p className="mt-4 max-w-xl text-lg font-bold leading-7 text-tt-navy-soft">
-              Empathy isn’t taught in a lecture — it’s practiced: feeding a hungry pup, sharing with a sibling, saving up for a shelter dog.
-              TailTots gives your child one simple daily checklist of kindness missions, pet care, chores, and savings — and takes you just
-              10 minutes a day to guide their character + life skills.
+              TailTots turns everyday moments — feeding the dog, finishing chores, choosing kindness — into the responsibility, empathy, and life skills you’ll actually see grow. They live it all day; you track it in minutes.
             </p>
             <p className="mt-2 max-w-xl text-[15px] font-semibold leading-6 text-tt-ink-soft">
               The child who cares for animals grows up caring for people. Parent-approved and closed: no strangers, no chats, no doomscroll.
@@ -3318,13 +3345,6 @@ function VisionLandingPanel({
   );
 }
 
-const PLAYDATE_SLOT_OPTIONS = [
-  "Tuesday 4:30\u20136:00 PM",
-  "Thursday 4:30\u20136:00 PM",
-  "Saturday 10:00 AM\u201312:00 PM",
-  "Sunday afternoon",
-];
-
 function formatClaimedAt(ts?: number): string {
   if (!ts) return "";
   try {
@@ -3337,6 +3357,549 @@ function formatClaimedAt(ts?: number): string {
   } catch {
     return "";
   }
+}
+
+/* ------------------------------------------------------------------ */
+/* Feedback R2 — schedule stream: 15-min week grid + calendar import.   */
+/* Pure slot/ICS helpers live in lib/schedule-calendar.ts (unit-tested) */
+/* and notification helpers in lib/playdate-notifications.ts. The      */
+/* components below are the SchedulePanel region of this file.         */
+/* ------------------------------------------------------------------ */
+
+const SCHEDULE_BUSY_STORAGE_KEY = "tailtots-schedule-busy-v1";
+
+interface ScheduleBusyImport {
+  id: string;
+  fileName: string;
+  importedAt: number;
+  eventCount: number;
+  /** Busy keys this import added (for undo). */
+  addedBusyKeys: string[];
+  /** Availability selections this import cleared, per kid (for undo). */
+  removedByKid: Record<string, string[]>;
+}
+
+interface ScheduleBusyState {
+  keys: string[];
+  imports: ScheduleBusyImport[];
+}
+
+function readScheduleBusyState(): ScheduleBusyState {
+  if (typeof window === "undefined" || typeof localStorage === "undefined") return { keys: [], imports: [] };
+  try {
+    const raw = localStorage.getItem(SCHEDULE_BUSY_STORAGE_KEY);
+    if (!raw) return { keys: [], imports: [] };
+    const parsed = JSON.parse(raw) as Partial<ScheduleBusyState>;
+    const keys = Array.isArray(parsed.keys) ? parsed.keys.filter((k): k is string => typeof k === "string") : [];
+    const imports = Array.isArray(parsed.imports)
+      ? parsed.imports.filter(
+          (i): i is ScheduleBusyImport => !!i && typeof (i as ScheduleBusyImport).id === "string",
+        )
+      : [];
+    return { keys, imports };
+  } catch {
+    return { keys: [], imports: [] };
+  }
+}
+
+function writeScheduleBusyState(state: ScheduleBusyState): void {
+  if (typeof window === "undefined" || typeof localStorage === "undefined") return;
+  try {
+    localStorage.setItem(SCHEDULE_BUSY_STORAGE_KEY, JSON.stringify(state));
+  } catch {
+    /* quota — busy state still works for this session */
+  }
+}
+
+function makeScheduleId(): string {
+  try {
+    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") return crypto.randomUUID();
+  } catch {
+    /* fall through */
+  }
+  return `sch-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+/** One kid's 15-minute week grid. Busy (imported) and claimed slots are locked. */
+function KidWeekGrid({
+  childId,
+  childName,
+  selectedKeys,
+  busyKeys,
+  claimedKeys,
+  legacyLabels,
+  claimedLegacyLabels,
+  onToggleKey,
+  onSetKeys,
+  onRemoveLegacy,
+}: {
+  childId: string;
+  childName: string;
+  /** Canonical 15-min keys currently selected for this kid. */
+  selectedKeys: string[];
+  /** Imported-calendar busy keys (all kids). */
+  busyKeys: Set<string>;
+  /** Claimed keys, global `${childId}|${key}` format. */
+  claimedKeys: Set<string>;
+  /** Older human-label selections that predate the 15-min grid. */
+  legacyLabels: string[];
+  claimedLegacyLabels: Set<string>;
+  onToggleKey: (childId: string, key: string) => void;
+  onSetKeys: (childId: string, keys: string[], select: boolean) => void;
+  onRemoveLegacy: (childId: string, label: string) => void;
+}) {
+  const [activeDay, setActiveDay] = useState<ScheduleDay>("Mon");
+  const selectedSet = useMemo(() => new Set(selectedKeys), [selectedKeys]);
+  const mergedSummary = useMemo(() => mergeSlotKeys(selectedKeys), [selectedKeys]);
+
+  const daySelectedCount = (day: ScheduleDay) => selectedKeys.filter((k) => k.startsWith(`${day}|`)).length;
+
+  function dayKeys(day: ScheduleDay): string[] {
+    const keys: string[] = [];
+    for (let h = GRID_START_HOUR; h <= GRID_END_HOUR; h++) {
+      for (let q = 0; q < 60; q += 15) keys.push(slotKey(day, h, q));
+    }
+    return keys;
+  }
+
+  const presets: Array<{ label: string; days: ScheduleDay[]; startHour: number; endHour: number }> = [
+    { label: "Weekday afternoons · 3–6 PM", days: ["Mon", "Tue", "Wed", "Thu", "Fri"], startHour: 15, endHour: 18 },
+    { label: "Weekend mornings · 9 AM–12 PM", days: ["Sat", "Sun"], startHour: 9, endHour: 12 },
+  ];
+
+  function applyPreset(preset: (typeof presets)[number]) {
+    const keys: string[] = [];
+    for (const day of preset.days) {
+      for (let h = preset.startHour; h < preset.endHour; h++) {
+        for (let q = 0; q < 60; q += 15) keys.push(slotKey(day, h, q));
+      }
+    }
+    onSetKeys(childId, keys, true);
+  }
+
+  const hours: number[] = [];
+  for (let h = GRID_START_HOUR; h <= GRID_END_HOUR; h++) hours.push(h);
+
+  return (
+    <div className="rounded-lg bg-[#faf8f0] p-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="font-black">{childName}</p>
+        <p className="text-xs font-bold text-[#4f625b]">
+          {selectedKeys.length > 0
+            ? `${selectedKeys.length} × 15-min slot${selectedKeys.length === 1 ? "" : "s"} selected`
+            : "Tap times to mark them free"}
+        </p>
+      </div>
+
+      <div className="mt-2 flex flex-wrap gap-1.5">
+        {presets.map((preset) => (
+          <button
+            key={preset.label}
+            type="button"
+            onClick={() => applyPreset(preset)}
+            className="tt-btn-press min-h-9 rounded-full border-2 border-[#ded8c7] bg-white px-3 py-1 text-xs font-black text-[#165a4b]"
+          >
+            + {preset.label}
+          </button>
+        ))}
+        {selectedKeys.length > 0 && (
+          <button
+            type="button"
+            onClick={() => onSetKeys(childId, selectedKeys, false)}
+            className="tt-btn-press min-h-9 rounded-full border-2 border-[#ded8c7] bg-white px-3 py-1 text-xs font-black text-[#b3541e]"
+          >
+            Clear all
+          </button>
+        )}
+      </div>
+
+      <div className="mt-3 flex flex-wrap gap-1" role="tablist" aria-label={`${childName} weekday`}>
+        {SCHEDULE_DAYS.map((day) => {
+          const active = activeDay === day;
+          const count = daySelectedCount(day);
+          return (
+            <button
+              key={day}
+              type="button"
+              role="tab"
+              aria-selected={active}
+              onClick={() => setActiveDay(day)}
+              className={`tt-btn-press min-h-10 rounded-lg px-2.5 py-1 text-xs font-black ${
+                active ? "bg-[#165a4b] text-white" : "bg-white text-[#4f625b] ring-1 ring-[#ded8c7]"
+              }`}
+            >
+              {day}
+              {count > 0 && <span className={`ml-1 ${active ? "text-[#ffe9a8]" : "text-[#165a4b]"}`}>·{count}</span>}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="mt-2 flex gap-2">
+        <button
+          type="button"
+          onClick={() => onSetKeys(childId, dayKeys(activeDay), true)}
+          className="text-xs font-black text-[#165a4b] underline decoration-[#165a4b]/30 underline-offset-2"
+        >
+          Select all {activeDay}
+        </button>
+        <button
+          type="button"
+          onClick={() => onSetKeys(childId, dayKeys(activeDay), false)}
+          className="text-xs font-black text-[#4f625b] underline decoration-[#4f625b]/30 underline-offset-2"
+        >
+          Clear {activeDay}
+        </button>
+      </div>
+
+      <div className="mt-2 grid gap-1.5" role="group" aria-label={`${childName} ${activeDay} times`}>
+        {hours.map((h) => (
+          <div key={h} className="flex items-center gap-2">
+            <span className="w-14 shrink-0 text-xs font-black text-[#4f625b]">{formatHourLabel(h)}</span>
+            <div className="grid flex-1 grid-cols-4 gap-1">
+              {[0, 15, 30, 45].map((q) => {
+                const key = slotKey(activeDay, h, q);
+                const selected = selectedSet.has(key);
+                const busy = busyKeys.has(key);
+                const claimed = claimedKeys.has(`${childId}|${key}`);
+                const disabled = busy || claimed;
+                const label = `${activeDay} ${formatTime12(h, q)}`;
+                return (
+                  <button
+                    key={q}
+                    type="button"
+                    disabled={disabled}
+                    onClick={() => onToggleKey(childId, key)}
+                    title={claimed ? `${label} · already booked` : busy ? `${label} · busy (imported calendar)` : label}
+                    aria-pressed={selected}
+                    className={`tt-btn-press min-h-9 rounded-md border-2 px-1 py-1 text-[11px] font-bold disabled:cursor-not-allowed ${
+                      claimed
+                        ? "border-[#ded8c7] bg-[#f1ede2] text-[#a09a8c] line-through"
+                        : busy
+                          ? "border-[#ded8c7] bg-[#f1ede2] text-[#a09a8c]"
+                          : selected
+                            ? "border-[#165a4b] bg-[#e7f4ef] text-[#165a4b]"
+                            : "border-[#ded8c7] bg-white text-[#4f625b]"
+                    }`}
+                  >
+                    {formatTime12(h, q)}
+                    {claimed ? " · booked" : busy ? " · busy" : ""}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {mergedSummary.length > 0 && (
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {mergedSummary.map((label) => (
+            <span key={label} className="rounded-full bg-[#e7f4ef] px-2.5 py-1 text-xs font-black text-[#165a4b]">
+              {label}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {legacyLabels.length > 0 && (
+        <div className="mt-3 rounded-lg bg-white p-2.5 ring-1 ring-[#ded8c7]">
+          <p className="text-[11px] font-black uppercase tracking-[0.14em] text-[#a09a8c]">Earlier saved times</p>
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            {legacyLabels.map((label) => {
+              const claimed = claimedLegacyLabels.has(label);
+              return (
+                <span
+                  key={label}
+                  className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold ${
+                    claimed ? "bg-[#f1ede2] text-[#a09a8c] line-through" : "bg-[#eef2ff] text-[#2563eb]"
+                  }`}
+                >
+                  {label}
+                  {claimed ? (
+                    " · booked"
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => onRemoveLegacy(childId, label)}
+                      aria-label={`Remove ${label}`}
+                      className="tt-btn-press ml-0.5 font-black"
+                    >
+                      ×
+                    </button>
+                  )}
+                </span>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Calendar import: Google / Apple connect buttons (UI complete, but NOT
+ * wired — the repo has no OAuth credentials; see the SCHEDULE_*_CONFIGURED
+ * flags and the OAuth gap notes in lib/schedule-calendar.ts) plus a fully
+ * working .ics file import that maps events onto busy 15-minute slots.
+ */
+function CalendarImportCard({
+  busyState,
+  setBusyState,
+  kidAvailability,
+  setKidAvailability,
+  childProfiles,
+}: {
+  busyState: ScheduleBusyState;
+  setBusyState: (state: ScheduleBusyState) => void;
+  kidAvailability: Record<string, string[]>;
+  setKidAvailability: (value: Record<string, string[]>) => void;
+  childProfiles: Child[];
+}) {
+  const [oauthNotice, setOauthNotice] = useState<null | "google" | "apple">(null);
+  const [review, setReview] = useState<{ fileName: string; events: ParsedCalendarEvent[] } | null>(null);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  function handlePickedFile(input: HTMLInputElement) {
+    const file = input.files?.[0];
+    input.value = "";
+    if (!file) return;
+    setError("");
+    setMessage("");
+    file
+      .text()
+      .then((text) => {
+        const events = parseIcs(text);
+        if (events.length === 0) {
+          setReview(null);
+          setError(`No calendar events found in ${file.name}. Make sure it's a valid .ics calendar file.`);
+          return;
+        }
+        setReview({ fileName: file.name, events });
+      })
+      .catch(() => {
+        setReview(null);
+        setError("Couldn't read that file — try exporting the .ics again.");
+      });
+  }
+
+  function applyImport() {
+    if (!review) return;
+    const busyKeys = new Set<string>();
+    for (const event of review.events) {
+      for (const key of eventToBusySlotKeys(event)) busyKeys.add(key);
+    }
+    const existing = new Set(busyState.keys);
+    const addedBusyKeys = [...busyKeys].filter((k) => !existing.has(k));
+    const removedByKid: Record<string, string[]> = {};
+    const nextAvailability = { ...kidAvailability };
+    let clearedCount = 0;
+    for (const child of childProfiles) {
+      const current = nextAvailability[child.id] ?? [];
+      const removed = current.filter((k) => isCanonicalSlotKey(k) && busyKeys.has(k));
+      if (removed.length > 0) {
+        removedByKid[child.id] = removed;
+        clearedCount += removed.length;
+        nextAvailability[child.id] = current.filter((k) => !busyKeys.has(k));
+      }
+    }
+    const record: ScheduleBusyImport = {
+      id: makeScheduleId(),
+      fileName: review.fileName,
+      importedAt: Date.now(),
+      eventCount: review.events.length,
+      addedBusyKeys,
+      removedByKid,
+    };
+    setBusyState({ keys: [...existing, ...addedBusyKeys], imports: [record, ...busyState.imports].slice(0, 20) });
+    setKidAvailability(nextAvailability);
+    setMessage(
+      `Imported ${review.events.length} event${review.events.length === 1 ? "" : "s"} from ${review.fileName} — ` +
+        `${busyKeys.size} busy 15-min slot${busyKeys.size === 1 ? "" : "s"} blocked in the weekly grid` +
+        (clearedCount > 0 ? `, ${clearedCount} selected time${clearedCount === 1 ? "" : "s"} cleared` : "") +
+        ".",
+    );
+    setReview(null);
+  }
+
+  function undoImport(id: string) {
+    const record = busyState.imports.find((i) => i.id === id);
+    if (!record) return;
+    const others = busyState.imports.filter((i) => i.id !== id);
+    const otherKeys = new Set(others.flatMap((i) => i.addedBusyKeys));
+    const keys = busyState.keys.filter((k) => !record.addedBusyKeys.includes(k) || otherKeys.has(k));
+    const nextAvailability = { ...kidAvailability };
+    for (const child of childProfiles) {
+      const restore = record.removedByKid[child.id] ?? [];
+      if (restore.length > 0) {
+        const current = new Set(nextAvailability[child.id] ?? []);
+        for (const k of restore) current.add(k);
+        nextAvailability[child.id] = [...current];
+      }
+    }
+    setBusyState({ keys, imports: others });
+    setKidAvailability(nextAvailability);
+    setMessage(`Undid the ${record.fileName} import — its busy blocks are gone and cleared times were restored.`);
+  }
+
+  const oauthCopy =
+    oauthNotice === "google" ? (
+      <>
+        <p className="text-sm font-black">Google Calendar isn&apos;t connected yet</p>
+        <p className="mt-1 text-sm font-semibold leading-6 text-[#4f625b]">
+          One-time setup is needed first: a Google Cloud OAuth 2.0 Client ID with the Calendar readonly scope
+          (flag <code>SCHEDULE_GOOGLE_OAUTH_CONFIGURED</code> in{" "}
+          <code>lib/schedule-calendar.ts</code>). Until then, export your Google Calendar as{" "}
+          <code>.ics</code> (Google Calendar → Settings → Import &amp; export) and use the .ics import below — it
+          works today, no sign-in needed.
+        </p>
+      </>
+    ) : (
+      <>
+        <p className="text-sm font-black">Apple Calendar (iPhone) can&apos;t connect on the web</p>
+        <p className="mt-1 text-sm font-semibold leading-6 text-[#4f625b]">
+          Apple offers no web sign-in for iCloud Calendar. Two paths instead: (1) in the TailTots iPhone app, grant
+          calendar access (EventKit — flag <code>SCHEDULE_APPLE_CALENDAR_CONFIGURED</code> in{" "}
+          <code>lib/schedule-calendar.ts</code>); or (2) export an <code>.ics</code> from iCloud.com (Calendar →
+          Settings → Advanced → export) and import it below — it works today.
+        </p>
+      </>
+    );
+
+  return (
+    <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
+      <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2563eb]">Step 1b · sync your calendar</p>
+      <h3 className="mt-2 text-2xl font-black">Import busy times</h3>
+      <p className="mt-1 max-w-3xl text-sm font-semibold leading-6 text-[#4f625b]">
+        Connect a calendar or drop in an <code>.ics</code> file — imported events block the matching times in the
+        grid above so you never offer a time you&apos;re busy. The weekly template repeats by weekday: a Tuesday
+        class blocks Tuesdays.
+      </p>
+
+      <div className="mt-3 flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={() => setOauthNotice(oauthNotice === "google" ? null : "google")}
+          className="tt-btn-press min-h-11 rounded-lg border-2 border-[#ded8c7] bg-white px-4 py-2 text-sm font-black text-[#17231f]"
+        >
+          📅 Connect Google Calendar{" "}
+          {!SCHEDULE_GOOGLE_OAUTH_CONFIGURED && (
+            <span className="ml-1 rounded-full bg-[#fef3c7] px-2 py-0.5 text-[11px] text-[#92400e]">needs setup</span>
+          )}
+        </button>
+        <button
+          type="button"
+          onClick={() => setOauthNotice(oauthNotice === "apple" ? null : "apple")}
+          className="tt-btn-press min-h-11 rounded-lg border-2 border-[#ded8c7] bg-white px-4 py-2 text-sm font-black text-[#17231f]"
+        >
+          🍎 Connect Apple Calendar{" "}
+          {!SCHEDULE_APPLE_CALENDAR_CONFIGURED && (
+            <span className="ml-1 rounded-full bg-[#fef3c7] px-2 py-0.5 text-[11px] text-[#92400e]">needs setup</span>
+          )}
+        </button>
+        <input
+          ref={fileRef}
+          type="file"
+          accept=".ics,text/calendar"
+          className="hidden"
+          aria-label="Import .ics calendar file"
+          onChange={(e) => handlePickedFile(e.target)}
+        />
+        <button
+          type="button"
+          onClick={() => fileRef.current?.click()}
+          className="tt-btn-press min-h-11 rounded-lg bg-[#165a4b] px-4 py-2 text-sm font-black text-white"
+        >
+          📂 Import .ics file
+        </button>
+      </div>
+
+      {oauthNotice && (
+        <div className="mt-3 max-w-3xl rounded-lg bg-[#fffbeb] p-4 ring-1 ring-[#fde68a]">
+          {oauthCopy}
+          {/* OAuth gap (feedback R2 item 19): these buttons are UI-complete but
+              unwired — SCHEDULE_GOOGLE_OAUTH_CONFIGURED /
+              SCHEDULE_APPLE_CALENDAR_CONFIGURED are false in
+              lib/schedule-calendar.ts because the repo has no OAuth
+              credentials. See the gap notes there for exactly what's needed. */}
+        </div>
+      )}
+
+      {error && <p className="mt-3 max-w-3xl rounded-lg bg-[#fdeee4] p-3 text-sm font-bold text-[#b3541e]">{error}</p>}
+      {message && !review && (
+        <p className="mt-3 max-w-3xl rounded-lg bg-[#e7f4ef] p-3 text-sm font-bold text-[#165a4b]" role="status">
+          {message}
+        </p>
+      )}
+
+      {review && (
+        <div className="mt-3 max-w-3xl rounded-lg border-2 border-[#2563eb] bg-[#f4f7ff] p-4">
+          <p className="text-sm font-black">
+            {review.fileName} — {review.events.length} event{review.events.length === 1 ? "" : "s"} found
+          </p>
+          <ul className="mt-2 grid gap-1">
+            {review.events.slice(0, 8).map((event, i) => (
+              <li key={`${event.uid}-${i}`} className="text-sm font-semibold text-[#4f625b]">
+                • <b className="text-[#17231f]">{event.summary}</b> — {formatEventWhen(event)}
+              </li>
+            ))}
+          </ul>
+          {review.events.length > 8 && (
+            <p className="mt-1 text-xs font-bold text-[#4f625b]">+ {review.events.length - 8} more</p>
+          )}
+          <p className="mt-2 text-xs font-semibold leading-5 text-[#4f625b]">
+            These will block the matching weekday in your weekly grid (a Tuesday event blocks Tuesdays). Any
+            currently-selected times that overlap will be cleared — you can undo the whole import afterwards.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={applyImport}
+              className="tt-btn-press min-h-11 rounded-lg bg-[#2563eb] px-4 py-2 text-sm font-black text-white"
+            >
+              Block these times
+            </button>
+            <button
+              type="button"
+              onClick={() => setReview(null)}
+              className="tt-btn-press min-h-11 rounded-lg border-2 border-[#ded8c7] bg-white px-4 py-2 text-sm font-black text-[#4f625b]"
+            >
+              Discard
+            </button>
+          </div>
+        </div>
+      )}
+
+      {busyState.imports.length > 0 && (
+        <div className="mt-3 max-w-3xl">
+          <p className="text-xs font-black uppercase tracking-[0.14em] text-[#a09a8c]">Imported calendars</p>
+          <ul className="mt-1.5 grid gap-1.5">
+            {busyState.imports.map((imp) => (
+              <li
+                key={imp.id}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-[#faf8f0] px-3 py-2 ring-1 ring-[#ded8c7]"
+              >
+                <span className="text-sm font-bold text-[#4f625b]">
+                  📂 {imp.fileName} · {imp.eventCount} event{imp.eventCount === 1 ? "" : "s"} ·{" "}
+                  {formatClaimedAt(imp.importedAt)}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => undoImport(imp.id)}
+                  className="tt-btn-press text-xs font-black text-[#b3541e] underline underline-offset-2"
+                >
+                  Undo import
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </section>
+  );
 }
 
 function SchedulePanel({
@@ -3355,6 +3918,22 @@ function SchedulePanel({
   const [linkCopiedId, setLinkCopiedId] = useState<string | null>(null);
   const [justCreatedId, setJustCreatedId] = useState<string | null>(null);
   const [createError, setCreateError] = useState("");
+  const [notifications, setNotifications] = useState<PlaydateNotification[]>(() => readPlaydateNotifications());
+  const [claimToast, setClaimToast] = useState<string | null>(null);
+  const [busyState, setBusyState] = useState<ScheduleBusyState>(() => readScheduleBusyState());
+  const prevInvitesRef = useRef<PlaydateInvite[] | null>(null);
+  const baselineDoneRef = useRef(false);
+  const toastTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (toastTimerRef.current !== null) window.clearTimeout(toastTimerRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    writeScheduleBusyState(busyState);
+  }, [busyState]);
 
   // Live list of this family's invites; refreshes when another tab (the
   // other parent's claim view) writes to the store.
@@ -3372,39 +3951,101 @@ function SchedulePanel({
     };
   }, []);
 
+  // Feedback R2 item 20 — host-side in-app notification: when an invite flips
+  // open→booked (another parent claimed a slot), record a notification and
+  // pop a toast. The first load only sets the baseline so old bookings don't
+  // re-notify; later loads are driven by the store subscription, i.e. real
+  // changes. The accepting parent's receipt is recorded on the claim page
+  // (PlaydateClaimView) and also lands in this inbox.
+  useEffect(() => {
+    if (!baselineDoneRef.current) {
+      baselineDoneRef.current = true;
+      prevInvitesRef.current = invites;
+      return;
+    }
+    const prev = new Map((prevInvitesRef.current ?? []).map((invite) => [invite.id, invite]));
+    const fresh: NewPlaydateNotification[] = [];
+    for (const invite of invites) {
+      if (invite.status !== "booked" || !invite.claimedBy) continue;
+      const old = prev.get(invite.id);
+      if (old && old.status === "booked") continue;
+      const slot = invite.slots.find((s) => s.status === "claimed");
+      fresh.push(
+        buildClaimNotification({
+          inviteId: invite.id,
+          hostName: invite.hostName,
+          claimedBy: invite.claimedBy,
+          slotLabel: slot?.slot ?? "a playdate time",
+          childName: slot?.childName ?? "your kid",
+          claimedAt: invite.claimedAt,
+        }),
+      );
+    }
+    if (fresh.length > 0) {
+      setNotifications(appendPlaydateNotifications(fresh));
+      setClaimToast(fresh[fresh.length - 1].title);
+      if (toastTimerRef.current !== null) window.clearTimeout(toastTimerRef.current);
+      toastTimerRef.current = window.setTimeout(() => setClaimToast(null), 9000);
+    }
+    prevInvitesRef.current = invites;
+  }, [invites]);
+
   // Slots already claimed across this family's invites can't be picked again.
+  // Claimed labels (merged ranges or legacy labels) expand back to 15-min keys.
   const claimedKeys = useMemo(
-    () =>
-      new Set(
-        invites.flatMap((invite) =>
-          invite.slots
-            .filter((slot) => slot.status === "claimed")
-            .map((slot) => `${slot.childId}|${slot.slot}`)
-        )
-      ),
-    [invites]
+    () => {
+      const set = new Set<string>();
+      for (const invite of invites) {
+        for (const slot of invite.slots) {
+          if (slot.status !== "claimed") continue;
+          for (const key of expandSlotLabel(slot.slot)) set.add(`${slot.childId}|${key}`);
+        }
+      }
+      return set;
+    },
+    [invites],
   );
+
+  const busyKeySet = useMemo(() => new Set(busyState.keys), [busyState]);
+
+  function setKeys(childId: string, keys: string[], select: boolean) {
+    const allowed = keys.filter((k) => !busyKeySet.has(k) && !claimedKeys.has(`${childId}|${k}`));
+    const next = new Set(kidAvailability[childId] ?? []);
+    for (const k of allowed) {
+      if (select) next.add(k);
+      else next.delete(k);
+    }
+    setKidAvailability({ ...kidAvailability, [childId]: [...next] });
+  }
+
+  function toggleKey(childId: string, key: string) {
+    const current = kidAvailability[childId] ?? [];
+    setKeys(childId, [key], !current.includes(key));
+  }
+
+  function removeLegacyLabel(childId: string, label: string) {
+    const current = kidAvailability[childId] ?? [];
+    setKidAvailability({ ...kidAvailability, [childId]: current.filter((l) => l !== label) });
+  }
 
   const openSelections = useMemo(
     () =>
-      childProfiles.flatMap((child) =>
-        (kidAvailability[child.id] ?? [])
-          .filter((slot) => !claimedKeys.has(`${child.id}|${slot}`))
-          .map((slot) => ({ childId: child.id, childName: child.name.split(" ")[0], slot }))
-      ),
-    [childProfiles, kidAvailability, claimedKeys]
+      childProfiles.flatMap((child) => {
+        const firstName = child.name.split(" ")[0];
+        const raw = kidAvailability[child.id] ?? [];
+        const keys = raw.filter((k) => isCanonicalSlotKey(k) && !claimedKeys.has(`${child.id}|${k}`));
+        const legacy = raw.filter((k) => !isCanonicalSlotKey(k) && !claimedKeys.has(`${child.id}|${k}`));
+        const merged = mergeSlotKeys(keys).map((slot) => ({ childId: child.id, childName: firstName, slot }));
+        const legacySelections = legacy.map((slot) => ({ childId: child.id, childName: firstName, slot }));
+        return [...merged, ...legacySelections];
+      }),
+    [childProfiles, kidAvailability, claimedKeys],
   );
-
-  function toggleSlot(childId: string, slot: string) {
-    const current = kidAvailability[childId] ?? [];
-    const next = current.includes(slot) ? current.filter((item) => item !== slot) : [...current, slot];
-    setKidAvailability({ ...kidAvailability, [childId]: next });
-  }
 
   async function createInvite() {
     setCreateError("");
     if (openSelections.length === 0) {
-      setCreateError("Check at least one free time in Step 1 first.");
+      setCreateError("Select at least one free time in Step 1 first.");
       return;
     }
     try {
@@ -3428,6 +4069,12 @@ function SchedulePanel({
     );
   }
 
+  function markAllNotificationsRead() {
+    setNotifications(markAllPlaydateNotificationsRead());
+  }
+
+  const unreadCount = unreadPlaydateNotificationCount(notifications);
+
   const latestClaim = useMemo(() => {
     const booked = invites.filter((i) => i.status === "booked" && i.claimedBy);
     booked.sort((a, b) => (b.claimedAt ?? 0) - (a.claimedAt ?? 0));
@@ -3441,44 +4088,70 @@ function SchedulePanel({
         <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2563eb]">Schedule · parent tool</p>
         <h2 className="mt-2 text-3xl font-black">Playdate availability</h2>
         <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-[#4f625b]">
-          Set each kid&apos;s free windows, create a real invite link, and send it to the other parent. They pick one
-          time — you&apos;ll see their choice here the moment they confirm. Only first names and time windows are ever
-          shared; parent approves every plan before kids hear about it.
+          Mark each kid&apos;s free times on the 15-minute weekly grid (or import your calendar to block busy times),
+          create a real invite link, and send it to the other parents. The first parent to pick a time books it — the
+          slot instantly becomes unavailable to everyone else, and you&apos;ll both be notified here the moment it
+          happens. Only first names and time windows are ever shared; parent approves every plan before kids hear
+          about it.
         </p>
       </div>
+
+      {claimToast && (
+        <div role="status" className="flex items-start justify-between gap-3 rounded-lg border-2 border-[#165a4b] bg-[#e7f4ef] p-4 shadow-sm">
+          <div>
+            <p className="text-sm font-black text-[#165a4b]">{claimToast}</p>
+            <p className="mt-1 text-xs font-semibold text-[#4f625b]">
+              That time is now closed everywhere — it can&apos;t be double-booked. Details are in your notifications below.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setClaimToast(null)}
+            aria-label="Dismiss"
+            className="tt-btn-press text-lg font-black text-[#165a4b]"
+          >
+            ×
+          </button>
+        </div>
+      )}
 
       <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
         <p className="text-xs font-black uppercase tracking-[0.18em] text-[#165a4b]">Step 1 · free time per kid</p>
         <h3 className="mt-2 text-2xl font-black">When is each kid free for a playdate?</h3>
+        <p className="mt-1 max-w-3xl text-sm font-semibold text-[#4f625b]">
+          Tap 15-minute blocks — adjacent picks merge into tidy windows on the invite. Booked times lock automatically.
+        </p>
         <div className="mt-4 grid gap-3 md:grid-cols-2">
           {childProfiles.map((child) => {
-            const selected = kidAvailability[child.id] ?? [];
+            const raw = kidAvailability[child.id] ?? [];
+            const selectedKeys = raw.filter(isCanonicalSlotKey);
+            const legacyLabels = raw.filter((l) => !isCanonicalSlotKey(l));
             return (
-              <div key={child.id} className="rounded-lg bg-[#faf8f0] p-4">
-                <p className="font-black">{child.name}</p>
-                <div className="mt-2 grid gap-2">
-                  {PLAYDATE_SLOT_OPTIONS.map((slot) => {
-                    const checked = selected.includes(slot);
-                    const claimed = claimedKeys.has(`${child.id}|${slot}`);
-                    return (
-                      <label key={slot} className={`flex items-center gap-2 rounded-lg border-2 p-2 text-sm font-bold ${claimed ? "border-[#ded8c7] bg-white/60 text-[#a09a8c]" : checked ? "border-[#165a4b] bg-[#e7f4ef]" : "border-[#ded8c7] bg-white"}`}>
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          disabled={claimed}
-                          onChange={() => toggleSlot(child.id, slot)}
-                          className="size-5 accent-[#165a4b]"
-                        />
-                        <span>{slot}{claimed ? " \u00b7 booked" : ""}</span>
-                      </label>
-                    );
-                  })}
-                </div>
-              </div>
+              <KidWeekGrid
+                key={child.id}
+                childId={child.id}
+                childName={child.name}
+                selectedKeys={selectedKeys}
+                busyKeys={busyKeySet}
+                claimedKeys={claimedKeys}
+                legacyLabels={legacyLabels}
+                claimedLegacyLabels={new Set(legacyLabels.filter((l) => claimedKeys.has(`${child.id}|${l}`)))}
+                onToggleKey={toggleKey}
+                onSetKeys={setKeys}
+                onRemoveLegacy={removeLegacyLabel}
+              />
             );
           })}
         </div>
       </section>
+
+      <CalendarImportCard
+        busyState={busyState}
+        setBusyState={setBusyState}
+        kidAvailability={kidAvailability}
+        setKidAvailability={setKidAvailability}
+        childProfiles={childProfiles}
+      />
 
       <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
         <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2563eb]">Step 2 · invite the other parent</p>
@@ -3486,7 +4159,7 @@ function SchedulePanel({
         <p className="mt-1 text-sm font-semibold text-[#4f625b]">
           {openSelections.length > 0
             ? `${openSelections.length} open time${openSelections.length === 1 ? "" : "s"} will go on the invite.`
-            : "Check free times in Step 1 — they'll go on the invite."}
+            : "Select free times in Step 1 — they'll go on the invite."}
         </p>
         <label className="mt-3 block max-w-sm">
           <span className="text-sm font-black">Your first name (shown to the other parent)</span>
@@ -3504,14 +4177,62 @@ function SchedulePanel({
         <button
           onClick={createInvite}
           disabled={openSelections.length === 0}
-          className="mt-3 min-h-11 rounded-lg bg-[#2563eb] px-4 py-2 text-sm font-black text-white disabled:opacity-40"
+          className="tt-btn-press mt-3 min-h-11 rounded-lg bg-[#2563eb] px-4 py-2 text-sm font-black text-white disabled:opacity-40"
         >
           Create playdate invite
         </button>
         <p className="mt-2 text-xs font-semibold text-[#4f625b]">
           The link opens a claim page for the other parent — first names and time windows only. No addresses, no kid
-          last names, no contact details.
+          last names, no contact details. Share it with 2–3 parents: the first to accept books the time, and it
+          becomes unavailable to everyone else.
         </p>
+      </section>
+
+      <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2563eb]">🔔 Notifications</p>
+            <h3 className="mt-2 text-2xl font-black">
+              Playdate updates{" "}
+              {unreadCount > 0 && (
+                <span className="ml-1 rounded-full bg-[#2563eb] px-2.5 py-0.5 align-middle text-xs font-black text-white">
+                  {unreadCount} new
+                </span>
+              )}
+            </h3>
+          </div>
+          {notifications.length > 0 && (
+            <button
+              type="button"
+              onClick={markAllNotificationsRead}
+              className="tt-btn-press min-h-9 rounded-lg border-2 border-[#ded8c7] bg-white px-3 py-1 text-xs font-black text-[#4f625b]"
+            >
+              Mark all read
+            </button>
+          )}
+        </div>
+        {notifications.length === 0 ? (
+          <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-[#4f625b]">
+            Nothing yet. When another parent claims one of your invites you&apos;ll be notified here the moment it
+            happens — and they get a confirmation receipt on their side too.
+          </p>
+        ) : (
+          <ul className="mt-3 grid gap-2">
+            {notifications.map((n) => (
+              <li
+                key={n.id}
+                className={`rounded-lg p-3 ring-1 ${n.read ? "bg-[#faf8f0] ring-[#ded8c7]" : "bg-[#f4f7ff] ring-[#2563eb]/40"}`}
+              >
+                <p className="text-sm font-black text-[#17231f]">
+                  {!n.read && <span className="mr-1.5 inline-block size-2 rounded-full bg-[#2563eb]" aria-label="unread" />}
+                  {n.title}
+                </p>
+                <p className="mt-0.5 text-sm font-semibold leading-6 text-[#4f625b]">{n.body}</p>
+                <p className="mt-1 text-[11px] font-bold text-[#a09a8c]">{formatClaimedAt(n.createdAt)}</p>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
 
       {invites.length > 0 && (
@@ -3545,7 +4266,7 @@ function SchedulePanel({
                       <p className="mt-2 break-all rounded-lg bg-white p-3 text-sm font-black text-[#17231f] ring-1 ring-[#ded8c7]">{url}</p>
                       <button
                         onClick={() => copyInviteLink(invite)}
-                        className="mt-2 min-h-11 rounded-lg bg-[#165a4b] px-4 py-2 text-sm font-black text-white"
+                        className="tt-btn-press mt-2 min-h-11 rounded-lg bg-[#165a4b] px-4 py-2 text-sm font-black text-white"
                       >
                         {linkCopiedId === invite.id ? "Copied! Send it to the other parent ✓" : "Copy invite link"}
                       </button>
@@ -3574,7 +4295,6 @@ function SchedulePanel({
     </section>
   );
 }
-
 /**
  * Feedback R2 — AI Buddy daily content: stable 32-bit seed from the local
  * calendar day (localDayKey) so the featured pet and the daily question /
@@ -4169,7 +4889,6 @@ function Hero({
   pendingCount,
   taskProgress,
   approvedMissionCount,
-  pets,
   setActiveTab,
   role,
 }: {
@@ -4179,7 +4898,6 @@ function Hero({
   pendingCount: number;
   taskProgress: number;
   approvedMissionCount: number;
-  pets: Pet[];
   setActiveTab: (tab: string) => void;
   role: Role;
 }) {
@@ -8807,313 +9525,6 @@ function LegacyNeighborhoodPanel({ goals, childProfiles }: { goals: SavingsGoal[
 }
 
 void LegacyNeighborhoodPanel;
-
-function AIPanel({ childProfiles, missions, parentSignedIn }: { childProfiles: Child[]; missions: Mission[]; parentSignedIn: boolean }) {
-  const currentUses = [
-    ["Local parent tools", "TailTots now has template-powered helpers for missions and life-skill chores."],
-    ["AI ideas are live for parents", "The Life Skill Chore Planner can generate activity ideas with Cloudflare Workers AI. Parents review every suggestion before it becomes a mission."],
-  ];
-  const [aiDraft, setAiDraft] = useState({
-    petType: "Guinea pig",
-    routine: "Morning hay, fresh water, veggie treat, quick cage check",
-    lifeSkill: "responsibility",
-    choreGoal: "Teach responsibility through morning pet care and one family helper task",
-  });
-  const smartMissions = buildSmartMissions(aiDraft.petType, aiDraft.routine);
-  const lifeSkillMissions = buildLifeSkillChores(aiDraft.lifeSkill, aiDraft.choreGoal, childProfiles);
-  const [aiIdeas, setAiIdeas] = useState<string[] | null>(null);
-  const [aiLoading, setAiLoading] = useState(false);
-  const [aiError, setAiError] = useState<string | null>(null);
-  // Where the shown ideas came from: "live" for the real AI endpoint, "demo"
-  // for the built-in fallback (there is no /api/ai/ideas route in this repo
-  // build, so the demo path is the one that runs here — labeled honestly).
-  const [aiIdeasSource, setAiIdeasSource] = useState<"live" | "demo" | null>(null);
-  const [aiIdeasNote, setAiIdeasNote] = useState<string | null>(null);
-  // "Ask your kid with AI": parent picks a topic. When a parent is signed in,
-  // a genuinely AI-written prompt comes from the parent-side AI endpoint;
-  // signed out (or on any failure) the honest local demo fallback is used.
-  const [askTopic, setAskTopic] = useState("kindness");
-  const [askPrompt, setAskPrompt] = useState<string | null>(null);
-  const [askPromptSource, setAskPromptSource] = useState<"live" | "demo" | null>(null);
-  const [askLoading, setAskLoading] = useState(false);
-  const askKidPrompts: Record<string, string[]> = {
-    kindness: [
-      "Tell me about a time you were kind to someone this week — how did it make you feel?",
-      "If you could do one kind thing for our family tomorrow, what would it be?",
-      "Who is someone that was kind to you lately, and how could you thank them?",
-    ],
-    patience: [
-      "Tell me about a time you had to wait for something — what helped you stay patient?",
-      "What is something hard that got easier because you kept practicing?",
-      "When you feel like rushing, what could you do to slow down?",
-    ],
-    honesty: [
-      "Why do you think telling the truth matters, even when it is hard?",
-      "Tell me about a time you told the truth when it would have been easier not to.",
-      "What would you do if a friend asked you to keep a secret that felt wrong?",
-    ],
-    responsibility: [
-      "What is one job in our family that you feel proud to own?",
-      "How do you think taking care of our pet teaches responsibility?",
-      "What is something you want to be trusted with when you are older, and how are you earning it now?",
-    ],
-  };
-  async function generateAskPrompt() {
-    const applyLocalFallback = () => {
-      const options = askKidPrompts[askTopic] ?? askKidPrompts.kindness;
-      setAskPrompt(options[Math.floor(Math.random() * options.length)]);
-      setAskPromptSource("demo");
-    };
-    setAskLoading(true);
-    try {
-      const accessToken = await getParentAccessToken();
-      if (!accessToken) {
-        // No signed-in parent: honest local demo fallback instead of a dead button.
-        applyLocalFallback();
-        return;
-      }
-      const child = childProfiles[0];
-      const result = await fetchConversationPrompt({
-        token: accessToken,
-        topic: askTopic,
-        ageBand: child ? ageBandForAge(child.age) : "7-9",
-      });
-      if (result.ok) {
-        setAskPrompt(result.prompt);
-        setAskPromptSource("live");
-      } else {
-        applyLocalFallback();
-      }
-    } catch {
-      applyLocalFallback();
-    } finally {
-      setAskLoading(false);
-    }
-  }
-
-  function ageBandForAge(age: number): "4-6" | "7-9" | "10-12" {
-    if (age <= 6) return "4-6";
-    if (age <= 9) return "7-9";
-    return "10-12";
-  }
-
-  async function getParentAccessToken(): Promise<string | null> {
-    if (!supabase) return null;
-    try {
-      const { data, error } = await supabase.auth.getSession();
-      if (error) return null;
-      return data.session?.access_token ?? null;
-    } catch {
-      return null;
-    }
-  }
-
-  async function generateAiIdeas() {
-    const child = childProfiles[0];
-    setAiLoading(true);
-    setAiError(null);
-    try {
-      const accessToken = await getParentAccessToken();
-      if (!accessToken) {
-        // No signed-in parent: show the clearly-labeled demo fallback instead of a dead button.
-        setAiIdeas(lifeSkillMissions.slice(0, 5));
-        setAiIdeasSource("demo");
-        setAiIdeasNote("Demo ideas — connect AI in settings for live generation.");
-        setAiError(null);
-        return;
-      }
-      const response = await fetch("/api/ai/ideas", {
-        method: "POST",
-        headers: { "content-type": "application/json", authorization: `Bearer ${accessToken}` },
-        // Kids-data rule: the AI is parent-side only. Send the life skill and a
-        // coarse age band — never a child's name or any other kid PII.
-        body: JSON.stringify({
-          lifeSkill: aiDraft.lifeSkill,
-          ageBand: child ? ageBandForAge(child.age) : "7-9",
-        }),
-      });
-      const data = (await response.json()) as { ideas?: unknown };
-      const ideas = Array.isArray(data.ideas)
-        ? data.ideas.filter((item): item is string => typeof item === "string" && item.trim().length > 0)
-        : [];
-      if (response.ok && ideas.length > 0) {
-        setAiIdeas(ideas);
-        setAiIdeasSource("live");
-        setAiIdeasNote("AI-generated ideas — review before saving as a mission.");
-      } else {
-        setAiIdeas(lifeSkillMissions.slice(0, 5));
-        setAiIdeasSource("demo");
-        setAiIdeasNote("Demo ideas — the live AI helper is unavailable right now.");
-      }
-      setAiError(null);
-    } catch {
-      setAiIdeas(lifeSkillMissions.slice(0, 5));
-      setAiIdeasSource("demo");
-      setAiIdeasNote("Demo ideas — the live AI helper is unavailable right now.");
-      setAiError(null);
-    } finally {
-      setAiLoading(false);
-    }
-  }
-  // Insights only from real family data — no invented identities or observations.
-
-  return (
-    <section className="space-y-4">
-      <div className="rounded-lg border border-[#ded8c7] bg-[#17231f] p-5 text-white shadow-sm">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#ffd166]">Parent tools</p>
-        <h2 className="mt-2 text-3xl font-black">You stay in charge — AI does the planning</h2>
-        <p className="mt-3 max-w-3xl text-sm font-semibold leading-6 text-[#dce7e2]">
-          TailTots keeps tabs on your kids building pre-adulthood skills with minimal work from you: AI-generated missions target character and life skills — responsibility, empathy, teamwork — and nothing becomes a mission until you choose it.
-        </p>
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-2">
-        <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-[#165a4b]">AI now</p>
-          <h3 className="mt-2 text-2xl font-black">What exists today</h3>
-          <div className="mt-4 grid gap-3">
-            {currentUses.map(([title, body]) => (
-              <article key={title} className="rounded-lg bg-[#faf8f0] p-4">
-                <h4 className="font-black">{title}</h4>
-                <p className="mt-1 text-sm font-semibold leading-5 text-[#4f625b]">{body}</p>
-              </article>
-            ))}
-          </div>
-        </section>
-
-      </div>
-
-      <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2563eb]">AI tools</p>
-        <h3 className="mt-2 text-2xl font-black">Parent-side helpers you can use now</h3>
-        <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-[#4f625b]">
-                    The planner below can generate ideas with AI, or keep using the built-in templates. Nothing is
-          saved until a parent chooses it.
-        </p>
-
-        <div className="mt-5 grid gap-4 lg:grid-cols-2">
-          <section className="rounded-lg bg-[#eef2ff] p-4">
-            <h4 className="text-lg font-black">Life Skill Chore Planner</h4>
-            <div className="mt-3 grid gap-3 sm:grid-cols-2">
-              <select className="rounded-lg border border-[#dce6f8] px-3 py-3 text-sm font-semibold" value={aiDraft.lifeSkill} onChange={(event) => setAiDraft({ ...aiDraft, lifeSkill: event.target.value })}>
-                <option value="responsibility">Responsibility</option>
-                <option value="empathy">Empathy</option>
-                <option value="teamwork">Teamwork</option>
-                <option value="leadership">Leadership</option>
-                <option value="time">Time habits</option>
-              </select>
-              <input className="rounded-lg border border-[#dce6f8] px-3 py-3 text-sm font-semibold" value={aiDraft.choreGoal} onChange={(event) => setAiDraft({ ...aiDraft, choreGoal: event.target.value })} placeholder="What value should chores teach?" />
-            </div>
-            <button
-              type="button"
-              onClick={generateAiIdeas}
-              disabled={aiLoading}
-              className="mt-3 min-h-11 rounded-lg bg-[#17231f] px-4 py-2 text-xs font-black text-white shadow-sm disabled:opacity-50"
-            >
-              {aiLoading ? "Generating ideas\u2026" : "Generate with AI"}
-            </button>
-            {!parentSignedIn && (
-              <p className="mt-2 text-xs font-semibold text-[#7a4b12]">
-                AI ideas need a signed-in parent account — set one up in Family Setup, under Parent account.
-              </p>
-            )}
-            {aiError && (
-              <p className="mt-2 text-xs font-semibold text-[#7a4b12]">{aiError}</p>
-            )}
-            {aiIdeas && (
-              <div className="mt-3 rounded-lg bg-white p-3">
-                <p className={`text-[11px] font-black uppercase tracking-[0.14em] ${aiIdeasSource === "live" ? "text-[#2563eb]" : "text-[#7a4b12]"}`}>
-                  {aiIdeasNote ?? (aiIdeasSource === "live" ? "AI-generated ideas — review before saving as a mission" : "Demo ideas — connect AI in settings for live generation.")}
-                </p>
-                <div className="mt-2 grid gap-2">
-                  {aiIdeas.map((idea) => (
-                    <p key={idea} className="rounded-lg bg-[#eef2ff] p-3 text-sm font-semibold leading-5">{idea}</p>
-                  ))}
-                </div>
-              </div>
-            )}
-            <div className="mt-3 grid gap-2">
-              {lifeSkillMissions.map((mission) => <p key={mission} className="rounded-lg bg-white p-3 text-sm font-semibold leading-5">{mission}</p>)}
-            </div>
-          </section>
-
-
-          <section className="rounded-lg bg-[#faf8f0] p-4">
-            <h4 className="text-lg font-black">Smart Mission Generator</h4>
-            <div className="mt-3 grid gap-3 sm:grid-cols-2">
-              <input className="rounded-lg border border-[#ded8c7] px-3 py-3 text-sm font-semibold" value={aiDraft.petType} onChange={(event) => setAiDraft({ ...aiDraft, petType: event.target.value })} placeholder="Pet type" />
-            </div>
-            <textarea className="mt-3 min-h-24 w-full rounded-lg border border-[#ded8c7] px-3 py-3 text-sm font-semibold" value={aiDraft.routine} onChange={(event) => setAiDraft({ ...aiDraft, routine: event.target.value })} />
-            <div className="mt-3 grid gap-2">
-              {smartMissions.map((mission) => <p key={mission} className="rounded-lg bg-white p-3 text-sm font-semibold">{mission}</p>)}
-            </div>
-          </section>
-          <section className="rounded-lg bg-[#f4efff] p-4">
-            <h4 className="text-lg font-black">Ask your kid with AI 💬</h4>
-            <p className="mt-1 text-sm font-semibold text-[#4f625b]">
-              Pick a topic — AI writes one conversation prompt you can ask your kid tonight. Signed-in parents get a fresh AI-written prompt; otherwise a built-in demo prompt.
-            </p>
-            <div className="mt-3 flex flex-wrap gap-2" role="group" aria-label="Conversation topic">
-              {["kindness", "patience", "honesty", "responsibility"].map((topic) => (
-                <button
-                  key={topic}
-                  onClick={() => { setAskTopic(topic); setAskPrompt(null); setAskPromptSource(null); }}
-                  className={`min-h-11 rounded-lg px-4 py-2 text-sm font-black capitalize ${askTopic === topic ? "bg-[#6d3ed1] text-white" : "bg-white text-[#17231f] ring-2 ring-[#ded8c7]"}`}
-                >
-                  {topic}
-                </button>
-              ))}
-            </div>
-            <button
-              onClick={generateAskPrompt}
-              disabled={askLoading}
-              className="mt-3 min-h-11 rounded-lg bg-[#6d3ed1] px-4 py-2 text-sm font-black text-white disabled:opacity-50"
-            >
-              {askLoading ? "Generating prompt…" : "Generate a prompt"}
-            </button>
-            {!parentSignedIn && (
-              <p className="mt-2 text-xs font-semibold text-[#7a4b12]">
-                AI prompts need a signed-in parent account — set one up in Family Setup, under Parent account. Until then you get the built-in demo prompts.
-              </p>
-            )}
-            {askPrompt && (
-              <div className="mt-3 rounded-lg bg-white p-4">
-                <p className="text-xs font-black uppercase tracking-[0.14em] text-[#6d3ed1]">
-                  {askPromptSource === "live" ? "✨ AI-generated prompt" : "Demo prompt · generated locally"}
-                </p>
-                <p className="mt-2 text-base font-black leading-6">“{askPrompt}”</p>
-                <p className="mt-2 text-xs font-semibold text-[#4f625b]">
-                  Tip: ask it at dinner, listen fully, then share your own answer first next time.
-                </p>
-              </div>
-            )}
-          </section>
-        </div>
-      </section>
-    </section>
-  );
-}
-
-function buildSmartMissions(petType: string, routine: string) {
-  const pet = petType.trim() || "pet";
-  const routineParts = routine.split(",").map((part) => part.trim()).filter(Boolean).slice(0, 3);
-  const baseParts = routineParts.length ? routineParts : ["fresh food", "clean water", "comfort check"];
-  return baseParts.map((part, index) => `${index + 1}. ${pet} mission: ${part}. Kid step: do it, notice one thing, then ask parent to approve.`);
-}
-
-function buildLifeSkillChores(skill: string, goal: string, childProfiles: Child[]) {
-  const label = getLifeSkillLabel((skill as LifeSkillKey) || "responsibility");
-  const sortedKids = [...childProfiles].sort((a, b) => a.age - b.age);
-  const younger = sortedKids[0];
-  const older = sortedKids[sortedKids.length - 1];
-  const purpose = goal.trim() || `Teach ${label.toLowerCase()} through simple care routines`;
-  return [
-    `${younger?.name ?? "Younger child"}: easy mission, 10-12 points. Notice one pet need and tell a parent. Purpose: ${purpose}.`,
-    `${older?.name ?? "Older child"}: medium mission, 16-20 points. Complete a care checklist and help reset supplies.`,
-    "Parent rule: reward effort and completion, not speed. If one child gets harder work, add enough points so weekly totals stay close.",
-    "Kid-facing wording: show helpful next steps and badges, not rankings or judgment.",
-  ];
-}
 
 /** Layered portrait medallion for pet photos: stage-colored dashed "sticker" ring,
  *  soft shadow, sparkle, and a stage ribbon — like a prize badge. */
