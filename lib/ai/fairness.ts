@@ -279,7 +279,7 @@ export function validateFairnessCoachingInput(body: unknown): FairnessCoachingVa
     return { ok: false, error: "perKid must be a non-empty array (max 8)." };
   }
   const skills: FairnessSkillKey[] = ["responsibility", "empathy", "teamwork", "leadership", "time"];
-  const clean = [];
+  const clean: FairnessCoachingPayload["perKid"] = [];
   for (const entry of perKid) {
     if (!isRecord(entry)) return { ok: false, error: "Each perKid entry must be an object." };
     const { ageBand, plannedPoints, openCount, avgDifficulty, topSkill } = entry;
@@ -292,7 +292,7 @@ export function validateFairnessCoachingInput(body: unknown): FairnessCoachingVa
     if (typeof topSkill !== "string" || !skills.includes(topSkill as FairnessSkillKey)) {
       return { ok: false, error: "perKid[].topSkill must be a valid skill." };
     }
-    clean.push({ ageBand, plannedPoints, openCount, avgDifficulty, topSkill: topSkill as FairnessSkillKey });
+    clean.push({ ageBand: ageBand as IdeaAgeBand, plannedPoints, openCount, avgDifficulty, topSkill: topSkill as FairnessSkillKey });
   }
   return { ok: true, value: { spread, balanced, perKid: clean } };
 }

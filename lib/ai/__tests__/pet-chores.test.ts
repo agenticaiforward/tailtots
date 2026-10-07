@@ -153,7 +153,7 @@ describe("fetchPetChores", () => {
       new Response(JSON.stringify({ chores: payload }), { status: 200 }),
     );
     const result = await fetchPetChores({
-      fetchFn: fetchFn as unknown as typeof fetch,
+      fetchFn: fetchFn as typeof fetch,
       token: "tok",
       skill: "responsibility",
       ageBand: "7-9",
@@ -165,7 +165,8 @@ describe("fetchPetChores", () => {
       "/api/ai/pet-chores",
       expect.objectContaining({ method: "POST" }),
     );
-    const body = JSON.parse((fetchFn.mock.calls[0][1] as RequestInit).body as string);
+    const callArgs = fetchFn.mock.calls[0] as unknown as [string, RequestInit];
+    const body = JSON.parse(callArgs[1].body as string);
     expect(body.pets).toEqual([{ name: "Jack", species: "Guinea pig" }]);
     expect(body).not.toHaveProperty("childName");
   });
@@ -175,7 +176,7 @@ describe("fetchPetChores", () => {
       throw new Error("down");
     });
     const result = await fetchPetChores({
-      fetchFn: fetchFn as unknown as typeof fetch,
+      fetchFn: fetchFn as typeof fetch,
       token: "tok",
       skill: "time",
       ageBand: "7-9",

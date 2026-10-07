@@ -3,6 +3,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { playdateClaimUrl, playdateStore } from "@/lib/playdate-store";
 import type { PlaydateInvite } from "@/lib/playdate-store";
+// Feedback R2 (schedule stream, cross-region hook ≤5 lines): record the
+// accepting parent's in-app confirmation receipt. The host is notified via
+// their Schedule panel; email is not sent — the repo has no email provider
+// (see the EMAIL GAP notes in lib/playdate-notifications.ts).
+import { recordClaimReceiptFromInvite } from "@/lib/playdate-notifications";
 
 /**
  * The other parent's view, rendered instead of the app when the URL is
@@ -53,6 +58,7 @@ export function PlaydateClaimView({ inviteId }: { inviteId: string }) {
     setClaimError("");
     const updated = await playdateStore.claimSlot(inviteId, pickedIndex, claimerName);
     if (updated) {
+      recordClaimReceiptFromInvite(updated, claimerName);
       setInvite(updated);
       setJustClaimed(true);
     } else {

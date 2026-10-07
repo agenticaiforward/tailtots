@@ -1212,14 +1212,17 @@ export function TailTotsApp() {
   // Stream R2: after a magic-link sign-in completes on a dedicated auth page,
   // close the page and land the parent on Family Setup in real mode. The
   // sign-in bootstrap above already pulled (or prepared) their cloud family.
+  // Navigation is a reaction to the sign-in event, not part of rendering.
   useEffect(() => {
     if (!cloudAccountEmail || !authPage) return;
-    setAuthPage(null);
-    setAppMode("real");
-    setRole("parent");
-    setIsParentUnlocked(true);
-    setActiveTab("setup");
-    requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "smooth" }));
+    queueMicrotask(() => {
+      setAuthPage(null);
+      setAppMode("real");
+      setRole("parent");
+      setIsParentUnlocked(true);
+      setActiveTab("setup");
+      requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "smooth" }));
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cloudAccountEmail]);
 

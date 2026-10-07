@@ -189,12 +189,13 @@ describe("fetchFairnessCoaching", () => {
     const fetchFn = vi.fn(async () => new Response(JSON.stringify({ tip: "Try swapping one task." }), { status: 200 }));
     const analysis = analyzeFairness([], [makeChild("k1", "Maya", 6)]);
     const result = await fetchFairnessCoaching({
-      fetchFn: fetchFn as unknown as typeof fetch,
+      fetchFn: fetchFn as typeof fetch,
       token: "tok",
       analysis,
     });
     expect(result).toEqual({ ok: true, tip: "Try swapping one task." });
-    const body = JSON.parse((fetchFn.mock.calls[0][1] as RequestInit).body as string);
+    const callArgs = fetchFn.mock.calls[0] as unknown as [string, RequestInit];
+    const body = JSON.parse(callArgs[1].body as string);
     expect(JSON.stringify(body)).not.toContain("Maya");
   });
 
@@ -204,7 +205,7 @@ describe("fetchFairnessCoaching", () => {
     });
     const analysis = analyzeFairness([], [makeChild("k1", "Maya", 6)]);
     const result = await fetchFairnessCoaching({
-      fetchFn: fetchFn as unknown as typeof fetch,
+      fetchFn: fetchFn as typeof fetch,
       token: "tok",
       analysis,
     });
