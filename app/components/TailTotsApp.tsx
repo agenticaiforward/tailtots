@@ -3152,44 +3152,44 @@ function VisionLandingPanel({
         <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-sun">Who TailTots is for 🐾</p>
         <h3 className="mt-1 text-2xl font-black tracking-tight sm:text-3xl">Strong habits. Real responsibility. Whichever kid you’ve got.</h3>
         <div className="mt-4 grid gap-3 md:grid-cols-3">
-          <div className="overflow-hidden rounded-2xl bg-white/10 ring-1 ring-white/15">
-            <div className="relative">
-              <img src="/landing/kid-dog.jpg" alt="A boy hugging his dog in the grass — a kid who already has a pet" className="h-44 w-full object-cover" loading="lazy" />
-              <span className="absolute bottom-2 left-2 rounded-full bg-tt-sun px-3 py-1 text-[11px] font-black text-tt-ink shadow">🐾 Has one</span>
+          <div className="rounded-2xl bg-white/10 p-4 ring-1 ring-white/15">
+            <div className="flex items-center gap-3">
+              <img src="/landing/kid-dog.jpg" alt="A boy hugging his dog — a kid who already has a pet" className="size-16 shrink-0 rounded-2xl object-cover" loading="lazy" />
+              <div>
+                <p className="text-base font-black">Kids who have pets</p>
+                <span className="mt-1 inline-block rounded-full bg-tt-sun px-2.5 py-0.5 text-[11px] font-black text-tt-ink">🐾 Has one</span>
+              </div>
             </div>
-            <div className="p-4">
-              <p className="text-base font-black">Kids who have pets</p>
-              <p className="mt-1 text-sm font-semibold leading-6 text-white/80">
-                The biggest crowd. Your kid stops being a spectator and starts running the real routine — feeding schedules they actually
-                follow, training missions, vet-visit prep. From “we have a dog” to “my kid <em>runs</em> the dog.”
-              </p>
-            </div>
+            <ul className="mt-3 grid gap-1.5 text-sm font-semibold leading-5 text-white/85">
+              <li className="flex gap-2"><span aria-hidden="true">•</span> Runs the real routine — feeding schedules, training missions, vet-visit prep</li>
+              <li className="flex gap-2"><span aria-hidden="true">•</span> From “we have a dog” to “my kid <em>runs</em> the dog”</li>
+            </ul>
           </div>
-          <div className="overflow-hidden rounded-2xl bg-white/10 ring-1 ring-white/15">
-            <div className="relative">
-              <img src="/landing/kid-rabbit.jpg" alt="A girl holding a rabbit close — a kid dreaming of a pet" className="h-44 w-full object-cover" loading="lazy" />
-              <span className="absolute bottom-2 left-2 rounded-full bg-tt-sun px-3 py-1 text-[11px] font-black text-tt-ink shadow">🎓 Dreaming of one</span>
+          <div className="rounded-2xl bg-white/10 p-4 ring-1 ring-white/15">
+            <div className="flex items-center gap-3">
+              <img src="/landing/kid-rabbit.jpg" alt="A girl holding a rabbit — a kid dreaming of a pet" className="size-16 shrink-0 rounded-2xl object-cover" loading="lazy" />
+              <div>
+                <p className="text-base font-black">Kids who want a pet</p>
+                <span className="mt-1 inline-block rounded-full bg-tt-sun px-2.5 py-0.5 text-[11px] font-black text-tt-ink">🎓 Dreaming of one</span>
+              </div>
             </div>
-            <div className="p-4">
-              <p className="text-base font-black">Kids who want a pet</p>
-              <p className="mt-1 text-sm font-semibold leading-6 text-white/80">
-                Day after day of parent-set home and community missions builds the proof record toward the Pet Readiness Certificate —
-                answering the one question that matters: will they stick with it?
-              </p>
-            </div>
+            <ul className="mt-3 grid gap-1.5 text-sm font-semibold leading-5 text-white/85">
+              <li className="flex gap-2"><span aria-hidden="true">•</span> Daily home + community missions build the proof record</li>
+              <li className="flex gap-2"><span aria-hidden="true">•</span> Earns the Pet Readiness Certificate — proof they’ll stick with it</li>
+            </ul>
           </div>
-          <div className="overflow-hidden rounded-2xl bg-white/10 ring-1 ring-white/15">
-            <div className="relative">
-              <img src="/landing/kid-cat.jpg" alt="A girl hugging a cat at home — a kid who can't have a pet but loves animals" className="h-44 w-full object-cover" loading="lazy" />
-              <span className="absolute bottom-2 left-2 rounded-full bg-tt-sun px-3 py-1 text-[11px] font-black text-tt-ink shadow">💛 Loves them anyway</span>
+          <div className="rounded-2xl bg-white/10 p-4 ring-1 ring-white/15">
+            <div className="flex items-center gap-3">
+              <img src="/landing/kid-cat.jpg" alt="A girl hugging a cat — a kid who loves animals" className="size-16 shrink-0 rounded-2xl object-cover" loading="lazy" />
+              <div>
+                <p className="text-base font-black">Kids who can’t have pets</p>
+                <span className="mt-1 inline-block rounded-full bg-tt-sun px-2.5 py-0.5 text-[11px] font-black text-tt-ink">💛 Loves them anyway</span>
+              </div>
             </div>
-            <div className="p-4">
-              <p className="text-base font-black">Kids who can’t have pets</p>
-              <p className="mt-1 text-sm font-semibold leading-6 text-white/80">
-                Animal lovers through and through. Set donation goals for real animal shelters, cheer on rescue dogs — and get the full
-                skill builder every other kid gets: money smarts, chores, kindness missions, certificates at every milestone.
-              </p>
-            </div>
+            <ul className="mt-3 grid gap-1.5 text-sm font-semibold leading-5 text-white/85">
+              <li className="flex gap-2"><span aria-hidden="true">•</span> Donation goals for real shelters, cheer on rescue dogs</li>
+              <li className="flex gap-2"><span aria-hidden="true">•</span> Full skill builder — money smarts, chores, kindness missions</li>
+            </ul>
           </div>
         </div>
         <div className="mt-4 flex flex-wrap items-center justify-between gap-4">
