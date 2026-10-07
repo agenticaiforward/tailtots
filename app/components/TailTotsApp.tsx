@@ -7480,12 +7480,12 @@ function PetChoreBuilderCard(props: {
       <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2563eb]">AI pet-chores builder</p>
       <h2 className="mt-2 text-2xl font-black sm:text-3xl">Teach one skill today — AI builds the chores</h2>
       <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-[#4f625b]">
-        Pick the character or life skill to teach. The builder uses your family's exact pets and returns 4–5 trackable
+        Pick the character or life skill to teach. The builder uses your family’s exact pets and returns 4–5 trackable
         chores, each tagged with the skill it grows. Nothing becomes a mission until you save it.
       </p>
       {props.pets.length === 0 ? (
         <p className="mt-4 rounded-lg bg-[#fff4d8] p-4 text-sm font-semibold text-[#7a4b12]">
-          Add your pets in Pet Passports first — the builder crafts chores from your family's exact pets.
+          Add your pets in Pet Passports first — the builder crafts chores from your family’s exact pets.
         </p>
       ) : (
         <>
@@ -7573,7 +7573,7 @@ function PetChoreBuilderCard(props: {
                   disabled={!chores.length || !assignTo}
                   className="tt-btn-press min-h-11 rounded-lg bg-[#165a4b] px-5 py-2 text-sm font-black text-white disabled:opacity-50"
                 >
-                  Save as today's missions
+                  Save as today’s missions
                 </button>
               </div>
               {savedFlash && (
@@ -7751,7 +7751,7 @@ function KidPasscodeCard(props: {
       <p className="text-xs font-black uppercase tracking-[0.18em] text-[#f47b20]">Kid profiles</p>
       <h2 className="mt-2 text-2xl font-black">Profile passcodes</h2>
       <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-[#4f625b]">
-        Set a passcode for each kid's profile — settable when the profile is created or any time after, right here.
+        Set a passcode for each kid’s profile — settable when the profile is created or any time after, right here.
         Only a parent on this tab can set or change them.
       </p>
       {flash && <p className="mt-3 rounded-lg bg-[#e7f4ef] p-3 text-sm font-semibold text-[#165a4b]">{flash}</p>}
