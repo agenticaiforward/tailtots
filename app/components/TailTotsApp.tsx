@@ -3955,11 +3955,49 @@ function SchedulePanel({
 
   // Live list of this family's invites; refreshes when another tab (the
   // other parent's claim view) writes to the store.
+  //
+  // Feedback R2 item 20 — host-side in-app notification: when an invite flips
+  // open→booked (another parent claimed a slot), record a notification and
+  // pop a toast. The first load only sets the baseline so old bookings don't
+  // re-notify; later loads are driven by the store subscription, i.e. real
+  // changes. The accepting parent's receipt is recorded on the claim page
+  // (PlaydateClaimView) and also lands in this inbox.
   useEffect(() => {
     let cancelled = false;
     async function load() {
       const all = await playdateStore.listInvites();
-      if (!cancelled) setInvites(all);
+      if (cancelled) return;
+      setInvites(all);
+      if (!baselineDoneRef.current) {
+        baselineDoneRef.current = true;
+        prevInvitesRef.current = all;
+        return;
+      }
+      const prev = new Map((prevInvitesRef.current ?? []).map((invite) => [invite.id, invite]));
+      const fresh: NewPlaydateNotification[] = [];
+      for (const invite of all) {
+        if (invite.status !== "booked" || !invite.claimedBy) continue;
+        const old = prev.get(invite.id);
+        if (old && old.status === "booked") continue;
+        const slot = invite.slots.find((s) => s.status === "claimed");
+        fresh.push(
+          buildClaimNotification({
+            inviteId: invite.id,
+            hostName: invite.hostName,
+            claimedBy: invite.claimedBy,
+            slotLabel: slot?.slot ?? "a playdate time",
+            childName: slot?.childName ?? "your kid",
+            claimedAt: invite.claimedAt,
+          }),
+        );
+      }
+      if (fresh.length > 0) {
+        setNotifications(appendPlaydateNotifications(fresh));
+        setClaimToast(fresh[fresh.length - 1].title);
+        if (toastTimerRef.current !== null) window.clearTimeout(toastTimerRef.current);
+        toastTimerRef.current = window.setTimeout(() => setClaimToast(null), 9000);
+      }
+      prevInvitesRef.current = all;
     }
     load();
     const unsubscribe = playdateStore.subscribe(load);
@@ -3968,45 +4006,6 @@ function SchedulePanel({
       unsubscribe();
     };
   }, []);
-
-  // Feedback R2 item 20 — host-side in-app notification: when an invite flips
-  // open→booked (another parent claimed a slot), record a notification and
-  // pop a toast. The first load only sets the baseline so old bookings don't
-  // re-notify; later loads are driven by the store subscription, i.e. real
-  // changes. The accepting parent's receipt is recorded on the claim page
-  // (PlaydateClaimView) and also lands in this inbox.
-  useEffect(() => {
-    if (!baselineDoneRef.current) {
-      baselineDoneRef.current = true;
-      prevInvitesRef.current = invites;
-      return;
-    }
-    const prev = new Map((prevInvitesRef.current ?? []).map((invite) => [invite.id, invite]));
-    const fresh: NewPlaydateNotification[] = [];
-    for (const invite of invites) {
-      if (invite.status !== "booked" || !invite.claimedBy) continue;
-      const old = prev.get(invite.id);
-      if (old && old.status === "booked") continue;
-      const slot = invite.slots.find((s) => s.status === "claimed");
-      fresh.push(
-        buildClaimNotification({
-          inviteId: invite.id,
-          hostName: invite.hostName,
-          claimedBy: invite.claimedBy,
-          slotLabel: slot?.slot ?? "a playdate time",
-          childName: slot?.childName ?? "your kid",
-          claimedAt: invite.claimedAt,
-        }),
-      );
-    }
-    if (fresh.length > 0) {
-      setNotifications(appendPlaydateNotifications(fresh));
-      setClaimToast(fresh[fresh.length - 1].title);
-      if (toastTimerRef.current !== null) window.clearTimeout(toastTimerRef.current);
-      toastTimerRef.current = window.setTimeout(() => setClaimToast(null), 9000);
-    }
-    prevInvitesRef.current = invites;
-  }, [invites]);
 
   // Slots already claimed across this family's invites can't be picked again.
   // Claimed labels (merged ranges or legacy labels) expand back to 15-min keys.
