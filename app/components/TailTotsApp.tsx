@@ -2605,13 +2605,15 @@ function VisionLandingPanel({
               For parents of kids 5–12
             </p>
             <h2 className="tt-display mt-3 max-w-2xl text-[2.75rem] font-black leading-[1.04] text-tt-navy sm:text-6xl">
-              Get your evenings back. Raise a kid who <span className="relative inline-block px-1"><span className="absolute inset-0 -rotate-1 rounded bg-tt-sun/70" aria-hidden="true" /><span className="relative italic">handles it.</span></span>
+              Raise the <span className="relative inline-block px-1"><span className="absolute inset-0 -rotate-1 rounded bg-tt-sun/70" aria-hidden="true" /><span className="relative italic">kind, responsible kid</span></span> the world needs — in just 10 minutes a day.
             </h2>
             <p className="mt-4 max-w-xl text-lg font-bold leading-7 text-tt-navy-soft">
-              TailTots gives your child one simple daily checklist — pet care, chores, savings goals — they track themselves in about a minute a day. You approve in 30 seconds. Less nagging, more doing. Parent-approved and closed: no strangers, no chats, no doomscroll.
+              Empathy isn’t taught in a lecture — it’s practiced: feeding a hungry pup, sharing with a sibling, saving up for a shelter dog.
+              TailTots gives your child one simple daily checklist of kindness missions, pet care, chores, and savings — and takes you just
+              10 minutes a day to guide their character + life skills.
             </p>
             <p className="mt-2 max-w-xl text-[15px] font-semibold leading-6 text-tt-ink-soft">
-              They earn real <strong className="font-black text-tt-navy">independence</strong> and real <strong className="font-black text-tt-navy">responsibility</strong> at the same time — and you get the lightest parenting win there is: your me-time back.
+              The child who cares for animals grows up caring for people. Parent-approved and closed: no strangers, no chats, no doomscroll.
             </p>
 
             {/* PRIMARY: launch capture. SECONDARY: kid demo. Never equal weight. */}
@@ -2728,29 +2730,44 @@ function VisionLandingPanel({
         <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-sun">Who TailTots is for 🐾</p>
         <h3 className="mt-1 text-2xl font-black tracking-tight sm:text-3xl">Strong habits. Real responsibility. Whichever kid you’ve got.</h3>
         <div className="mt-4 grid gap-3 md:grid-cols-3">
-          <div className="rounded-2xl bg-white/10 p-4 ring-1 ring-white/15">
-            <p className="text-2xl" aria-hidden="true">🐾</p>
-            <p className="mt-1 text-base font-black">Kids who have pets</p>
-            <p className="mt-1 text-sm font-semibold leading-6 text-white/80">
-              The biggest crowd. Your kid takes over the real routine — feeding schedules they actually follow, training missions, vet-visit prep.
-              From “we have a dog” to “my kid <em>runs</em> the dog.”
-            </p>
+          <div className="overflow-hidden rounded-2xl bg-white/10 ring-1 ring-white/15">
+            <div className="relative">
+              <img src="/landing/kid-dog.jpg" alt="A boy hugging his dog in the grass — a kid who already has a pet" className="h-44 w-full object-cover" loading="lazy" />
+              <span className="absolute bottom-2 left-2 rounded-full bg-tt-sun px-3 py-1 text-[11px] font-black text-tt-ink shadow">🐾 Has one</span>
+            </div>
+            <div className="p-4">
+              <p className="text-base font-black">Kids who have pets</p>
+              <p className="mt-1 text-sm font-semibold leading-6 text-white/80">
+                The biggest crowd. Your kid stops being a spectator and starts running the real routine — feeding schedules they actually
+                follow, training missions, vet-visit prep. From “we have a dog” to “my kid <em>runs</em> the dog.”
+              </p>
+            </div>
           </div>
-          <div className="rounded-2xl bg-white/10 p-4 ring-1 ring-white/15">
-            <p className="text-2xl" aria-hidden="true">🎓</p>
-            <p className="mt-1 text-base font-black">Kids who want a pet</p>
-            <p className="mt-1 text-sm font-semibold leading-6 text-white/80">
-              Parent-set home and community missions build the proof record — day after day — toward the Pet Readiness Certificate.
-              The real question it answers: will they stick with it?
-            </p>
+          <div className="overflow-hidden rounded-2xl bg-white/10 ring-1 ring-white/15">
+            <div className="relative">
+              <img src="/landing/kid-rabbit.jpg" alt="A girl holding a rabbit close — a kid dreaming of a pet" className="h-44 w-full object-cover" loading="lazy" />
+              <span className="absolute bottom-2 left-2 rounded-full bg-tt-sun px-3 py-1 text-[11px] font-black text-tt-ink shadow">🎓 Dreaming of one</span>
+            </div>
+            <div className="p-4">
+              <p className="text-base font-black">Kids who want a pet</p>
+              <p className="mt-1 text-sm font-semibold leading-6 text-white/80">
+                Day after day of parent-set home and community missions builds the proof record toward the Pet Readiness Certificate —
+                answering the one question that matters: will they stick with it?
+              </p>
+            </div>
           </div>
-          <div className="rounded-2xl bg-white/10 p-4 ring-1 ring-white/15">
-            <p className="text-2xl" aria-hidden="true">💛</p>
-            <p className="mt-1 text-base font-black">Kids who can’t have pets</p>
-            <p className="mt-1 text-sm font-semibold leading-6 text-white/80">
-              They can still be animal lovers. Set donation goals for real animal shelters, cheer on rescue dogs —
-              and get the full skill builder every other kid gets: money smarts, chores, kindness missions, certificates at every milestone.
-            </p>
+          <div className="overflow-hidden rounded-2xl bg-white/10 ring-1 ring-white/15">
+            <div className="relative">
+              <img src="/landing/kid-cat.jpg" alt="A girl hugging a cat at home — a kid who can't have a pet but loves animals" className="h-44 w-full object-cover" loading="lazy" />
+              <span className="absolute bottom-2 left-2 rounded-full bg-tt-sun px-3 py-1 text-[11px] font-black text-tt-ink shadow">💛 Loves them anyway</span>
+            </div>
+            <div className="p-4">
+              <p className="text-base font-black">Kids who can’t have pets</p>
+              <p className="mt-1 text-sm font-semibold leading-6 text-white/80">
+                Animal lovers through and through. Set donation goals for real animal shelters, cheer on rescue dogs — and get the full
+                skill builder every other kid gets: money smarts, chores, kindness missions, certificates at every milestone.
+              </p>
+            </div>
           </div>
         </div>
         <div className="mt-4 flex flex-wrap items-center justify-between gap-4">
@@ -2828,35 +2845,7 @@ function VisionLandingPanel({
         </div>
       </section>
 
-      {/* ============ THE JOURNEY: how it actually works, three doorways ============ */}
-      <section className="-mx-3 border-y border-tt-line bg-white p-4 shadow-sm sm:mx-0 sm:rounded-3xl sm:border sm:p-6">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-pine">How it actually works 🗺️</p>
-        <h3 className="mt-2 max-w-2xl text-2xl tt-display font-black text-tt-navy sm:text-3xl">From “already done, Mom” to “done — check my streak.”</h3>
-        <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-tt-ink-soft">
-          Every kid walks the same road — mission, action, your approval, streak. Whether they have a pet, want one, or can’t have one,
-          the habits are the same: responsibility they practice daily, proof you can see. Same road. Same nag-free mornings for you.
-        </p>
-        <ol className="mt-5 grid gap-3 md:grid-cols-3">
-          <li className="tt-card-lift relative overflow-hidden rounded-2xl bg-tt-cream p-5">
-            <span className="pointer-events-none absolute -right-2 -top-4 select-none text-[5rem] font-black text-tt-pine/10" aria-hidden="true">1</span>
-            <span className="relative z-10 grid size-10 place-items-center rounded-full bg-tt-pine text-base" aria-hidden="true">🐾</span>
-            <p className="mt-3 text-base font-black text-tt-ink">They run the checklist</p>
-            <p className="mt-1 text-[13px] font-semibold leading-5 text-tt-ink-soft">One daily list — pet care, chores, kindness, giving. About a minute. Kids actually want to do it.</p>
-          </li>
-          <li className="tt-card-lift relative overflow-hidden rounded-2xl bg-tt-cream p-5">
-            <span className="pointer-events-none absolute -right-2 -top-4 select-none text-[5rem] font-black text-tt-pine/10" aria-hidden="true">2</span>
-            <span className="relative z-10 grid size-10 place-items-center rounded-full bg-tt-pine text-base" aria-hidden="true">✅</span>
-            <p className="mt-3 text-base font-black text-tt-ink">You tap approve</p>
-            <p className="mt-1 text-[13px] font-semibold leading-5 text-tt-ink-soft">30 seconds a day. No nagging, no sticker charts. Streaks and certificates turn effort into proof you can see.</p>
-          </li>
-          <li className="tt-card-lift relative overflow-hidden rounded-2xl bg-tt-cream p-5">
-            <span className="pointer-events-none absolute -right-2 -top-4 select-none text-[5rem] font-black text-tt-pine/10" aria-hidden="true">3</span>
-            <span className="relative z-10 grid size-10 place-items-center rounded-full bg-tt-pine text-base" aria-hidden="true">🚀</span>
-            <p className="mt-3 text-base font-black text-tt-ink">They level up</p>
-            <p className="mt-1 text-[13px] font-semibold leading-5 text-tt-ink-soft">Responsibility, money smarts, character, real giving — all in one safe place. No strangers, no extra apps.</p>
-          </li>
-        </ol>
-      </section>
+
 
       <section id="landing-contact" className="-mx-3 scroll-mt-36 border-y border-tt-line bg-[#eef2ff] p-4 shadow-sm sm:mx-0 sm:rounded-3xl sm:border sm:p-6">
         <div className="grid gap-5 lg:grid-cols-[0.85fr_1.15fr]">
