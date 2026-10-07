@@ -849,6 +849,10 @@ export function TailTotsApp() {
     "Money & saving",
   ]);
   const [aiBuddyDailyRotate, setAiBuddyDailyRotate] = useState(true);
+  // Feedback R2 — AI buddy stream: parent-set AI Buddy questions and the
+  // parent's safe-social content override. Persisted with the family snapshot.
+  const [buddyParentQuestions, setBuddyParentQuestions] = useState<BuddyParentQuestion[]>([]);
+  const [socialPracticeOverride, setSocialPracticeOverride] = useState<SocialPracticeOverride | null>(null);
   const [familyZip, setFamilyZip] = useState("");
   // Stream: R2 — chosen neighborhood/apartment from the family-setup ZIP picker.
   const [familyNeighborhood, setFamilyNeighborhood] = useState("");
@@ -1221,9 +1225,9 @@ export function TailTotsApp() {
 
   useEffect(() => {
     if (!hasLoadedSavedState) return;
-    saveFamilyState({ familyName, parentPasscode, parents, children, pets, missions, transactions, goals, badges, neighborhoodJobs, moments, studiedAnimals, socialPracticeDone, familyPhotoUrl, activeChildId, certificates, pointsPerDollar, dailyChecksEnabled, maxDailyChecks, familyZip, familyNeighborhood, aiBuddyCategories, aiBuddyDailyRotate });
+    saveFamilyState({ familyName, parentPasscode, parents, children, pets, missions, transactions, goals, badges, neighborhoodJobs, moments, studiedAnimals, socialPracticeDone, familyPhotoUrl, activeChildId, certificates, pointsPerDollar, dailyChecksEnabled, maxDailyChecks, familyZip, familyNeighborhood, aiBuddyCategories, aiBuddyDailyRotate, buddyParentQuestions, socialPracticeOverride });
     setLastSavedAt(new Date());
-  }, [activeChildId, aiBuddyCategories, aiBuddyDailyRotate, badges, certificates, children, dailyChecksEnabled, familyName, familyPhotoUrl, familyZip, familyNeighborhood, goals, hasLoadedSavedState, maxDailyChecks, missions, moments, neighborhoodJobs, parentPasscode, parents, pets, pointsPerDollar, studiedAnimals, socialPracticeDone, transactions]);
+  }, [activeChildId, aiBuddyCategories, aiBuddyDailyRotate, badges, buddyParentQuestions, certificates, children, dailyChecksEnabled, familyName, familyPhotoUrl, familyZip, familyNeighborhood, goals, hasLoadedSavedState, maxDailyChecks, missions, moments, neighborhoodJobs, parentPasscode, parents, pets, pointsPerDollar, socialPracticeOverride, studiedAnimals, socialPracticeDone, transactions]);
 
   // Debounced relational cloud push: mirrors family state into the Supabase
   // tables a couple of seconds after any change, while cloud sync is on.
@@ -1370,6 +1374,8 @@ export function TailTotsApp() {
     setFamilyNeighborhood(snapshot.familyNeighborhood ?? "");
     setAiBuddyCategories(snapshot.aiBuddyCategories ?? ["Pet care", "Chores & routine", "Kindness & feelings", "Money & saving"]);
     setAiBuddyDailyRotate(snapshot.aiBuddyDailyRotate ?? true);
+    setBuddyParentQuestions(snapshot.buddyParentQuestions ?? []);
+    setSocialPracticeOverride(snapshot.socialPracticeOverride ?? null);
   }
 
   function openRouteChooser() {
@@ -2592,7 +2598,7 @@ export function TailTotsApp() {
             <PassportPanel
               pets={pets}
               missions={missions}
-              isParentView={role === "parent"}
+              allowEditing={role === "parent"}
               updatePet={updatePet}
               updatePetPhoto={role === "parent" ? updatePetPhoto : undefined}
               onStudyComplete={recordPassportStudy}
@@ -2611,6 +2617,8 @@ export function TailTotsApp() {
               aiBuddyCategories={aiBuddyCategories}
               aiBuddyDailyRotate={aiBuddyDailyRotate}
               aiDailyBoost={aiDailyBoost}
+              parentQuestions={buddyParentQuestions}
+              socialOverride={socialPracticeOverride}
             />
           )}
           {visibleActiveTab === "bank" && (
@@ -2673,6 +2681,13 @@ export function TailTotsApp() {
                 onTemplateUsed={() => setActiveTab("neighborhood")}
               />
               <KidPasscodeCard childProfiles={children} setChildPasscode={setChildPasscode} />
+              {/* Feedback R2 — AI buddy stream: parent-only editors (Parent Review is parent-only; kids never see this tab). */}
+              <BuddyParentQuestionsEditor
+                questions={buddyParentQuestions}
+                onChange={setBuddyParentQuestions}
+                categories={[...BUDDY_BOOST_CATEGORIES]}
+              />
+              <SocialPracticeOverrideEditor override={socialPracticeOverride} onChange={setSocialPracticeOverride} />
             </div>
           )}
           {visibleActiveTab === "setup" && (
@@ -5760,10 +5775,17 @@ const learningPassports: { animal: string; tagline: string; facts: [string, stri
   },
 ];
 
-function PassportPanel({ pets, missions, isParentView, updatePet, updatePetPhoto, onStudyComplete, studiedAnimals }: {
+/**
+ * R2-21: ONE unified passport design for kids and parents — the header, pet
+ * medallion, care meters, and fact grid render identically in both views.
+ * The single justified parent-only action is editing a passport's care
+ * fields (vet, medicine, routines): kids see the same passport, read-only.
+ */
+function PassportPanel({ pets, missions, allowEditing, updatePet, updatePetPhoto, onStudyComplete, studiedAnimals }: {
   pets: Pet[];
   missions: Mission[];
-  isParentView: boolean;
+  /** Parent-only: editing vet/medicine/care fields. Kids see the same passport, read-only. */
+  allowEditing?: boolean;
   updatePet: (petId: string, updates: Partial<Pet>) => void;
   updatePetPhoto?: (petId: string, file?: File) => void;
   onStudyComplete: (animal: string) => void;
@@ -5777,7 +5799,6 @@ function PassportPanel({ pets, missions, isParentView, updatePet, updatePetPhoto
         <h2 className="mt-2 text-3xl font-black">Everything kids need to care correctly</h2>
         <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-[#4f625b]">
           Each passport keeps the pet&apos;s food, care notes, vet, and medicine in one place so kids do not have to guess.
-          {isParentView && pets.length > 0 && " Parents can edit any passport — vet changes, new medicine, new routines."}
         </p>
       </div>
       {pets.length === 0 && (
@@ -5844,7 +5865,7 @@ function PassportPanel({ pets, missions, isParentView, updatePet, updatePetPhoto
               </label>
               )}
             </div>
-            {isParentView && (
+            {allowEditing && (
               <button
                 onClick={() => setEditingPetId(editingPetId === pet.id ? null : pet.id)}
                 className="min-h-11 rounded-lg border border-[#ded8c7] bg-white px-4 py-2 text-sm font-black text-[#17231f]"
@@ -5857,7 +5878,7 @@ function PassportPanel({ pets, missions, isParentView, updatePet, updatePetPhoto
             <Meter label={`${pet.name} happiness`} value={care.happiness} color="#f47b20" />
             <Meter label={`${pet.name} feeling loved`} value={care.loved} color="#165a4b" />
           </div>
-          {isParentView && editingPetId === pet.id ? (
+          {allowEditing && editingPetId === pet.id ? (
             <div className="mt-5 grid gap-3">
               <label className="block text-sm font-black">Name
                 <input className="mt-1 w-full rounded-lg border border-[#ded8c7] px-4 py-3 font-semibold" value={pet.name} onChange={(event) => updatePet(pet.id, { name: event.target.value })} />
@@ -6879,6 +6900,48 @@ function BankPanel(props: {
   );
 }
 
+/** Parent-side AI endpoints need the signed-in parent's access token. Null = signed out. */
+async function getParentAccessToken(): Promise<string | null> {
+  if (!supabase) return null;
+  try {
+    const { data, error } = await supabase.auth.getSession();
+    if (error) return null;
+    return data.session?.access_token ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** Playdate claims the parent has already reviewed (local-only; Parent Review badge clears). */
+const ACK_PLAYDATES_KEY = "tailtots-ack-playdates-v1";
+function loadAckedPlaydateIds(): string[] {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(ACK_PLAYDATES_KEY) ?? "[]");
+    return Array.isArray(parsed) ? parsed.filter((id): id is string => typeof id === "string") : [];
+  } catch {
+    return [];
+  }
+}
+function saveAckedPlaydateIds(ids: string[]): void {
+  try {
+    localStorage.setItem(ACK_PLAYDATES_KEY, JSON.stringify(ids));
+  } catch {
+    // Local-only acknowledgement; never blocks the notification flow.
+  }
+}
+
+/** Pet-chore skill tag → mission category, so getMissionLifeSkill labels them trackably. */
+function choreSkillToCategory(skill: PetChoreSkill): Mission["category"] {
+  const map: Record<PetChoreSkill, Mission["category"]> = {
+    responsibility: "pet_care",
+    empathy: "kindness",
+    teamwork: "community",
+    leadership: "money",
+    time: "chore",
+  };
+  return map[skill];
+}
+
 function ApprovalsPanel(props: {
   missions: Mission[];
   transactions: BankTransaction[];
@@ -7059,6 +7122,34 @@ function MissionAssignmentPanel(props: {
   const highest = sortedPoints[sortedPoints.length - 1];
   const spread = highest && lowest ? highest.points - lowest.points : 0;
   const familySkillSummary = getFamilySkillSummary(props.badges, props.childProfiles);
+  // Real fairness engine: workload analysis + concrete rebalancing proposals.
+  const fairness = useMemo(() => analyzeFairness(props.missions, props.childProfiles), [props.missions, props.childProfiles]);
+  const [coachTip, setCoachTip] = useState<string | null>(null);
+  const [coachSource, setCoachSource] = useState<"live" | "demo" | null>(null);
+  const [coachLoading, setCoachLoading] = useState(false);
+
+  async function askFairnessCoach() {
+    setCoachLoading(true);
+    try {
+      const token = await getParentAccessToken();
+      if (token) {
+        const result = await fetchFairnessCoaching({ token, analysis: fairness });
+        if (result.ok) {
+          setCoachTip(result.tip);
+          setCoachSource("live");
+          return;
+        }
+      }
+      setCoachTip(fairnessCoachFallback(fairness));
+      setCoachSource("demo");
+    } finally {
+      setCoachLoading(false);
+    }
+  }
+
+  function applyRebalancePlan(moves: RebalanceMove[]) {
+    moves.forEach((move) => props.assignMission(move.missionId, move.toChildId));
+  }
 
   return (
     <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
@@ -7092,19 +7183,78 @@ function MissionAssignmentPanel(props: {
           <p className="mt-1 text-sm font-bold text-[#7a4b12]">Keep kids near the same total while harder work still earns more.</p>
         </div>
       </div>
-      <div className="mt-4 grid gap-3 sm:grid-cols-2">
-        {plannedPoints.map(({ child, points }) => (
-          <div key={child.id} className="rounded-lg bg-[#faf8f0] p-4">
-            <p className="text-lg font-black">{child.name}</p>
-            <p className="mt-1 text-sm font-bold text-[#4f625b]">Age {child.age} • {points} planned points today</p>
+      <div className="mt-4 rounded-lg border border-[#ded8c7] bg-[#faf8f0] p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.14em] text-[#165a4b]">Fairness engine · AI-backed</p>
+            <h3 className="mt-1 text-xl font-black">Workload analysis</h3>
           </div>
-        ))}
+          {fairness.moves.length > 0 && (
+            <span
+              className="inline-flex min-h-6 min-w-6 items-center justify-center rounded-full bg-[#d92626] px-2 text-xs font-black text-white"
+              role="status"
+              aria-label={`${fairness.moves.length} rebalancing suggestions`}
+            >
+              {fairness.moves.length}
+            </span>
+          )}
+        </div>
+        <p className="mt-2 text-sm font-semibold leading-6 text-[#4f625b]">{fairness.insight}</p>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          {fairness.kids.map((kid) => (
+            <div key={kid.childId} className="rounded-lg bg-white p-3">
+              <p className="font-black">
+                {kid.name} <span className="text-xs font-bold text-[#69736f]">· age {kid.age}</span>
+              </p>
+              <p className="mt-1 text-sm font-bold text-[#4f625b]">
+                {kid.plannedPoints} planned pts · {kid.openCount} open · {kid.awaitingApproval} awaiting approval
+              </p>
+              <p className="mt-1 text-xs font-bold text-[#69736f]">
+                Avg difficulty {kid.avgDifficulty ? kid.avgDifficulty.toFixed(1) : "—"}/4 · easy {kid.byDifficulty.easy} ·
+                medium {kid.byDifficulty.medium} · hard {kid.byDifficulty.hard + kid.byDifficulty.super_hard}
+              </p>
+            </div>
+          ))}
+        </div>
+        {fairness.moves.length > 0 && (
+          <div className="mt-3 rounded-lg bg-white p-3">
+            <p className="text-sm font-black">Suggested rebalancing — you stay in charge</p>
+            <div className="mt-2 grid gap-2">
+              {fairness.moves.map((move) => (
+                <div key={move.missionId} className="rounded-lg bg-[#fff4d8] p-3">
+                  <p className="text-sm font-black">
+                    “{move.title}” ({move.points} pts): {move.fromName} → {move.toName}
+                  </p>
+                  <p className="mt-1 text-xs font-semibold text-[#4f625b]">{move.reason}</p>
+                </div>
+              ))}
+            </div>
+            <button
+              onClick={() => applyRebalancePlan(fairness.moves)}
+              className="tt-btn-press mt-3 min-h-11 rounded-lg bg-[#165a4b] px-5 py-2 text-sm font-black text-white"
+            >
+              Apply rebalancing ({fairness.moves.length})
+            </button>
+          </div>
+        )}
+        <div className="mt-3">
+          <button
+            onClick={askFairnessCoach}
+            disabled={coachLoading}
+            className="min-h-11 rounded-lg bg-[#6d3ed1] px-5 py-2 text-sm font-black text-white disabled:opacity-50"
+          >
+            {coachLoading ? "Asking the coach…" : "Ask AI coach"}
+          </button>
+          {coachTip && (
+            <div className="mt-2 rounded-lg bg-white p-3">
+              <p className="text-[11px] font-black uppercase tracking-[0.14em] text-[#6d3ed1]">
+                {coachSource === "live" ? "✨ AI coach" : "Built-in coach · works offline"}
+              </p>
+              <p className="mt-1 text-sm font-semibold leading-6 text-[#17231f]">{coachTip}</p>
+            </div>
+          )}
+        </div>
       </div>
-      <p className={`mt-3 rounded-lg p-3 text-sm font-black ${spread <= 8 ? "bg-[#e7f4ef] text-[#165a4b]" : "bg-[#fff4d8] text-[#7a4b12]"}`}>
-        {spread <= 8
-          ? "Looks balanced. Kids should finish with similar points if they complete their assignments."
-          : `${highest?.child.name ?? "One kid"} has ${spread} more planned points than ${lowest?.child.name ?? "another kid"}. Move one mission to rebalance.`}
-      </p>
       <div className="mt-4 grid gap-3">
         {props.missions.map((mission) => (
           <article key={mission.id} className="grid gap-3 rounded-lg border border-[#ded8c7] bg-[#faf8f0] p-4 md:grid-cols-[1fr_190px] md:items-center">
@@ -7134,6 +7284,516 @@ function MissionAssignmentPanel(props: {
               </select>
             </label>
           </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+/** Parent Review: red-dot notification center — missions, Kid Bank requests, playdate claims. */
+function NotificationsCard(props: {
+  missions: Mission[];
+  transactions: BankTransaction[];
+  childProfiles: Child[];
+  pendingPlaydates: PlaydateInvite[];
+  acknowledgePlaydate: (inviteId: string) => void;
+  setActiveTab: (tab: string) => void;
+}) {
+  const pendingMissions = props.missions.filter((mission) => mission.completedBy && mission.status === "pending");
+  const pendingTransactions = props.transactions.filter((tx) => tx.status === "pending");
+  const total = pendingMissions.length + pendingTransactions.length + props.pendingPlaydates.length;
+  const childName = (id?: string) => props.childProfiles.find((entry) => entry.id === id)?.name ?? "Kid";
+  const countBadge = (count: number, label: string) => (
+    <span
+      className="ml-2 inline-flex min-h-6 min-w-6 items-center justify-center rounded-full bg-[#d92626] px-2 text-xs font-black text-white"
+      role="status"
+      aria-label={label}
+    >
+      {count}
+    </span>
+  );
+  return (
+    <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm" aria-label="Notifications">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-[#d92626]">Notifications</p>
+          {total > 0 && countBadge(total, `${total} items need your review`)}
+        </div>
+        <h2 className="text-2xl font-black">{total > 0 ? "Needs your review" : "All caught up 🎉"}</h2>
+      </div>
+      {total === 0 ? (
+        <p className="mt-3 rounded-lg bg-[#e7f4ef] p-4 text-sm font-semibold text-[#165a4b]">
+          Nothing waiting — no missions to approve, no money requests, no playdate claims.
+        </p>
+      ) : (
+        <div className="mt-4 grid gap-3">
+          {pendingMissions.length > 0 && (
+            <div className="rounded-lg bg-[#faf8f0] p-4">
+              <p className="font-black">
+                Missions waiting{countBadge(pendingMissions.length, `${pendingMissions.length} missions waiting`)}
+              </p>
+              <ul className="mt-2 grid gap-1 text-sm font-semibold text-[#4f625b]">
+                {pendingMissions.slice(0, 3).map((mission) => (
+                  <li key={mission.id}>
+                    • “{mission.title}” — {childName(mission.completedBy)} finished it
+                  </li>
+                ))}
+                {pendingMissions.length > 3 && <li>• +{pendingMissions.length - 3} more below</li>}
+              </ul>
+            </div>
+          )}
+          {pendingTransactions.length > 0 && (
+            <div className="rounded-lg bg-[#fff4d8] p-4">
+              <p className="font-black">
+                Money requests{countBadge(pendingTransactions.length, `${pendingTransactions.length} money requests`)}
+              </p>
+              <ul className="mt-2 grid gap-1 text-sm font-semibold text-[#4f625b]">
+                {pendingTransactions.slice(0, 3).map((tx) => (
+                  <li key={tx.id}>
+                    • ${tx.amount} {tx.category} — {childName(tx.childId)}: {tx.description}
+                  </li>
+                ))}
+                {pendingTransactions.length > 3 && <li>• +{pendingTransactions.length - 3} more below</li>}
+              </ul>
+            </div>
+          )}
+          {props.pendingPlaydates.length > 0 && (
+            <div className="rounded-lg bg-[#eef2ff] p-4">
+              <p className="font-black">
+                Playdate claims{countBadge(props.pendingPlaydates.length, `${props.pendingPlaydates.length} playdate claims`)}
+              </p>
+              <div className="mt-2 grid gap-2">
+                {props.pendingPlaydates.map((invite) => {
+                  const claimedSlot = invite.slots.find((slot) => slot.status === "claimed");
+                  return (
+                    <div key={invite.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-white p-3">
+                      <p className="text-sm font-bold text-[#17231f]">
+                        ✅ {invite.claimedBy} claimed {claimedSlot?.slot} for {claimedSlot?.childName}
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          onClick={() => props.setActiveTab("schedule")}
+                          className="min-h-11 rounded-lg bg-[#2563eb] px-4 py-2 text-xs font-black text-white"
+                        >
+                          Open Schedule
+                        </button>
+                        <button
+                          onClick={() => props.acknowledgePlaydate(invite.id)}
+                          className="min-h-11 rounded-lg border border-[#ded8c7] bg-white px-4 py-2 text-xs font-black text-[#4f625b]"
+                        >
+                          Mark reviewed
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </section>
+  );
+}
+
+/** Parent Review: AI pet-chores builder — pick a skill, AI builds chores from your exact pets. */
+function PetChoreBuilderCard(props: {
+  pets: Pet[];
+  childProfiles: Child[];
+  parentSignedIn: boolean;
+  addChoreMissions: (drafts: PetChoreDraft[], childId: string) => void;
+}) {
+  const [skill, setSkill] = useState<PetChoreSkill>("responsibility");
+  const [skillSearch, setSkillSearch] = useState("");
+  const [chores, setChores] = useState<PetChoreDraft[] | null>(null);
+  const [choreSource, setChoreSource] = useState<"live" | "demo" | null>(null);
+  const [choreLoading, setChoreLoading] = useState(false);
+  const [history, setHistory] = useState<ChoreSetRecord[]>(() => loadChoreHistory());
+  const [assignTo, setAssignTo] = useState(props.childProfiles[0]?.id ?? "");
+  const [savedFlash, setSavedFlash] = useState<string | null>(null);
+
+  const filteredSkills = PET_CHORE_SKILLS.filter((option) =>
+    getLifeSkillLabel(option).toLowerCase().includes(skillSearch.trim().toLowerCase()),
+  );
+  const petInputs = props.pets.map((pet) => ({ id: pet.id, name: pet.name, species: pet.species }));
+  const ageBand = domainAgeBandForAge(props.childProfiles[0]?.age ?? 8);
+
+  function recordHistory(source: "live" | "demo", next: PetChoreDraft[]) {
+    const record: ChoreSetRecord = {
+      id: `chores-${Date.now()}`,
+      dateKey: todayLocalDateKey(),
+      skill,
+      petNames: petInputs.map((pet) => pet.name),
+      chores: next,
+      source,
+    };
+    setHistory((items) => {
+      const updated = [record, ...items].slice(0, 20);
+      saveChoreHistory(updated);
+      return updated;
+    });
+  }
+
+  async function generateChores() {
+    setChoreLoading(true);
+    setSavedFlash(null);
+    try {
+      const token = await getParentAccessToken();
+      if (token) {
+        const result = await fetchPetChores({ token, skill, ageBand, pets: petInputs });
+        if (result.ok) {
+          setChores(result.chores);
+          setChoreSource("live");
+          recordHistory("live", result.chores);
+          return;
+        }
+      }
+      // Honest local fallback: built from the family's exact pets, labeled as templates.
+      const local = buildLocalPetChoreSet(petInputs, skill, ageBand);
+      setChores(local);
+      setChoreSource("demo");
+      recordHistory("demo", local);
+    } finally {
+      setChoreLoading(false);
+    }
+  }
+
+  function saveAsMissions() {
+    if (!chores?.length || !assignTo) return;
+    props.addChoreMissions(chores, assignTo);
+    const kid = props.childProfiles.find((entry) => entry.id === assignTo);
+    setSavedFlash(`${chores.length} missions saved for ${kid?.name ?? "your kid"} — they appear in Today's missions now.`);
+  }
+
+  function reuseRecord(record: ChoreSetRecord) {
+    setSkill(record.skill);
+    setChores(record.chores);
+    setChoreSource(record.source);
+    setSavedFlash(null);
+  }
+
+  return (
+    <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm" aria-label="AI pet-chores builder">
+      <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2563eb]">AI pet-chores builder</p>
+      <h2 className="mt-2 text-2xl font-black sm:text-3xl">Teach one skill today — AI builds the chores</h2>
+      <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-[#4f625b]">
+        Pick the character or life skill to teach. The builder uses your family's exact pets and returns 4–5 trackable
+        chores, each tagged with the skill it grows. Nothing becomes a mission until you save it.
+      </p>
+      {props.pets.length === 0 ? (
+        <p className="mt-4 rounded-lg bg-[#fff4d8] p-4 text-sm font-semibold text-[#7a4b12]">
+          Add your pets in Pet Passports first — the builder crafts chores from your family's exact pets.
+        </p>
+      ) : (
+        <>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <label className="text-sm font-black text-[#17231f]">
+              Skill to teach
+              <select
+                value={skill}
+                onChange={(event) => setSkill(event.target.value as PetChoreSkill)}
+                className="mt-2 min-h-11 w-full rounded-lg border border-[#ded8c7] bg-white px-3 py-2 font-bold"
+              >
+                {(filteredSkills.length ? filteredSkills : PET_CHORE_SKILLS).map((option) => (
+                  <option key={option} value={option}>
+                    {getLifeSkillLabel(option)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="text-sm font-black text-[#17231f]">
+              Search skills
+              <input
+                value={skillSearch}
+                onChange={(event) => setSkillSearch(event.target.value)}
+                placeholder="Type to filter…"
+                className="mt-2 min-h-11 w-full rounded-lg border border-[#ded8c7] bg-white px-3 py-2 font-bold"
+              />
+            </label>
+          </div>
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <button
+              onClick={generateChores}
+              disabled={choreLoading}
+              className="tt-btn-press min-h-11 rounded-lg bg-[#17231f] px-5 py-2 text-sm font-black text-white disabled:opacity-50"
+            >
+              {choreLoading ? "Building chores…" : "Build chore set with AI"}
+            </button>
+            {!props.parentSignedIn && (
+              <p className="text-xs font-semibold text-[#7a4b12]">
+                Signed-in parents get live AI generation; otherwise built-in templates are used.
+              </p>
+            )}
+          </div>
+          {chores && (
+            <div className="mt-4 rounded-lg bg-[#eef2ff] p-4">
+              <p className={`text-[11px] font-black uppercase tracking-[0.14em] ${choreSource === "live" ? "text-[#2563eb]" : "text-[#7a4b12]"}`}>
+                {choreSource === "live" ? "✨ AI-built chore set — review before saving" : "Built-in templates · built from your exact pets"}
+              </p>
+              <div className="mt-2 grid gap-2">
+                {chores.map((chore) => (
+                  <div key={`${chore.title}-${chore.skill}`} className="rounded-lg bg-white p-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="rounded-full bg-[#f0edff] px-3 py-1 text-xs font-black text-[#6d3ed1]">
+                        {getLifeSkillLabel(chore.skill)}
+                      </span>
+                      <span className="rounded-full bg-[#fff4d8] px-3 py-1 text-xs font-black">+{chore.points} pts</span>
+                      <span className="rounded-full bg-white px-3 py-1 text-xs font-black capitalize ring-1 ring-[#ded8c7]">
+                        {chore.difficulty}
+                      </span>
+                      {chore.petName && (
+                        <span className="text-xs font-bold text-[#4f625b]">🐾 {chore.petName}</span>
+                      )}
+                    </div>
+                    <p className="mt-2 text-sm font-black text-[#17231f]">{chore.title}</p>
+                    {chore.detail && <p className="mt-1 text-sm font-semibold leading-5 text-[#4f625b]">{chore.detail}</p>}
+                  </div>
+                ))}
+              </div>
+              <div className="mt-3 flex flex-wrap items-center gap-3">
+                <label className="text-sm font-black text-[#17231f]">
+                  Save for
+                  <select
+                    value={assignTo}
+                    onChange={(event) => setAssignTo(event.target.value)}
+                    className="ml-2 min-h-11 rounded-lg border border-[#ded8c7] bg-white px-3 py-2 font-bold"
+                  >
+                    {props.childProfiles.map((child) => (
+                      <option key={child.id} value={child.id}>
+                        {child.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <button
+                  onClick={saveAsMissions}
+                  disabled={!chores.length || !assignTo}
+                  className="tt-btn-press min-h-11 rounded-lg bg-[#165a4b] px-5 py-2 text-sm font-black text-white disabled:opacity-50"
+                >
+                  Save as today's missions
+                </button>
+              </div>
+              {savedFlash && (
+                <p className="mt-2 rounded-lg bg-[#e7f4ef] p-3 text-sm font-semibold text-[#165a4b]">{savedFlash}</p>
+              )}
+            </div>
+          )}
+          {history.length > 0 && (
+            <div className="mt-4">
+              <p className="text-xs font-black uppercase tracking-[0.14em] text-[#69736f]">Chore-set history</p>
+              <div className="mt-2 grid gap-2">
+                {history.map((record) => (
+                  <div key={record.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-[#faf8f0] p-3">
+                    <p className="text-sm font-bold text-[#17231f]">
+                      {record.dateKey} · {getLifeSkillLabel(record.skill)} · {record.petNames.join(", ") || "pets"} ·{" "}
+                      {record.chores.length} chores
+                      <span className="ml-2 text-xs font-bold text-[#69736f]">
+                        {record.source === "live" ? "✨ AI" : "templates"}
+                      </span>
+                    </p>
+                    <button
+                      onClick={() => reuseRecord(record)}
+                      className="min-h-11 rounded-lg border border-[#ded8c7] bg-white px-4 py-2 text-xs font-black text-[#17231f]"
+                    >
+                      Use for today
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
+      )}
+    </section>
+  );
+}
+
+/** Parent Review: "Ask your kid with AI" conversation prompts (relocated from the old AI tab). */
+function AskKidPromptCard({ childProfiles, parentSignedIn }: { childProfiles: Child[]; parentSignedIn: boolean }) {
+  const [askTopic, setAskTopic] = useState("kindness");
+  const [askPrompt, setAskPrompt] = useState<string | null>(null);
+  const [askPromptSource, setAskPromptSource] = useState<"live" | "demo" | null>(null);
+  const [askLoading, setAskLoading] = useState(false);
+  const askKidPrompts: Record<string, string[]> = {
+    kindness: [
+      "Tell me about a time you were kind to someone this week — how did it make you feel?",
+      "If you could do one kind thing for our family tomorrow, what would it be?",
+      "Who is someone that was kind to you lately, and how could you thank them?",
+    ],
+    patience: [
+      "Tell me about a time you had to wait for something — what helped you stay patient?",
+      "What is something hard that got easier because you kept practicing?",
+      "When you feel like rushing, what could you do to slow down?",
+    ],
+    honesty: [
+      "Why do you think telling the truth matters, even when it is hard?",
+      "Tell me about a time you told the truth when it would have been easier not to.",
+      "What would you do if a friend asked you to keep a secret that felt wrong?",
+    ],
+    responsibility: [
+      "What is one job in our family that you feel proud to own?",
+      "How do you think taking care of our pet teaches responsibility?",
+      "What is something you want to be trusted with when you are older, and how are you earning it now?",
+    ],
+  };
+
+  async function generateAskPrompt() {
+    const applyLocalFallback = () => {
+      const options = askKidPrompts[askTopic] ?? askKidPrompts.kindness;
+      setAskPrompt(options[Math.floor(Math.random() * options.length)]);
+      setAskPromptSource("demo");
+    };
+    setAskLoading(true);
+    try {
+      const accessToken = await getParentAccessToken();
+      if (!accessToken) {
+        applyLocalFallback();
+        return;
+      }
+      const child = childProfiles[0];
+      const result = await fetchConversationPrompt({
+        token: accessToken,
+        topic: askTopic,
+        ageBand: child ? domainAgeBandForAge(child.age) : "7-9",
+      });
+      if (result.ok) {
+        setAskPrompt(result.prompt);
+        setAskPromptSource("live");
+      } else {
+        applyLocalFallback();
+      }
+    } catch {
+      applyLocalFallback();
+    } finally {
+      setAskLoading(false);
+    }
+  }
+
+  return (
+    <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm" aria-label="Ask your kid with AI">
+      <p className="text-xs font-black uppercase tracking-[0.18em] text-[#6d3ed1]">AI in the background</p>
+      <h2 className="mt-2 text-2xl font-black">Ask your kid with AI 💬</h2>
+      <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-[#4f625b]">
+        Pick a topic — AI writes one conversation prompt you can ask your kid tonight. Signed-in parents get a fresh
+        AI-written prompt; otherwise a built-in demo prompt.
+      </p>
+      <div className="mt-3 flex flex-wrap gap-2" role="group" aria-label="Conversation topic">
+        {["kindness", "patience", "honesty", "responsibility"].map((topic) => (
+          <button
+            key={topic}
+            onClick={() => {
+              setAskTopic(topic);
+              setAskPrompt(null);
+              setAskPromptSource(null);
+            }}
+            className={`min-h-11 rounded-lg px-4 py-2 text-sm font-black capitalize ${
+              askTopic === topic ? "bg-[#6d3ed1] text-white" : "bg-white text-[#17231f] ring-2 ring-[#ded8c7]"
+            }`}
+          >
+            {topic}
+          </button>
+        ))}
+      </div>
+      <button
+        onClick={generateAskPrompt}
+        disabled={askLoading}
+        className="mt-3 min-h-11 rounded-lg bg-[#6d3ed1] px-4 py-2 text-sm font-black text-white disabled:opacity-50"
+      >
+        {askLoading ? "Generating prompt…" : "Generate a prompt"}
+      </button>
+      {!parentSignedIn && (
+        <p className="mt-2 text-xs font-semibold text-[#7a4b12]">
+          AI prompts need a signed-in parent account — set one up in Family Setup, under Parent account. Until then you
+          get the built-in demo prompts.
+        </p>
+      )}
+      {askPrompt && (
+        <div className="mt-3 rounded-lg bg-[#f4efff] p-4">
+          <p className="text-xs font-black uppercase tracking-[0.14em] text-[#6d3ed1]">
+            {askPromptSource === "live" ? "✨ AI-generated prompt" : "Demo prompt · generated locally"}
+          </p>
+          <p className="mt-2 text-base font-black leading-6">“{askPrompt}”</p>
+          <p className="mt-2 text-xs font-semibold text-[#4f625b]">
+            Tip: ask it at dinner, listen fully, then share your own answer first next time.
+          </p>
+        </div>
+      )}
+    </section>
+  );
+}
+
+/** Parent Review: parent-set passcode per kid profile (set at creation or later). */
+function KidPasscodeCard(props: {
+  childProfiles: Child[];
+  setChildPasscode: (childId: string, passcode: string) => void;
+}) {
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [flash, setFlash] = useState<string | null>(null);
+
+  function save(childId: string, name: string) {
+    const draft = (drafts[childId] ?? "").trim();
+    if (!draft) return;
+    props.setChildPasscode(childId, draft);
+    setDrafts((items) => ({ ...items, [childId]: "" }));
+    setFlash(`Passcode saved for ${name}.`);
+  }
+
+  function clear(childId: string, name: string) {
+    props.setChildPasscode(childId, "");
+    setFlash(`Passcode cleared for ${name}.`);
+  }
+
+  return (
+    <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm" aria-label="Kid profile passcodes">
+      <p className="text-xs font-black uppercase tracking-[0.18em] text-[#f47b20]">Kid profiles</p>
+      <h2 className="mt-2 text-2xl font-black">Profile passcodes</h2>
+      <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-[#4f625b]">
+        Set a passcode for each kid's profile — settable when the profile is created or any time after, right here.
+        Only a parent on this tab can set or change them.
+      </p>
+      {flash && <p className="mt-3 rounded-lg bg-[#e7f4ef] p-3 text-sm font-semibold text-[#165a4b]">{flash}</p>}
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        {props.childProfiles.map((child) => (
+          <div key={child.id} className="rounded-lg bg-[#faf8f0] p-4">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-lg font-black">{child.name}</p>
+              <span
+                className={`rounded-full px-3 py-1 text-xs font-black ${
+                  child.passcode ? "bg-[#e7f4ef] text-[#165a4b]" : "bg-[#fff4d8] text-[#7a4b12]"
+                }`}
+              >
+                {child.passcode ? "Passcode set" : "No passcode"}
+              </span>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <input
+                type="password"
+                inputMode="numeric"
+                autoComplete="new-password"
+                maxLength={12}
+                value={drafts[child.id] ?? ""}
+                onChange={(event) => setDrafts((items) => ({ ...items, [child.id]: event.target.value }))}
+                placeholder={child.passcode ? "Enter a new passcode" : "Set a passcode"}
+                aria-label={`Passcode for ${child.name}`}
+                className="min-h-11 min-w-0 flex-1 rounded-lg border border-[#ded8c7] bg-white px-3 py-2 text-sm font-bold"
+              />
+              <button
+                onClick={() => save(child.id, child.name)}
+                disabled={!(drafts[child.id] ?? "").trim()}
+                className="tt-btn-press min-h-11 rounded-lg bg-[#165a4b] px-4 py-2 text-sm font-black text-white disabled:opacity-50"
+              >
+                {child.passcode ? "Change" : "Set"}
+              </button>
+              {child.passcode && (
+                <button
+                  onClick={() => clear(child.id, child.name)}
+                  className="min-h-11 rounded-lg border border-[#ded8c7] bg-white px-4 py-2 text-sm font-black text-[#b44421]"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+          </div>
         ))}
       </div>
     </section>
@@ -7627,7 +8287,7 @@ function NeighborhoodPickerCard(props: {
   const validZip = normalizeZip(props.familyZip);
   const suggestions = validZip ? neighborhoodSuggestionsForZip(validZip) : [];
 
-  function useCustomName() {
+  function applyCustomName() {
     const name = customName.trim();
     if (name) {
       props.setFamilyNeighborhood(name);
@@ -7690,11 +8350,11 @@ function NeighborhoodPickerCard(props: {
                   className="min-h-11 rounded-lg border border-[#ded8c7] px-4 py-2 text-sm font-semibold"
                   value={customName}
                   onChange={(event) => setCustomName(event.target.value)}
-                  onKeyDown={(event) => { if (event.key === "Enter") useCustomName(); }}
+                  onKeyDown={(event) => { if (event.key === "Enter") applyCustomName(); }}
                   placeholder="Or type your own: e.g. Maple Grove Apartments"
                   aria-label="Custom neighborhood or apartment name"
                 />
-                <button onClick={useCustomName} disabled={!customName.trim()} className="min-h-11 rounded-lg bg-[#1e3a8a] px-4 py-2 text-xs font-black text-white disabled:opacity-60">
+                <button onClick={applyCustomName} disabled={!customName.trim()} className="min-h-11 rounded-lg bg-[#1e3a8a] px-4 py-2 text-xs font-black text-white disabled:opacity-60">
                   Use this name
                 </button>
               </div>
