@@ -8562,19 +8562,22 @@ function SocialPracticeOverrideEditor({
   onChange: (next: SocialPracticeOverride | null) => void;
 }) {
   const blankDraft = { heading: "", intro: "", scenarios: [] as SocialPracticeParentScenario[] };
+  const cloneOverrideDraft = (src: SocialPracticeOverride | null) => (src
+    ? { heading: src.heading, intro: src.intro, scenarios: src.scenarios.map((s) => ({ ...s })) }
+    : { heading: blankDraft.heading, intro: blankDraft.intro, scenarios: [] as SocialPracticeParentScenario[] });
   const [draft, setDraft] = useState<{ heading: string; intro: string; scenarios: SocialPracticeParentScenario[] }>(
-    () => (override ? { heading: override.heading, intro: override.intro, scenarios: override.scenarios.map((s) => ({ ...s })) } : blankDraft),
+    () => cloneOverrideDraft(override),
   );
   const [aiLoading, setAiLoading] = useState(false);
   const [aiSource, setAiSource] = useState<"live" | "demo" | null>(null);
-  useEffect(() => {
-    if (override) {
-      setDraft({ heading: override.heading, intro: override.intro, scenarios: override.scenarios.map((s) => ({ ...s })) });
-    } else {
-      setDraft(blankDraft);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [override?.updatedAt]);
+  // Sync the draft when the parent's saved override changes (keyed on updatedAt
+  // so editing the draft doesn't reset it). Render-time adjustment replaces the
+  // old setState-in-effect (react-hooks/set-state-in-effect).
+  const [prevOverrideUpdatedAt, setPrevOverrideUpdatedAt] = useState<string | undefined>(override?.updatedAt);
+  if ((override?.updatedAt ?? null) !== (prevOverrideUpdatedAt ?? null)) {
+    setPrevOverrideUpdatedAt(override?.updatedAt);
+    setDraft(cloneOverrideDraft(override));
+  }
   const update = (next: { heading: string; intro: string; scenarios: SocialPracticeParentScenario[] }) => {
     setDraft(next);
     onChange({ heading: next.heading, intro: next.intro, scenarios: next.scenarios, updatedAt: new Date().toISOString() });
