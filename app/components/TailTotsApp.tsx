@@ -3146,22 +3146,6 @@ function VisionLandingPanel({
         </div>
       </div>
 
-      {/* ============ HERO ILLUSTRATION: the dream, painted ============ */}
-      <section aria-label="A TailTots evening at home" className="-mx-3 overflow-hidden border-y border-tt-line bg-white shadow-sm sm:mx-0 sm:rounded-3xl sm:border">
-        <div className="grid items-center gap-6 p-5 sm:p-8 lg:grid-cols-[0.9fr_1.1fr]">
-          <div>
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-tang">6:47 PM at your house</p>
-            <h3 className="mt-2 text-2xl tt-display font-black text-tt-navy sm:text-3xl">This is what responsibility looks like.</h3>
-            <p className="mt-2 max-w-lg text-[15px] font-semibold leading-6 text-tt-ink-soft">
-              No nagging. No charts on the fridge. Just a kid who noticed the water bowl was low — because Jack, Captain, and RB are <em>their</em> crew now.
-            </p>
-          </div>
-          <div className="overflow-hidden rounded-2xl shadow-lg ring-1 ring-tt-line">
-            <img src="/hero-kids-pets.png" alt="Two kids caring for their guinea pig, tortoise, and fish at home" className="w-full object-cover" loading="lazy" />
-          </div>
-        </div>
-      </section>
-
       {/* ============ DOCTRINE: the 10-second parent version ============ */}
       {/* ============ WHO IT'S FOR: strong habits, three kinds of kids ============ */}
       <section className="-mx-3 border-y-2 border-tt-pine/40 bg-tt-pine p-5 text-white shadow-sm sm:mx-0 sm:rounded-3xl sm:border sm:p-6">
