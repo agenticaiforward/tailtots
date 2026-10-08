@@ -1,1 +1,144 @@
-{"manifest":{"apis":{"custom":{"endpoint":{"uri":"arn:aws:lambda:us-east-1:000000000000:function:tailtots-alexa-parent-skill"}}},"manifestVersion":"1.0","privacyAndCompliance":{"allowsPurchases":false,"containsAds":false,"isChildDirected":false,"isExportCompliant":true,"locales":{"en-US":{"privacyPolicyUrl":"https://tailtots.com/privacy","termsOfUseUrl":"https://tailtots.com/terms"}},"usesPersonalInfo":false},"publishingInformation":{"category":"LIFESTYLE","distributionCountries":[],"isAvailableWorldwide":true,"locales":{"en-US":{"description":"TailTots for Parents keeps you in the loop while your kids build real-world responsibility. Ask what missions are on deck today, what needs your approval, how Kid Bank balances look, and how streaks are going. TailTots turns everyday care, chores, and kindness into missions kids complete — you approve in about 30 seconds, and their streaks prove the habits are sticking. Note: this first release uses demo family data; account linking with your TailTots family is coming next.","examplePhrases":["Alexa, open Tail Tots Parent","Alexa, ask Tail Tots Parent what needs my approval","Alexa, ask Tail Tots Parent for today's missions"],"keywords":["parenting","family","chores","allowance","responsibility","kids","pet care"],"name":"TailTots for Parents","summary":"A parent companion for TailTots: hear today's missions, pending approvals, Kid Bank balances, and streaks."}},"testingInstructions":"Open the skill and say 'what needs my approval' or 'today's missions'. The MVP uses clearly-labeled demo family data until TailTots account linking is added."}}}
+{
+  "manifest": {
+    "apis": {
+      "custom": {
+        "endpoint": {
+          "uri": "arn:aws:lambda:us-east-1:000000000000:function:tailtots-alexa-parent-skill"
+        }
+      }
+    },
+    "manifestVersion": "1.0",
+    "privacyAndCompliance": {
+      "allowsPurchases": false,
+      "containsAds": false,
+      "isChildDirected": false,
+      "isExportCompliant": true,
+      "locales": {
+        "en-US": {
+          "privacyPolicyUrl": "https://tailtots.com/privacy",
+          "termsOfUseUrl": "https://tailtots.com/terms"
+        },
+        "en-GB": {
+          "privacyPolicyUrl": "https://tailtots.com/privacy",
+          "termsOfUseUrl": "https://tailtots.com/terms"
+        },
+        "en-CA": {
+          "privacyPolicyUrl": "https://tailtots.com/privacy",
+          "termsOfUseUrl": "https://tailtots.com/terms"
+        },
+        "en-AU": {
+          "privacyPolicyUrl": "https://tailtots.com/privacy",
+          "termsOfUseUrl": "https://tailtots.com/terms"
+        },
+        "en-IN": {
+          "privacyPolicyUrl": "https://tailtots.com/privacy",
+          "termsOfUseUrl": "https://tailtots.com/terms"
+        }
+      },
+      "usesPersonalInfo": false
+    },
+    "publishingInformation": {
+      "category": "LIFESTYLE",
+      "distributionCountries": [],
+      "isAvailableWorldwide": true,
+      "locales": {
+        "en-US": {
+          "description": "TailTots for Parents keeps you in the loop while your kids build real-world responsibility. Ask what missions are on deck today, what needs your approval, how Kid Bank balances look, and how streaks are going. TailTots turns everyday care, chores, and kindness into missions kids complete — you approve in about 30 seconds, and their streaks prove the habits are sticking. Note: this first release uses demo family data; account linking with your TailTots family is coming next.",
+          "examplePhrases": [
+            "Alexa, open Tail Tots Parent",
+            "Alexa, ask Tail Tots Parent what needs my approval",
+            "Alexa, ask Tail Tots Parent what are today's missions"
+          ],
+          "keywords": [
+            "parenting",
+            "family",
+            "chores",
+            "allowance",
+            "responsibility",
+            "kids",
+            "pet care"
+          ],
+          "name": "TailTots for Parents",
+          "summary": "A parent companion for TailTots: hear today's missions, pending approvals, Kid Bank balances, and streaks."
+        },
+        "en-GB": {
+          "description": "TailTots for Parents keeps you in the loop while your kids build real-world responsibility. Ask what missions are on deck today, what needs your approval, how Kid Bank balances look, and how streaks are going. TailTots turns everyday care, chores, and kindness into missions kids complete — you approve in about 30 seconds, and their streaks prove the habits are sticking. Note: this first release uses demo family data; account linking with your TailTots family is coming next.",
+          "examplePhrases": [
+            "Alexa, open Tail Tots Parent",
+            "Alexa, ask Tail Tots Parent what needs my approval",
+            "Alexa, ask Tail Tots Parent what are today's missions"
+          ],
+          "keywords": [
+            "parenting",
+            "family",
+            "chores",
+            "allowance",
+            "responsibility",
+            "kids",
+            "pet care"
+          ],
+          "name": "TailTots for Parents",
+          "summary": "A parent companion for TailTots: hear today's missions, pending approvals, Kid Bank balances, and streaks."
+        },
+        "en-CA": {
+          "description": "TailTots for Parents keeps you in the loop while your kids build real-world responsibility. Ask what missions are on deck today, what needs your approval, how Kid Bank balances look, and how streaks are going. TailTots turns everyday care, chores, and kindness into missions kids complete — you approve in about 30 seconds, and their streaks prove the habits are sticking. Note: this first release uses demo family data; account linking with your TailTots family is coming next.",
+          "examplePhrases": [
+            "Alexa, open Tail Tots Parent",
+            "Alexa, ask Tail Tots Parent what needs my approval",
+            "Alexa, ask Tail Tots Parent what are today's missions"
+          ],
+          "keywords": [
+            "parenting",
+            "family",
+            "chores",
+            "allowance",
+            "responsibility",
+            "kids",
+            "pet care"
+          ],
+          "name": "TailTots for Parents",
+          "summary": "A parent companion for TailTots: hear today's missions, pending approvals, Kid Bank balances, and streaks."
+        },
+        "en-AU": {
+          "description": "TailTots for Parents keeps you in the loop while your kids build real-world responsibility. Ask what missions are on deck today, what needs your approval, how Kid Bank balances look, and how streaks are going. TailTots turns everyday care, chores, and kindness into missions kids complete — you approve in about 30 seconds, and their streaks prove the habits are sticking. Note: this first release uses demo family data; account linking with your TailTots family is coming next.",
+          "examplePhrases": [
+            "Alexa, open Tail Tots Parent",
+            "Alexa, ask Tail Tots Parent what needs my approval",
+            "Alexa, ask Tail Tots Parent what are today's missions"
+          ],
+          "keywords": [
+            "parenting",
+            "family",
+            "chores",
+            "allowance",
+            "responsibility",
+            "kids",
+            "pet care"
+          ],
+          "name": "TailTots for Parents",
+          "summary": "A parent companion for TailTots: hear today's missions, pending approvals, Kid Bank balances, and streaks."
+        },
+        "en-IN": {
+          "description": "TailTots for Parents keeps you in the loop while your kids build real-world responsibility. Ask what missions are on deck today, what needs your approval, how Kid Bank balances look, and how streaks are going. TailTots turns everyday care, chores, and kindness into missions kids complete — you approve in about 30 seconds, and their streaks prove the habits are sticking. Note: this first release uses demo family data; account linking with your TailTots family is coming next.",
+          "examplePhrases": [
+            "Alexa, open Tail Tots Parent",
+            "Alexa, ask Tail Tots Parent what needs my approval",
+            "Alexa, ask Tail Tots Parent what are today's missions"
+          ],
+          "keywords": [
+            "parenting",
+            "family",
+            "chores",
+            "allowance",
+            "responsibility",
+            "kids",
+            "pet care"
+          ],
+          "name": "TailTots for Parents",
+          "summary": "A parent companion for TailTots: hear today's missions, pending approvals, Kid Bank balances, and streaks."
+        }
+      },
+      "testingInstructions": "Open the skill and say 'what needs my approval' or 'today's missions'. The MVP uses clearly-labeled demo family data until TailTots account linking is added."
+    }
+  }
+}

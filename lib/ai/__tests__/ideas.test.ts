@@ -4,7 +4,6 @@ import {
   IDEA_AGE_BANDS,
   IDEA_LIFE_SKILLS,
   IDEAS_MODEL_ID,
-  MAX_IDEA_NAME_LENGTH,
   ageBandForAge,
   buildIdeasMessages,
   buildIdeasSystemPrompt,
@@ -19,13 +18,13 @@ const _skillSyncCheck: readonly LifeSkillKey[] = IDEA_LIFE_SKILLS;
 void _skillSyncCheck;
 
 describe("validateIdeasInput", () => {
-  const valid = { lifeSkill: "kindness", childFirstName: "Aarav", ageBand: "7-9" };
+  const valid = { lifeSkill: "kindness", ageBand: "7-9" };
 
   it("accepts a valid request", () => {
-    const result = validateIdeasInput({ lifeSkill: "responsibility", childFirstName: "  Mia  ", ageBand: "4-6" });
+    const result = validateIdeasInput({ lifeSkill: "responsibility", ageBand: "4-6" });
     expect(result).toEqual({
       ok: true,
-      value: { lifeSkill: "responsibility", childFirstName: "Mia", ageBand: "4-6" },
+      value: { lifeSkill: "responsibility", ageBand: "4-6" },
     });
   });
 
@@ -37,42 +36,30 @@ describe("validateIdeasInput", () => {
 
   it("rejects each lifeSkill outside the UI list", () => {
     for (const bad of ["", "hacking", "RESPONSIBILITY", null, 42]) {
-      const result = validateIdeasInput({ lifeSkill: bad, childFirstName: "Mia", ageBand: "7-9" });
+      const result = validateIdeasInput({ lifeSkill: bad, ageBand: "7-9" });
       expect(result.ok).toBe(false);
     }
     // Every documented skill passes.
     for (const skill of IDEA_LIFE_SKILLS) {
-      const result = validateIdeasInput({ lifeSkill: skill, childFirstName: "Mia", ageBand: "7-9" });
+      const result = validateIdeasInput({ lifeSkill: skill, ageBand: "7-9" });
       expect(result.ok).toBe(true);
     }
   });
 
   it("rejects an unknown ageBand", () => {
     for (const bad of ["3-5", "7 - 9", "", null]) {
-      const result = validateIdeasInput({ lifeSkill: "empathy", childFirstName: "Mia", ageBand: bad });
+      const result = validateIdeasInput({ lifeSkill: "empathy", ageBand: bad });
       expect(result.ok).toBe(false);
     }
     for (const band of IDEA_AGE_BANDS) {
-      const result = validateIdeasInput({ lifeSkill: "empathy", childFirstName: "Mia", ageBand: band });
+      const result = validateIdeasInput({ lifeSkill: "empathy", ageBand: band });
       expect(result.ok).toBe(true);
     }
   });
 
-  it("rejects an empty or missing childFirstName", () => {
-    for (const bad of ["", "   ", null, undefined, 7]) {
-      const result = validateIdeasInput({ lifeSkill: "teamwork", childFirstName: bad, ageBand: "10-12" });
-      expect(result.ok).toBe(false);
-    }
-  });
-
-  it("rejects an overlong childFirstName", () => {
-    const result = validateIdeasInput({
-      lifeSkill: "leadership",
-      childFirstName: "x".repeat(MAX_IDEA_NAME_LENGTH + 1),
-      ageBand: "7-9",
-    });
-    expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.error).toContain(String(MAX_IDEA_NAME_LENGTH));
+  it("ignores kid-PII fields from older clients instead of using them", () => {
+    const result = validateIdeasInput({ lifeSkill: "teamwork", ageBand: "10-12", childFirstName: "Mia" });
+    expect(result).toEqual({ ok: true, value: { lifeSkill: "teamwork", ageBand: "10-12" } });
   });
 
   it("rejects non-object bodies", () => {
@@ -95,7 +82,7 @@ describe("ageBandForAge", () => {
 });
 
 describe("prompt building", () => {
-  const input = { lifeSkill: "responsibility" as const, childFirstName: "Mia", ageBand: "7-9" as const };
+  const input = { lifeSkill: "responsibility" as const, ageBand: "7-9" as const };
 
   it("system prompt carries the guardrails", () => {
     const prompt = buildIdeasSystemPrompt();
@@ -109,8 +96,8 @@ describe("prompt building", () => {
   it("user message carries only the allowed fields", () => {
     const message = buildIdeasUserMessage(input);
     expect(message).toContain("responsibility");
-    expect(message).toContain("Mia");
     expect(message).toContain("7-9");
+    expect(message).not.toContain("Mia");
   });
 
   it("messages are system-first", () => {

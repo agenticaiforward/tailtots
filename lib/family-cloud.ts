@@ -447,8 +447,8 @@ export interface JobRowUpsert {
 /**
  * NeighborhoodJob -> neighborhood_jobs row (rewardDollars -> reward_cents).
  * Unknown assigned children are dropped; unknown acceptedBy becomes null.
- * visibleToKids / minAge / skillFocus / trustSignals / missionId have no
- * columns — known v1 gaps.
+ * visibleToKids / minAge / skillFocus / trustSignals / missionId / posterThanked
+ * have no columns — known v1 gaps (all default to safe values on pull).
  */
 export function mapJobToRow(
   familyId: string,
@@ -613,7 +613,7 @@ export function mapRowToBadge(
 /**
  * neighborhood_jobs row -> NeighborhoodJob (reward_cents -> rewardDollars).
  * visibleToKids defaults to false (safe); minAge/skillFocus/trustSignals/
- * missionId have no columns — v1 gaps.
+ * missionId/posterThanked have no columns — v1 gaps.
  */
 export function mapRowToJob(
   row: DbJobRow,

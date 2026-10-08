@@ -32,11 +32,8 @@ export type IdeaAgeBand = (typeof IDEA_AGE_BANDS)[number];
 
 export interface ActivityIdeaRequest {
   lifeSkill: IdeaLifeSkill;
-  childFirstName: string;
   ageBand: IdeaAgeBand;
 }
-
-export const MAX_IDEA_NAME_LENGTH = 40;
 
 /**
  * Workers AI model used for parent-facing activity ideas.
@@ -54,7 +51,10 @@ export function validateIdeasInput(body: unknown): IdeasValidation {
     return { ok: false, error: "Request body must be a JSON object." };
   }
   const record = body as Record<string, unknown>;
-  const { lifeSkill, childFirstName, ageBand } = record;
+  // Kids-data rule: the AI endpoint is parent-side only. It accepts the life
+  // skill and a coarse age band — never a child's name or any other kid PII.
+  // Extra fields (e.g. childFirstName from older clients) are ignored.
+  const { lifeSkill, ageBand } = record;
 
   if (typeof lifeSkill !== "string" || !(IDEA_LIFE_SKILLS as readonly string[]).includes(lifeSkill)) {
     return { ok: false, error: `lifeSkill must be one of: ${IDEA_LIFE_SKILLS.join(", ")}.` };
@@ -62,18 +62,10 @@ export function validateIdeasInput(body: unknown): IdeasValidation {
   if (typeof ageBand !== "string" || !(IDEA_AGE_BANDS as readonly string[]).includes(ageBand)) {
     return { ok: false, error: `ageBand must be one of: ${IDEA_AGE_BANDS.join(", ")}.` };
   }
-  if (typeof childFirstName !== "string" || childFirstName.trim().length === 0) {
-    return { ok: false, error: "childFirstName must be a non-empty string." };
-  }
-  const name = childFirstName.trim();
-  if (name.length > MAX_IDEA_NAME_LENGTH) {
-    return { ok: false, error: `childFirstName must be at most ${MAX_IDEA_NAME_LENGTH} characters.` };
-  }
   return {
     ok: true,
     value: {
       lifeSkill: lifeSkill as IdeaLifeSkill,
-      childFirstName: name,
       ageBand: ageBand as IdeaAgeBand,
     },
   };
@@ -114,7 +106,6 @@ export function buildIdeasSystemPrompt(): string {
 export function buildIdeasUserMessage(input: ActivityIdeaRequest): string {
   return [
     `Life skill: "${input.lifeSkill}".`,
-    `Child's first name: ${input.childFirstName}.`,
     `Age band: ${input.ageBand}.`,
     "Suggest 3-5 brief real-world activity ideas. Respond with ONLY a JSON array of strings.",
   ].join(" ");

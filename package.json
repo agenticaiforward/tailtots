@@ -20,7 +20,7 @@
     "amazon:sync": "npm run android:sync",
     "amazon:build:debug": "npm run android:build:debug",
     "amazon:build:release": "npm run android:build:release",
-    "ios:sync": "npm run build && cap sync ios",
+    "ios:sync": "npm run mobile:web:build && cap sync ios",
     "ios:open": "cap open ios",
     "alexa:validate": "node apps/alexa/validate-skill.mjs",
     "supabase:apply-schema": "node scripts/apply-supabase-schema.mjs",
@@ -58,6 +58,7 @@
     "typescript": "5.9.3",
     "vinext": "0.0.50",
     "vite": "8.0.13",
+    "vitest": "^5.0.3",
     "wrangler": "4.92.0"
   },
   "type": "module"
