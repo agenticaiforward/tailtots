@@ -3193,72 +3193,72 @@ function VisionLandingPanel({
       <section className="-mx-3 border-y-2 border-tt-pine/40 bg-tt-pine p-5 text-white shadow-sm sm:mx-0 sm:rounded-3xl sm:border sm:p-6">
         <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-sun">Who TailTots is for 🐾</p>
         <h3 className="mt-1 text-2xl font-black tracking-tight sm:text-3xl">Strong habits. Real responsibility. Whichever kid you’ve got.</h3>
-        <div className="mt-4 overflow-x-auto rounded-2xl ring-1 ring-white/15">
-          <table className="w-full min-w-[520px] border-collapse bg-white/10 text-sm">
+        <div className="mt-4 rounded-2xl ring-1 ring-white/15">
+          <table className="w-full border-collapse bg-white/10 text-xs">
             <thead>
               <tr className="border-b border-white/15">
-                <th className="p-3 text-left">
-                  <img src="/landing/kid-dog.jpg" alt="Kid with pets" className="size-14 rounded-xl object-cover" loading="lazy" />
+                <th className="p-2 text-left">
+                  <img src="/landing/kid-dog.jpg" alt="Kid with pets" className="size-10 rounded-lg object-cover" loading="lazy" />
                 </th>
-                <th className="p-3 text-center">
-                  <p className="text-sm font-black">Have pets</p>
+                <th className="p-2 text-center">
+                  <p className="text-xs font-black leading-tight">Have<br />pets</p>
                 </th>
-                <th className="p-3 text-center">
-                  <p className="text-sm font-black">Want pets</p>
+                <th className="p-2 text-center">
+                  <p className="text-xs font-black leading-tight">Want<br />pets</p>
                 </th>
-                <th className="p-3 text-center">
-                  <p className="text-sm font-black">Can't have pets</p>
+                <th className="p-2 text-center">
+                  <p className="text-xs font-black leading-tight">Can't have<br />pets</p>
                 </th>
               </tr>
             </thead>
             <tbody className="font-semibold text-white/85">
               <tr className="border-b border-white/10">
-                <td className="p-3">Kid Bank — Save, Spend, Give</td>
-                <td className="p-3 text-center text-lg">✅</td>
-                <td className="p-3 text-center text-lg">✅</td>
-                <td className="p-3 text-center text-lg">✅</td>
+                <td className="p-2">Kid Bank</td>
+                <td className="p-2 text-center">✅</td>
+                <td className="p-2 text-center">✅</td>
+                <td className="p-2 text-center">✅</td>
               </tr>
               <tr className="border-b border-white/10">
-                <td className="p-3">Skill-builder missions</td>
-                <td className="p-3 text-center text-lg">✅</td>
-                <td className="p-3 text-center text-lg">✅</td>
-                <td className="p-3 text-center text-lg">✅</td>
+                <td className="p-2">Skill missions</td>
+                <td className="p-2 text-center">✅</td>
+                <td className="p-2 text-center">✅</td>
+                <td className="p-2 text-center">✅</td>
               </tr>
               <tr className="border-b border-white/10">
-                <td className="p-3">Kindness missions</td>
-                <td className="p-3 text-center text-lg">✅</td>
-                <td className="p-3 text-center text-lg">✅</td>
-                <td className="p-3 text-center text-lg">✅</td>
+                <td className="p-2">Kindness missions</td>
+                <td className="p-2 text-center">✅</td>
+                <td className="p-2 text-center">✅</td>
+                <td className="p-2 text-center">✅</td>
               </tr>
               <tr className="border-b border-white/10">
-                <td className="p-3">Streaks & certificates</td>
-                <td className="p-3 text-center text-lg">✅</td>
-                <td className="p-3 text-center text-lg">✅</td>
-                <td className="p-3 text-center text-lg">✅</td>
+                <td className="p-2">Streaks & certificates</td>
+                <td className="p-2 text-center">✅</td>
+                <td className="p-2 text-center">✅</td>
+                <td className="p-2 text-center">✅</td>
               </tr>
               <tr className="border-b border-white/10">
-                <td className="p-3">Parent approvals & safety</td>
-                <td className="p-3 text-center text-lg">✅</td>
-                <td className="p-3 text-center text-lg">✅</td>
-                <td className="p-3 text-center text-lg">✅</td>
+                <td className="p-2">Parent approvals</td>
+                <td className="p-2 text-center">✅</td>
+                <td className="p-2 text-center">✅</td>
+                <td className="p-2 text-center">✅</td>
               </tr>
               <tr className="border-b border-white/10 bg-white/5">
-                <td className="p-3">Real pet routine — feeding, training, vet prep</td>
-                <td className="p-3 text-center text-lg">✅</td>
-                <td className="p-3 text-center text-white/30">—</td>
-                <td className="p-3 text-center text-white/30">—</td>
+                <td className="p-2">Real pet routine</td>
+                <td className="p-2 text-center">✅</td>
+                <td className="p-2 text-center text-white/30">—</td>
+                <td className="p-2 text-center text-white/30">—</td>
               </tr>
               <tr className="border-b border-white/10 bg-white/5">
-                <td className="p-3">Pet Readiness Certificate track</td>
-                <td className="p-3 text-center text-white/30">—</td>
-                <td className="p-3 text-center text-lg">✅</td>
-                <td className="p-3 text-center text-white/30">—</td>
+                <td className="p-2">Readiness certificate</td>
+                <td className="p-2 text-center text-white/30">—</td>
+                <td className="p-2 text-center">✅</td>
+                <td className="p-2 text-center text-white/30">—</td>
               </tr>
               <tr className="bg-white/5">
-                <td className="p-3">Shelter donation goals</td>
-                <td className="p-3 text-center text-white/30">—</td>
-                <td className="p-3 text-center text-white/30">—</td>
-                <td className="p-3 text-center text-lg">✅</td>
+                <td className="p-2">Shelter giving</td>
+                <td className="p-2 text-center text-white/30">—</td>
+                <td className="p-2 text-center text-white/30">—</td>
+                <td className="p-2 text-center">✅</td>
               </tr>
             </tbody>
           </table>
