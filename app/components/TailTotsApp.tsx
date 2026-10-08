@@ -3197,21 +3197,17 @@ function VisionLandingPanel({
           <table className="w-full min-w-[520px] border-collapse bg-white/10 text-sm">
             <thead>
               <tr className="border-b border-white/15">
-                <th className="p-3 text-left font-black text-white/60"></th>
-                <th className="p-3 text-center">
-                  <img src="/landing/kid-dog.jpg" alt="Kid with dog" className="mx-auto size-12 rounded-xl object-cover" loading="lazy" />
-                  <p className="mt-1 text-xs font-black leading-tight">Kids who<br />have pets</p>
-                  <span className="mt-0.5 inline-block rounded-full bg-tt-sun px-2 py-0.5 text-[10px] font-black text-tt-ink">🐾 Has one</span>
+                <th className="p-3 text-left">
+                  <span className="text-2xl" aria-hidden="true">🐾</span>
                 </th>
                 <th className="p-3 text-center">
-                  <img src="/landing/kid-rabbit.jpg" alt="Kid with rabbit" className="mx-auto size-12 rounded-xl object-cover" loading="lazy" />
-                  <p className="mt-1 text-xs font-black leading-tight">Kids who<br />want a pet</p>
-                  <span className="mt-0.5 inline-block rounded-full bg-tt-sun px-2 py-0.5 text-[10px] font-black text-tt-ink">🎓 Dreaming of one</span>
+                  <p className="text-sm font-black">Have pets</p>
                 </th>
                 <th className="p-3 text-center">
-                  <img src="/landing/kid-cat.jpg" alt="Kid with cat" className="mx-auto size-12 rounded-xl object-cover" loading="lazy" />
-                  <p className="mt-1 text-xs font-black leading-tight">Kids who<br />can't have pets</p>
-                  <span className="mt-0.5 inline-block rounded-full bg-tt-sun px-2 py-0.5 text-[10px] font-black text-tt-ink">💛 Loves them anyway</span>
+                  <p className="text-sm font-black">Want pets</p>
+                </th>
+                <th className="p-3 text-center">
+                  <p className="text-sm font-black">Can't have pets</p>
                 </th>
               </tr>
             </thead>
