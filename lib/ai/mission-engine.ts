@@ -1303,8 +1303,8 @@ export function buildMissionEventRow(input: MissionEventInput, now: number = Dat
   const date = new Date(now);
   return {
     ...input,
-    weekday: date.getDay(),
-    hourOfDay: date.getHours(),
+    weekday: date.getUTCDay(),
+    hourOfDay: date.getUTCHours(),
     createdAt: date.toISOString(),
   };
 }
