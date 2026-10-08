@@ -3356,17 +3356,9 @@ function VisionLandingPanel({
           <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-pine">Why we built this</p>
           <h3 className="mt-1 text-2xl font-black tracking-tight text-tt-ink sm:text-3xl">"Why don't all homes have pets? Don't they like pets?"</h3>
           <p className="mt-3 text-[15px] font-semibold leading-7 text-tt-ink-soft">
-            That's what my kids asked me one day — and I didn't have a good answer. But I did have
-            two guinea pigs, a tortoise, and a tank of fish. And I'd watched what those animals did
-            for my children: the way caring for them built patience, the way a small life depending
-            on you teaches responsibility no lecture ever could, the way a quiet moment with a pet
-            can calm a stormy day.
-          </p>
-          <p className="mt-3 text-[15px] font-semibold leading-7 text-tt-ink-soft">
-            Not every family can have a pet. But every child deserves what pets teach. So I built
-            TailTots — to give every kid the responsibility, empathy, and pride that my kids found
-            in our little animals, one filled water bowl at a time. If it helped them, maybe it can
-            help yours too.
+            My kids asked me that one day. Our guinea pigs, tortoise, and fish had taught them
+            patience and responsibility no lecture could — and I realized every child deserves that,
+            pet or no pet. So I built TailTots. If it helped them, maybe it can help yours too.
           </p>
         </div>
       </section>
