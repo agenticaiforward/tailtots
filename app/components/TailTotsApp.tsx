@@ -3354,15 +3354,19 @@ function VisionLandingPanel({
       <section className="-mx-3 border-y border-tt-line bg-white p-5 shadow-sm sm:mx-0 sm:rounded-3xl sm:border sm:p-8">
         <div className="mx-auto max-w-2xl text-center">
           <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-pine">Why we built this</p>
-          <h3 className="mt-1 text-2xl font-black tracking-tight text-tt-ink sm:text-3xl">It started with a kid, a pet, and a simple question.</h3>
+          <h3 className="mt-1 text-2xl font-black tracking-tight text-tt-ink sm:text-3xl">"Why don't all homes have pets? Don't they like pets?"</h3>
           <p className="mt-3 text-[15px] font-semibold leading-7 text-tt-ink-soft">
-            "Can I help take care of them?" — that question, asked with big hopeful eyes, is where TailTots began.
-            We watched a child learn responsibility one filled water bowl at a time, and realized: the moments parents
-            already live through every day are the exact moments character is built.
+            That's what my kids asked me one day — and I didn't have a good answer. But I did have
+            two guinea pigs, a tortoise, and a tank of fish. And I'd watched what those animals did
+            for my children: the way caring for them built patience, the way a small life depending
+            on you teaches responsibility no lecture ever could, the way a quiet moment with a pet
+            can calm a stormy day.
           </p>
           <p className="mt-3 text-[15px] font-semibold leading-7 text-tt-ink-soft">
-            So we built the app we wished existed — one that turns "feed the dog" into life skills,
-            "clean your room" into pride, and ten minutes of your day into humans you're proud to raise.
+            Not every family can have a pet. But every child deserves what pets teach. So I built
+            TailTots — to give every kid the responsibility, empathy, and pride that my kids found
+            in our little animals, one filled water bowl at a time. If it helped them, maybe it can
+            help yours too.
           </p>
         </div>
       </section>
