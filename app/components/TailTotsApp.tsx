@@ -284,10 +284,12 @@ const starterMissions: Mission[] = [
     points: 12,
     coins: 2,
     allowanceDollars: 0,
-    assignedChildId: "aarush",
+    assignedChildId: "sahasra",
     petId: "jack",
     question: "Did Jack get fresh food, hay, and water?",
     status: "pending",
+    completedBy: "sahasra",
+    note: "Gave Jack fresh hay and refilled the water bottle!",
   },
   {
     id: "clean-jamie",
@@ -361,6 +363,7 @@ const starterGoals: SavingsGoal[] = [
 
 const starterTransactions: BankTransaction[] = [
   { id: "tx-1", childId: "sahasra", category: "earn", amount: 3, description: "Earned from approved pet care missions", status: "approved" },
+  { id: "tx-seed-save", childId: "sahasra", category: "save", amount: 12, description: "Saved for Guinea pig tunnel", goalId: "goal-1", status: "approved" },
   { id: "tx-2", childId: "aarush", category: "save", amount: 2, description: "Save $2 for Fish tank plant", goalId: "goal-2", status: "pending" },
 ];
 
@@ -485,6 +488,7 @@ function getPetCareStats(petId: string, missions: Mission[]): {
 const tabItems = [
   { id: "vision", label: "Vision" },
   { id: "missions", label: "Today" },
+  { id: "home", label: "Home Hub" },
   { id: "schedule", label: "Schedule" },
   { id: "pets", label: "Pet Passports" },
   { id: "pet-helper", label: "AI Buddy" },
@@ -495,7 +499,7 @@ const tabItems = [
   { id: "growth", label: "Growth Log" },
 ];
 
-const kidTabIds = ["missions", "pets", "pet-helper", "bank", "neighborhood"];
+const kidTabIds = ["missions", "home", "schedule", "pets", "pet-helper", "bank", "neighborhood"];
 const parentTabIds = ["vision", "approvals", "setup", "schedule", "pets", "neighborhood", "growth"];
 const defaultParentPasscode = "4321";
 
@@ -2545,6 +2549,15 @@ export function TailTotsApp() {
           ) : (
           (role === "child" || isParentUnlocked) && (
           <>
+          {visibleActiveTab === "home" && role === "child" && (
+            <KidHomeHub
+              activeChild={activeChild}
+              missions={missions}
+              transactions={transactions}
+              badges={badges}
+              setActiveTab={setActiveTab}
+            />
+          )}
           {visibleActiveTab === "missions" && (
             <>
               {role === "child" && dailyChecksEnabled && !checksExhausted && (
@@ -2595,6 +2608,12 @@ export function TailTotsApp() {
               childProfiles={children}
               kidAvailability={kidAvailability}
               setKidAvailability={setKidAvailability}
+            />
+          )}
+          {visibleActiveTab === "schedule" && role === "child" && (
+            <KidScheduleView
+              activeChild={activeChild}
+              kidAvailability={kidAvailability}
             />
           )}
           {visibleActiveTab === "pets" && (
@@ -2747,6 +2766,11 @@ export function TailTotsApp() {
               setAiBuddyCategories={setAiBuddyCategories}
               aiBuddyDailyRotate={aiBuddyDailyRotate}
               setAiBuddyDailyRotate={setAiBuddyDailyRotate}
+              appMode={appMode}
+              onResetDemo={() => {
+                loadDemoFamily();
+                setActiveTab("setup");
+              }}
             />
           )}
           {visibleActiveTab === "growth" && role === "parent" && (
@@ -3146,6 +3170,24 @@ function VisionLandingPanel({
         </div>
       </div>
 
+      {/* ============ HOW IT WORKS: 5-step strip ============ */}
+      <section className="-mx-3 border-y border-tt-line bg-white p-5 shadow-sm sm:mx-0 sm:rounded-3xl sm:border sm:p-6">
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-pine">How it actually works</p>
+        <h3 className="mt-1 text-2xl font-black tracking-tight text-tt-ink sm:text-3xl">Five steps. Ten minutes a day.</h3>
+        <div className="mt-4 flex gap-3 overflow-x-auto pb-2 sm:grid sm:grid-cols-5 sm:overflow-visible">
+          {journeySteps.map(([emoji, title, desc], idx) => (
+            <div key={title} className="min-w-[220px] flex-1 rounded-2xl border border-tt-line bg-tt-cream p-4 sm:min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="flex size-8 items-center justify-center rounded-full bg-tt-pine text-sm font-black text-white">{idx + 1}</span>
+                <span className="text-xl" aria-hidden="true">{emoji}</span>
+              </div>
+              <p className="mt-2 text-sm font-black text-tt-ink">{title}</p>
+              <p className="mt-1 text-xs font-semibold leading-5 text-tt-ink-soft">{desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
       {/* ============ DOCTRINE: the 10-second parent version ============ */}
       {/* ============ WHO IT'S FOR: strong habits, three kinds of kids ============ */}
       <section className="-mx-3 border-y-2 border-tt-pine/40 bg-tt-pine p-5 text-white shadow-sm sm:mx-0 sm:rounded-3xl sm:border sm:p-6">
@@ -3282,6 +3324,46 @@ function VisionLandingPanel({
             </div>
             <p className="mt-3 text-xs font-semibold text-white/60">Tap “done” each day. Streaks grow. Goals fill up. You approve everything.</p>
           </div>
+        </div>
+      </section>
+
+      {/* ============ SAFETY: the non-negotiable ============ */}
+      <section className="-mx-3 border-y border-tt-line bg-tt-cream p-5 shadow-sm sm:mx-0 sm:rounded-3xl sm:border sm:p-8">
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-pine">Safety, by design</p>
+        <h3 className="mt-1 max-w-2xl text-2xl font-black tracking-tight text-tt-ink sm:text-3xl">Your child will never talk to a stranger on TailTots. Period.</h3>
+        <p className="mt-2 max-w-2xl text-[15px] font-semibold leading-6 text-tt-ink-soft">
+          No open chats, no friend requests from strangers, no feeds to doomscroll. Just your family, your pets, and skills that grow in the real world.
+        </p>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            ["🚫", "No strangers", "Nobody outside your family circle can reach your child. Ever."],
+            ["💬", "No open chats", "Kids can't message anyone. Communication stays in the real world, with you."],
+            ["✅", "You approve everything", "Missions, money moves, and playdates all need your high-five first."],
+            ["🔒", "Closed family circle", "Your family's data stays yours. Nothing leaves your device without you."],
+          ].map(([emoji, title, desc]) => (
+            <div key={title} className="rounded-2xl border border-tt-line bg-white p-4">
+              <p className="text-2xl" aria-hidden="true">{emoji}</p>
+              <p className="mt-2 text-sm font-black text-tt-ink">{title}</p>
+              <p className="mt-1 text-xs font-semibold leading-5 text-tt-ink-soft">{desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ============ ORIGIN: where this came from ============ */}
+      <section className="-mx-3 border-y border-tt-line bg-white p-5 shadow-sm sm:mx-0 sm:rounded-3xl sm:border sm:p-8">
+        <div className="mx-auto max-w-2xl text-center">
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-pine">Why we built this</p>
+          <h3 className="mt-1 text-2xl font-black tracking-tight text-tt-ink sm:text-3xl">It started with a kid, a pet, and a simple question.</h3>
+          <p className="mt-3 text-[15px] font-semibold leading-7 text-tt-ink-soft">
+            "Can I help take care of them?" — that question, asked with big hopeful eyes, is where TailTots began.
+            We watched a child learn responsibility one filled water bowl at a time, and realized: the moments parents
+            already live through every day are the exact moments character is built.
+          </p>
+          <p className="mt-3 text-[15px] font-semibold leading-7 text-tt-ink-soft">
+            So we built the app we wished existed — one that turns "feed the dog" into life skills,
+            "clean your room" into pride, and ten minutes of your day into humans you're proud to raise.
+          </p>
         </div>
       </section>
 
@@ -3898,6 +3980,148 @@ function CalendarImportCard({
               </li>
             ))}
           </ul>
+        </div>
+      )}
+    </section>
+  );
+}
+
+/** Kid-friendly home hub: overview of their day, stats, and quick links. */
+function KidHomeHub({
+  activeChild,
+  missions,
+  transactions,
+  badges,
+  setActiveTab,
+}: {
+  activeChild: Child | undefined;
+  missions: Mission[];
+  transactions: BankTransaction[];
+  badges: BadgeAward[];
+  setActiveTab: (tab: string) => void;
+}) {
+  const myMissions = missions.filter((m) => m.assignedChildId === activeChild?.id || m.completedBy === activeChild?.id);
+  const todoCount = myMissions.filter((m) => !m.completedBy && m.status !== "approved").length;
+  const waitingCount = myMissions.filter((m) => m.completedBy && m.status === "pending").length;
+  const myBadges = badges.filter((b) => b.childId === activeChild?.id);
+  const myEarned = transactions.filter((t) => t.childId === activeChild?.id && t.category === "earn" && t.status === "approved");
+  const totalEarned = myEarned.reduce((sum, t) => sum + t.amount, 0);
+
+  const quickLinks = [
+    ["missions", "🎯", "Today's missions", `${todoCount} to do`],
+    ["bank", "🫙", "Kid Bank", `$${totalEarned} earned`],
+    ["pets", "🐾", "Pet Passports", "Meet your buddies"],
+    ["schedule", "📅", "My schedule", "Free time"],
+  ] as const;
+
+  return (
+    <section className="space-y-4">
+      <div className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#165a4b]">Home hub</p>
+        <h2 className="mt-2 text-2xl font-black text-[#17231f]">
+          Hey{activeChild ? ` ${activeChild.name}` : ""}! 👋
+        </h2>
+        <p className="mt-2 text-sm font-semibold leading-6 text-[#4f625b]">
+          Here's your day at a glance. Pick something fun and go do it in the real world!
+        </p>
+        <div className="mt-4 grid grid-cols-3 gap-2">
+          <div className="rounded-lg bg-[#e7f4ef] p-3 text-center">
+            <p className="text-2xl font-black text-[#165a4b]">{todoCount}</p>
+            <p className="text-xs font-bold text-[#4f625b]">Missions to do</p>
+          </div>
+          <div className="rounded-lg bg-[#fff4d8] p-3 text-center">
+            <p className="text-2xl font-black text-[#7a4b12]">{waitingCount}</p>
+            <p className="text-xs font-bold text-[#4f625b]">Waiting for high-five</p>
+          </div>
+          <div className="rounded-lg bg-[#f2f8fd] p-3 text-center">
+            <p className="text-2xl font-black text-[#1a56db]">{myBadges.length}</p>
+            <p className="text-xs font-bold text-[#4f625b]">Badges earned</p>
+          </div>
+        </div>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        {quickLinks.map(([tabId, emoji, label, sub]) => (
+          <button
+            key={tabId}
+            onClick={() => setActiveTab(tabId)}
+            className="rounded-lg border border-[#ded8c7] bg-white p-4 text-left shadow-sm hover:border-[#165a4b] hover:bg-[#f8fffe]"
+          >
+            <p className="text-2xl" aria-hidden="true">{emoji}</p>
+            <p className="mt-1 text-sm font-black text-[#17231f]">{label}</p>
+            <p className="text-xs font-semibold text-[#4f625b]">{sub}</p>
+          </button>
+        ))}
+      </div>
+      {myBadges.length > 0 && (
+        <div className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
+          <p className="text-sm font-black text-[#17231f]">🏅 Your latest badges</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {myBadges.slice(0, 3).map((badge) => (
+              <span key={badge.id} className="rounded-full bg-[#fff4d8] px-3 py-1 text-xs font-black text-[#7a4b12]">
+                {badge.title}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
+/** Kid-friendly read-only schedule view: shows their free time for playdates. */
+function KidScheduleView({
+  activeChild,
+  kidAvailability,
+}: {
+  activeChild: Child | undefined;
+  kidAvailability: Record<string, string[]>;
+}) {
+  const slots = activeChild ? kidAvailability[activeChild.id] ?? [] : [];
+  const dayNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  const slotsByDay: Record<string, string[]> = {};
+  for (const slot of slots) {
+    const [day, ...rest] = slot.split(" ");
+    const time = rest.join(" ");
+    if (!slotsByDay[day]) slotsByDay[day] = [];
+    slotsByDay[day].push(time);
+  }
+
+  return (
+    <section className="space-y-4">
+      <div className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#165a4b]">My schedule</p>
+        <h2 className="mt-2 text-2xl font-black text-[#17231f]">
+          {activeChild ? `${activeChild.name}'s free time` : "Free time"}
+        </h2>
+        <p className="mt-2 text-sm font-semibold leading-6 text-[#4f625b]">
+          Times you're free for playdates and missions. Ask a grown-up to update this in the parent Schedule tab!
+        </p>
+      </div>
+      {slots.length === 0 ? (
+        <div className="rounded-lg border-2 border-dashed border-[#ded8c7] bg-[#faf8f0] p-6 text-center">
+          <p className="text-lg font-black text-[#17231f]">No free time set yet 📅</p>
+          <p className="mx-auto mt-2 max-w-md text-sm font-semibold text-[#4f625b]">
+            Once a grown-up adds your free times, they'll show up here so you know when playdates can happen!
+          </p>
+        </div>
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {dayNames.map((day) => (
+            <div key={day} className="rounded-lg border border-[#ded8c7] bg-white p-4">
+              <p className="text-sm font-black text-[#17231f]">{day}</p>
+              {(slotsByDay[day] ?? []).length === 0 ? (
+                <p className="mt-1 text-xs font-semibold text-[#8a8f8b]">Busy day</p>
+              ) : (
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {(slotsByDay[day] ?? []).map((time) => (
+                    <span key={time} className="rounded-full bg-[#e7f4ef] px-2 py-0.5 text-xs font-bold text-[#165a4b]">
+                      {time}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
         </div>
       )}
     </section>
@@ -5459,8 +5683,8 @@ function MissionsPanel(props: {
             <p className="text-lg font-black text-[#0d3b30]">No missions yet 🐾</p>
             <p className="mx-auto mt-2 max-w-md text-sm font-semibold text-[#4f625b]">
               {isKidView
-                ? "Your first mission is the start of the adventure."
-                : "Add the first mission so your kid has something to care for today."}
+                ? "Your first mission is the start of the adventure — ask a grown-up to add one, or try the demo missions above!"
+                : "Add the first mission so your kid has something to care for today — pet care, chores, or kindness."}
             </p>
             {isKidView && (
               <p className="mt-3 text-sm font-black text-[#165a4b]">Ask a grown-up to add your first one →</p>
@@ -6963,7 +7187,7 @@ function ApprovalsPanel(props: {
         </div>
         <div className="mt-4 grid gap-3">
           {!pendingMissions.length && (
-            <p className="rounded-lg bg-[#faf8f0] p-4 text-sm font-semibold text-[#4f625b]">No missions waiting right now.</p>
+            <p className="rounded-lg bg-[#faf8f0] p-4 text-sm font-semibold text-[#4f625b]">No missions waiting right now. When your kid finishes a mission, it'll show up here for your high-five! 🌟</p>
           )}
           {pendingMissions.map((mission) => {
             const child = props.childProfiles.find((entry) => entry.id === mission.completedBy);
@@ -7309,7 +7533,7 @@ function NotificationsCard(props: {
       </div>
       {total === 0 ? (
         <p className="mt-3 rounded-lg bg-[#e7f4ef] p-4 text-sm font-semibold text-[#165a4b]">
-          Nothing waiting — no missions to approve, no money requests, no playdate claims.
+          Nothing waiting — you're all caught up! 🎉 Missions your kids finish, money requests, and playdate claims will appear here.
         </p>
       ) : (
         <div className="mt-4 grid gap-3">
@@ -7839,6 +8063,8 @@ function FamilySetupPanel(props: {
   setAiBuddyCategories: (value: string[]) => void;
   aiBuddyDailyRotate: boolean;
   setAiBuddyDailyRotate: (value: boolean) => void;
+  appMode: "demo" | "real";
+  onResetDemo: () => void;
 }) {
   // Stream R2: every step is a real, checkable setup task — no placeholder
   // steps, no duplicated tracking.
@@ -7875,6 +8101,22 @@ function FamilySetupPanel(props: {
             </div>
           ))}
         </div>
+        {props.appMode === "demo" && (
+          <div className="mt-4 rounded-lg border border-dashed border-[#f0c96a] bg-[#fffdf5] p-4">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm font-black text-[#7a4b12]">Demo data</p>
+                <p className="mt-1 text-xs font-semibold text-[#8a7a5a]">You're exploring with sample family data. Reset anytime to restore the original demo missions, jars, and moments.</p>
+              </div>
+              <button
+                onClick={props.onResetDemo}
+                className="min-h-11 shrink-0 rounded-lg border border-[#f0c96a] bg-white px-4 py-2 text-sm font-black text-[#7a4b12] hover:bg-[#fff4d8]"
+              >
+                ↺ Reset demo
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="rounded-lg border border-[#dce6f8] bg-white p-5 shadow-sm">
