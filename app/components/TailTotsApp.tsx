@@ -802,7 +802,6 @@ export function TailTotsApp() {
     return () => window.removeEventListener("hashchange", onHashChange);
   }, []);
   const [activeTab, setActiveTab] = useState("vision");
-  const [showOriginStory, setShowOriginStory] = useState(false);
   const [isParentUnlocked, setIsParentUnlocked] = useState(true);
   const [parentGateOpen, setParentGateOpen] = useState(false);
   const [gateInput, setGateInput] = useState("");
@@ -3357,34 +3356,20 @@ function VisionLandingPanel({
           <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-pine">Why we built this</p>
           <h3 className="mt-1 text-2xl font-black tracking-tight text-tt-ink sm:text-3xl">"Why don't all homes have pets? Don't they like pets?"</h3>
           <p className="mt-3 text-[15px] font-semibold leading-7 text-tt-ink-soft">
-            My kids asked me that one day. Our guinea pigs, tortoise, and fish had taught them
-            patience and responsibility no lecture could — and I realized every child deserves that,
-            pet or no pet. So I built TailTots.
+            That's what my kids asked me one day — and I didn't have a good answer. But I did have
+            two guinea pigs, a tortoise, and a tank of fish. And I'd watched what those animals did
+            for my children: the way caring for them built patience, the way a small life depending
+            on you teaches responsibility no lecture ever could, the way a quiet moment with a pet
+            can calm a stormy day.
           </p>
-          <button onClick={() => setShowOriginStory(true)} className="mt-3 text-sm font-black text-tt-pine underline decoration-2 underline-offset-4 hover:text-tt-ink">
-            Read our full story →
-          </button>
+          <p className="mt-3 text-[15px] font-semibold leading-7 text-tt-ink-soft">
+            Not every family can have a pet. But every child deserves what pets teach. So I built
+            TailTots — to give every kid the responsibility, empathy, and pride that my kids found
+            in our little animals, one filled water bowl at a time. If it helped them, maybe it can
+            help yours too.
+          </p>
         </div>
       </section>
-
-      {/* ============ ORIGIN STORY: full page overlay ============ */}
-      {showOriginStory && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-tt-cream/98 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Our full story">
-          <div className="mx-auto max-w-2xl py-8">
-            <button onClick={() => setShowOriginStory(false)} className="mb-6 rounded-full bg-tt-ink px-4 py-2 text-sm font-black text-white">← Back</button>
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-pine">Why we built this</p>
-            <h2 className="mt-2 text-3xl font-black tracking-tight text-tt-ink sm:text-4xl">"Why don't all homes have pets? Don't they like pets?"</h2>
-            <div className="mt-6 grid gap-4 text-[16px] font-medium leading-8 text-tt-ink-soft">
-              <p>That's what my kids asked me one day — and I didn't have a good answer.</p>
-              <p>But I did have two guinea pigs, a tortoise, and a tank of fish. And I'd watched what those animals did for my children: the way caring for them built patience, the way a small life depending on you teaches responsibility no lecture ever could, the way a quiet moment with a pet can calm a stormy day.</p>
-              <p>Not every family can have a pet. Some can't for space, some for allergies, some for reasons no kid should have to understand. But every child deserves what pets teach.</p>
-              <p>So I built TailTots — to give every kid the responsibility, empathy, and pride that my kids found in our little animals, one filled water bowl at a time.</p>
-              <p className="font-black text-tt-ink">If it helped them, maybe it can help yours too.</p>
-            </div>
-            <button onClick={() => setShowOriginStory(false)} className="mt-8 rounded-full bg-tt-ink px-6 py-3 text-sm font-black text-white">← Back to the site</button>
-          </div>
-        </div>
-      )}
 
 
 
