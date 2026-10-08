@@ -3198,7 +3198,7 @@ function VisionLandingPanel({
             <thead>
               <tr className="border-b border-white/15">
                 <th className="p-2 text-left">
-                  <img src="/landing/kid-dog.jpg" alt="Kid with pets" className="size-10 rounded-lg object-cover" loading="lazy" />
+                  <img src="/landing/kid-dog.jpg" alt="Kid hugging their dog" className="h-20 w-full rounded-xl object-cover" loading="lazy" />
                 </th>
                 <th className="p-2 text-center">
                   <p className="text-xs font-black leading-tight">Have<br />pets</p>
