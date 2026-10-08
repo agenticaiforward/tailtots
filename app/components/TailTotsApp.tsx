@@ -2956,13 +2956,6 @@ function VisionLandingPanel({
   const [feedbackMessage, setFeedbackMessage] = useState("");
   const [shareMessage, setShareMessage] = useState("");
 
-  const journeySteps = [
-    ["🔍", "Learn the animal", "Pet Passports decode what the pet really needs — food, space, costs, lifespan. Fantasy out, respect in."],
-    ["🎯", "Own the routine", "Daily age-fit missions. Have a pet? Your kid takes over the real routine — feeding, water, comfort checks, for real this time. Don’t? Parent-set home and community chores: the nagging you already do becomes the training ground."],
-    ["📈", "Prove it over time", "Streaks plus your approvals build the proof record — day after day, toward sixty and beyond. Certificates mark the milestones along the way. This answers “will they stick with it?”"],
-    ["🎓", "Earn the certificate", "The proof record, framed. No pet yet? It’s the case for one. Have one? It’s the title: Certified Pet Hero."],
-    ["🌟", "Grow beyond the routine", "Missions grow with your kid — skills, money smarts, and giving: donate, fund real causes, build real-world confidence. Same missions, every doorway."],
-  ];
   const platformPillars = [
     ["🌐", "Safe social practice", "Training wheels for real-world social life. Kids practice teamwork, leadership, and empathy — with zero strangers, zero feeds, zero DMs."],
     ["🦸", "Character, on purpose", "Responsibility, kindness, honesty: a real character curriculum taught through missions, not lectures."],
@@ -3189,21 +3182,34 @@ function VisionLandingPanel({
         </div>
       </div>
 
-      {/* ============ HOW IT WORKS: 5-step strip ============ */}
+      {/* ============ AI-NATIVE PARENTING: why parents need this ============ */}
       <section className="-mx-3 border-y border-tt-line bg-white p-5 shadow-sm sm:mx-0 sm:rounded-3xl sm:border sm:p-6">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-pine">How it actually works</p>
-        <h3 className="mt-1 text-2xl font-black tracking-tight text-tt-ink sm:text-3xl">Five steps. Ten minutes a day.</h3>
-        <div className="mt-4 flex gap-3 overflow-x-auto pb-2 sm:grid sm:grid-cols-5 sm:overflow-visible">
-          {journeySteps.map(([emoji, title, desc], idx) => (
-            <div key={title} className="min-w-[220px] flex-1 rounded-2xl border border-tt-line bg-tt-cream p-4 sm:min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="flex size-8 items-center justify-center rounded-full bg-tt-pine text-sm font-black text-white">{idx + 1}</span>
-                <span className="text-xl" aria-hidden="true">{emoji}</span>
-              </div>
-              <p className="mt-2 text-sm font-black text-tt-ink">{title}</p>
-              <p className="mt-1 text-xs font-semibold leading-5 text-tt-ink-soft">{desc}</p>
-            </div>
-          ))}
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-pine">Built different</p>
+        <h3 className="mt-1 text-2xl font-black tracking-tight text-tt-ink sm:text-3xl">An AI that parents <em>with</em> you.</h3>
+        <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-tt-ink-soft">
+          Not another chore chart. TailTots learns your child — their strengths, their tough days, what makes them light up — and turns that into parenting you couldn't do alone.
+        </p>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <div className="rounded-2xl border border-tt-line bg-tt-cream p-4">
+            <p className="text-xl" aria-hidden="true">🧠</p>
+            <p className="mt-2 text-sm font-black text-tt-ink">Missions built for <em>your</em> kid</p>
+            <p className="mt-1 text-xs font-semibold leading-5 text-tt-ink-soft">Every mission is generated for your child's age, strengths, and what they need most right now — not a one-size-fits-all checklist.</p>
+          </div>
+          <div className="rounded-2xl border border-tt-line bg-tt-cream p-4">
+            <p className="text-xl" aria-hidden="true">🔍</p>
+            <p className="mt-2 text-sm font-black text-tt-ink">Sees patterns you'd miss</p>
+            <p className="mt-1 text-xs font-semibold leading-5 text-tt-ink-soft">Kindness missions stalling on Thursdays? Confidence dipping after hard weeks? Your copilot spots it and tells you what to try — before it becomes a battle.</p>
+          </div>
+          <div className="rounded-2xl border border-tt-line bg-tt-cream p-4">
+            <p className="text-xl" aria-hidden="true">🌸</p>
+            <p className="mt-2 text-sm font-black text-tt-ink">Watch them actually flourish</p>
+            <p className="mt-1 text-xs font-semibold leading-5 text-tt-ink-soft">Not just "chores done" — see joy, persistence, empathy, and confidence growing week by week. The growth you'd otherwise only guess at.</p>
+          </div>
+          <div className="rounded-2xl border border-tt-line bg-tt-cream p-4">
+            <p className="text-xl" aria-hidden="true">💛</p>
+            <p className="mt-2 text-sm font-black text-tt-ink">Meets hard days with heart</p>
+            <p className="mt-1 text-xs font-semibold leading-5 text-tt-ink-soft">Tough day? Missions shift to calming, body-first activities automatically. No forcing, no meltdowns — just the right thing at the right moment.</p>
+          </div>
         </div>
       </section>
 
