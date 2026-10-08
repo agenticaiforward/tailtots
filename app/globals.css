@@ -366,6 +366,11 @@ button {
 .tt-marquee-track:hover { animation-play-state: paused; }
 
 /* ---------- premium interactive primitives ---------- */
+.tt-display {
+  font-family: var(--font-display), Georgia, "Times New Roman", serif;
+  font-optical-sizing: auto;
+  letter-spacing: -0.01em;
+}
 .tt-card-lift {
   transition: transform 0.25s ease, box-shadow 0.25s ease;
 }
