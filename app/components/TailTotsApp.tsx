@@ -2390,6 +2390,13 @@ export function TailTotsApp() {
                 </button>
               ))}
             </div>
+            {role === "child" && (
+              <ChildProfileDropdown
+                activeChild={activeChild}
+                childProfiles={children}
+                requestChildSwitch={requestChildSwitch}
+              />
+            )}
           </div>
           )}
         </div>
@@ -2490,14 +2497,6 @@ export function TailTotsApp() {
               )}
             </div>
           </div>
-
-          {role === "child" && (
-            <ChildProfileSwitcher
-              activeChild={activeChild}
-              childProfiles={children}
-              requestChildSwitch={requestChildSwitch}
-            />
-          )}
 
           {(role === "child" || isParentUnlocked) && (
           <nav className="grid grid-flow-col gap-2 overflow-x-auto pb-1 lg:grid-flow-row lg:overflow-visible lg:pb-0">
@@ -2695,6 +2694,7 @@ export function TailTotsApp() {
                 missions={missions}
                 transactions={transactions}
                 childProfiles={children}
+                pets={pets}
                 approveMission={approveMission}
                 approveTransaction={approveTransaction}
                 rejectMission={rejectMission}
@@ -3364,20 +3364,16 @@ function VisionLandingPanel({
       <section className="-mx-3 border-y border-tt-line bg-tt-cream p-5 shadow-sm sm:mx-0 sm:rounded-3xl sm:border sm:p-8">
         <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-pine">Safety, by design</p>
         <h3 className="mt-1 max-w-2xl text-2xl font-black tracking-tight text-tt-ink sm:text-3xl">Your child will never talk to a stranger on TailTots. Period.</h3>
-        <p className="mt-2 max-w-2xl text-[15px] font-semibold leading-6 text-tt-ink-soft">
-          No open chats, no friend requests from strangers, no feeds to doomscroll. Just your family, your pets, and skills that grow in the real world.
-        </p>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
           {[
-            ["🚫", "No strangers", "Nobody outside your family circle can reach your child. Ever."],
-            ["💬", "No open chats", "Kids can't message anyone. Communication stays in the real world, with you."],
-            ["✅", "You approve everything", "Missions, money moves, and playdates all need your high-five first."],
-            ["🔒", "Closed family circle", "Your family's data stays yours. Nothing leaves your device without you."],
-          ].map(([emoji, title, desc]) => (
-            <div key={title} className="rounded-2xl border border-tt-line bg-white p-4">
-              <p className="text-2xl" aria-hidden="true">{emoji}</p>
+            ["🚫", "No strangers"],
+            ["💬", "No open chats"],
+            ["✅", "You approve everything"],
+            ["🔒", "Closed family circle"],
+          ].map(([emoji, title]) => (
+            <div key={title} className="rounded-2xl border border-tt-line bg-white p-4 text-center">
+              <p className="text-3xl" aria-hidden="true">{emoji}</p>
               <p className="mt-2 text-sm font-black text-tt-ink">{title}</p>
-              <p className="mt-1 text-xs font-semibold leading-5 text-tt-ink-soft">{desc}</p>
             </div>
           ))}
         </div>
@@ -5082,7 +5078,7 @@ function BuddyParentQuestionsEditor({
   );
 }
 
-function ChildProfileSwitcher({
+function ChildProfileDropdown({
   activeChild,
   childProfiles,
   requestChildSwitch,
@@ -5091,48 +5087,76 @@ function ChildProfileSwitcher({
   childProfiles: Child[];
   requestChildSwitch: (childId: string) => void;
 }) {
+  const [isOpen, setIsOpen] = useState(false);
   const activeLook = getChildLook(activeChild?.id);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    if (isOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [isOpen]);
+
+  function handleSwitch(childId: string) {
+    requestChildSwitch(childId);
+    setIsOpen(false);
+  }
 
   return (
-    <section className="rounded-lg border border-[#ded8c7] bg-[#fff4d8] p-4 shadow-sm" aria-label="Child profile switcher">
-      <p className="text-xs font-black uppercase tracking-[0.16em] text-[#7a4b12]">Who is using TailTots?</p>
-      <div className="mt-3 flex min-w-0 items-center gap-3 rounded-lg bg-white p-3">
+    <div ref={dropdownRef} className="relative">
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        aria-label={`Switch kid profile, currently ${activeChild?.name ?? "no kid selected"}`}
+        aria-expanded={isOpen}
+        className="flex min-h-11 items-center gap-2 rounded-full border border-[#ded8c7] bg-white py-1 pl-1 pr-3 text-xs font-black text-[#17231f] shadow-sm"
+      >
         <ProfilePhoto
           label={activeChild?.name ?? "Kid"}
           initial={activeLook.initial}
           colors={activeLook.colors}
+          size="xs"
           variant="kid"
           hair={activeLook.hair}
           photoUrl={activeChild?.photoUrl}
         />
-        <div className="min-w-0">
-          <p className="truncate text-lg font-black text-[#17231f]">{activeChild?.name ?? "Choose a kid"}</p>
-          <p className="text-xs font-bold text-[#7a4b12]">Active profile on this screen</p>
+        <span className="max-w-20 truncate">{activeChild?.name ?? "Kid"}</span>
+        <span aria-hidden="true" className={`text-[10px] transition-transform ${isOpen ? "rotate-180" : ""}`}>▼</span>
+      </button>
+      {isOpen && (
+        <div className="absolute right-0 top-full z-30 mt-2 w-56 overflow-hidden rounded-xl border border-[#ded8c7] bg-white shadow-lg">
+          <p className="border-b border-[#ded8c7] bg-[#fff4d8] px-3 py-2 text-[10px] font-black uppercase tracking-[0.14em] text-[#7a4b12]">
+            Who is using TailTots?
+          </p>
+          <div className="max-h-64 overflow-y-auto p-2">
+            {childProfiles.map((child) => {
+              const look = getChildLook(child.id);
+              const isActive = child.id === activeChild?.id;
+              return (
+                <button
+                  key={child.id}
+                  type="button"
+                  onClick={() => handleSwitch(child.id)}
+                  className={`flex min-h-12 w-full items-center gap-3 rounded-lg px-2 py-2 text-left text-sm font-black ${
+                    isActive ? "bg-[#e7f4ef] text-[#165a4b]" : "text-[#17231f] hover:bg-[#faf8f0]"
+                  }`}
+                >
+                  <ProfilePhoto label={child.name} initial={look.initial} colors={look.colors} size="xs" variant="kid" hair={look.hair} photoUrl={child.photoUrl} />
+                  <span className="min-w-0 flex-1 truncate">{child.name}</span>
+                  {isActive && <span aria-hidden="true" className="text-[#165a4b]">✓</span>}
+                </button>
+              );
+            })}
+          </div>
         </div>
-      </div>
-      <div className="mt-3 grid gap-2">
-        {childProfiles.map((child) => {
-          const look = getChildLook(child.id);
-          const isActive = child.id === activeChild?.id;
-          return (
-            <button
-              key={child.id}
-              type="button"
-              onClick={() => requestChildSwitch(child.id)}
-              className={`flex min-h-12 w-full items-center gap-3 rounded-lg border px-3 py-2 text-left text-sm font-black ${
-                isActive ? "border-[#f47b20] bg-[#17231f] text-white" : "border-[#e1d5b9] bg-white text-[#17231f]"
-              }`}
-            >
-              <ProfilePhoto label={child.name} initial={look.initial} colors={look.colors} size="xs" variant="kid" hair={look.hair} photoUrl={child.photoUrl} />
-              <span className="min-w-0 flex-1 truncate">{child.name}</span>
-              <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] uppercase tracking-[0.1em] ${isActive ? "bg-white text-[#17231f]" : "bg-[#faf8f0] text-[#7a4b12]"}`}>
-                {isActive ? "Using now" : "Switch"}
-              </span>
-            </button>
-          );
-        })}
-      </div>
-    </section>
+      )}
+    </div>
   );
 }
 
@@ -5606,6 +5630,56 @@ function isNeighborhoodSchoolMission(mission: Mission): boolean {
   return mission.category === "community";
 }
 
+const MISSION_CATEGORY_VISUAL: Record<Mission["category"], { emoji: string; bg: string }> = {
+  pet_care: { emoji: "🐾", bg: "bg-[#e7f4ef]" },
+  chore: { emoji: "🧹", bg: "bg-[#fff4d8]" },
+  kindness: { emoji: "💛", bg: "bg-[#ffe4e6]" },
+  money: { emoji: "💰", bg: "bg-[#dcfce7]" },
+  community: { emoji: "🤝", bg: "bg-[#e0f2fe]" },
+};
+
+/**
+ * Mission card thumbnail: the linked pet's photo for pet missions
+ * (falls back to the illustrated pet character), otherwise a category
+ * emoji tile. No external images, no API calls.
+ */
+function MissionThumb({
+  mission,
+  pet,
+  size = "md",
+}: {
+  mission: Pick<Mission, "category" | "title">;
+  pet?: Pet;
+  size?: "sm" | "md";
+}) {
+  if (pet) {
+    const look = getPetLook(pet.id, pet);
+    return (
+      <ProfilePhoto
+        label={pet.name}
+        initial={look.face}
+        colors={look.colors}
+        size={size === "sm" ? "xs" : "md"}
+        variant="pet"
+        petKind={look.kind}
+        photoUrl={pet.photoUrl}
+      />
+    );
+  }
+  const visual = MISSION_CATEGORY_VISUAL[mission.category] ?? MISSION_CATEGORY_VISUAL.chore;
+  return (
+    <div
+      aria-hidden="true"
+      title={mission.title}
+      className={`grid shrink-0 place-items-center rounded-2xl ${visual.bg} ring-1 ring-black/5 ${
+        size === "sm" ? "size-12 text-2xl" : "size-16 text-3xl"
+      }`}
+    >
+      <span>{visual.emoji}</span>
+    </div>
+  );
+}
+
 function MissionsPanel(props: {
   activeChild?: Child;
   missions: Mission[];
@@ -5722,6 +5796,7 @@ function MissionsPanel(props: {
         )}
         {props.missions.map((mission) => {
           const skill = getMissionLifeSkill(mission);
+          const pet = props.pets.find((item) => item.id === mission.petId);
           const assignedChild = props.allChildren.find((child) => child.id === mission.assignedChildId);
           const missionDone = Boolean(mission.completedBy) || mission.status === "approved";
           return (
@@ -5743,7 +5818,10 @@ function MissionsPanel(props: {
               {isKidView ? (
                 <>
                   <div>
-                    <h3 className="text-xl font-black">{mission.title}</h3>
+                    <div className="flex items-center gap-3">
+                      <MissionThumb mission={mission} pet={pet} />
+                      <h3 className="text-xl font-black">{mission.title}</h3>
+                    </div>
                     <p className="mt-1 text-sm font-semibold text-[#4f625b]">{mission.question}</p>
                     <div className="mt-2 flex flex-wrap items-center gap-2 text-xs font-black text-[#4f625b]">
                       {isNeighborhoodSchoolMission(mission) && (
@@ -5856,7 +5934,10 @@ function MissionsPanel(props: {
                     </span>
                   )}
                 </div>
-                <h3 className="mt-3 text-xl font-black">{mission.title}</h3>
+                <div className="mt-3 flex items-center gap-3">
+                  <MissionThumb mission={mission} pet={pet} />
+                  <h3 className="text-xl font-black">{mission.title}</h3>
+                </div>
                 <p className="mt-1 text-sm font-semibold text-[#4f625b]">{mission.question}</p>
                 <div className="mt-3 grid gap-2 sm:grid-cols-2">
                   <p className="rounded-lg bg-white p-3 text-xs font-black text-[#165a4b]">
@@ -6950,29 +7031,6 @@ function BankPanel(props: {
 
   return (
     <section className="space-y-4">
-      <div className="rounded-lg border border-[#ded8c7] bg-white p-4 shadow-sm">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#f47b20]">Choose kid bank</p>
-        <div className="mt-3 grid gap-2 sm:grid-cols-2">
-          {props.childProfiles.map((childProfile) => {
-            const look = getChildLook(childProfile.id);
-            const isSelected = childProfile.id === props.child?.id;
-            return (
-              <button
-                key={childProfile.id}
-                onClick={() => props.setActiveChildId(childProfile.id)}
-                className={`flex min-h-14 items-center gap-3 rounded-lg border px-3 py-2 text-left text-sm font-black ${
-                  isSelected ? "border-[#f47b20] bg-[#fff4d8] text-[#17231f] ring-2 ring-[#f47b20]/20" : "border-[#ded8c7] bg-[#faf8f0] text-[#4f625b]"
-                }`}
-              >
-                <ProfilePhoto label={childProfile.name} initial={look.initial} colors={look.colors} size="xs" variant="kid" hair={look.hair} photoUrl={childProfile.photoUrl} />
-                <span className="min-w-0 flex-1 truncate">{childProfile.name}</span>
-                {isSelected && <span className="rounded-full bg-[#17231f] px-2 py-1 text-[10px] uppercase tracking-[0.1em] text-white">Selected</span>}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
       <div className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
         <div className="flex items-center gap-4">
           <ProfilePhoto
@@ -7185,6 +7243,7 @@ function ApprovalsPanel(props: {
   missions: Mission[];
   transactions: BankTransaction[];
   childProfiles: Child[];
+  pets?: Pet[];
   approveMission: (missionId: string) => void;
   approveTransaction: (transactionId: string) => void;
   rejectMission: (missionId: string, reason?: string) => void;
@@ -7221,6 +7280,7 @@ function ApprovalsPanel(props: {
           {pendingMissions.map((mission) => {
             const child = props.childProfiles.find((entry) => entry.id === mission.completedBy);
             const childLook = getChildLook(child?.id);
+            const pet = props.pets?.find((item) => item.id === mission.petId);
             return (
               <article key={mission.id} className="flex gap-4 rounded-lg bg-[#faf8f0] p-4">
                 <ProfilePhoto
@@ -7234,7 +7294,10 @@ function ApprovalsPanel(props: {
                 />
                 <div className="min-w-0 flex-1">
                   <p className="text-xs font-black uppercase tracking-[0.12em] text-[#4f625b]">{child?.name ?? "Kid"} finished</p>
-                  <h3 className="mt-1 text-xl font-black">{mission.title}</h3>
+                  <div className="mt-1 flex items-center gap-2">
+                    <MissionThumb mission={mission} pet={pet} size="sm" />
+                    <h3 className="text-xl font-black">{mission.title}</h3>
+                  </div>
                   {mission.note ? (
                     <p className="mt-2 rounded-lg bg-white p-3 text-sm font-semibold leading-6 text-[#17231f]">“{mission.note}”</p>
                   ) : (
