@@ -36,6 +36,19 @@ import {
   type SnapshotAwardInput,
   type SnapshotCompletionInput,
 } from "../lib/ai/mission-engine";
+import {
+  COPILOT_MODEL_ID,
+  buildCopilotNarrationMessages,
+  calibrateDifficultyBands,
+  detectPatterns,
+  fallbackNarrative,
+  narrationInputFor,
+  parseCopilotNarrationResponse,
+  validateCopilotInsightsInput,
+  type CopilotEventInput,
+  type DetectedPattern,
+  type PatternInsightRow,
+} from "../lib/ai/copilot";
 import { InMemoryRateLimiter } from "../lib/ai/rate-limit";
 import { authenticateParentRequest, extractBearerToken } from "../lib/ai/supabase-auth";
 
@@ -43,6 +56,7 @@ const log = createLogger("worker:ai-ideas");
 const conversationLog = createLogger("worker:ai-conversation-prompt");
 const dailyBoostLog = createLogger("worker:ai-daily-boost");
 const missionSetLog = createLogger("worker:ai-mission-set");
+const copilotLog = createLogger("worker:ai-copilot-insights");
 
 interface Env {
   ASSETS: Fetcher;
@@ -89,6 +103,7 @@ const conversationPromptRateLimiter = new InMemoryRateLimiter(20, 60 * 60 * 1000
 const dailyBoostRateLimiter = new InMemoryRateLimiter(10, 60 * 60 * 1000);
 // Parent-side AI mission sets: 20 requests/hour per client IP.
 const missionSetRateLimiter = new InMemoryRateLimiter(20, 60 * 60 * 1000);
+const copilotRateLimiter = new InMemoryRateLimiter(20, 60 * 60 * 1000);
 
 function jsonResponse(data: unknown, status: number): Response {
   return new Response(JSON.stringify(data), {
@@ -319,6 +334,52 @@ async function restGet<T>(client: SupabaseRestClient, path: string): Promise<T |
   }
 }
 
+async function restPost<T>(client: SupabaseRestClient, path: string, body: unknown): Promise<T | null> {
+  try {
+    const response = await fetch(`${client.supabaseUrl.replace(/\/+$/, "")}/rest/v1/${path}`, {
+      method: "POST",
+      headers: { ...restHeaders(client), Prefer: "return=representation" },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (!response.ok) return null;
+    return (await response.json()) as T;
+  } catch {
+    return null;
+  }
+}
+
+async function restPatch<T>(client: SupabaseRestClient, path: string, body: unknown): Promise<T | null> {
+  try {
+    const response = await fetch(`${client.supabaseUrl.replace(/\/+$/, "")}/rest/v1/${path}`, {
+      method: "PATCH",
+      headers: { ...restHeaders(client), Prefer: "return=representation" },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (!response.ok) return null;
+    return (await response.json()) as T;
+  } catch {
+    return null;
+  }
+}
+
+/** Upsert with merge-duplicates (requires on_conflict query param naming the constraint columns). */
+async function restUpsert<T>(client: SupabaseRestClient, path: string, body: unknown): Promise<T | null> {
+  try {
+    const response = await fetch(`${client.supabaseUrl.replace(/\/+$/, "")}/rest/v1/${path}`, {
+      method: "POST",
+      headers: { ...restHeaders(client), Prefer: "return=representation,resolution=merge-duplicates" },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (!response.ok) return null;
+    return (await response.json()) as T;
+  } catch {
+    return null;
+  }
+}
+
 interface ChildRow {
   id: string;
   family_id: string;
@@ -500,6 +561,253 @@ async function handleAiMissionSet(request: Request, env: Env): Promise<Response>
   return jsonResponse({ mode: "ai", missions, generationId }, 200);
 }
 
+interface CopilotEventRow {
+  event_type: string;
+  task_id: string | null;
+  category: string | null;
+  difficulty: string | null;
+  skill: string | null;
+  weekday: number | null;
+  hour_of_day: number | null;
+  minutes_to_complete: number | null;
+  created_at: string;
+}
+
+function toCopilotEventInput(row: CopilotEventRow): CopilotEventInput {
+  return {
+    eventType: row.event_type,
+    taskId: row.task_id,
+    category: row.category,
+    difficulty: row.difficulty,
+    skill: row.skill,
+    weekday: row.weekday,
+    createdAt: row.created_at,
+    minutesToComplete: row.minutes_to_complete,
+  };
+}
+
+function todayIso(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function yesterdayIso(): string {
+  return new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
+}
+
+/**
+ * POST /api/ai/copilot-insights — Parent Copilot (Phase 2).
+ *
+ * Parent-side only. Runs DETERMINISTIC pattern detection over the child's
+ * mission_events (no LLM), reconciles pattern_insights, upserts
+ * difficulty_calibration, then narrates up to 3 insights missing a narrative
+ * with ONE small LLM call each (best-effort). Every narration is scanned
+ * for clinical terms; on any failure the deterministic fallback narrative is
+ * stored instead — the copilot works fully without the model.
+ *
+ * The model never sees raw events, names, notes, or photos: narration input
+ * is insight_type + behavioral fact JSON + age band only.
+ */
+async function handleAiCopilotInsights(request: Request, env: Env): Promise<Response> {
+  if (copilotRateLimiter.isLimited(`ai-copilot:${clientIp(request)}`)) {
+    return jsonResponse({ error: "Too many requests. Please try again later." }, 429);
+  }
+  if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) {
+    copilotLog.warn("Supabase env vars missing for /api/ai/copilot-insights");
+    return jsonResponse(
+      { error: "Parent sign-in is not configured yet. Please try again later." },
+      503,
+    );
+  }
+  const parent = await authenticateParentRequest({
+    supabaseUrl: env.SUPABASE_URL,
+    anonKey: env.SUPABASE_ANON_KEY,
+    authorizationHeader: request.headers.get("Authorization"),
+  });
+  if (!parent) {
+    return jsonResponse({ error: "Parent sign-in required." }, 401);
+  }
+  const token = extractBearerToken(request.headers.get("Authorization"));
+  if (!token) {
+    return jsonResponse({ error: "Parent sign-in required." }, 401);
+  }
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonResponse({ error: "Request body must be valid JSON." }, 400);
+  }
+  const validated = validateCopilotInsightsInput(body);
+  if (!validated.ok) {
+    return jsonResponse({ error: validated.error }, 400);
+  }
+  const { childId } = validated;
+  const rest: SupabaseRestClient = {
+    supabaseUrl: env.SUPABASE_URL,
+    anonKey: env.SUPABASE_ANON_KEY,
+    token,
+  };
+
+  // Child lookup through the parent's JWT: RLS scopes to their own family.
+  const eightWeeksAgo = new Date(Date.now() - 56 * 86_400_000).toISOString();
+  const [childRows, eventRows] = await Promise.all([
+    restGet<ChildRow[]>(rest, `children?id=eq.${childId}&select=id,family_id,age,streak_days,last_streak_date&limit=1`),
+    restGet<CopilotEventRow[]>(
+      rest,
+      `mission_events?child_id=eq.${childId}&created_at=gt.${eightWeeksAgo}` +
+        `&select=event_type,task_id,category,difficulty,skill,weekday,hour_of_day,minutes_to_complete,created_at` +
+        `&order=created_at.desc&limit=3000`,
+    ),
+  ]);
+  const child = childRows?.[0] ?? null;
+  if (!child) {
+    return jsonResponse({ error: "Child not found." }, 404);
+  }
+
+  const events = (eventRows ?? []).map(toCopilotEventInput);
+  const nowMs = Date.now();
+
+  // Stage 1 — deterministic detection (no LLM).
+  const detected: DetectedPattern[] = detectPatterns(
+    events,
+    { streakDays: child.streak_days ?? 0, age: child.age },
+    nowMs,
+  );
+  const calibrations = calibrateDifficultyBands(events, nowMs);
+
+  // Stage 2 — reconcile pattern_insights.
+  const existing =
+    (await restGet<PatternInsightRow[]>(
+      rest,
+      `pattern_insights?child_id=eq.${childId}&select=*&order=created_at.desc&limit=50`,
+    )) ?? [];
+  const today = todayIso();
+  const active = existing.filter(
+    (r) => !r.dismissed_by_parent_id && (!r.valid_until || r.valid_until >= today),
+  );
+  const activeByType = new Map(active.map((r) => [r.insight_type, r]));
+  const detectedTypes = new Set(detected.map((d) => d.insightType));
+  const finalInsights: PatternInsightRow[] = [];
+
+  for (const pattern of detected) {
+    const prior = activeByType.get(pattern.insightType);
+    const detailJson = pattern.detail as Record<string, string | number | boolean | null>;
+    if (prior) {
+      // Refresh if the facts changed (clears a stale narrative); else keep.
+      if (JSON.stringify(prior.detail_json) !== JSON.stringify(detailJson)) {
+        const updated = await restPatch<PatternInsightRow[]>(
+          rest,
+          `pattern_insights?id=eq.${prior.id}`,
+          { detail_json: detailJson, severity: pattern.severity, narrative: null, valid_until: null },
+        );
+        if (updated?.[0]) finalInsights.push(updated[0]);
+        else finalInsights.push(prior);
+      } else {
+        finalInsights.push(prior);
+      }
+    } else {
+      const created = await restPost<PatternInsightRow[]>(
+        rest,
+        `pattern_insights`,
+        {
+          family_id: child.family_id,
+          child_id: childId,
+          insight_type: pattern.insightType,
+          severity: pattern.severity,
+          detail_json: detailJson,
+        },
+      );
+      if (created?.[0]) finalInsights.push(created[0]);
+    }
+  }
+  // Expire insights that no longer detect (keep history; stop showing).
+  for (const prior of active) {
+    if (!detectedTypes.has(prior.insight_type)) {
+      await restPatch(rest, `pattern_insights?id=eq.${prior.id}`, { valid_until: yesterdayIso() });
+    }
+  }
+
+  // Stage 3 — upsert difficulty calibration (feeds the Mission Engine planner).
+  for (const cal of calibrations) {
+    await restUpsert(
+      rest,
+      `difficulty_calibration?on_conflict=child_id,category`,
+      {
+        child_id: childId,
+        category: cal.category,
+        band: cal.band,
+        completion_rate_30d: cal.rate,
+        sample_size: cal.sampleSize,
+      },
+    );
+  }
+
+  // Stage 4 — narrate up to 3 insights missing a narrative (best-effort).
+  const needsNarrative = finalInsights.filter((i) => !i.narrative).slice(0, 3);
+  if (needsNarrative.length > 0 && env.AI) {
+    for (const insight of needsNarrative) {
+      const narrationInput = narrationInputFor(
+        {
+          insightType: insight.insight_type,
+          severity: insight.severity,
+          detail: insight.detail_json,
+        },
+        child.age,
+      );
+      let narrative: string | null = null;
+      try {
+        const output = await env.AI.run(COPILOT_MODEL_ID, {
+          messages: buildCopilotNarrationMessages(narrationInput),
+          max_tokens: 120,
+          temperature: 0.5,
+        });
+        narrative = parseCopilotNarrationResponse(output?.response ?? "");
+      } catch (error) {
+        copilotLog.warn("Copilot narration failed; using fallback", { error });
+      }
+      // Deterministic, pre-written safe narrative on any LLM failure or
+      // clinical-term scan hit. The copilot works fully without the model.
+      const final = narrative ?? fallbackNarrative(narrationInput);
+      const updated = await restPatch<PatternInsightRow[]>(rest, `pattern_insights?id=eq.${insight.id}`, {
+        narrative: final,
+      });
+      if (updated?.[0]) {
+        const idx = finalInsights.findIndex((i) => i.id === insight.id);
+        if (idx >= 0) finalInsights[idx] = updated[0];
+      } else {
+        insight.narrative = final;
+      }
+    }
+  } else if (needsNarrative.length > 0) {
+    // No AI binding: store deterministic narratives directly.
+    for (const insight of needsNarrative) {
+      const final = fallbackNarrative(
+        narrationInputFor(
+          { insightType: insight.insight_type, severity: insight.severity, detail: insight.detail_json },
+          child.age,
+        ),
+      );
+      const updated = await restPatch<PatternInsightRow[]>(rest, `pattern_insights?id=eq.${insight.id}`, {
+        narrative: final,
+      });
+      if (updated?.[0]) {
+        const idx = finalInsights.findIndex((i) => i.id === insight.id);
+        if (idx >= 0) finalInsights[idx] = updated[0];
+      } else {
+        insight.narrative = final;
+      }
+    }
+  }
+
+  // Order: act > watch > info, then newest first.
+  const severityRank: Record<string, number> = { act: 0, watch: 1, info: 2 };
+  finalInsights.sort(
+    (a, b) =>
+      (severityRank[a.severity] ?? 3) - (severityRank[b.severity] ?? 3) ||
+      (b.created_at ?? "").localeCompare(a.created_at ?? ""),
+  );
+  return jsonResponse({ insights: finalInsights }, 200);
+}
+
 const worker = {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
@@ -530,6 +838,13 @@ const worker = {
         return new Response("Method Not Allowed", { status: 405 });
       }
       return handleAiMissionSet(request, env);
+    }
+
+    if (url.pathname === "/api/ai/copilot-insights") {
+      if (request.method !== "POST") {
+        return new Response("Method Not Allowed", { status: 405 });
+      }
+      return handleAiCopilotInsights(request, env);
     }
 
     if (url.pathname === "/_vinext/image") {

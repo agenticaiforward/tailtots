@@ -87,6 +87,7 @@ import {
 } from "@/lib/ai/daily-boost";
 import { ageBandForAge as domainAgeBandForAge } from "@/lib/ai/ideas";
 import { fetchConversationPrompt } from "@/lib/ai/conversation-prompt";
+import { fetchCopilotInsights, type PatternInsightRow } from "@/lib/ai/copilot";
 import { normalizeZip, neighborhoodSuggestionsForZip } from "@/lib/neighborhoods";
 import {
   PET_CHORE_SKILLS,
@@ -2690,6 +2691,7 @@ export function TailTotsApp() {
                 addChoreMissions={addChoreMissions}
               />
               <AskKidPromptCard childProfiles={children} parentSignedIn={Boolean(cloudAccountEmail)} />
+              <CopilotPanel childProfiles={children} cloudFamilyId={cloudFamilyId} />
               <ApprovalsPanel
                 missions={missions}
                 transactions={transactions}
@@ -7239,6 +7241,207 @@ function choreSkillToCategory(skill: PetChoreSkill): Mission["category"] {
     time: "chore",
   };
   return map[skill];
+}
+
+/**
+ * Parent Copilot panel (Phase 2) — parent-only, lives at the top of Parent
+ * Review. A pattern-READER, not a chatbot: the Worker runs deterministic
+ * detection over mission activity and narrates precomputed facts into warm,
+ * actionable sentences. Conscious-parenting voice throughout: every insight
+ * points at what the PARENT can try together with their child — never at
+ * what's wrong with the kid. Dismissible; no persistent profiles.
+ */
+function CopilotPanel(props: { childProfiles: Child[]; cloudFamilyId: string | null }) {
+  const [selectedClientId, setSelectedClientId] = useState<string>("");
+  const [insights, setInsights] = useState<PatternInsightRow[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [dismissingId, setDismissingId] = useState<string | null>(null);
+
+  const activeChild =
+    props.childProfiles.find((c) => c.id === selectedClientId) ?? props.childProfiles[0] ?? null;
+
+  const loadInsights = useCallback(
+    async (clientId: string) => {
+      if (!props.cloudFamilyId || !supabase) {
+        setError("Connect cloud sync in Family Setup to enable the Copilot.");
+        return;
+      }
+      setLoading(true);
+      setError(null);
+      try {
+        const token = await getParentAccessToken();
+        if (!token) {
+          setError("Sign in with your parent account to use the Copilot.");
+          return;
+        }
+        const { data: childRow } = await supabase
+          .from("children")
+          .select("id")
+          .eq("family_id", props.cloudFamilyId)
+          .eq("client_id", clientId)
+          .maybeSingle();
+        if (!childRow?.id) {
+          setError("This profile hasn't synced to the cloud yet.");
+          return;
+        }
+        const result = await fetchCopilotInsights({ token, childId: childRow.id as string });
+        if (!result.ok) {
+          setError("The Copilot couldn't reach its pattern reader just now. Try again in a bit.");
+          return;
+        }
+        setInsights(result.insights ?? []);
+      } catch {
+        setError("The Copilot couldn't reach its pattern reader just now. Try again in a bit.");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [props.cloudFamilyId],
+  );
+
+  useEffect(() => {
+    if (!activeChild) return;
+    // Defer past the effect body so state updates don't cascade synchronously.
+    const timer = setTimeout(() => {
+      void loadInsights(activeChild.id);
+    }, 0);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeChild?.id, props.cloudFamilyId]);
+
+  const dismissInsight = async (insight: PatternInsightRow) => {
+    if (!supabase) return;
+    setDismissingId(insight.id);
+    try {
+      // Best-effort: record who dismissed. Falls back to expiring the insight.
+      let parentId: string | null = null;
+      try {
+        const { data: userData } = await supabase.auth.getUser();
+        const authUserId = userData.user?.id;
+        if (authUserId) {
+          const { data: parentRow } = await supabase
+            .from("parents")
+            .select("id")
+            .eq("auth_user_id", authUserId)
+            .maybeSingle();
+          parentId = (parentRow as { id?: string } | null)?.id ?? null;
+        }
+      } catch {
+        parentId = null;
+      }
+      const yesterday = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
+      await supabase
+        .from("pattern_insights")
+        .update(
+          parentId
+            ? { dismissed_by_parent_id: parentId }
+            : { valid_until: yesterday },
+        )
+        .eq("id", insight.id);
+      setInsights((prev) => prev.filter((i) => i.id !== insight.id));
+    } finally {
+      setDismissingId(null);
+    }
+  };
+
+  const severityStyle: Record<string, string> = {
+    act: "border-amber-300 bg-amber-50",
+    watch: "border-sky-200 bg-sky-50",
+    info: "border-emerald-200 bg-emerald-50",
+  };
+  const severityLabel: Record<string, string> = {
+    act: "Worth a look",
+    watch: "Gentle note",
+    info: "Celebrate",
+  };
+
+  return (
+    <section aria-label="Parent Copilot" className="rounded-2xl border border-violet-200 bg-white p-4 shadow-sm sm:p-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h3 className="text-lg font-bold text-slate-800">Parent Copilot</h3>
+          <p className="text-sm text-slate-500">
+            Patterns from your family&apos;s mission activity — observations to act on, never diagnoses.
+          </p>
+        </div>
+        {props.childProfiles.length > 1 && (
+          <label className="flex items-center gap-2 text-sm text-slate-600">
+            Child
+            <select
+              value={activeChild?.id ?? ""}
+              onChange={(e) => setSelectedClientId(e.target.value)}
+              className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-sm"
+            >
+              {props.childProfiles.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+      </div>
+
+      <div className="mt-4">
+        {loading && (
+          <p className="text-sm text-slate-500">Reading {activeChild?.name ?? "your child"}&apos;s mission rhythms…</p>
+        )}
+        {!loading && error && (
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+            <p className="text-sm text-slate-600">{error}</p>
+            <button
+              type="button"
+              onClick={() => activeChild && loadInsights(activeChild.id)}
+              className="mt-2 rounded-lg bg-violet-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-violet-700"
+            >
+              Try again
+            </button>
+          </div>
+        )}
+        {!loading && !error && insights.length === 0 && (
+          <p className="text-sm text-slate-500">
+            No patterns to share yet — the Copilot spots rhythms after a couple of weeks of missions. Keep the streak warm.
+          </p>
+        )}
+        {!loading && !error && insights.length > 0 && (
+          <ul className="space-y-3">
+            {insights.map((insight) => (
+              <li
+                key={insight.id}
+                className={`rounded-xl border p-3 ${severityStyle[insight.severity] ?? severityStyle.info}`}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      {severityLabel[insight.severity] ?? "Note"}
+                      {activeChild ? ` · ${activeChild.name}` : ""}
+                    </p>
+                    <p className="mt-1 text-sm leading-relaxed text-slate-800">
+                      {insight.narrative ?? "A new pattern was spotted — check back in a moment."}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => dismissInsight(insight)}
+                    disabled={dismissingId === insight.id}
+                    className="shrink-0 rounded-lg px-2 py-1 text-xs font-semibold text-slate-400 hover:bg-white hover:text-slate-600 disabled:opacity-50"
+                    aria-label="Dismiss this insight"
+                  >
+                    {dismissingId === insight.id ? "…" : "Dismiss"}
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      <p className="mt-4 text-xs text-slate-400">
+        The Copilot reads mission activity only (completions, timing, categories). It never sees names, notes, or photos, and it never gives medical or mental-health advice.
+      </p>
+    </section>
+  );
 }
 
 function ApprovalsPanel(props: {
