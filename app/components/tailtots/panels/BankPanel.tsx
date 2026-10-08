@@ -70,28 +70,6 @@ export function BankPanel(props: {
           Pet Passports
         </button>
       </div>
-      <div className="rounded-lg border border-[#ded8c7] bg-white p-4 shadow-sm">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#f47b20]">Choose kid bank</p>
-        <div className="mt-3 grid gap-2 sm:grid-cols-2">
-          {props.childProfiles.map((childProfile) => {
-            const look = getChildLook(childProfile.id);
-            const isSelected = childProfile.id === props.child?.id;
-            return (
-              <button
-                key={childProfile.id}
-                onClick={() => props.setActiveChildId(childProfile.id)}
-                className={`flex min-h-14 items-center gap-3 rounded-lg border px-3 py-2 text-left text-sm font-black ${
-                  isSelected ? "border-[#f47b20] bg-[#fff4d8] text-[#17231f] ring-2 ring-[#f47b20]/20" : "border-[#ded8c7] bg-[#f8f6ed] text-[#53615b]"
-                }`}
-              >
-                <ProfilePhoto label={childProfile.name} initial={look.initial} colors={look.colors} size="xs" variant="kid" hair={look.hair} photoUrl={childProfile.photoUrl} />
-                <span className="min-w-0 flex-1 truncate">{childProfile.name}</span>
-                {isSelected && <span className="rounded-full bg-[#17231f] px-2 py-1 text-[10px] uppercase tracking-[0.1em] text-white">Selected</span>}
-              </button>
-            );
-          })}
-        </div>
-      </div>
       <div className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
         <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
           <div className="flex items-center gap-4">
