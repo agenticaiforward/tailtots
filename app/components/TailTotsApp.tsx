@@ -3193,46 +3193,79 @@ function VisionLandingPanel({
       <section className="-mx-3 border-y-2 border-tt-pine/40 bg-tt-pine p-5 text-white shadow-sm sm:mx-0 sm:rounded-3xl sm:border sm:p-6">
         <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-sun">Who TailTots is for 🐾</p>
         <h3 className="mt-1 text-2xl font-black tracking-tight sm:text-3xl">Strong habits. Real responsibility. Whichever kid you’ve got.</h3>
-        <div className="mt-4 grid gap-3 md:grid-cols-3">
-          <div className="rounded-2xl bg-white/10 p-4 ring-1 ring-white/15">
-            <div className="flex items-center gap-3">
-              <img src="/landing/kid-dog.jpg" alt="A boy hugging his dog — a kid who already has a pet" className="size-16 shrink-0 rounded-2xl object-cover" loading="lazy" />
-              <div>
-                <p className="text-base font-black">Kids who have pets</p>
-                <span className="mt-1 inline-block rounded-full bg-tt-sun px-2.5 py-0.5 text-[11px] font-black text-tt-ink">🐾 Has one</span>
-              </div>
-            </div>
-            <ul className="mt-3 grid gap-1.5 text-sm font-semibold leading-5 text-white/85">
-              <li className="flex gap-2"><span aria-hidden="true" className="shrink-0">•</span><span>Runs the real routine — feeding schedules, training missions, vet-visit prep</span></li>
-              <li className="flex gap-2"><span aria-hidden="true" className="shrink-0">•</span><span>Plus everything: Kid Bank, skill builder, kindness missions, certificates</span></li>
-            </ul>
-          </div>
-          <div className="rounded-2xl bg-white/10 p-4 ring-1 ring-white/15">
-            <div className="flex items-center gap-3">
-              <img src="/landing/kid-rabbit.jpg" alt="A girl holding a rabbit — a kid dreaming of a pet" className="size-16 shrink-0 rounded-2xl object-cover" loading="lazy" />
-              <div>
-                <p className="text-base font-black">Kids who want a pet</p>
-                <span className="mt-1 inline-block rounded-full bg-tt-sun px-2.5 py-0.5 text-[11px] font-black text-tt-ink">🎓 Dreaming of one</span>
-              </div>
-            </div>
-            <ul className="mt-3 grid gap-1.5 text-sm font-semibold leading-5 text-white/85">
-              <li className="flex gap-2"><span aria-hidden="true" className="shrink-0">•</span><span>Earns the Pet Readiness Certificate — proof they'll stick with it</span></li>
-              <li className="flex gap-2"><span aria-hidden="true" className="shrink-0">•</span><span>Plus everything: Kid Bank, skill builder, kindness missions, daily streaks</span></li>
-            </ul>
-          </div>
-          <div className="rounded-2xl bg-white/10 p-4 ring-1 ring-white/15">
-            <div className="flex items-center gap-3">
-              <img src="/landing/kid-cat.jpg" alt="A girl hugging a cat — a kid who loves animals" className="size-16 shrink-0 rounded-2xl object-cover" loading="lazy" />
-              <div>
-                <p className="text-base font-black">Kids who can’t have pets</p>
-                <span className="mt-1 inline-block rounded-full bg-tt-sun px-2.5 py-0.5 text-[11px] font-black text-tt-ink">💛 Loves them anyway</span>
-              </div>
-            </div>
-            <ul className="mt-3 grid gap-1.5 text-sm font-semibold leading-5 text-white/85">
-              <li className="flex gap-2"><span aria-hidden="true" className="shrink-0">•</span><span>Donation goals for real shelters, cheer on rescue dogs</span></li>
-              <li className="flex gap-2"><span aria-hidden="true" className="shrink-0">•</span><span>Plus everything: Kid Bank, skill builder, kindness missions, daily streaks</span></li>
-            </ul>
-          </div>
+        <div className="mt-4 overflow-x-auto rounded-2xl ring-1 ring-white/15">
+          <table className="w-full min-w-[520px] border-collapse bg-white/10 text-sm">
+            <thead>
+              <tr className="border-b border-white/15">
+                <th className="p-3 text-left font-black text-white/60"></th>
+                <th className="p-3 text-center">
+                  <img src="/landing/kid-dog.jpg" alt="Kid with dog" className="mx-auto size-12 rounded-xl object-cover" loading="lazy" />
+                  <p className="mt-1 text-xs font-black leading-tight">Kids who<br />have pets</p>
+                  <span className="mt-0.5 inline-block rounded-full bg-tt-sun px-2 py-0.5 text-[10px] font-black text-tt-ink">🐾 Has one</span>
+                </th>
+                <th className="p-3 text-center">
+                  <img src="/landing/kid-rabbit.jpg" alt="Kid with rabbit" className="mx-auto size-12 rounded-xl object-cover" loading="lazy" />
+                  <p className="mt-1 text-xs font-black leading-tight">Kids who<br />want a pet</p>
+                  <span className="mt-0.5 inline-block rounded-full bg-tt-sun px-2 py-0.5 text-[10px] font-black text-tt-ink">🎓 Dreaming of one</span>
+                </th>
+                <th className="p-3 text-center">
+                  <img src="/landing/kid-cat.jpg" alt="Kid with cat" className="mx-auto size-12 rounded-xl object-cover" loading="lazy" />
+                  <p className="mt-1 text-xs font-black leading-tight">Kids who<br />can't have pets</p>
+                  <span className="mt-0.5 inline-block rounded-full bg-tt-sun px-2 py-0.5 text-[10px] font-black text-tt-ink">💛 Loves them anyway</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody className="font-semibold text-white/85">
+              <tr className="border-b border-white/10">
+                <td className="p-3">Kid Bank — Save, Spend, Give</td>
+                <td className="p-3 text-center text-lg">✅</td>
+                <td className="p-3 text-center text-lg">✅</td>
+                <td className="p-3 text-center text-lg">✅</td>
+              </tr>
+              <tr className="border-b border-white/10">
+                <td className="p-3">Skill-builder missions</td>
+                <td className="p-3 text-center text-lg">✅</td>
+                <td className="p-3 text-center text-lg">✅</td>
+                <td className="p-3 text-center text-lg">✅</td>
+              </tr>
+              <tr className="border-b border-white/10">
+                <td className="p-3">Kindness missions</td>
+                <td className="p-3 text-center text-lg">✅</td>
+                <td className="p-3 text-center text-lg">✅</td>
+                <td className="p-3 text-center text-lg">✅</td>
+              </tr>
+              <tr className="border-b border-white/10">
+                <td className="p-3">Streaks & certificates</td>
+                <td className="p-3 text-center text-lg">✅</td>
+                <td className="p-3 text-center text-lg">✅</td>
+                <td className="p-3 text-center text-lg">✅</td>
+              </tr>
+              <tr className="border-b border-white/10">
+                <td className="p-3">Parent approvals & safety</td>
+                <td className="p-3 text-center text-lg">✅</td>
+                <td className="p-3 text-center text-lg">✅</td>
+                <td className="p-3 text-center text-lg">✅</td>
+              </tr>
+              <tr className="border-b border-white/10 bg-white/5">
+                <td className="p-3">Real pet routine — feeding, training, vet prep</td>
+                <td className="p-3 text-center text-lg">✅</td>
+                <td className="p-3 text-center text-white/30">—</td>
+                <td className="p-3 text-center text-white/30">—</td>
+              </tr>
+              <tr className="border-b border-white/10 bg-white/5">
+                <td className="p-3">Pet Readiness Certificate track</td>
+                <td className="p-3 text-center text-white/30">—</td>
+                <td className="p-3 text-center text-lg">✅</td>
+                <td className="p-3 text-center text-white/30">—</td>
+              </tr>
+              <tr className="bg-white/5">
+                <td className="p-3">Shelter donation goals</td>
+                <td className="p-3 text-center text-white/30">—</td>
+                <td className="p-3 text-center text-white/30">—</td>
+                <td className="p-3 text-center text-lg">✅</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
         <div className="mt-4 flex flex-wrap items-center justify-between gap-4">
           <p className="max-w-2xl text-sm font-semibold leading-6 text-white/80">
