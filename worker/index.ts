@@ -51,12 +51,31 @@ import {
 } from "../lib/ai/copilot";
 import { InMemoryRateLimiter } from "../lib/ai/rate-limit";
 import { authenticateParentRequest, extractBearerToken } from "../lib/ai/supabase-auth";
+import {
+  FLOURISH_MODEL_ID,
+  brightestPillar,
+  buildFlourishSystemPrompt,
+  buildFlourishUserPrompt,
+  buildFlourishingSnapshot,
+  computeFlourishScores,
+  computeFlourishTrends,
+  flourishFallbackNarrative,
+  sanitizeFlourishNarration,
+  validateFlourishInput,
+  weekStartIso,
+  type FlourishBadgeInput,
+  type FlourishBankInput,
+  type FlourishEventInput,
+  type FlourishScores,
+} from "../lib/ai/flourishing";
+import { ageBandForAge } from "../lib/ai/ideas";
 
 const log = createLogger("worker:ai-ideas");
 const conversationLog = createLogger("worker:ai-conversation-prompt");
 const dailyBoostLog = createLogger("worker:ai-daily-boost");
 const missionSetLog = createLogger("worker:ai-mission-set");
 const copilotLog = createLogger("worker:ai-copilot-insights");
+const flourishLog = createLogger("worker:ai-flourishing");
 
 interface Env {
   ASSETS: Fetcher;
@@ -104,6 +123,7 @@ const dailyBoostRateLimiter = new InMemoryRateLimiter(10, 60 * 60 * 1000);
 // Parent-side AI mission sets: 20 requests/hour per client IP.
 const missionSetRateLimiter = new InMemoryRateLimiter(20, 60 * 60 * 1000);
 const copilotRateLimiter = new InMemoryRateLimiter(20, 60 * 60 * 1000);
+const flourishRateLimiter = new InMemoryRateLimiter(20, 60 * 60 * 1000);
 
 function jsonResponse(data: unknown, status: number): Response {
   return new Response(JSON.stringify(data), {
@@ -808,6 +828,209 @@ async function handleAiCopilotInsights(request: Request, env: Env): Promise<Resp
   return jsonResponse({ insights: finalInsights }, 200);
 }
 
+/**
+ * POST /api/ai/flourishing — PERMA Growth Log (Phase 3).
+ *
+ * Parent-side only. Computes the five flourishing pillars DETERMINISTICALLY
+ * from the child's mission_events, badge_awards, and Kid Bank ledger (no
+ * LLM for scores), compares against the prior week's snapshot for trend
+ * arrows, then narrates ONE warm parent-facing celebration with a small
+ * LLM call (best-effort). Every narration is clinical-scanned; on any
+ * failure the deterministic fallback narrative is stored instead.
+ *
+ * The model never sees raw events, names, notes, or photos: narration input
+ * is pillar trends + brightest pillar + age band only. Scores are internal
+ * only — never shown to children, never percentiles vs other kids.
+ */
+interface FlourishSnapshotRow {
+  id: string;
+  scores_json: FlourishScores;
+  trends_json: Record<string, string>;
+  narrative: string | null;
+  created_at: string;
+}
+
+interface FlourishEventRow {
+  event_type: string;
+  task_id: string | null;
+  category: string | null;
+  difficulty: string | null;
+  skill: string | null;
+  created_at: string;
+}
+
+interface FlourishBadgeRow {
+  skill: string | null;
+  awarded_at: string;
+}
+
+interface FlourishBankRow {
+  category: string;
+  amount_cents: number;
+  status: string;
+  created_at: string;
+}
+
+async function handleAiFlourishing(request: Request, env: Env): Promise<Response> {
+  if (flourishRateLimiter.isLimited(`ai-flourishing:${clientIp(request)}`)) {
+    return jsonResponse({ error: "Too many requests. Please try again later." }, 429);
+  }
+  if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) {
+    flourishLog.warn("Supabase env vars missing for /api/ai/flourishing");
+    return jsonResponse(
+      { error: "Parent sign-in is not configured yet. Please try again later." },
+      503,
+    );
+  }
+  const parent = await authenticateParentRequest({
+    supabaseUrl: env.SUPABASE_URL,
+    anonKey: env.SUPABASE_ANON_KEY,
+    authorizationHeader: request.headers.get("Authorization"),
+  });
+  if (!parent) {
+    return jsonResponse({ error: "Parent sign-in required." }, 401);
+  }
+  const token = extractBearerToken(request.headers.get("Authorization"));
+  if (!token) {
+    return jsonResponse({ error: "Parent sign-in required." }, 401);
+  }
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonResponse({ error: "Request body must be valid JSON." }, 400);
+  }
+  const validated = validateFlourishInput(body);
+  if (!validated.ok) {
+    return jsonResponse({ error: validated.error }, 400);
+  }
+  const { childId } = validated;
+  const rest: SupabaseRestClient = {
+    supabaseUrl: env.SUPABASE_URL,
+    anonKey: env.SUPABASE_ANON_KEY,
+    token,
+  };
+
+  const nowMs = Date.now();
+  const eightWeeksAgo = new Date(nowMs - 56 * 86_400_000).toISOString();
+  const [childRows, eventRows, badgeRows, bankRows, priorRows] = await Promise.all([
+    restGet<{ id: string; family_id: string; age: number | null }[]>(
+      rest,
+      `children?id=eq.${childId}&select=id,family_id,age&limit=1`,
+    ),
+    restGet<FlourishEventRow[]>(
+      rest,
+      `mission_events?child_id=eq.${childId}&created_at=gt.${eightWeeksAgo}` +
+        `&select=event_type,task_id,category,difficulty,skill,created_at` +
+        `&order=created_at.desc&limit=3000`,
+    ),
+    restGet<FlourishBadgeRow[]>(
+      rest,
+      `badge_awards?child_id=eq.${childId}&awarded_at=gt.${eightWeeksAgo}` +
+        `&select=skill,awarded_at&order=awarded_at.desc&limit=500`,
+    ),
+    restGet<FlourishBankRow[]>(
+      rest,
+      `kid_bank_transactions?child_id=eq.${childId}&select=category,amount_cents,status,created_at&order=created_at.desc&limit=500`,
+    ),
+    restGet<FlourishSnapshotRow[]>(
+      rest,
+      `flourishing_snapshots?child_id=eq.${childId}&select=id,scores_json,trends_json,narrative,created_at&order=week_start.desc&limit=2`,
+    ),
+  ]);
+  const child = childRows?.[0] ?? null;
+  if (!child) {
+    return jsonResponse({ error: "Child not found." }, 404);
+  }
+
+  const events: FlourishEventInput[] = (eventRows ?? []).map((r) => ({
+    eventType: r.event_type,
+    taskId: r.task_id,
+    category: r.category,
+    difficulty: r.difficulty,
+    skill: r.skill,
+    createdAt: r.created_at,
+  }));
+  const badges: FlourishBadgeInput[] = (badgeRows ?? []).map((r) => ({
+    skill: r.skill,
+    earnedAt: r.awarded_at,
+  }));
+  const bank: FlourishBankInput[] = (bankRows ?? [])
+    .filter((r) => ["earn", "spend", "give", "save"].includes(r.category))
+    .map((r) => ({
+      category: r.category as FlourishBankInput["category"],
+      amount: r.amount_cents / 100,
+      approved: r.status === "approved",
+    }));
+
+  // Idempotency: if this week's snapshot already exists, return it.
+  const thisWeek = weekStartIso(nowMs);
+  const existingThisWeek = (priorRows ?? []).find(
+    (r) => r.created_at.slice(0, 10) >= thisWeek,
+  );
+  if (existingThisWeek) {
+    return jsonResponse({ snapshot: existingThisWeek, cached: true }, 200);
+  }
+
+  // Stage 1 — deterministic pillar computation (no LLM). Prior week's
+  // scores smooth the output so pillars move gradually.
+  const prior = (priorRows ?? [])[0]?.scores_json as FlourishScores | undefined;
+  const scores = computeFlourishScores(events, badges, bank, prior, nowMs);
+  const lastWeekScores = prior;
+
+  // Stage 2 — narration (best-effort LLM, deterministic fallback).
+  const narrationInput = {
+    scores,
+    trends: computeFlourishTrends(scores, lastWeekScores),
+    brightest: brightestPillar(scores),
+    ageBand: ageBandForAge(child.age ?? 8),
+  };
+
+  let narrative: string | null = null;
+  let mode: "ai" | "deterministic" = "deterministic";
+  if (env.AI) {
+    try {
+      const output = await env.AI.run(FLOURISH_MODEL_ID, {
+        messages: [
+          { role: "system", content: buildFlourishSystemPrompt() },
+          { role: "user", content: buildFlourishUserPrompt(narrationInput) },
+        ],
+        max_tokens: 150,
+        temperature: 0.6,
+      });
+      narrative = sanitizeFlourishNarration(
+        String((output as { response?: unknown })?.response ?? ""),
+      );
+      if (narrative) mode = "ai";
+    } catch (error) {
+      flourishLog.warn("Flourish narration failed; using fallback", { error });
+    }
+  }
+  if (!narrative) {
+    narrative = flourishFallbackNarrative(narrationInput.brightest);
+  }
+
+  const snapshot = buildFlourishingSnapshot(childId, scores, lastWeekScores, narrative, mode, nowMs);
+
+  // Stage 3 — persist (unique on child_id + week_start; ignore conflicts).
+  const created = await restPost<FlourishSnapshotRow[]>(
+    rest,
+    `flourishing_snapshots`,
+    {
+      family_id: child.family_id,
+      child_id: childId,
+      week_start: snapshot.weekStart,
+      scores_json: snapshot.scores,
+      trends_json: snapshot.trends,
+      brightest: snapshot.brightest,
+      narrative: snapshot.narrative,
+      mode: snapshot.mode,
+    },
+  );
+
+  return jsonResponse({ snapshot: created?.[0] ?? snapshot, cached: false }, 200);
+}
+
 const worker = {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
@@ -845,6 +1068,13 @@ const worker = {
         return new Response("Method Not Allowed", { status: 405 });
       }
       return handleAiCopilotInsights(request, env);
+    }
+
+    if (url.pathname === "/api/ai/flourishing") {
+      if (request.method !== "POST") {
+        return new Response("Method Not Allowed", { status: 405 });
+      }
+      return handleAiFlourishing(request, env);
     }
 
     if (url.pathname === "/_vinext/image") {

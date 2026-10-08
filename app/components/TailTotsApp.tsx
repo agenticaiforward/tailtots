@@ -106,6 +106,17 @@ import {
   type RebalanceMove,
 } from "@/lib/ai/fairness";
 import {
+  brightestPillar,
+  buildFlourishingSnapshot,
+  computeFlourishScores,
+  flourishFallbackNarrative,
+  type FlourishBankInput,
+  type FlourishBadgeInput,
+  type FlourishEventInput,
+  type FlourishingSnapshot,
+} from "@/lib/ai/flourishing";
+import { FlourishingPanel } from "./FlourishingPanel";
+import {
   buildCurriculumLevelBadge,
   CHARACTER_TRAITS,
   curriculumLevelBadgeId,
@@ -2790,6 +2801,7 @@ export function TailTotsApp() {
               activeChildId={activeChild?.id}
               onSelectChild={role === "parent" ? setActiveChildId : undefined}
               assignCurriculumMissions={assignCurriculumMissions}
+              transactions={transactions}
             />
           )}
           {visibleActiveTab === "neighborhood" && (
@@ -9583,7 +9595,51 @@ function GrowthPanel(props: {
   activeChildId?: string;
   onSelectChild?: (childId: string) => void;
   assignCurriculumMissions: (traitKey: CharacterTraitKey, levelIndex: number, childId: string) => void;
+  transactions: BankTransaction[];
 }) {
+  // Phase 3 — PERMA Growth Log: local flourishing snapshot for the active
+  // child, computed deterministically from missions + badges + Kid Bank.
+  // Labeled "Built-in celebration" (mode: deterministic) — the signed-in
+  // server route /api/ai/flourishing is the authoritative weekly snapshot.
+  const flourishingSnapshot: FlourishingSnapshot | null = useMemo(() => {
+    const childId = props.activeChildId ?? props.childProfiles[0]?.id;
+    if (!childId) return null;
+    const now = new Date().toISOString();
+    const childMissions = props.missions.filter(
+      (m) => m.assignedChildId === childId || m.completedBy === childId,
+    );
+    const events: FlourishEventInput[] = [];
+    for (const m of childMissions) {
+      events.push({
+        eventType: "assigned",
+        taskId: m.id,
+        category: m.category,
+        difficulty: m.difficulty,
+        createdAt: now,
+      });
+      if (m.status === "approved") {
+        events.push({ eventType: "started", taskId: m.id, category: m.category, difficulty: m.difficulty, createdAt: now });
+        events.push({ eventType: "completed", taskId: m.id, category: m.category, difficulty: m.difficulty, createdAt: now });
+      }
+    }
+    const badges: FlourishBadgeInput[] = props.badges
+      .filter((b) => b.childId === childId)
+      .map((b) => ({ skill: b.skill, earnedAt: b.awardedAt ?? now }));
+    const bank: FlourishBankInput[] = props.transactions
+      .filter((t) => t.childId === childId)
+      .map((t) => ({ category: t.category, amount: t.amount, approved: t.status === "approved" }));
+    if (events.length === 0 && badges.length === 0 && bank.length === 0) return null;
+    const scores = computeFlourishScores(events, badges, bank, undefined, Date.now());
+    return buildFlourishingSnapshot(
+      childId,
+      scores,
+      undefined,
+      flourishFallbackNarrative(brightestPillar(scores)),
+      "deterministic",
+      Date.now(),
+    );
+  }, [props.activeChildId, props.childProfiles, props.missions, props.badges, props.transactions]);
+  const flourishingChild = props.childProfiles.find((c) => c.id === (props.activeChildId ?? props.childProfiles[0]?.id));
   // R2-30: life skills summarized per family (getFamilySkillSummary is read-only).
   const familySkills = getFamilySkillSummary(props.badges, props.childProfiles);
   const skillCounts = (["responsibility", "empathy", "teamwork", "leadership", "time"] as LifeSkillKey[]).map((skill) => ({
@@ -9595,6 +9651,10 @@ function GrowthPanel(props: {
     <section className="rounded-lg border border-[#ded8c7] bg-white p-5">
       <p className="text-xs font-black uppercase tracking-[0.18em] text-[#6d3ed1]">Character growth</p>
       <h2 className="mt-2 text-3xl font-black">Responsibility, empathy, kindness, leadership</h2>
+      {/* Phase 3 — PERMA Growth Log: weekly flourishing bloom (parent view). */}
+      <div className="mt-5">
+        <FlourishingPanel snapshot={flourishingSnapshot} childName={flourishingChild?.name ?? "your child"} />
+      </div>
       {/* R2-30: memory moments are the hero of the growth log. */}
       <div className="mt-5 overflow-hidden rounded-2xl border-2 border-[#6d3ed1]/25 bg-gradient-to-br from-[#f0edff] via-white to-[#faf8f0]">
         <div className="p-5">
