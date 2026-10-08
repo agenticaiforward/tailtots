@@ -3256,8 +3256,14 @@ function VisionLandingPanel({
               </tr>
               <tr className="bg-white/5">
                 <td className="p-2">Shelter giving</td>
-                <td className="p-2 text-center text-white/30">—</td>
-                <td className="p-2 text-center text-white/30">—</td>
+                <td className="p-2 text-center">✅</td>
+                <td className="p-2 text-center">✅</td>
+                <td className="p-2 text-center">✅</td>
+              </tr>
+              <tr className="bg-white/5">
+                <td className="p-2">School & PTO donations</td>
+                <td className="p-2 text-center">✅</td>
+                <td className="p-2 text-center">✅</td>
                 <td className="p-2 text-center">✅</td>
               </tr>
             </tbody>
