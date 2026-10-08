@@ -42,11 +42,14 @@ export async function submitLaunchInterest(input: LaunchInterestInput) {
     throw new Error("Enter a valid parent email address.");
   }
 
-  const payload = {
+  const payload: { email: string; city?: string; source: string } = {
     email: normalizedEmail,
-    city: input.city?.trim() || null,
     source: input.source ?? "tailtots-app",
   };
+  const trimmedCity = input.city?.trim();
+  if (trimmedCity) {
+    payload.city = trimmedCity;
+  }
 
   if (!supabase) {
     const saved = JSON.parse(localStorage.getItem("tailtots-launch-interest") ?? "[]") as typeof payload[];
