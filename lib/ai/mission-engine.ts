@@ -1188,48 +1188,6 @@ function pointsForDifficulty(difficulty: MissionDifficulty): number {
   return difficulty === "hard" ? 20 : difficulty === "medium" ? 12 : 8;
 }
 
-/**
- * Tier-2 fallback: builds a mission set from original templates,
- * parameterized by the deterministic plan (skill, category, difficulty per
- * slot). Regulation-first slots pull from the somatic body-mission library
- * instead of the regular templates. Honest labeling: the client shows these
- * as "smart templates".
- */
-export function buildSmartTemplateSet(
-  plan: MissionPlan,
-  pets: SnapshotPetInput[],
-  options: { ageBand?: IdeaAgeBand; seed?: number } = {},
-): GeneratedMission[] {
-  return plan.slots.map((slot, i) => {
-    // Regulation-first slots come from the somatic library: body-based,
-    // no fail state, completion = participation.
-    if (slot.kind === "regulation_first") {
-      const somatic = pickSomaticMission({
-        ageBand: options.ageBand ?? "7-9",
-        hasPets: pets.length > 0,
-        seed: (options.seed ?? 0) + i,
-      });
-      const mission = somaticToGeneratedMission(somatic, slot.traitFocus);
-      // Keep the planner's difficulty band (one below calibrated) for
-      // points consistency, but somatic missions are always easy by design.
-      return { ...mission, difficulty: slot.difficulty, points: pointsForDifficulty(slot.difficulty) };
-    }
-    const pool = SMART_TEMPLATES[slot.category][slot.skill];
-    const template = pool[i % pool.length];
-    const petLinked = slot.category === "pet_care" && pets.length > 0;
-    return {
-      title: template.title,
-      detail: template.detail,
-      skill: slot.skill,
-      category: slot.category,
-      difficulty: slot.difficulty,
-      points: pointsForDifficulty(slot.difficulty),
-      minutes: template.minutes,
-      petLinked,
-      traitFocus: slot.traitFocus,
-    };
-  });
-}
 
 // ---------------------------------------------------------------------------
 // Client fetch helper + Tier-1 cache (localStorage)

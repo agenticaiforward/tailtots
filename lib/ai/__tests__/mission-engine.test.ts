@@ -9,7 +9,6 @@ import {
   buildMissionEventRow,
   buildMissionSetMessages,
   buildMissionSetSystemPrompt,
-  buildSmartTemplateSet,
   calibrateDifficulty,
   computeBehavioralTraitSignals,
   computeTraitWeights,
@@ -548,26 +547,6 @@ describe("scanMissionsForBlockedContent", () => {
   });
 });
 
-describe("buildSmartTemplateSet", () => {
-  it("builds one mission per plan slot with matching skill/category/difficulty", () => {
-    const plan = planMissionSlots(makeSnapshot(), { count: 4 });
-    const missions = buildSmartTemplateSet(plan, [{ species: "dog" }]);
-    expect(missions).toHaveLength(4);
-    missions.forEach((mission, i) => {
-      expect(mission.skill).toBe(plan.slots[i].skill);
-      expect(mission.category).toBe(plan.slots[i].category);
-      expect(mission.difficulty).toBe(plan.slots[i].difficulty);
-      expect(mission.traitFocus).toBe(plan.slots[i].traitFocus);
-    });
-  });
-
-  it("marks pet_care missions as pet-linked when pets exist", () => {
-    const plan = planMissionSlots(makeSnapshot(), { count: 4 });
-    const missions = buildSmartTemplateSet(plan, [{ species: "dog" }]);
-    const petMissions = missions.filter((m) => m.category === "pet_care");
-    for (const m of petMissions) expect(m.petLinked).toBe(true);
-  });
-});
 
 describe("calibrateDifficulty", () => {
   const now = Date.parse("2026-10-08T12:00:00Z");

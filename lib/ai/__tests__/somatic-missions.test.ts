@@ -17,7 +17,6 @@ import {
   type SomaticMission,
 } from "../somatic-missions";
 import {
-  buildSmartTemplateSet,
   planMissionSlots,
   type ChildSnapshot,
 } from "../mission-engine";
@@ -288,36 +287,5 @@ describe("mission engine integration", () => {
   it("disengaged snapshot plans a regulation_first slot", () => {
     const plan = planMissionSlots(disengagedSnapshot(), { count: 4 });
     expect(plan.slots[0].kind).toBe("regulation_first");
-  });
-
-  it("buildSmartTemplateSet uses a somatic mission for regulation_first", () => {
-    const plan = planMissionSlots(disengagedSnapshot(), { count: 4 });
-    const missions = buildSmartTemplateSet(plan, [{ species: "dog" }], {
-      ageBand: "7-9",
-      seed: 0,
-    });
-    const somaticIds = new Set(SOMATIC_MISSIONS.map((m) => m.id));
-    // The first mission must come from the somatic library (match by title).
-    const somaticTitles = new Set(SOMATIC_MISSIONS.map((m) => m.title));
-    expect(somaticTitles.has(missions[0].title)).toBe(true);
-    expect(somaticIds.size).toBeGreaterThan(0);
-  });
-
-  it("regulation_first mission is easy with participation points", () => {
-    const plan = planMissionSlots(disengagedSnapshot(), { count: 4 });
-    const missions = buildSmartTemplateSet(plan, [], {
-      ageBand: "4-6",
-      seed: 1,
-    });
-    expect(missions[0].difficulty).toBe("easy");
-    expect(missions[0].points).toBe(8);
-  });
-
-  it("regulation_first works without pets", () => {
-    const snap = disengagedSnapshot();
-    snap.pets = [];
-    const plan = planMissionSlots(snap, { count: 4 });
-    const missions = buildSmartTemplateSet(plan, [], { ageBand: "7-9" });
-    expect(missions[0].title.length).toBeGreaterThan(0);
   });
 });
