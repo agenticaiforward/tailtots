@@ -39,6 +39,7 @@ function daysAgoIso(days: number, base: number): string {
 function makeSnapshot(overrides: Partial<ChildSnapshot> = {}): ChildSnapshot {
   const base: ChildSnapshot = {
     ageBand: "7-9",
+    age: 8,
     skillPoints14d: { responsibility: 4, empathy: 1, teamwork: 0, leadership: 2, time: 3 },
     skillPoints30d: { responsibility: 8, empathy: 2, teamwork: 1, leadership: 4, time: 6 },
     traitScores: traitScoresFromSkillPoints({ responsibility: 8, empathy: 2, teamwork: 1, leadership: 4, time: 6 }),

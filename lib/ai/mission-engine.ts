@@ -27,6 +27,11 @@
  */
 import { IDEA_AGE_BANDS, ageBandForAge, type IdeaAgeBand } from "./ideas";
 import { pickSomaticMission, somaticToGeneratedMission } from "./somatic-missions";
+import {
+  grammarInstructionFor,
+  selectStageGrammar,
+  type StageGrammar,
+} from "./erikson-grammar";
 
 /** Workers AI model for mission-set generation. Same verified free-tier model as the other AI routes. */
 export const MISSION_SET_MODEL_ID = "@cf/meta/llama-3.1-8b-instruct-fp8";
@@ -109,6 +114,12 @@ export interface MissionPlan {
   slots: MissionSlot[];
   /** Short machine-readable rationale for the audit log. */
   rationale: string;
+  /**
+   * Developmental framing grammar for the whole set (Erikson stage grammars,
+   * Phase 6). Drives the LLM's mission-framing instructions. Internal only —
+   * never surfaced as a label to parents or children.
+   */
+  grammar: StageGrammar;
 }
 
 /** One generated mission as returned to the parent for approval. */
@@ -158,6 +169,8 @@ export interface SnapshotPetInput {
 
 export interface ChildSnapshot {
   ageBand: IdeaAgeBand;
+  /** Raw age in years (null when unknown); drives Erikson stage grammars. */
+  age: number | null;
   skillPoints14d: Record<MissionSkill, number>;
   skillPoints30d: Record<MissionSkill, number>;
   traitScores: Record<ThriverTrait, number>; // 0..1 relative development signal
@@ -576,6 +589,7 @@ export function buildChildSnapshot(input: {
 
   return {
     ageBand,
+    age: input.child.age,
     skillPoints14d,
     skillPoints30d,
     traitScores,
@@ -817,6 +831,12 @@ export function planMissionSlots(
     }
   }
 
+  // Developmental framing grammar (Erikson stage grammars, Phase 6).
+  // Regression rule: stressed/disengaged children get the gentler initiative
+  // grammar, unlabeled — never surfaced to parents or children as a state.
+  const grammar = selectStageGrammar(snapshot.age, snapshot.ageBand, disengaged);
+  reasons.push(`grammar: ${grammar}`);
+
   // Renumber slots in order and trim to count.
   const finalSlots = slots.slice(0, count).map((slot, i) => ({ ...slot, slot: i + 1 }));
   // The confidence anchor must remain last; if trimming cut it, re-append.
@@ -827,7 +847,7 @@ export function planMissionSlots(
     };
   }
 
-  return { slots: finalSlots, rationale: reasons.join("; ") };
+  return { slots: finalSlots, rationale: reasons.join("; "), grammar };
 }
 
 // ---------------------------------------------------------------------------
@@ -959,6 +979,9 @@ export function buildMissionSetUserMessage(
     `Weak weekdays: ${redacted.weakWeekdays.join(", ") || "none"}.`,
     `Weak categories: ${redacted.weakCategories.join(", ") || "none"}.`,
     `Calibrated difficulty: ${JSON.stringify(redacted.calibratedDifficulty)}.`,
+    "",
+    "Developmental framing (apply to EVERY mission in this set):",
+    grammarInstructionFor(plan.grammar),
     "",
     `Generate exactly ${plan.slots.length} missions, one per slot:`,
   ];
