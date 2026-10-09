@@ -26,6 +26,7 @@
  * import this module via a relative path — same convention as pet-chores.ts.
  */
 import { IDEA_AGE_BANDS, ageBandForAge, type IdeaAgeBand } from "./ideas";
+import { pickSomaticMission, somaticToGeneratedMission } from "./somatic-missions";
 
 /** Workers AI model for mission-set generation. Same verified free-tier model as the other AI routes. */
 export const MISSION_SET_MODEL_ID = "@cf/meta/llama-3.1-8b-instruct-fp8";
@@ -1163,8 +1164,6 @@ const SMART_TEMPLATES: Record<MissionCategory, Record<MissionSkill, SmartTemplat
 function pointsForDifficulty(difficulty: MissionDifficulty): number {
   return difficulty === "hard" ? 20 : difficulty === "medium" ? 12 : 8;
 }
-
-import { pickSomaticMission, somaticToGeneratedMission } from "./somatic-missions";
 
 /**
  * Tier-2 fallback: builds a mission set from original templates,
