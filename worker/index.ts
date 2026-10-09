@@ -69,6 +69,18 @@ import {
   type FlourishScores,
 } from "../lib/ai/flourishing";
 import { ageBandForAge } from "../lib/ai/ideas";
+import {
+  runFlowCalibration,
+  updateEloRating,
+  initialEloState,
+  detectBraveTry,
+  trackScaffoldFade,
+  buildDifficultyNudge,
+  DIFFICULTY_RATINGS,
+  type FlowEventInput,
+  type EloRatingState,
+  type MissionCategory as FlowCategory,
+} from "../lib/ai/flow-calibration";
 
 const log = createLogger("worker:ai-ideas");
 const conversationLog = createLogger("worker:ai-conversation-prompt");
@@ -76,6 +88,7 @@ const dailyBoostLog = createLogger("worker:ai-daily-boost");
 const missionSetLog = createLogger("worker:ai-mission-set");
 const copilotLog = createLogger("worker:ai-copilot-insights");
 const flourishLog = createLogger("worker:ai-flourishing");
+const flowLog = createLogger("worker:ai-flow-calibration");
 
 interface Env {
   ASSETS: Fetcher;
@@ -498,9 +511,9 @@ async function handleAiMissionSet(request: Request, env: Env): Promise<Response>
   // their own family. The model only ever sees the redacted aggregates.
   const sixtyDaysAgo = new Date(Date.now() - 60 * 86_400_000).toISOString();
   const thirtyDaysAgo = new Date(Date.now() - 30 * 86_400_000).toISOString();
-  const [childRows, petRows, completionRows, awardRows] = await Promise.all([
+  const [childRows, petRows, completionRows, awardRows, lifetimeAwards, lifetimeCompletions] = await Promise.all([
     restGet<ChildRow[]>(rest, `children?id=eq.${childId}&select=id,family_id,age,streak_days,last_streak_date&limit=1`),
-    restGet<{ species: string }[]>(rest, `pets?select=species&limit=8`),
+    restGet<{ species: string; name?: string; careNotes?: string; favoriteFood?: string }[]>(rest, `pets?select=species,name,careNotes,favoriteFood&limit=8`),
     restGet<CompletionRow[]>(
       rest,
       `task_completions?child_id=eq.${childId}&completed_at=gt.${sixtyDaysAgo}` +
@@ -510,6 +523,9 @@ async function handleAiMissionSet(request: Request, env: Env): Promise<Response>
       rest,
       `badge_awards?child_id=eq.${childId}&awarded_at=gt.${thirtyDaysAgo}&select=skill,awarded_at&limit=200`,
     ),
+    // Lifetime achievement history — full badge and completion counts for long-term insight.
+    restGet<{ skill: string }[]>(rest, `badge_awards?child_id=eq.${childId}&select=skill&limit=1000`),
+    restGet<{ status: string }[]>(rest, `task_completions?child_id=eq.${childId}&select=status&limit=1000`),
   ]);
   const child = childRows?.[0] ?? null;
   if (!child) {
@@ -520,7 +536,19 @@ async function handleAiMissionSet(request: Request, env: Env): Promise<Response>
     child: { age: child.age, streakDays: child.streak_days ?? 0, lastStreakDate: child.last_streak_date },
     completions: toSnapshotCompletions(completionRows ?? []),
     awards: toSnapshotAwards(awardRows ?? []),
-    pets: (petRows ?? []).map((p) => ({ species: p.species })),
+    pets: (petRows ?? []).map((p) => ({
+      species: p.species,
+      name: p.name,
+      careNeeds: [p.careNotes, p.favoriteFood ? `Favorite food: ${p.favoriteFood}` : null].filter(Boolean).join("; ") || undefined,
+    })),
+    lifetime: {
+      totalBadges: (lifetimeAwards ?? []).length,
+      badgesBySkill: (lifetimeAwards ?? []).reduce<Record<string, number>>((acc, a) => {
+        acc[a.skill] = (acc[a.skill] ?? 0) + 1;
+        return acc;
+      }, {}),
+      totalCompletions: (lifetimeCompletions ?? []).filter((c) => c.status === "completed").length,
+    },
   });
   const redacted = redactSnapshotForModel(snapshot);
 
