@@ -26,6 +26,7 @@
  * import this module via a relative path — same convention as pet-chores.ts.
  */
 import { IDEA_AGE_BANDS, ageBandForAge, type IdeaAgeBand } from "./ideas";
+import { pickSomaticMission, somaticToGeneratedMission } from "./somatic-missions";
 
 /** Workers AI model for mission-set generation. Same verified free-tier model as the other AI routes. */
 export const MISSION_SET_MODEL_ID = "@cf/meta/llama-3.1-8b-instruct-fp8";
@@ -435,6 +436,12 @@ export function buildChildSnapshot(input: {
   awards: SnapshotAwardInput[];
   pets: SnapshotPetInput[];
   now?: number;
+  /**
+   * Optional flow-calibrated bands (Phase 4a). When provided, these override
+   * the basic 30-day calibration — the flow engine's Elo + signal based bands
+   * are the richer source of truth.
+   */
+  flowBands?: Partial<Record<MissionCategory, MissionDifficulty>>;
 }): ChildSnapshot {
   const now = input.now ?? Date.now();
   const { completions, awards, pets } = input;
@@ -572,7 +579,7 @@ export function buildChildSnapshot(input: {
     currentStreak: input.child.streakDays,
     assigned14d: recent14.length,
     skipRejectRate14d,
-    calibratedDifficulty: calibrateDifficulty(completions, ageBand, now),
+    calibratedDifficulty: input.flowBands ?? calibrateDifficulty(completions, ageBand, now),
     pets: pets.map((p) => ({ species: p.species })),
   };
 }
@@ -1139,13 +1146,29 @@ function pointsForDifficulty(difficulty: MissionDifficulty): number {
 /**
  * Tier-2 fallback: builds a mission set from original templates,
  * parameterized by the deterministic plan (skill, category, difficulty per
- * slot). Honest labeling: the client shows these as "smart templates".
+ * slot). Regulation-first slots pull from the somatic body-mission library
+ * instead of the regular templates. Honest labeling: the client shows these
+ * as "smart templates".
  */
 export function buildSmartTemplateSet(
   plan: MissionPlan,
   pets: SnapshotPetInput[],
+  options: { ageBand?: IdeaAgeBand; seed?: number } = {},
 ): GeneratedMission[] {
   return plan.slots.map((slot, i) => {
+    // Regulation-first slots come from the somatic library: body-based,
+    // no fail state, completion = participation.
+    if (slot.kind === "regulation_first") {
+      const somatic = pickSomaticMission({
+        ageBand: options.ageBand ?? "7-9",
+        hasPets: pets.length > 0,
+        seed: (options.seed ?? 0) + i,
+      });
+      const mission = somaticToGeneratedMission(somatic, slot.traitFocus);
+      // Keep the planner's difficulty band (one below calibrated) for
+      // points consistency, but somatic missions are always easy by design.
+      return { ...mission, difficulty: slot.difficulty, points: pointsForDifficulty(slot.difficulty) };
+    }
     const pool = SMART_TEMPLATES[slot.category][slot.skill];
     const template = pool[i % pool.length];
     const petLinked = slot.category === "pet_care" && pets.length > 0;

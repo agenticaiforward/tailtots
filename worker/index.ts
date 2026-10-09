@@ -124,6 +124,7 @@ const dailyBoostRateLimiter = new InMemoryRateLimiter(10, 60 * 60 * 1000);
 const missionSetRateLimiter = new InMemoryRateLimiter(20, 60 * 60 * 1000);
 const copilotRateLimiter = new InMemoryRateLimiter(20, 60 * 60 * 1000);
 const flourishRateLimiter = new InMemoryRateLimiter(20, 60 * 60 * 1000);
+const flowRateLimiter = new InMemoryRateLimiter(20, 60 * 60 * 1000);
 
 function jsonResponse(data: unknown, status: number): Response {
   return new Response(JSON.stringify(data), {
@@ -1031,6 +1032,162 @@ async function handleAiFlourishing(request: Request, env: Env): Promise<Response
   return jsonResponse({ snapshot: created?.[0] ?? snapshot, cached: false }, 200);
 }
 
+/**
+ * POST /api/ai/flow-calibration — Flow Calibration (Phase 4a).
+ *
+ * Parent-side only. Runs the deterministic flow engine over the child's
+ * mission_events: Elo rating updates, asymmetric signal-based band
+ * calibration, Brave Try detection, scaffold-fade tracking. Writes
+ * readiness_ratings and upserts difficulty_calibration; returns bands,
+ * nudges (with {name} placeholder for the UI to fill), and any Brave Try
+ * awards. No LLM calls — fully deterministic, works offline-capable.
+ */
+async function handleAiFlowCalibration(request: Request, env: Env): Promise<Response> {
+  if (flowRateLimiter.isLimited(`ai-flow:${clientIp(request)}`)) {
+    return jsonResponse({ error: "Too many requests. Please try again later." }, 429);
+  }
+  if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) {
+    flowLog.warn("Supabase env vars missing for /api/ai/flow-calibration");
+    return jsonResponse(
+      { error: "Parent sign-in is not configured yet. Please try again later." },
+      503,
+    );
+  }
+  const parent = await authenticateParentRequest({
+    supabaseUrl: env.SUPABASE_URL,
+    anonKey: env.SUPABASE_ANON_KEY,
+    authorizationHeader: request.headers.get("Authorization"),
+  });
+  if (!parent) {
+    return jsonResponse({ error: "Parent sign-in required." }, 401);
+  }
+  const token = extractBearerToken(request.headers.get("Authorization"));
+  if (!token) {
+    return jsonResponse({ error: "Parent sign-in required." }, 401);
+  }
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonResponse({ error: "Request body must be valid JSON." }, 400);
+  }
+  const childId = typeof (body as Record<string, unknown>)?.childId === "string"
+    ? (body as Record<string, string>).childId
+    : null;
+  if (!childId) {
+    return jsonResponse({ error: "childId is required." }, 400);
+  }
+  const rest: SupabaseRestClient = {
+    supabaseUrl: env.SUPABASE_URL,
+    anonKey: env.SUPABASE_ANON_KEY,
+    token,
+  };
+
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 86_400_000).toISOString();
+  const [childRows, eventRows, ratingRows] = await Promise.all([
+    restGet<ChildRow[]>(rest, `children?id=eq.${childId}&select=id,family_id,age&limit=1`),
+    restGet<Array<Record<string, unknown>>>(
+      rest,
+      `mission_events?child_id=eq.${childId}&created_at=gt.${thirtyDaysAgo}` +
+        `&select=child_id,event_type,category,difficulty,minutes_to_complete,created_at` +
+        `&order=created_at.desc&limit=3000`,
+    ),
+    restGet<Array<Record<string, unknown>>>(
+      rest,
+      `readiness_ratings?child_id=eq.${childId}&select=child_id,category,rating,games_played,scaffold_level,consecutive_wins`,
+    ),
+  ]);
+  const child = childRows?.[0] ?? null;
+  if (!child) {
+    return jsonResponse({ error: "Child not found." }, 404);
+  }
+
+  const ageBand = ageBandForAge(typeof child.age === "number" ? child.age : 8);
+  const events: FlowEventInput[] = (eventRows ?? []).map((r) => ({
+    childId: String(r.child_id ?? childId),
+    eventType: String(r.event_type ?? ""),
+    category: typeof r.category === "string" ? r.category : undefined,
+    difficulty: typeof r.difficulty === "string" ? r.difficulty : undefined,
+    minutesToComplete: typeof r.minutes_to_complete === "number" ? r.minutes_to_complete : undefined,
+    createdAt: String(r.created_at ?? new Date().toISOString()),
+  }));
+
+  // Rebuild Elo states from stored ratings, then fold in recent outcomes.
+  const eloStates: Partial<Record<FlowCategory, EloRatingState>> = {};
+  for (const r of ratingRows ?? []) {
+    const cat = String(r.category ?? "");
+    if (!cat) continue;
+    eloStates[cat as FlowCategory] = {
+      childId,
+      category: cat as FlowCategory,
+      rating: typeof r.rating === "number" ? r.rating : 1200,
+      gamesPlayed: typeof r.games_played === "number" ? r.games_played : 0,
+    };
+  }
+
+  // Current bands from difficulty_calibration (Phase 2 table).
+  const bandRows =
+    (await restGet<Array<Record<string, unknown>>>(
+      rest,
+      `difficulty_calibration?child_id=eq.${childId}&select=category,band`,
+    )) ?? [];
+  const currentBands: Partial<Record<FlowCategory, "easy" | "medium" | "hard">> = {};
+  for (const r of bandRows) {
+    const cat = String(r.category ?? "");
+    const band = String(r.band ?? "");
+    if (cat && (band === "easy" || band === "medium" || band === "hard")) {
+      currentBands[cat as FlowCategory] = band;
+    }
+  }
+
+  const result = runFlowCalibration({
+    childId,
+    ageBand,
+    events,
+    currentBands,
+    eloStates,
+    now: Date.now(),
+  });
+
+  // Persist: upsert readiness_ratings and difficulty_calibration.
+  const nowIso = new Date().toISOString();
+  await Promise.all([
+    ...Object.values(result.eloStates).map((s) =>
+      restUpsert(rest, "readiness_ratings", {
+        child_id: childId,
+        category: s.category,
+        rating: s.rating,
+        games_played: s.gamesPlayed,
+        updated_at: nowIso,
+      }),
+    ),
+    ...Object.entries(result.bands).map(([category, band]) =>
+      restUpsert(rest, "difficulty_calibration", {
+        child_id: childId,
+        category,
+        band,
+        updated_at: nowIso,
+      }),
+    ),
+  ]);
+
+  return jsonResponse(
+    {
+      bands: result.bands,
+      calibrations: result.calibrations.map((c) => ({
+        category: c.category,
+        band: c.band,
+        previousBand: c.previousBand,
+        moved: c.moved,
+        moveDirection: c.moveDirection,
+        reason: c.reason,
+      })),
+      nudges: result.nudges,
+    },
+    200,
+  );
+}
+
 const worker = {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
@@ -1075,6 +1232,13 @@ const worker = {
         return new Response("Method Not Allowed", { status: 405 });
       }
       return handleAiFlourishing(request, env);
+    }
+
+    if (url.pathname === "/api/ai/flow-calibration") {
+      if (request.method !== "POST") {
+        return new Response("Method Not Allowed", { status: 405 });
+      }
+      return handleAiFlowCalibration(request, env);
     }
 
     if (url.pathname === "/_vinext/image") {
