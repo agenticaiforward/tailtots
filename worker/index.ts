@@ -81,6 +81,17 @@ import {
   type EloRatingState,
   type MissionCategory as FlowCategory,
 } from "../lib/ai/flow-calibration";
+import {
+  BLUEPRINT_MODEL_ID,
+  assembleBlueprint,
+  buildBlueprintSystemPrompt,
+  buildBlueprintUserPrompt,
+  blueprintFallbackNarrative,
+  sanitizeBlueprintNarration,
+  validateBlueprintInput,
+  type BlueprintAssemblyInput,
+  type EngineStateInput,
+} from "../lib/ai/blueprint";
 
 const log = createLogger("worker:ai-ideas");
 const conversationLog = createLogger("worker:ai-conversation-prompt");
@@ -89,6 +100,8 @@ const missionSetLog = createLogger("worker:ai-mission-set");
 const copilotLog = createLogger("worker:ai-copilot-insights");
 const flourishLog = createLogger("worker:ai-flourishing");
 const flowLog = createLogger("worker:ai-flow-calibration");
+const blueprintLog = createLogger("worker:ai-blueprint");
+const blueprintRateLimiter = new InMemoryRateLimiter(10, 60 * 60 * 1000);
 
 interface Env {
   ASSETS: Fetcher;
@@ -1216,6 +1229,297 @@ async function handleAiFlowCalibration(request: Request, env: Env): Promise<Resp
   );
 }
 
+/**
+ * POST /api/ai/blueprint — Child Resilience Blueprint (Phase 5).
+ *
+ * Parent-side only. Assembles the three-part blueprint DETERMINISTICALLY
+ * from the child's mission_events, badge_awards, Kid Bank ledger, and
+ * flourishing history (no LLM for structure), then narrates ONE warm
+ * parent-facing opening with a small LLM call (best-effort). Every
+ * narration is clinical-scanned; on any failure the deterministic
+ * fallback narrative is stored instead.
+ *
+ * The model never sees raw events, names, notes, or photos: narration
+ * input is behavioral facts + age band only. Blueprints are snapshots
+ * (30-day expiry), not persistent psychological profiles.
+ */
+interface BlueprintEventRow {
+  event_type: string;
+  category: string | null;
+  difficulty: string | null;
+  skill: string | null;
+  minutes_to_complete: number | null;
+  created_at: string;
+}
+
+interface BlueprintBadgeRow {
+  skill: string | null;
+  awarded_at: string;
+}
+
+interface BlueprintBankRow {
+  category: string;
+  amount_cents: number;
+  status: string;
+  created_at: string;
+}
+
+interface BlueprintSnapshotRow {
+  id: string;
+  engine_state: string;
+  observations_json: unknown;
+  body_toolkit_json: unknown;
+  growth_plan_json: unknown;
+  brightest_pillar: string;
+  growing_pillar: string;
+  narrative: string | null;
+  mode: string;
+  created_at: string;
+}
+
+async function handleAiBlueprint(request: Request, env: Env): Promise<Response> {
+  if (blueprintRateLimiter.isLimited(`ai-blueprint:${clientIp(request)}`)) {
+    return jsonResponse({ error: "Too many requests. Please try again later." }, 429);
+  }
+  if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) {
+    blueprintLog.warn("Supabase env vars missing for /api/ai/blueprint");
+    return jsonResponse(
+      { error: "Parent sign-in is not configured yet. Please try again later." },
+      503,
+    );
+  }
+  const parent = await authenticateParentRequest({
+    supabaseUrl: env.SUPABASE_URL,
+    anonKey: env.SUPABASE_ANON_KEY,
+    authorizationHeader: request.headers.get("Authorization"),
+  });
+  if (!parent) {
+    return jsonResponse({ error: "Parent sign-in required." }, 401);
+  }
+  const token = extractBearerToken(request.headers.get("Authorization"));
+  if (!token) {
+    return jsonResponse({ error: "Parent sign-in required." }, 401);
+  }
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonResponse({ error: "Request body must be valid JSON." }, 400);
+  }
+  const validated = validateBlueprintInput(body);
+  if (!validated.ok) {
+    return jsonResponse({ error: validated.error }, 400);
+  }
+  const { childId } = validated;
+  const rest: SupabaseRestClient = {
+    supabaseUrl: env.SUPABASE_URL,
+    anonKey: env.SUPABASE_ANON_KEY,
+    token,
+  };
+
+  const nowMs = Date.now();
+  const sixtyDaysAgo = new Date(nowMs - 60 * 86_400_000).toISOString();
+  const fourteenDaysAgo = new Date(nowMs - 14 * 86_400_000).toISOString();
+  const threeDaysAgo = new Date(nowMs - 3 * 86_400_000).toISOString();
+
+  const [childRows, petRows, eventRows, badgeRows, bankRows, flourishRows, existingRows] =
+    await Promise.all([
+      restGet<{ id: string; family_id: string; age: number | null }[]>(
+        rest,
+        `children?id=eq.${childId}&select=id,family_id,age&limit=1`,
+      ),
+      restGet<{ species: string }[]>(rest, `pets?select=species&limit=8`),
+      restGet<BlueprintEventRow[]>(
+        rest,
+        `mission_events?child_id=eq.${childId}&created_at=gt.${sixtyDaysAgo}` +
+          `&select=event_type,category,difficulty,skill,minutes_to_complete,created_at` +
+          `&order=created_at.desc&limit=3000`,
+      ),
+      restGet<BlueprintBadgeRow[]>(
+        rest,
+        `badge_awards?child_id=eq.${childId}&awarded_at=gt.${sixtyDaysAgo}` +
+          `&select=skill,awarded_at&order=awarded_at.desc&limit=500`,
+      ),
+      restGet<BlueprintBankRow[]>(
+        rest,
+        `kid_bank_transactions?child_id=eq.${childId}&created_at=gt.${sixtyDaysAgo}` +
+          `&select=category,amount_cents,status,created_at&order=created_at.desc&limit=500`,
+      ),
+      restGet<FlourishSnapshotRow[]>(
+        rest,
+        `flourishing_snapshots?child_id=eq.${childId}` +
+          `&select=id,scores_json,trends_json,narrative,created_at` +
+          `&order=created_at.desc&limit=2`,
+      ),
+      restGet<BlueprintSnapshotRow[]>(
+        rest,
+        `blueprint_snapshots?child_id=eq.${childId}` +
+          `&select=id,engine_state,observations_json,body_toolkit_json,growth_plan_json,brightest_pillar,growing_pillar,narrative,mode,created_at` +
+          `&order=created_at.desc&limit=1`,
+      ),
+    ]);
+  const child = childRows?.[0] ?? null;
+  if (!child) {
+    return jsonResponse({ error: "Child not found." }, 404);
+  }
+
+  // Idempotency: a fresh (≤7 day old) blueprint is returned as-is.
+  const existing = (existingRows ?? [])[0];
+  if (existing && Date.parse(existing.created_at) > nowMs - 7 * 86_400_000) {
+    return jsonResponse({ blueprint: existing, cached: true }, 200);
+  }
+
+  // ---- Stage 1: deterministic assembly (no LLM) ----
+  const events = eventRows ?? [];
+  const recent = events.filter((e) => e.created_at >= fourteenDaysAgo);
+  const completions14d = recent.filter((e) => e.event_type === "completed").length;
+  const assigned14d = recent.filter((e) =>
+    ["assigned", "completed", "skipped", "rejected"].includes(e.event_type),
+  ).length;
+  const skipped14d = recent.filter((e) => e.event_type === "skipped" || e.event_type === "rejected").length;
+  const completedRows = recent.filter(
+    (e) => e.event_type === "completed" && e.minutes_to_complete != null,
+  );
+  const avgMinutes =
+    completedRows.length > 0
+      ? completedRows.reduce((s, e) => s + (e.minutes_to_complete ?? 0), 0) / completedRows.length
+      : null;
+  const hardAttempts = recent.filter((e) => e.difficulty === "hard").length;
+  const hardCompletions = recent.filter(
+    (e) => e.difficulty === "hard" && e.event_type === "completed",
+  ).length;
+  const recentCompletions = events.filter(
+    (e) => e.event_type === "completed" && e.created_at >= threeDaysAgo,
+  ).length;
+
+  const engineInput: EngineStateInput = {
+    completionRate14d: assigned14d > 0 ? completions14d / assigned14d : null,
+    avgMinutesPerMission: avgMinutes,
+    skipRate14d: assigned14d > 0 ? skipped14d / assigned14d : null,
+    recentCompletions,
+    hardAttempts14d: hardAttempts,
+    hardCompletions14d: hardCompletions,
+  };
+
+  // Trait scores: reuse the badge-derived signal (60/40 blend lives in the
+  // Mission Engine; here we do a light version from recent badges).
+  const skillCounts: Record<string, number> = {};
+  for (const b of badgeRows ?? []) {
+    if (b.skill) skillCounts[b.skill] = (skillCounts[b.skill] ?? 0) + 1;
+  }
+  const totalBadges = Object.values(skillCounts).reduce((a, b) => a + b, 0);
+  const traitScores: Record<string, number> = {};
+  const { SKILL_TO_TRAITS, THRIVER_TRAITS } = await import("../lib/ai/mission-engine").then(
+    (m) => ({ SKILL_TO_TRAITS: m.SKILL_TO_TRAITS, THRIVER_TRAITS: m.THRIVER_TRAITS }),
+  );
+  for (const trait of THRIVER_TRAITS) {
+    let acc = 0;
+    let n = 0;
+    for (const [skill, traits] of Object.entries(SKILL_TO_TRAITS)) {
+      if ((traits as string[]).includes(trait)) {
+        acc += totalBadges > 0 ? (skillCounts[skill] ?? 0) / totalBadges : 0;
+        n += 1;
+      }
+    }
+    traitScores[trait] = n > 0 ? acc / n : 0.5;
+  }
+  const weakestTraits = [...THRIVER_TRAITS].sort(
+    (a, b) => (traitScores[a] ?? 0.5) - (traitScores[b] ?? 0.5),
+  );
+
+  // PERMA pillar scores: prefer the latest flourishing snapshot; otherwise
+  // compute a light version from events/badges/bank.
+  let flourishScores: FlourishScores;
+  const latestFlourish = (flourishRows ?? [])[0];
+  if (latestFlourish?.scores_json) {
+    flourishScores = latestFlourish.scores_json as FlourishScores;
+  } else {
+    const fEvents = events.map((r) => ({
+      eventType: r.event_type,
+      taskId: null,
+      approved: true,
+    }));
+    const fBadges = (badgeRows ?? []).map((r) => ({ skill: r.skill, earnedAt: r.awarded_at }));
+    const fBank = (bankRows ?? [])
+      .filter((r) => ["earn", "spend", "give", "save"].includes(r.category))
+      .map((r) => ({
+        category: r.category as "earn" | "spend" | "give" | "save",
+        amount: r.amount_cents / 100,
+        approved: r.status === "approved",
+      }));
+    flourishScores = computeFlourishScores(fEvents, fBadges, fBank, undefined, nowMs);
+  }
+
+  const assemblyInput: BlueprintAssemblyInput = {
+    childId,
+    age: child.age ?? null,
+    engine: engineInput,
+    traitScores,
+    weakestTraits,
+    flourishScores,
+    hasPet: (petRows ?? []).length > 0,
+    parentFocusSkill: null,
+  };
+  const blueprint = assembleBlueprint(assemblyInput);
+
+  // ---- Stage 2: narration (best-effort LLM, deterministic fallback) ----
+  const narrationInput = {
+    engineState: blueprint.engineState,
+    ageBand: blueprint.ageBand,
+    observationTexts: blueprint.observations.map((o) => o.text),
+    brightestPillar: blueprint.brightestPillar,
+    growingPillar: blueprint.growingPillar,
+    bodyTitles: blueprint.bodyToolkit.map((b) => b.title),
+    growthTitles: blueprint.growthPlan.map((g) => g.title),
+  };
+  let narrative: string | null = null;
+  let mode: "ai" | "deterministic" = "deterministic";
+  if (env.AI) {
+    try {
+      const output = await env.AI.run(BLUEPRINT_MODEL_ID, {
+        messages: [
+          { role: "system", content: buildBlueprintSystemPrompt() },
+          { role: "user", content: buildBlueprintUserPrompt(narrationInput) },
+        ],
+        max_tokens: 200,
+        temperature: 0.6,
+      });
+      narrative = sanitizeBlueprintNarration(
+        String((output as { response?: unknown })?.response ?? ""),
+      );
+      if (narrative) mode = "ai";
+    } catch (error) {
+      blueprintLog.warn("Blueprint narration failed; using fallback", { error });
+    }
+  }
+  if (!narrative) {
+    narrative = blueprintFallbackNarrative(narrationInput);
+  }
+  blueprint.narrative = narrative;
+  blueprint.mode = mode;
+
+  // ---- Stage 3: persist the snapshot ----
+  const created = await restPost<BlueprintSnapshotRow[]>(
+    rest,
+    `blueprint_snapshots`,
+    {
+      family_id: child.family_id,
+      child_id: childId,
+      engine_state: blueprint.engineState,
+      age_band: blueprint.ageBand,
+      observations_json: blueprint.observations,
+      body_toolkit_json: blueprint.bodyToolkit,
+      growth_plan_json: blueprint.growthPlan,
+      brightest_pillar: blueprint.brightestPillar,
+      growing_pillar: blueprint.growingPillar,
+      narrative: blueprint.narrative,
+      mode: blueprint.mode,
+    },
+  );
+
+  return jsonResponse({ blueprint: created?.[0] ?? blueprint, cached: false }, 200);
+}
+
 const worker = {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
@@ -1267,6 +1571,13 @@ const worker = {
         return new Response("Method Not Allowed", { status: 405 });
       }
       return handleAiFlowCalibration(request, env);
+    }
+
+    if (url.pathname === "/api/ai/blueprint") {
+      if (request.method !== "POST") {
+        return new Response("Method Not Allowed", { status: 405 });
+      }
+      return handleAiBlueprint(request, env);
     }
 
     if (url.pathname === "/_vinext/image") {

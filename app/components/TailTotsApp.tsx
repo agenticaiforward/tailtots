@@ -116,6 +116,8 @@ import {
   type FlourishingSnapshot,
 } from "@/lib/ai/flourishing";
 import { FlourishingPanel } from "./FlourishingPanel";
+import { BlueprintPanel } from "./BlueprintPanel";
+import { fetchBlueprint, type ResilienceBlueprint } from "@/lib/ai/blueprint";
 import {
   buildCurriculumLevelBadge,
   CHARACTER_TRAITS,
@@ -2703,6 +2705,7 @@ export function TailTotsApp() {
               />
               <AskKidPromptCard childProfiles={children} parentSignedIn={Boolean(cloudAccountEmail)} />
               <CopilotPanel childProfiles={children} cloudFamilyId={cloudFamilyId} />
+              <BlueprintSection childProfiles={children} cloudFamilyId={cloudFamilyId} />
               <ApprovalsPanel
                 missions={missions}
                 transactions={transactions}
@@ -7463,6 +7466,105 @@ function CopilotPanel(props: { childProfiles: Child[]; cloudFamilyId: string | n
       <p className="mt-4 text-xs text-slate-400">
         The Copilot reads mission activity only (completions, timing, categories). It never sees names, notes, or photos, and it never gives medical or mental-health advice.
       </p>
+    </section>
+  );
+}
+
+/**
+ * BlueprintSection — fetches the Child Resilience Blueprint for the active
+ * child and renders it via BlueprintPanel. Parent-only. The blueprint is
+ * a personalized parenting guide assembled from mission patterns —
+ * observations, a body-first toolkit, and a growth plan — never a
+ * clinical assessment.
+ */
+function BlueprintSection(props: { childProfiles: Child[]; cloudFamilyId: string | null }) {
+  const [selectedClientId, setSelectedClientId] = useState<string>("");
+  const [blueprint, setBlueprint] = useState<ResilienceBlueprint | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const activeChild =
+    props.childProfiles.find((c) => c.id === selectedClientId) ?? props.childProfiles[0] ?? null;
+
+  const loadBlueprint = useCallback(
+    async (clientId: string) => {
+      if (!props.cloudFamilyId || !supabase) {
+        setError("Connect cloud sync in Family Setup to generate the Blueprint.");
+        return;
+      }
+      setLoading(true);
+      setError(null);
+      setBlueprint(null);
+      try {
+        const token = await getParentAccessToken();
+        if (!token) {
+          setError("Sign in with your parent account to generate the Blueprint.");
+          return;
+        }
+        const { data: childRow } = await supabase
+          .from("children")
+          .select("id")
+          .eq("family_id", props.cloudFamilyId)
+          .eq("client_id", clientId)
+          .maybeSingle();
+        if (!childRow?.id) {
+          setError("This profile hasn't synced to the cloud yet.");
+          return;
+        }
+        const result = await fetchBlueprint({ token, childId: childRow.id as string });
+        if (!result.ok || !result.blueprint) {
+          setError("The Blueprint couldn't be assembled just now. Try again in a bit.");
+          return;
+        }
+        setBlueprint(result.blueprint);
+      } catch {
+        setError("The Blueprint couldn't be assembled just now. Try again in a bit.");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [props.cloudFamilyId],
+  );
+
+  useEffect(() => {
+    if (!activeChild) return;
+    const timer = setTimeout(() => {
+      void loadBlueprint(activeChild.id);
+    }, 0);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeChild?.id, props.cloudFamilyId]);
+
+  return (
+    <section aria-label="Resilience Blueprint" className="mt-6">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <h3 className="text-base font-black text-tt-ink">🗺️ Resilience Blueprint</h3>
+        {props.childProfiles.length > 1 && (
+          <select
+            aria-label="Choose child for blueprint"
+            value={activeChild?.id ?? ""}
+            onChange={(e) => setSelectedClientId(e.target.value)}
+            className="rounded-full border border-tt-line bg-white px-3 py-1.5 text-xs font-bold text-tt-ink"
+          >
+            {props.childProfiles.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        )}
+      </div>
+      {error ? (
+        <div className="rounded-3xl border border-tt-line bg-white p-6 text-center shadow-sm">
+          <p className="text-sm font-semibold text-tt-ink-soft">{error}</p>
+        </div>
+      ) : (
+        <BlueprintPanel
+          blueprint={blueprint}
+          childName={activeChild?.name ?? "your child"}
+          loading={loading}
+        />
+      )}
     </section>
   );
 }
