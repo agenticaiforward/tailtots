@@ -6,6 +6,8 @@ import Image from "next/image";
 import Cropper, { type Area } from "react-easy-crop";
 import { PetBuddyFace } from "./pet-buddy";
 import type { PetKind } from "./pet-buddy";
+import { KidExperienceTop, KidExperienceBottom } from "./KidExperience";
+import { InviteFamily } from "./InviteFamily";
 import { PlaydateClaimView } from "./PlaydateClaimView";
 import { GivingShareView } from "./GivingShareView";
 import { parsePlaydateHash, playdateClaimUrl, playdateStore, configurePlaydateStore } from "@/lib/playdate-store";
@@ -2630,15 +2632,27 @@ export function TailTotsApp() {
             />
           )}
           {visibleActiveTab === "pets" && (
-            <PassportPanel
-              pets={pets}
-              missions={missions}
-              allowEditing={role === "parent"}
-              updatePet={updatePet}
-              updatePetPhoto={role === "parent" ? updatePetPhoto : undefined}
-              onStudyComplete={recordPassportStudy}
-              studiedAnimals={studiedAnimals}
-            />
+            <>
+              <PassportPanel
+                pets={pets}
+                missions={missions}
+                allowEditing={role === "parent"}
+                updatePet={updatePet}
+                updatePetPhoto={role === "parent" ? updatePetPhoto : undefined}
+                onStudyComplete={recordPassportStudy}
+                studiedAnimals={studiedAnimals}
+              />
+              {role === "parent" && (
+                <div className="mt-6">
+                  <InviteFamily
+                    familyName={familyName}
+                    petName={pets[0]?.name}
+                    petKind={pets[0] ? getPetLook(pets[0].id, pets[0]).kind : undefined}
+                    petPhotoUrl={pets[0]?.photoUrl}
+                  />
+                </div>
+              )}
+            </>
           )}
           {visibleActiveTab === "pet-helper" && (
             <KidAiBuddyPanel
@@ -3477,7 +3491,7 @@ function VisionLandingPanel({
         </div>
         <div className="mt-6 flex flex-col items-center justify-between gap-2 border-t border-tt-line pt-4 text-center sm:flex-row sm:text-left">
           <p className="text-xs font-black text-tt-navy">🐾 TailTots — parent-guided real-world growth.</p>
-          <p className="text-[11px] font-semibold text-tt-ink-faint">Made with guinea-pig supervision · <a className="font-bold text-tt-pine underline decoration-tt-sun decoration-2 underline-offset-2" href="mailto:hello@tailtots.com">hello@tailtots.com</a> · <a className="font-bold text-tt-pine underline decoration-tt-sun decoration-2 underline-offset-2" href="https://tailtots.com/privacy" target="_blank" rel="noreferrer">Privacy</a> · <a className="font-bold text-tt-pine underline decoration-tt-sun decoration-2 underline-offset-2" href="https://tailtots.com/terms" target="_blank" rel="noreferrer">Terms</a></p>
+          <p className="text-[11px] font-semibold text-tt-ink-faint">Made with guinea-pig supervision · <a className="font-bold text-tt-pine underline decoration-tt-sun decoration-2 underline-offset-2" href="mailto:hello@tailtots.com">hello@tailtots.com</a> · <a className="font-bold text-tt-pine underline decoration-tt-sun decoration-2 underline-offset-2" href="/promise">Our Promise</a> · <a className="font-bold text-tt-pine underline decoration-tt-sun decoration-2 underline-offset-2" href="/science">Our Science</a> · <a className="font-bold text-tt-pine underline decoration-tt-sun decoration-2 underline-offset-2" href="https://tailtots.com/privacy" target="_blank" rel="noreferrer">Privacy</a> · <a className="font-bold text-tt-pine underline decoration-tt-sun decoration-2 underline-offset-2" href="https://tailtots.com/terms" target="_blank" rel="noreferrer">Terms</a></p>
         </div>
       </section>
     </section>
@@ -5750,6 +5764,15 @@ function MissionsPanel(props: {
           </p>
         </div>
       </div>
+      {isKidView && (props.activeChild ?? props.allChildren[0]) && (
+        <div className="mt-4">
+          <KidExperienceTop
+            child={props.activeChild ?? props.allChildren[0]}
+            pets={props.pets}
+            missions={props.missions}
+          />
+        </div>
+      )}
       {isKidView && statusPet && statusPetStats && statusPetLook && (
         <div className="mt-4 overflow-hidden rounded-xl border border-[#ded8c7] bg-[#faf8f0]">
           <div className="flex items-center gap-4 p-4">
@@ -6006,6 +6029,9 @@ function MissionsPanel(props: {
           );
         })}
       </div>
+      {isKidView && (props.activeChild ?? props.allChildren[0]) && (
+        <KidExperienceBottom child={props.activeChild ?? props.allChildren[0]} missions={props.missions} />
+      )}
     </section>
   );
 }
