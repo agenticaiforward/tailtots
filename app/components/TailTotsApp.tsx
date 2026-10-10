@@ -2571,8 +2571,29 @@ export function TailTotsApp() {
           )}
           {showOnboarding && (
             <GuidedOnboarding
-              onComplete={() => setShowOnboarding(false)}
-              onSignup={() => {
+              onComplete={(result) => {
+                // Persist the chosen pet track + any real pets from onboarding.
+                try {
+                  localStorage.setItem("tt-pet-track", result.track);
+                } catch { /* private mode */ }
+                if (result.pets.length > 0) {
+                  setPets((prev) => {
+                    const ids = new Set(prev.map((p) => p.id));
+                    return [...prev, ...result.pets.filter((p) => !ids.has(p.id))];
+                  });
+                }
+                setShowOnboarding(false);
+              }}
+              onSignup={(result) => {
+                try {
+                  localStorage.setItem("tt-pet-track", result.track);
+                } catch { /* private mode */ }
+                if (result.pets.length > 0) {
+                  setPets((prev) => {
+                    const ids = new Set(prev.map((p) => p.id));
+                    return [...prev, ...result.pets.filter((p) => !ids.has(p.id))];
+                  });
+                }
                 setShowOnboarding(false);
                 setAuthPage("signup");
               }}

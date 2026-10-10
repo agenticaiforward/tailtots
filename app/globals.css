@@ -571,3 +571,103 @@ button {
     animation: none !important;
   }
 }
+
+/* ============ AlivePet: the pet is never fully still ============
+   Breathing, blinking support, mood reactions, Ken Burns for real photos.
+   All transform/opacity only (60fps, GPU-friendly). */
+
+/* Breathing — subtle scale pulse, always on for virtual pets */
+@keyframes pet-breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.025, 1.035); }
+}
+.animate-pet-breathe { animation: pet-breathe 3.4s ease-in-out infinite; }
+
+/* Tap wiggle — happy reaction when the kid taps the pet */
+@keyframes pet-tap-wiggle {
+  0%, 100% { transform: rotate(0deg) scale(1); }
+  25% { transform: rotate(-10deg) scale(1.08); }
+  50% { transform: rotate(8deg) scale(1.05); }
+  75% { transform: rotate(-4deg) scale(1.06); }
+}
+.animate-pet-tap-wiggle { animation: pet-tap-wiggle 0.6s ease-in-out; }
+
+/* Jump for joy — celebration */
+@keyframes pet-jump-joy {
+  0%, 100% { transform: translateY(0) scale(1); }
+  30% { transform: translateY(-26px) scale(1.08, 1.12); }
+  55% { transform: translateY(0) scale(0.96, 1.04); }
+  75% { transform: translateY(-14px) scale(1.05); }
+}
+.animate-pet-jump-joy { animation: pet-jump-joy 0.9s cubic-bezier(0.22, 1.2, 0.36, 1) 2; }
+
+/* Happy spin — excitement (welcome back) */
+@keyframes pet-spin-happy {
+  0% { transform: rotate(0deg) scale(1); }
+  50% { transform: rotate(180deg) scale(1.1); }
+  100% { transform: rotate(360deg) scale(1); }
+}
+.animate-pet-spin-happy { animation: pet-spin-happy 0.8s ease-in-out 2; }
+
+/* Sleepy sway — slow side-to-side */
+@keyframes pet-sway-sleepy {
+  0%, 100% { transform: rotate(-4deg) translateY(0); }
+  50% { transform: rotate(4deg) translateY(4px); }
+}
+.animate-pet-sway-sleepy { animation: pet-sway-sleepy 4s ease-in-out infinite; }
+
+/* Gentle bounce — encouragement (never guilt) */
+@keyframes pet-bounce-gentle {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+.animate-pet-bounce-gentle { animation: pet-bounce-gentle 1.4s ease-in-out 2; }
+
+/* Head tilt — curiosity */
+@keyframes pet-head-tilt {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(-9deg); }
+}
+.animate-pet-head-tilt { animation: pet-head-tilt 1.8s ease-in-out 3; }
+
+/* Ken Burns for real photos — slow zoom + pan keeps static photos alive */
+@keyframes ken-burns-frame {
+  0%, 100% { transform: scale(1) translate(0, 0); }
+  25% { transform: scale(1.04) translate(1.5%, -1%); }
+  50% { transform: scale(1.07) translate(-1%, 1.5%); }
+  75% { transform: scale(1.03) translate(1%, 1%); }
+}
+.animate-ken-burns-frame { animation: ken-burns-frame 14s ease-in-out infinite; }
+
+/* Playful bobbing frame around the photo */
+@keyframes frame-bob {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-5px) rotate(0.6deg); }
+}
+.animate-frame-bob { animation: frame-bob 3.8s ease-in-out infinite; }
+
+/* Photo sleep — gentle dim when idle */
+@keyframes photo-sleep-dim {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(0.82); }
+}
+.animate-photo-sleep-dim { animation: photo-sleep-dim 4.5s ease-in-out infinite; }
+
+/* Zzz float (companion to existing zzz-float, different timing) */
+.animate-zzz-float { animation: zzz-float 2.8s ease-out infinite; }
+
+/* Celebration confetti burst radiating from the pet */
+@keyframes celeb-burst {
+  0% { opacity: 1; transform: translate(-50%, -50%) rotate(var(--burst-angle, 0deg)) translateY(0) scale(0.5); }
+  100% { opacity: 0; transform: translate(-50%, -50%) rotate(var(--burst-angle, 0deg)) translateY(-72px) scale(1.15); }
+}
+.animate-celeb-burst { animation: celeb-burst 0.9s ease-out both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-pet-breathe, .animate-pet-tap-wiggle, .animate-pet-jump-joy,
+  .animate-pet-spin-happy, .animate-pet-sway-sleepy, .animate-pet-bounce-gentle,
+  .animate-pet-head-tilt, .animate-ken-burns-frame, .animate-frame-bob,
+  .animate-photo-sleep-dim, .animate-zzz-float, .animate-celeb-burst {
+    animation: none !important;
+  }
+}

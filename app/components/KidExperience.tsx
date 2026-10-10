@@ -10,11 +10,14 @@
  */
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import type { Child, Mission, Pet } from "../../lib/types";
 import { getAgeMode, KidModeHeader } from "./AgeMode";
 import { Graduation, useGraduation } from "./Graduation";
 import { PetEvolution } from "./PetEvolution";
+import RealPetHero from "./RealPetHero";
+import ReadinessMeter from "./ReadinessMeter";
+import ShelterBuddy from "./ShelterBuddy";
 import { BraveTryStreak, braveTriesFromMissions } from "./BraveTryStreak";
 import { MemoryStones } from "./MemoryStones";
 import type { PetKind } from "./pet-buddy";
@@ -32,9 +35,32 @@ export function petKindFor(species: string): PetKind {
   return "pet";
 }
 
+/** A pet counts as "real" when it has a user-uploaded photo (data URL) or the
+ *  family chose the HAVE track. Demo/starter photos stay on the virtual path. */
+function isRealPet(pet: Pet | undefined, track: string | null): boolean {
+  if (!pet) return false;
+  if (track === "have") return true;
+  if (track === "want" || track === "cant") return false;
+  // Fallback heuristic: data-URL photos are user uploads; demo paths are not.
+  return !!pet.photoUrl && pet.photoUrl.startsWith("data:");
+}
+
+function usePetTrack(): string | null {
+  const [track] = useState<string | null>(() => {
+    try {
+      return typeof window !== "undefined" ? localStorage.getItem("tt-pet-track") : null;
+    } catch {
+      return null; // private mode
+    }
+  });
+  return track;
+}
+
 export function KidExperienceTop({ child, pets, missions }: { child: Child; pets: Pet[]; missions: Mission[] }) {
   const mode = getAgeMode(child.age);
   const pet = pets[0];
+  const track = usePetTrack();
+  const showRealHero = isRealPet(pet, track);
   const { pendingGraduation, dismissGraduation } = useGraduation(child.id, child.age);
 
   const myMissions = useMemo(() => missions.filter((m) => !m.assignedChildId || m.assignedChildId === child.id), [missions, child.id]);
@@ -65,14 +91,29 @@ export function KidExperienceTop({ child, pets, missions }: { child: Child; pets
         openMissionCount={openCount}
         completedCount={approvedCount}
       />
-      {pet && (
+      {pet && showRealHero ? (
+        <RealPetHero pet={pet} approvedCount={approvedCount} />
+      ) : pet ? (
         <PetEvolution
           approvedCount={approvedCount}
           petKind={petKindFor(pet.species)}
           photoUrl={pet.photoUrl}
           petName={pet.name}
         />
+      ) : null}
+      {/* WANT track: readiness journey toward a real pet */}
+      {track === "want" && (
+        <ReadinessMeter
+          input={{
+            careMissions: approvedCount,
+            streakDays: child.streakDays,
+            activeDays30d: Math.min(30, approvedCount),
+          }}
+          buddyName={pet?.name ?? "Buddy"}
+        />
       )}
+      {/* CANT track: shelter buddy connection */}
+      {track === "cant" && <ShelterBuddy />}
       <BraveTryStreak tries={braveTries} childName={child.name} />
     </div>
   );
