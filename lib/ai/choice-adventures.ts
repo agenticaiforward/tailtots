@@ -292,6 +292,136 @@ export const SEED_SCENARIOS: ChoiceScenario[] = [
       },
     ],
   },
+  // ---- RESPECT scenarios: boundaries, fairness, treating others well ----
+  {
+    id: "seed-sprout-game",
+    title: "Not My Game",
+    emoji: "🎮",
+    setup: "Your friend is playing a game on their tablet. You really want a turn, but they said 'not right now' and kept playing.",
+    ageMode: "sprout",
+    probesPattern: "impulsivity",
+    choices: [
+      { id: "wait", label: "Wait until they offer", emoji: "⏳", archetype: "careful" },
+      { id: "ask", label: "Ask nicely one more time", emoji: "🙏", archetype: "kind" },
+    ],
+    outcomes: [
+      {
+        choiceId: "wait",
+        headline: "You waited",
+        story: "After a few minutes, your friend looks up and says 'okay, your turn!' Waiting showed them their 'no' mattered — and it felt good to be trusted.",
+        emoji: "🌟",
+        feeling: "happy",
+      },
+      {
+        choiceId: "ask",
+        headline: "One kind ask",
+        story: "You ask sweetly: 'Can I have a turn when you're done?' Your friend nods. Asking — not grabbing — kept the friendship smooth.",
+        emoji: "💛",
+        feeling: "happy",
+      },
+    ],
+  },
+  {
+    id: "seed-grow-borrow",
+    title: "The Borrowed Book",
+    emoji: "📖",
+    setup: "You borrowed your cousin's favorite comic book last week. There's a small juice stain on one page now. Your cousin is coming over today.",
+    ageMode: "grow",
+    probesPattern: "deliberation",
+    choices: [
+      { id: "tell", label: "Tell them right away", emoji: "🗣️", archetype: "bold" },
+      { id: "hide", label: "Say nothing and hope they don't notice", emoji: "🤫", archetype: "careful" },
+      { id: "fix", label: "Try to fix it first, then tell them", emoji: "🛠️", archetype: "kind" },
+    ],
+    outcomes: [
+      {
+        choiceId: "tell",
+        headline: "Honest up front",
+        story: "You show them the stain right away and say sorry. They're a little sad — then they say 'thanks for telling me.' Owning it kept the trust.",
+        emoji: "🤝",
+        feeling: "happy",
+      },
+      {
+        choiceId: "hide",
+        headline: "The secret stain",
+        story: "They find it halfway through reading. 'Was this you?' The stain was small — the hiding felt bigger. Trust is easier to keep than rebuild.",
+        emoji: "😟",
+        feeling: "tricky",
+      },
+      {
+        choiceId: "fix",
+        headline: "Fix and fess up",
+        story: "You gently blot the page, then tell them what happened. They appreciate both the effort and the honesty. Respecting their things meant respecting them.",
+        emoji: "✨",
+        feeling: "happy",
+      },
+    ],
+  },
+  // ---- PATIENCE scenarios: waiting well, delayed gratification ----
+  {
+    id: "seed-sprout-cookie",
+    title: "One Cookie or Two?",
+    emoji: "🍪",
+    setup: "Grown-up puts one cookie in front of you. 'You can eat it now — or wait 10 minutes while we read a story, and you can have TWO cookies.'",
+    ageMode: "sprout",
+    probesPattern: "impulsivity",
+    choices: [
+      { id: "now", label: "Eat the one cookie now", emoji: "😋", archetype: "bold" },
+      { id: "wait", label: "Wait for two cookies", emoji: "⏳", archetype: "careful" },
+    ],
+    outcomes: [
+      {
+        choiceId: "now",
+        headline: "Yum, one cookie!",
+        story: "Crunch! Delicious. The story is fun too — but somewhere in the middle you wonder what two cookies would have tasted like. Wondering is okay!",
+        emoji: "🍪",
+        feeling: "okay",
+      },
+      {
+        choiceId: "wait",
+        headline: "Two cookies!",
+        story: "The story ends, and there they are — TWO cookies! Waiting was a little wiggly, but wow, double cookies. Patience tastes sweet.",
+        emoji: "🍪🍪",
+        feeling: "happy",
+      },
+    ],
+  },
+  {
+    id: "seed-grow-seeds",
+    title: "The Slow Seeds",
+    emoji: "🌱",
+    setup: "You planted bean seeds in a cup a week ago. Nothing is poking up yet. Your friend's fast-growing cress already sprouted. You could dig yours up to check — or keep waiting.",
+    ageMode: "grow",
+    probesPattern: "deliberation",
+    choices: [
+      { id: "dig", label: "Dig one up to peek", emoji: "🔍", archetype: "bold" },
+      { id: "wait", label: "Keep watering and wait", emoji: "💧", archetype: "careful" },
+      { id: "journal", label: "Draw what you imagine is happening underground", emoji: "🎨", archetype: "playful" },
+    ],
+    outcomes: [
+      {
+        choiceId: "dig",
+        headline: "A tiny peek",
+        story: "You find a pale little root! But the seed you dug up won't grow now. Some things break when we rush them — roots need their quiet time.",
+        emoji: "🌱",
+        feeling: "tricky",
+      },
+      {
+        choiceId: "wait",
+        headline: "Green surprise!",
+        story: "Three days later — a green loop pushes through the soil! Waiting didn't just work, it felt like a little miracle you earned.",
+        emoji: "🌿",
+        feeling: "happy",
+      },
+      {
+        choiceId: "journal",
+        headline: "Underground imagination",
+        story: "You draw roots spreading like secret rivers. When the real sprout comes, your drawing was almost right! Waiting + wondering is a superpower.",
+        emoji: "🎨",
+        feeling: "happy",
+      },
+    ],
+  },
 ];
 
 export function seedScenariosFor(mode: ChoiceAgeMode): ChoiceScenario[] {

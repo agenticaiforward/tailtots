@@ -120,6 +120,16 @@ function copyFor(pattern: DetectedPattern, childName: string): InsightCopy {
           `Week-over-week completion across ${d.assignedThisWeek} missions this week. ` +
           `The AI celebrates the momentum and gradually raises the challenge ceiling to match the growth.`,
       };
+    case "independence_milestone":
+      return {
+        strength: `${childName} just unlocked "${d.milestoneTitle}" ${d.milestoneEmoji ?? ""} — doing more on their own!`,
+        observation: `Independence isn't about needing nobody — it's about knowing you can. ${childName} needed you a little less this week, and that's the goal working.`,
+        suggestion: `Celebrate it together, then step back a little further next time. The lantern dims as ${childName} shines brighter.`,
+        detailTitle: `Independence milestone: ${d.milestoneTitle}`,
+        detailBody:
+          `Detected from mission completion patterns — not scored, celebrated. ` +
+          `Milestones mark moments of autonomy: first steps, streaks, brave solos, comebacks.`,
+      };
     default:
       return {
         strength: `${childName} is growing — here's what the week showed.`,

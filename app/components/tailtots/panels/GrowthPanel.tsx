@@ -12,6 +12,8 @@ import { getChildLook } from "../avatar-looks";
 import { Meter, ProfilePhoto } from "../ui";
 import { PetReadyJourneyPanel } from "./PetReadyJourneyPanel";
 import { DecisionGrowthCard } from "../../DecisionGrowthCard";
+import { IndependenceMilestones } from "../../IndependenceMilestones";
+import type { IndependenceEvent } from "@/lib/ai/independence";
 import { playthroughsThisWeek, choiceEventsFor } from "../../ChoiceAdventureSpot";
 import { curiosityCountsFor } from "../../CuriosityMissions";
 import { synthesisCountsFor } from "../../SynthesisMoments";
@@ -129,6 +131,30 @@ export function GrowthPanel(props: {
                 taughtPet: synth.taughtPet,
                 weeklyInsight: weeklyInsightFor(child.id),
               }}
+            />
+          );
+        })}
+      </div>
+      {/* Independence milestones — celebrated, never scored */}
+      <div className="mt-5 grid gap-4 lg:grid-cols-2">
+        {props.childProfiles.map((child) => {
+          // Demo adapter: local missions carry no timestamps, so order them
+          // by list position (oldest first) one day apart. The backend
+          // mission_events table carries real timestamps.
+          const childMissions = props.missions.filter((m) => m.assignedChildId === child.id);
+          const events: IndependenceEvent[] = childMissions.map((m, i) => ({
+            completedAt: new Date(
+              Date.now() - (childMissions.length - 1 - i) * 86_400_000,
+            ).toISOString(),
+            status: m.status,
+            difficulty: m.difficulty,
+            category: m.category,
+          }));
+          return (
+            <IndependenceMilestones
+              key={`independence-${child.id}`}
+              events={events}
+              childName={child.name}
             />
           );
         })}

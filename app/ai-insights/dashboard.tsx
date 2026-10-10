@@ -54,6 +54,7 @@ const TRAIT_LABELS: Record<ThriverTrait, string> = {
   curiosity: "Curiosity",
   perseverance: "Perseverance",
   optimism: "Optimism",
+  respect: "Respect",
 };
 
 const TRAIT_COLORS: Record<ThriverTrait, string> = {

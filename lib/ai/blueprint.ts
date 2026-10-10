@@ -197,6 +197,7 @@ const TRAIT_TO_PILLAR: Record<string, FlourishPillar> = {
   curiosity: "joy",
   perseverance: "stick",
   optimism: "joy",
+  respect: "together",
 };
 
 function brightestAndGrowing(

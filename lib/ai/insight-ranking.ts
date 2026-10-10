@@ -46,6 +46,7 @@ export const ACTIONABILITY_SCORES: Record<InsightType, number> = {
   streak_at_risk: 0.6, // gentle nudge — low stakes either way
   weak_skill: 0.6, // informational
   engagement_rise: 0.4, // celebration — wonderful, but not the weekly slot
+  independence_milestone: 0.5, // celebration of autonomy — joyful, not urgent
 };
 
 export interface RankedInsight {

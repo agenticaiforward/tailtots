@@ -234,6 +234,33 @@ describe("detectPatterns", () => {
       expect(detailText).not.toMatch(/anxious|trauma|adhd|diagnos/);
     }
   });
+
+  it("surfaces fresh independence milestones as info patterns", () => {
+    const now = Date.now();
+    const events: CopilotEventInput[] = [3, 2, 1].map((daysAgo) => ({
+      eventType: "mission_approved",
+      category: "chore",
+      difficulty: "easy",
+      createdAt: new Date(now - daysAgo * 86_400_000).toISOString(),
+    }));
+    const found = detectPatterns(events, { streakDays: 3, age: 8 }, now);
+    const milestone = found.find((p) => p.insightType === "independence_milestone");
+    expect(milestone).toBeDefined();
+    expect(milestone?.severity).toBe("info");
+    expect(milestone?.detail.milestoneTitle).toBeTruthy();
+  });
+
+  it("does not surface stale independence milestones", () => {
+    const now = Date.now();
+    const events: CopilotEventInput[] = [30, 29, 28].map((daysAgo) => ({
+      eventType: "mission_approved",
+      category: "chore",
+      difficulty: "easy",
+      createdAt: new Date(now - daysAgo * 86_400_000).toISOString(),
+    }));
+    const found = detectPatterns(events, { streakDays: 0, age: 8 }, now);
+    expect(found.filter((p) => p.insightType === "independence_milestone")).toHaveLength(0);
+  });
 });
 
 describe("calibrateDifficultyBands", () => {

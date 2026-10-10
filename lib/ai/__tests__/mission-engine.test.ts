@@ -3,12 +3,17 @@ import {
   MISSION_CATEGORIES,
   MISSION_DIFFICULTIES,
   MISSION_SKILLS,
+  MULTIPLIER_PAIRS,
+  PATIENCE_MISSION_SEEDS,
   THRIVER_TRAITS,
+  TRAIT_AGE_PRIORS,
+  TRAIT_MISSION_SEEDS,
   SKILL_TO_TRAITS,
   buildChildSnapshot,
   buildMissionEventRow,
   buildMissionSetMessages,
   buildMissionSetSystemPrompt,
+  buildTraitSeedGuidance,
   calibrateDifficulty,
   computeBehavioralTraitSignals,
   computeTraitWeights,
@@ -49,7 +54,8 @@ function makeSnapshot(overrides: Partial<ChildSnapshot> = {}): ChildSnapshot {
       integrity: 0.11,
       curiosity: 0.16,
       perseverance: 0.09,
-      optimism: 0.23,
+      optimism: 0.13,
+      respect: 0.1,
     },
     weakestTraits: ["optimism", "curiosity"],
     weakestSkill: "teamwork",
@@ -111,6 +117,7 @@ describe("computeTraitWeights", () => {
     curiosity: 0.5,
     perseverance: 0.5,
     optimism: 0.5,
+    respect: 0.5,
   };
 
   it("sums to 1.0 and respects the variety guard bounds", () => {
@@ -202,6 +209,21 @@ describe("computeBehavioralTraitSignals", () => {
   it("reads integrity from the parent approval rate", () => {
     const signals = computeBehavioralTraitSignals({ ...thin, approvalRate30d: 0.9 });
     expect(signals.integrity).toBe(0.9);
+  });
+
+  it("reads respect from care missions plus approval rate", () => {
+    const signals = computeBehavioralTraitSignals({
+      ...thin,
+      categoryCompletionCounts: { kindness: 3, pet_care: 3, chore: 2 },
+      approvalRate30d: 0.8,
+    });
+    // careShare = 6/8 = 0.75; respect = 0.6*0.75 + 0.4*0.8 = 0.77
+    expect(signals.respect).toBeCloseTo(0.77, 2);
+  });
+
+  it("falls back to neutral respect when data is thin", () => {
+    const signals = computeBehavioralTraitSignals(thin);
+    expect(signals.respect).toBe(0.5);
   });
 
   it("keeps every signal in 0..1", () => {
@@ -348,7 +370,7 @@ describe("planMissionSlots", () => {
   it("opens with a trait-entry slot for an engaged child", () => {
     const plan = planMissionSlots(makeSnapshot());
     expect(plan.slots[0].kind).toBe("trait_entry");
-    expect(plan.slots[0].traitFocus).toBe("optimism");
+    expect(plan.slots[0].traitFocus).toBe("curiosity");
   });
 
   it("targets the top-weighted trait (not just the weakest score) for the entry slot", () => {
@@ -359,8 +381,9 @@ describe("planMissionSlots", () => {
         "self-control": 0.1,
         integrity: 0.1,
         curiosity: 0.4,
-        perseverance: 0.1,
+        perseverance: 0.05,
         optimism: 0.1,
+        respect: 0.05,
       },
     });
     const plan = planMissionSlots(snapshot);
@@ -382,9 +405,9 @@ describe("planMissionSlots", () => {
   });
 
   it("honors the parent focus skill when unused", () => {
-    const plan = planMissionSlots(makeSnapshot(), { count: 4, focusSkill: "leadership" });
+    const plan = planMissionSlots(makeSnapshot(), { count: 4, focusSkill: "time" });
     const focusSlot = plan.slots.find((s) => s.kind === "parent_focus");
-    expect(focusSlot?.skill).toBe("leadership");
+    expect(focusSlot?.skill).toBe("time");
   });
 
   it("ends with a confidence anchor", () => {
@@ -705,5 +728,76 @@ describe("PARENT_VOICE_GUIDELINES", () => {
     expect(PARENT_VOICE_GUIDELINES).toMatch(/companion, not a supervisor/);
     expect(PARENT_VOICE_GUIDELINES).toMatch(/brave tries/);
     expect(PARENT_VOICE_GUIDELINES).toMatch(/no shaming/i);
+  });
+});
+
+describe("respect trait (8th trait)", () => {
+  it("is in the trait list", () => {
+    expect(THRIVER_TRAITS).toContain("respect");
+    expect(THRIVER_TRAITS).toHaveLength(8);
+  });
+
+  it("maps from empathy and teamwork skills", () => {
+    expect(SKILL_TO_TRAITS.empathy).toContain("respect");
+    expect(SKILL_TO_TRAITS.teamwork).toContain("respect");
+  });
+
+  it("has age priors for all bands that sum to 1.0", () => {
+    for (const band of ["4-6", "7-9", "10-12"] as const) {
+      const priors = TRAIT_AGE_PRIORS[band];
+      expect(priors.respect).toBeGreaterThan(0);
+      const total = Object.values(priors).reduce((a, b) => a + b, 0);
+      expect(total).toBeCloseTo(1.0, 5);
+    }
+  });
+
+  it("participates in multiplier pairs as the outward expression of inner traits", () => {
+    const pairs = MULTIPLIER_PAIRS.filter(([a, b]) => a === "respect" || b === "respect");
+    expect(pairs.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("gets deficit-driven weight like other traits", () => {
+    const scores = {
+      confidence: 0.8, empathy: 0.8, "self-control": 0.8, integrity: 0.8,
+      curiosity: 0.8, perseverance: 0.8, optimism: 0.8, respect: 0.2,
+    };
+    const weights = computeTraitWeights(scores, "7-9");
+    expect(weights.respect).toBeGreaterThan(weights.confidence);
+  });
+});
+
+describe("trait mission seeds", () => {
+  it("has seeds for all 8 traits", () => {
+    for (const t of THRIVER_TRAITS) {
+      expect(TRAIT_MISSION_SEEDS[t].length).toBeGreaterThanOrEqual(3);
+    }
+  });
+
+  it("respect seeds teach boundaries and care", () => {
+    const seeds = TRAIT_MISSION_SEEDS.respect.join(" ").toLowerCase();
+    expect(seeds).toMatch(/borrow|interrupt|thank/);
+  });
+
+  it("builds seed guidance for top-weighted traits", () => {
+    const weights = {
+      confidence: 0.05, empathy: 0.05, "self-control": 0.05, integrity: 0.05,
+      curiosity: 0.05, perseverance: 0.05, optimism: 0.05, respect: 0.65,
+    };
+    const guidance = buildTraitSeedGuidance(weights);
+    expect(guidance).toContain("respect");
+  });
+
+  it("adds patience seeds when self-control is emphasized", () => {
+    const weights = {
+      confidence: 0.05, empathy: 0.05, "self-control": 0.65, integrity: 0.05,
+      curiosity: 0.05, perseverance: 0.05, optimism: 0.05, respect: 0.05,
+    };
+    const guidance = buildTraitSeedGuidance(weights);
+    expect(guidance.toLowerCase()).toContain("patience");
+  });
+
+  it("patience seeds teach waiting well and delayed gratification", () => {
+    const seeds = PATIENCE_MISSION_SEEDS.join(" ").toLowerCase();
+    expect(seeds).toMatch(/wait|later|patient/);
   });
 });

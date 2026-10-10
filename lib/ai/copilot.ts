@@ -23,6 +23,7 @@
 
 import { PARENT_VOICE_GUIDELINES } from "./mission-engine";
 import { ageBandForAge, type IdeaAgeBand } from "./ideas";
+import { detectIndependenceMilestones } from "./independence";
 
 export const COPILOT_MODEL_ID = "@cf/meta/llama-3.1-8b-instruct-fp8-fast";
 
@@ -36,6 +37,7 @@ export const INSIGHT_TYPES = [
   "completion_drop",
   "skill_imbalance",
   "engagement_rise",
+  "independence_milestone",
 ] as const;
 export type InsightType = (typeof INSIGHT_TYPES)[number];
 
@@ -448,7 +450,41 @@ export function detectPatterns(
     ...detectSkillImbalance(events, nowMs),
     ...detectDifficultyMismatch(events, nowMs),
     ...detectEngagementRise(events, nowMs),
+    ...detectIndependenceMilestones_(events, nowMs),
   ];
+}
+
+/**
+ * Independence milestones as a Weekly Insight pattern. Celebrates autonomy —
+ * "doing more on their own." Only fires for milestones achieved in the last
+ * 7 days (fresh wins worth celebrating), severity info (never alarming).
+ */
+function detectIndependenceMilestones_(
+  events: CopilotEventInput[],
+  nowMs: number,
+): DetectedPattern[] {
+  const independenceEvents = events
+    .filter((e) => e.eventType === "mission_approved" || e.eventType === "mission_completed")
+    .map((e) => ({
+      completedAt: e.createdAt,
+      status: "approved" as const,
+      difficulty: e.difficulty ?? "easy",
+      category: e.category ?? "chore",
+    }));
+  const milestones = detectIndependenceMilestones(independenceEvents, nowMs);
+  const weekAgo = nowMs - 7 * DAY_MS;
+  return milestones
+    .filter((m) => m.progress >= 1 && m.achievedAt && Date.parse(m.achievedAt) >= weekAgo)
+    .map((m) => ({
+      insightType: "independence_milestone" as const,
+      severity: "info" as const,
+      detail: {
+        milestoneId: m.id,
+        milestoneTitle: m.title,
+        milestoneEmoji: m.emoji,
+        achievedAt: m.achievedAt,
+      },
+    }));
 }
 
 /** Per-category calibrated difficulty band from 30-day completion rates. */
@@ -632,6 +668,11 @@ export function fallbackNarrative(input: NarrationInput): string {
       return `The skill "${d.skill ?? "unknown"}" has had little practice lately. One small, joyful mission in it, done together.`;
     case "engagement_rise":
       return `Completion this week is ${pct(d.thisWeekRate)} vs ${pct(d.priorRate)} lately — something is working. Keep that same rhythm going.`;
+    case "independence_milestone":
+      return (
+        `${String(d.milestoneEmoji ?? "🌟")} "${String(d.milestoneTitle ?? "A new milestone")}" unlocked — ` +
+        `doing more on their own! Celebrate it together, then step back a little further next time.`
+      );
   }
 }
 

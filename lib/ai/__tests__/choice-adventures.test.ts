@@ -14,10 +14,20 @@ import {
 } from "../choice-adventures";
 
 describe("seedScenariosFor", () => {
-  it("returns 2 scenarios per age mode", () => {
-    expect(seedScenariosFor("sprout")).toHaveLength(2);
-    expect(seedScenariosFor("grow")).toHaveLength(2);
+  it("returns scenarios per age mode (incl. respect + patience seeds)", () => {
+    expect(seedScenariosFor("sprout")).toHaveLength(4);
+    expect(seedScenariosFor("grow")).toHaveLength(4);
     expect(seedScenariosFor("thrive")).toHaveLength(2);
+  });
+  it("includes respect dilemma seeds", () => {
+    const ids = SEED_SCENARIOS.map((s) => s.id);
+    expect(ids).toContain("seed-sprout-game");
+    expect(ids).toContain("seed-grow-borrow");
+  });
+  it("includes patience tradeoff seeds", () => {
+    const ids = SEED_SCENARIOS.map((s) => s.id);
+    expect(ids).toContain("seed-sprout-cookie");
+    expect(ids).toContain("seed-grow-seeds");
   });
   it("sprout scenarios have exactly 2 choices", () => {
     for (const s of seedScenariosFor("sprout")) {

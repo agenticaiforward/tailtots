@@ -8,11 +8,14 @@
  * never a child's name or other kid PII. All AI output is parent-side only and
  * passes through the existing parent approval gate.
  *
- * Character curriculum note: the engine's planning layer tracks seven
+ * Character curriculum note: the engine's planning layer tracks eight
  * developmental traits (confidence, empathy, self-control, integrity,
- * curiosity, perseverance, optimism) as *design categories* for weighting
- * mission selection. Trait names are used as labels only; all mission content
- * is original. No text is copied from any published work.
+ * curiosity, perseverance, optimism, respect) as *design categories* for
+ * weighting mission selection. Trait names are used as labels only; all
+ * mission content is original. No text is copied from any published work.
+ * Respect — treating people, animals, and things with care — is the outward
+ * expression of inner traits (empathy, self-control, integrity): it is
+ * tracked as its own category because parents name it as a core value.
  *
  * Guardrails (non-negotiable, enforced here and in the Worker route):
  * - Parent-side AI only. Kids never talk to the model.
@@ -47,8 +50,10 @@ export const MISSION_SKILLS = [
 export type MissionSkill = (typeof MISSION_SKILLS)[number];
 
 /**
- * Seven developmental traits used as planning categories for weighting
+ * Eight developmental traits used as planning categories for weighting
  * mission selection. Names are category labels only (see module header).
+ * Respect is the eighth: the outward expression of inner traits — treating
+ * people, animals, and things with care.
  */
 export const THRIVER_TRAITS = [
   "confidence",
@@ -58,6 +63,7 @@ export const THRIVER_TRAITS = [
   "curiosity",
   "perseverance",
   "optimism",
+  "respect",
 ] as const;
 export type ThriverTrait = (typeof THRIVER_TRAITS)[number];
 
@@ -67,8 +73,8 @@ export type ThriverTrait = (typeof THRIVER_TRAITS)[number];
  */
 export const SKILL_TO_TRAITS: Record<MissionSkill, ThriverTrait[]> = {
   responsibility: ["integrity", "self-control"],
-  empathy: ["empathy", "optimism"],
-  teamwork: ["empathy", "integrity"],
+  empathy: ["empathy", "optimism", "respect"],
+  teamwork: ["empathy", "integrity", "respect"],
   leadership: ["confidence", "curiosity", "optimism"],
   time: ["self-control", "perseverance"],
 };
@@ -211,6 +217,7 @@ function emptyTraitRecord(): Record<ThriverTrait, number> {
     curiosity: 0,
     perseverance: 0,
     optimism: 0,
+    respect: 0,
   };
 }
 
@@ -250,31 +257,34 @@ export function traitScoresFromSkillPoints(
 /** Age-band developmental priorities: which traits are most teachable now. */
 export const TRAIT_AGE_PRIORS: Record<IdeaAgeBand, Record<ThriverTrait, number>> = {
   "4-6": {
-    "self-control": 0.2,
-    empathy: 0.18,
-    curiosity: 0.18,
-    confidence: 0.15,
-    perseverance: 0.12,
-    optimism: 0.1,
-    integrity: 0.07,
+    "self-control": 0.18,
+    empathy: 0.16,
+    curiosity: 0.16,
+    respect: 0.14,
+    confidence: 0.13,
+    perseverance: 0.11,
+    optimism: 0.07,
+    integrity: 0.05,
   },
   "7-9": {
-    empathy: 0.2,
-    perseverance: 0.18,
-    confidence: 0.16,
-    "self-control": 0.14,
-    curiosity: 0.14,
-    integrity: 0.1,
-    optimism: 0.08,
+    empathy: 0.18,
+    respect: 0.16,
+    perseverance: 0.16,
+    confidence: 0.14,
+    "self-control": 0.12,
+    curiosity: 0.12,
+    integrity: 0.07,
+    optimism: 0.05,
   },
   "10-12": {
-    integrity: 0.18,
-    perseverance: 0.16,
-    optimism: 0.16,
-    confidence: 0.14,
-    curiosity: 0.14,
-    empathy: 0.12,
-    "self-control": 0.1,
+    integrity: 0.16,
+    respect: 0.16,
+    perseverance: 0.14,
+    optimism: 0.14,
+    confidence: 0.12,
+    curiosity: 0.12,
+    empathy: 0.1,
+    "self-control": 0.06,
   },
 };
 
@@ -288,6 +298,11 @@ export const MULTIPLIER_PAIRS: [ThriverTrait, ThriverTrait][] = [
   ["integrity", "empathy"],
   ["integrity", "optimism"],
   ["empathy", "optimism"],
+  // Respect is the outward expression of inner traits: strength in empathy
+  // or self-control scaffolds respectful behavior.
+  ["empathy", "respect"],
+  ["self-control", "respect"],
+  ["integrity", "respect"],
 ];
 
 function softmax(values: number[], temperature = 1.5): number[] {
@@ -409,6 +424,17 @@ export function computeBehavioralTraitSignals(input: BehavioralSignalInput): Rec
           ? 0.5
           : 0.2;
   s.optimism = Math.round((0.5 * regulateSig + 0.5 * comeback) * 100) / 100;
+
+  // Respect: treating people, animals, and things with care. Observed via
+  // care-oriented missions (kindness → people, pet_care → animals) plus
+  // approval rate (respecting commitments and the review process itself).
+  const careShare =
+    totalCat >= 4
+      ? ((input.categoryCompletionCounts.kindness ?? 0) + (input.categoryCompletionCounts.pet_care ?? 0)) /
+        totalCat
+      : NEUTRAL;
+  const processRespect = input.approvalRate30d ?? NEUTRAL;
+  s.respect = Math.round((0.6 * careShare + 0.4 * processRespect) * 100) / 100;
 
   return s;
 }
@@ -933,6 +959,93 @@ export const PARENT_VOICE_GUIDELINES = [
  * advice; no diagnosis; no labels on children; no shaming of parents.
  * Parent-provided text is quoted data, never instructions.
  */
+/* ------------------------------------------------------------------ */
+/* Trait mission seeds + patience skill seeds                           */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Concrete mission framings per trait, handed to the LLM as creative seeds
+ * for the highest-weighted traits. Original content — not copied from any
+ * published work. The model expands these into full missions; seeds keep
+ * trait emphasis grounded in kid-doable actions.
+ */
+export const TRAIT_MISSION_SEEDS: Record<ThriverTrait, string[]> = {
+  confidence: [
+    "Teach someone a small skill you know",
+    "Perform or show something you made to family",
+    "Try a mission one level harder than usual",
+  ],
+  empathy: [
+    "Notice how someone is feeling and name it kindly",
+    "Do something helpful without being asked",
+    "Comfort someone who is upset",
+  ],
+  "self-control": [
+    "Pause and breathe before reacting when frustrated",
+    "Follow a 3-step routine without reminders",
+    "Stop an activity calmly when time is up",
+  ],
+  integrity: [
+    "Admit a mistake honestly",
+    "Keep a promise you made yesterday",
+    "Return something you borrowed in good shape",
+  ],
+  curiosity: [
+    "Ask three 'why' questions about something ordinary",
+    "Investigate how something in the house works",
+    "Learn one new fact and teach it to someone",
+  ],
+  perseverance: [
+    "Retry something that didn't work the first time",
+    "Break a big task into tiny steps and do step one",
+    "Practice a tricky skill for 5 focused minutes",
+  ],
+  optimism: [
+    "Name three good things about today",
+    "Turn a 'I can't' into a 'I'm learning to'",
+    "Cheer someone else on",
+  ],
+  respect: [
+    "Ask before borrowing something that isn't yours",
+    "Listen without interrupting for 2 minutes",
+    "Care for something that belongs to someone else",
+    "Thank someone who helped you today",
+  ],
+};
+
+/**
+ * Patience is a skill theme, not a ninth trait: delayed-gratification and
+ * waiting-well framings woven through missions. Surfaced in prompts when
+ * self-control is among the emphasized traits (patience is self-control
+ * stretched across time).
+ */
+export const PATIENCE_MISSION_SEEDS: string[] = [
+  "Wait your turn in a game without reminders",
+  "Plant a seed and check it daily — notice slow growth",
+  "Listen to a whole story without interrupting",
+  "Save half of a treat for later today",
+  "Do a puzzle without asking for the answer right away",
+  "Watch clouds for 3 minutes and describe what you see",
+];
+
+/**
+ * Build the seed-guidance block for the mission prompt: concrete framings
+ * for the two highest-weighted traits, plus patience seeds when
+ * self-control is emphasized.
+ */
+export function buildTraitSeedGuidance(traitWeights: Record<ThriverTrait, number>): string {
+  const top = [...THRIVER_TRAITS].sort((a, b) => traitWeights[b] - traitWeights[a]).slice(0, 2);
+  const lines: string[] = [];
+  for (const t of top) {
+    const seeds = TRAIT_MISSION_SEEDS[t];
+    if (seeds?.length) lines.push(`- ${t} missions can look like: ${seeds.join("; ")}.`);
+  }
+  if (top.includes("self-control")) {
+    lines.push(`- Patience (waiting well, delayed gratification) missions can look like: ${PATIENCE_MISSION_SEEDS.slice(0, 3).join("; ")}.`);
+  }
+  return lines.length ? `Trait mission seeds (use as creative starting points, not templates):\n${lines.join("\n")}` : "";
+}
+
 export function buildMissionSetSystemPrompt(): string {
   return [
     "You are a mission writer for PARENTS (never children) in a family app.",
@@ -975,6 +1088,7 @@ export function buildMissionSetUserMessage(
     `Lifetime achievements: ${redacted.lifetime?.totalBadges ?? 0} badges, ${redacted.lifetime?.totalCompletions ?? 0} missions completed all-time. Strongest skills ever: ${Object.entries(redacted.lifetime?.badgesBySkill ?? {}).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([s, n]) => `${s} (${n})`).join(", ") || "just starting"}.`,
     `Developmental trait focus: ${redacted.traitFocus.join(", ") || "balanced"}.`,
     `Trait emphasis (weighted): ${emphasis}.`,
+    buildTraitSeedGuidance(redacted.traitWeights),
     `Completion rate (14d): ${redacted.completionRate14d ?? "unknown"}.`,
     `Weak weekdays: ${redacted.weakWeekdays.join(", ") || "none"}.`,
     `Weak categories: ${redacted.weakCategories.join(", ") || "none"}.`,
