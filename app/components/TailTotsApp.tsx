@@ -18,6 +18,8 @@ import GuidedOnboarding from "./GuidedOnboarding";
 import LanternPhilosophy from "./LanternPhilosophy";
 import ExploreMode from "./ExploreMode";
 import { ChoiceAdventureSpot } from "./ChoiceAdventureSpot";
+import VillageTab from "./ecosystem/VillageTab";
+import type { ConsentGrant, EcoArtifact } from "../../lib/ecosystem/types";
 import { CuriosityMissions } from "./CuriosityMissions";
 import { SynthesisZone } from "./SynthesisMoments";
 import { TRAIT_META } from "../../lib/character-curriculum";
@@ -528,10 +530,11 @@ const tabItems = [
   { id: "setup", label: "Setup", icon: "M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6" },
   { id: "neighborhood", label: "Hood", icon: "M3 11l9-8 9 8M5 10v10h14V10M10 20v-6h4v6" },
   { id: "growth", label: "Growth", icon: "M12 22v-8M12 14c0-4 3-8 8-10-1 5-4 8-8 10Zm0 0c0-3-2.5-6-6-7.5.8 3.8 3 6 6 7.5Z" },
+  { id: "village", label: "Village", icon: "M3 11l9-8 9 8M5 10v10h14V10M10 20v-6h4v6M2 21h20" },
 ];
 
 const kidTabIds = ["missions", "home", "schedule", "pets", "pet-helper", "bank", "neighborhood"];
-const parentTabIds = ["vision", "approvals", "setup", "schedule", "pets", "neighborhood", "growth"];
+const parentTabIds = ["vision", "approvals", "setup", "schedule", "pets", "neighborhood", "growth", "village"];
 const defaultParentPasscode = "4321";
 
 const savedFamilyStateKey = "tailtots-family-state-v1";
@@ -814,6 +817,22 @@ function getCertificateProgress(
 
 export function TailTotsApp() {
   const [role, setRole] = useState<Role>("parent");
+  // Ecosystem: village artifacts + consent grants (localStorage-backed).
+  // Default-deny: empty grants = nothing crosses contexts.
+  const [ecoArtifacts, setEcoArtifacts] = useState<EcoArtifact[]>(() =>
+    typeof window !== "undefined"
+      ? JSON.parse(localStorage.getItem("tailtots-eco-artifacts-v1") ?? "[]")
+      : []
+  );
+  const [ecoGrants, setEcoGrants] = useState<ConsentGrant[]>(() =>
+    typeof window !== "undefined"
+      ? JSON.parse(localStorage.getItem("tailtots-eco-grants-v1") ?? "[]")
+      : []
+  );
+  const persistEcoGrants = (g: ConsentGrant[]) => {
+    setEcoGrants(g);
+    try { localStorage.setItem("tailtots-eco-grants-v1", JSON.stringify(g)); } catch { /* storage full */ }
+  };
   // Playdate claim route: `#playdate/<inviteId>` renders the other parent's
   // claim view instead of the app.
   const [playdateRouteId, setPlaydateRouteId] = useState<string | null>(() =>
@@ -2874,6 +2893,15 @@ export function TailTotsApp() {
               onSelectChild={role === "parent" ? setActiveChildId : undefined}
               assignCurriculumMissions={assignCurriculumMissions}
               transactions={transactions}
+            />
+          )}
+          {visibleActiveTab === "village" && role === "parent" && activeChild && (
+            <VillageTab
+              childId={activeChild.id}
+              childName={activeChild.name}
+              artifacts={ecoArtifacts}
+              grants={ecoGrants}
+              onGrantChange={persistEcoGrants}
             />
           )}
           {visibleActiveTab === "neighborhood" && (

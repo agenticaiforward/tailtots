@@ -130,6 +130,16 @@ function copyFor(pattern: DetectedPattern, childName: string): InsightCopy {
           `Detected from mission completion patterns — not scored, celebrated. ` +
           `Milestones mark moments of autonomy: first steps, streaks, brave solos, comebacks.`,
       };
+    case "cross_context_strength":
+      return {
+        strength: `${childName}'s ${d.strength} is blooming in ${d.fromContext === "community" ? "the community" : d.fromContext} — a real strength to build on.`,
+        observation: `The same strength shows up less in ${d.toContext === "community" ? "community settings" : d.toContext}. That's normal — strengths need the right setting to shine.`,
+        suggestion: String(d.framing ?? `Try: ${d.suggestedActivity ?? "one small activity that practices this strength together"}.`),
+        detailTitle: `Cross-context strength: ${d.strength}`,
+        detailBody:
+          `Spotted by comparing ${childName}'s mission patterns across home, school, and community contexts — ` +
+          `with your consent. The AI suggests; you decide. Same muscle, new setting.`,
+      };
     default:
       return {
         strength: `${childName} is growing — here's what the week showed.`,

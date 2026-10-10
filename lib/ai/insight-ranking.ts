@@ -47,6 +47,7 @@ export const ACTIONABILITY_SCORES: Record<InsightType, number> = {
   weak_skill: 0.6, // informational
   engagement_rise: 0.4, // celebration — wonderful, but not the weekly slot
   independence_milestone: 0.5, // celebration of autonomy — joyful, not urgent
+  cross_context_strength: 0.75, // strength spotted across contexts — actionable coaching idea
 };
 
 export interface RankedInsight {

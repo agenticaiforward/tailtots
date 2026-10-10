@@ -24,6 +24,8 @@
 import { PARENT_VOICE_GUIDELINES } from "./mission-engine";
 import { ageBandForAge, type IdeaAgeBand } from "./ideas";
 import { detectIndependenceMilestones } from "./independence";
+import { detectStrengthTransfer } from "../ecosystem/cross-context";
+import type { ContextTraitSummary } from "../ecosystem/types";
 
 export const COPILOT_MODEL_ID = "@cf/meta/llama-3.1-8b-instruct-fp8-fast";
 
@@ -38,6 +40,7 @@ export const INSIGHT_TYPES = [
   "skill_imbalance",
   "engagement_rise",
   "independence_milestone",
+  "cross_context_strength",
 ] as const;
 export type InsightType = (typeof INSIGHT_TYPES)[number];
 
@@ -441,6 +444,7 @@ export function detectPatterns(
   events: CopilotEventInput[],
   child: CopilotChildInput,
   nowMs: number = Date.now(),
+  ecoSummaries?: ContextTraitSummary[],
 ): DetectedPattern[] {
   return [
     ...detectWeakWeekday(events, nowMs),
@@ -451,7 +455,31 @@ export function detectPatterns(
     ...detectDifficultyMismatch(events, nowMs),
     ...detectEngagementRise(events, nowMs),
     ...detectIndependenceMilestones_(events, nowMs),
+    ...(ecoSummaries ? detectCrossContextStrengths_(ecoSummaries) : []),
   ];
+}
+
+/**
+ * Ecosystem bridge: cross-context strength transfer as a Copilot insight.
+ * Severity is always info — this is a celebration with a coaching idea,
+ * never an alert. The suggestion text comes from the ecosystem module's
+ * deterministic, strength-only templates.
+ */
+function detectCrossContextStrengths_(
+  summaries: ContextTraitSummary[],
+): DetectedPattern[] {
+  return detectStrengthTransfer(summaries, { limit: 2 }).map((s) => ({
+    insightType: "cross_context_strength" as const,
+    severity: "info" as const,
+    detail: {
+      strength: s.strength,
+      fromContext: s.fromContext,
+      toContext: s.toContext,
+      forAdult: s.forAdult,
+      suggestedActivity: s.suggestedActivity,
+      framing: s.framing,
+    },
+  }));
 }
 
 /**
@@ -673,6 +701,8 @@ export function fallbackNarrative(input: NarrationInput): string {
         `${String(d.milestoneEmoji ?? "🌟")} "${String(d.milestoneTitle ?? "A new milestone")}" unlocked — ` +
         `doing more on their own! Celebrate it together, then step back a little further next time.`
       );
+    case "cross_context_strength":
+      return String(d.framing ?? "A strength spotted in one part of their world — build on it in another.");
   }
 }
 
