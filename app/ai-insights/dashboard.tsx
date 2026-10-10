@@ -10,7 +10,6 @@
  */
 
 import { useMemo, useState } from "react";
-import { TraitGarden, levelToStage } from "../components/traits/TraitGarden";
 import {
   generateDemoFamily,
   toCopilotEvents,
@@ -468,24 +467,31 @@ export function AiInsightsDashboard() {
         {a.blurb}
       </p>
 
-      {/* 1. Trait development — VISUAL GARDEN, not text scores */}
+      {/* 1. Trait development */}
       <Section kicker="DEVELOPMENTAL MISSION ENGINE" title="Trait development — what the AI sees">
-        <TraitGarden
-          childName={a.child.name}
-          traits={THRIVER_TRAITS.map((t) => ({
-            trait: TRAIT_LABELS[t],
-            caption: t === snap.weakestTraits[0] ? "Getting extra sunshine" : "Growing steadily",
-            stage: levelToStage(snap.traitScores[t]),
-            _level: snap.traitScores[t],
-          }))}
-        />
-        <details style={{ marginTop: 12, fontSize: 12, color: "#8a978f" }}>
-          <summary style={{ cursor: "pointer", fontWeight: 700 }}>How the AI scores this (for evaluators)</summary>
-          <p style={{ marginTop: 8, lineHeight: 1.5 }}>
-            Seven traits, scored 0–1 from <strong>behavioral signals only</strong> (never surveys, never labels).
-            The personalization weight uses 60% weakest-trait targeting, 25% age-band priority, 15% multiplier-pair boost.
-          </p>
-        </details>
+        <p style={{ fontSize: 13, color: "#5a6b63", margin: "0 0 16px", lineHeight: 1.55 }}>
+          Seven traits, scored 0–1 from <strong>behavioral signals only</strong> (never surveys, never labels):
+          difficulty choices → confidence · kindness &amp; pet-care share → empathy · streak + skip rate →
+          self-control · parent approval rate → integrity · category breadth → curiosity · completion + hard-mission
+          rate → perseverance · comeback speed → optimism.
+        </p>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "0 24px" }}>
+          {weightRows.map((r) => (
+            <Bar
+              key={r.trait}
+              label={`${TRAIT_LABELS[r.trait]}${r.isWeakest ? " · needs nurture" : ""}`}
+              value={r.score}
+              max={1}
+              color={TRAIT_COLORS[r.trait]}
+              sub={`weight ${r.weight.toFixed(2)}`}
+            />
+          ))}
+        </div>
+        <p style={{ fontSize: 12, color: "#8a978f", margin: "12px 0 0", lineHeight: 1.5 }}>
+          The <strong>weight</strong> number is the 60/25/15 personalization algorithm at work: 60% toward the
+          weakest traits, 25% age-band priority, 15% multiplier-pair boost. Missions are generated for the
+          highest-weighted traits first.
+        </p>
       </Section>
 
       {/* 2. Detected patterns */}
