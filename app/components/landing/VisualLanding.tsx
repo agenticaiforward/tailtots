@@ -265,16 +265,20 @@ export function VisualLanding({
         <h2 className="text-center text-xl font-black">Families are growing</h2>
         <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
           {[
-            "/landing/household-african-american-dog.jpg",
-            "/landing/household-south-asian-cat.jpg",
-            "/landing/household-east-asian-rabbit.jpg",
-            "/landing/household-latino-guinea-pig.jpg",
-          ].map((src, i) => (
-            <div key={src} className="relative overflow-hidden rounded-2xl">
-              <img src={src} alt={`Family ${i + 1} with their pet`} className="aspect-square w-full object-cover" loading="lazy" />
+            { src: "/landing/household-african-american-dog.jpg", name: "The Johnsons", missions: "127 missions" },
+            { src: "/landing/household-south-asian-girl-cat-bedroom.jpg", name: "The Patels", missions: "89 missions" },
+            { src: "/landing/household-east-asian-siblings-rabbit-garden.jpg", name: "The Chens", missions: "203 missions" },
+            { src: "/landing/household-latina-girl-guineapig-livingroom.jpg", name: "The Garcias", missions: "64 missions" },
+            { src: "/landing/household-african-american-siblings-dog-park.jpg", name: "The Williams", missions: "156 missions" },
+            { src: "/landing/household-south-asian-cat.jpg", name: "The Sharmas", missions: "98 missions" },
+            { src: "/landing/household-east-asian-rabbit.jpg", name: "The Lius", missions: "174 missions" },
+            { src: "/landing/household-latino-guinea-pig.jpg", name: "The Fernandezes", missions: "71 missions" },
+          ].map((f, i) => (
+            <div key={f.src} className="relative overflow-hidden rounded-2xl">
+              <img src={f.src} alt={`Family ${i + 1} with their pet`} className="aspect-square w-full object-cover" loading="lazy" />
               <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-3 pt-8">
-                <p className="text-xs font-extrabold text-white">{["The Johnsons", "The Patels", "The Chens", "The Garcias"][i]}</p>
-                <p className="text-[11px] font-semibold text-white/80">{["127 missions", "89 missions", "203 missions", "64 missions"][i]}</p>
+                <p className="text-xs font-extrabold text-white">{f.name}</p>
+                <p className="text-[11px] font-semibold text-white/80">{f.missions}</p>
               </div>
             </div>
           ))}
