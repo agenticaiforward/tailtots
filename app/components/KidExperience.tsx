@@ -19,7 +19,7 @@ import { BraveTryStreak, braveTriesFromMissions } from "./BraveTryStreak";
 import { MemoryStones } from "./MemoryStones";
 import type { PetKind } from "./pet-buddy";
 
-function petKindFor(species: string): PetKind {
+export function petKindFor(species: string): PetKind {
   const s = species.toLowerCase();
   if (s.includes("dog")) return "dog";
   if (s.includes("cat")) return "cat";

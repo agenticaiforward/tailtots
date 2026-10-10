@@ -298,6 +298,21 @@ export default function WeeklyInsight({ insight, childName, onAcknowledge, detai
           {detailExtra}
         </div>
       )}
+      {/* AI humility footer — the lantern, not the leash */}
+      <p
+        style={{
+          marginTop: 18,
+          paddingTop: 14,
+          borderTop: "1px solid #e3ede8",
+          fontSize: 12,
+          color: "#69736f",
+          lineHeight: 1.55,
+          fontStyle: "italic",
+        }}
+      >
+        We see patterns in missions — not the whole child. You know {childName} better
+        than any algorithm ever will. 💛
+      </p>
     </section>
   );
 }

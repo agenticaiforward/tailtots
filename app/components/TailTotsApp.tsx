@@ -6,7 +6,22 @@ import Image from "next/image";
 import Cropper, { type Area } from "react-easy-crop";
 import { PetBuddyFace } from "./pet-buddy";
 import type { PetKind } from "./pet-buddy";
-import { KidExperienceTop, KidExperienceBottom } from "./KidExperience";
+import { KidExperienceTop, KidExperienceBottom, petKindFor as petKindForSpecies } from "./KidExperience";
+import { VisualLanding } from "./landing/VisualLanding";
+import { KidMyDay, ParentToday } from "./schedule/ScheduleAdapters";
+import { TraitGarden, levelToStage } from "./traits/TraitGarden";
+import { CelebrationEngine, BraveTryCelebration, type CelebrationReward } from "./CelebrationEngine";
+import { WelcomeBack } from "./WelcomeBack";
+import { SoundToggle } from "./SoundToggle";
+import AudienceLanes from "./AudienceLanes";
+import GuidedOnboarding from "./GuidedOnboarding";
+import LanternPhilosophy from "./LanternPhilosophy";
+import ExploreMode from "./ExploreMode";
+import { ChoiceAdventureSpot } from "./ChoiceAdventureSpot";
+import { CuriosityMissions } from "./CuriosityMissions";
+import { SynthesisZone } from "./SynthesisMoments";
+import { TRAIT_META } from "../../lib/character-curriculum";
+import { playClick } from "../../lib/sound";
 import { InviteFamily } from "./InviteFamily";
 import { PlaydateClaimView } from "./PlaydateClaimView";
 import { GivingShareView } from "./GivingShareView";
@@ -441,15 +456,15 @@ const starterScheduleItems: KidScheduleItem[] = [
 ];
 
 const childLooks: Record<string, { initial: string; colors: string; joy: number; love: number; hair: string }> = {
-  sahasra: { initial: "M", colors: "from-[#ffcf70] via-[#ff8a65] to-[#6d3ed1]", joy: 92, love: 88, hair: "#4a2718" },
-  aarush: { initial: "L", colors: "from-[#79d6ff] via-[#4ade80] to-[#2563eb]", joy: 78, love: 84, hair: "#1f2937" },
+  sahasra: { initial: "M", colors: "from-[#ffcf70] via-[#ff8a65] to-tt-grape", joy: 92, love: 88, hair: "#4a2718" },
+  aarush: { initial: "L", colors: "from-[#79d6ff] via-[#4ade80] to-tt-blue", joy: 78, love: 84, hair: "#1f2937" },
 };
 
 const petLooks: Record<string, { face: string; colors: string; happiness: number; loved: number; kind: PetKind }> = {
-  jack: { face: "J", colors: "from-[#ffd166] via-[#f47b20] to-[#7c2d12]", happiness: 94, loved: 91, kind: "guinea" },
-  jamie: { face: "J", colors: "from-[#ffd166] via-[#f47b20] to-[#7c2d12]", happiness: 83, loved: 89, kind: "guinea" },
+  jack: { face: "J", colors: "from-tt-sun via-tt-tang to-[#7c2d12]", happiness: 94, loved: 91, kind: "guinea" },
+  jamie: { face: "J", colors: "from-tt-sun via-tt-tang to-[#7c2d12]", happiness: 83, loved: 89, kind: "guinea" },
   captain: { face: "C", colors: "from-[#86efac] via-[#65a30d] to-[#365314]", happiness: 88, loved: 90, kind: "tortoise" },
-  rb: { face: "R", colors: "from-[#93c5fd] via-[#06b6d4] to-[#2563eb]", happiness: 86, loved: 87, kind: "fish" },
+  rb: { face: "R", colors: "from-[#93c5fd] via-[#06b6d4] to-tt-blue", happiness: 86, loved: 87, kind: "fish" },
 };
 
 /** Illustrated storybook pet portraits. Shown whenever the family hasn't captured a real photo yet. */
@@ -497,22 +512,22 @@ function getPetCareStats(petId: string, missions: Mission[]): {
   const loved = Math.min(98, 66 + approved * 4);
   const mood = approved === 0 ? "Waiting to meet you" : approved < 5 ? "Warming up" : approved < 15 ? "Happy" : "Thriving";
   const stage = approved < 5 ? "New buddy" : approved < 15 ? "Rising star" : approved < 30 ? "Superstar" : "Legend";
-  const stageRing = approved < 5 ? "ring-[#d8cfc0]" : approved < 15 ? "ring-[#d97706]" : approved < 30 ? "ring-[#94a3b8]" : "ring-[#f4b400]";
+  const stageRing = approved < 5 ? "ring-[#d8cfc0]" : approved < 15 ? "ring-[#d97706]" : approved < 30 ? "ring-[#94a3b8]" : "ring-tt-gold";
   return { approved, happiness, loved, mood, stage, stageRing };
 }
 
 const tabItems = [
-  { id: "vision", label: "Vision" },
-  { id: "missions", label: "Today" },
-  { id: "home", label: "Home Hub" },
-  { id: "schedule", label: "Schedule" },
-  { id: "pets", label: "Pet Passports" },
-  { id: "pet-helper", label: "AI Buddy" },
-  { id: "bank", label: "Kid Bank" },
-  { id: "approvals", label: "Parent Review" },
-  { id: "setup", label: "Family Setup" },
-  { id: "neighborhood", label: "Neighborhood" },
-  { id: "growth", label: "Growth Log" },
+  { id: "vision", label: "Vision", icon: "M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm1 15h-2v-6h2v6Zm0-8h-2V7h2v2Z" },
+  { id: "missions", label: "Today", icon: "M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" },
+  { id: "home", label: "Home", icon: "M3 10.5 12 3l9 7.5M5 9.5V21h14V9.5" },
+  { id: "schedule", label: "My Day", icon: "M8 2v4M16 2v4M3 8h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z" },
+  { id: "pets", label: "Pets", icon: "M12 13c-2.8 0-5 2-5 4.2 0 1.4 1 2.3 2.4 2.3 1 0 1.7-.5 2.6-.5s1.6.5 2.6.5c1.4 0 2.4-.9 2.4-2.3 0-2.2-2.2-4.2-5-4.2ZM6.5 8.5a1.8 1.8 0 1 0 0-.01M17.5 8.5a1.8 1.8 0 1 0 0-.01M9.5 5.5a1.8 1.8 0 1 0 0-.01M14.5 5.5a1.8 1.8 0 1 0 0-.01" },
+  { id: "pet-helper", label: "Buddy", icon: "M12 3a7 7 0 0 0-7 7c0 2.4 1.2 4.5 3 5.7V18a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2v-2.3c1.8-1.2 3-3.3 3-5.7a7 7 0 0 0-7-7Zm-3 13.5A5 5 0 0 1 7 10a5 5 0 0 1 10 0 5 5 0 0 1-2 6.5V18h-6v-4.5Z" },
+  { id: "bank", label: "Bank", icon: "M3 9l9-6 9 6M4 9v10M20 9v10M8 13v4M12 13v4M16 13v4M2 21h20" },
+  { id: "approvals", label: "Review", icon: "M9 12l2 2 4-4M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Z" },
+  { id: "setup", label: "Setup", icon: "M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6" },
+  { id: "neighborhood", label: "Hood", icon: "M3 11l9-8 9 8M5 10v10h14V10M10 20v-6h4v6" },
+  { id: "growth", label: "Growth", icon: "M12 22v-8M12 14c0-4 3-8 8-10-1 5-4 8-8 10Zm0 0c0-3-2.5-6-6-7.5.8 3.8 3 6 6 7.5Z" },
 ];
 
 const kidTabIds = ["missions", "home", "schedule", "pets", "pet-helper", "bank", "neighborhood"];
@@ -626,14 +641,14 @@ function buildCertificateHtml(child: Child, cert: Certificate, familyName: strin
 <html lang="en"><head><meta charset="utf-8" />
 <title>${cert.title} — ${childName}</title>
 <style>
-  body { font-family: Georgia, 'Times New Roman', serif; background: #faf8f0; display: flex; justify-content: center; padding: 48px 16px; margin: 0; }
-  .cert { background: #fff; border: 6px double #6d3ed1; border-radius: 24px; max-width: 640px; width: 100%; padding: 56px 48px; text-align: center; }
-  .kicker { font-size: 12px; letter-spacing: 4px; text-transform: uppercase; color: #6d3ed1; font-weight: bold; }
-  h1 { font-size: 40px; margin: 12px 0 4px; color: #17231f; }
-  .name { font-size: 32px; font-weight: bold; color: #6d3ed1; margin: 16px 0 4px; }
-  .family { font-size: 16px; color: #4f625b; }
-  p.body { font-size: 17px; line-height: 1.7; color: #17231f; margin: 24px 0; }
-  .date { font-size: 14px; color: #4f625b; margin-top: 24px; }
+  body { font-family: Georgia, 'Times New Roman', serif; background: var(--tt-cream); display: flex; justify-content: center; padding: 48px 16px; margin: 0; }
+  .cert { background: #fff; border: 6px double var(--tt-grape); border-radius: 24px; max-width: 640px; width: 100%; padding: 56px 48px; text-align: center; }
+  .kicker { font-size: 12px; letter-spacing: 4px; text-transform: uppercase; color: var(--tt-grape); font-weight: bold; }
+  h1 { font-size: 40px; margin: 12px 0 4px; color: var(--tt-ink); }
+  .name { font-size: 32px; font-weight: bold; color: var(--tt-grape); margin: 16px 0 4px; }
+  .family { font-size: 16px; color: var(--tt-ink-soft); }
+  p.body { font-size: 17px; line-height: 1.7; color: var(--tt-ink); margin: 24px 0; }
+  .date { font-size: 14px; color: var(--tt-ink-soft); margin-top: 24px; }
   .paws { font-size: 32px; margin-top: 16px; letter-spacing: 12px; }
   @media print { body { background: #fff; padding: 0; } .cert { border-width: 8px; } }
 </style></head>
@@ -819,6 +834,8 @@ export function TailTotsApp() {
   }, []);
   const [activeTab, setActiveTab] = useState("vision");
   const [isParentUnlocked, setIsParentUnlocked] = useState(true);
+  // Guided onboarding overlay (Duolingo lesson-one loop): value before signup.
+  const [showOnboarding, setShowOnboarding] = useState(false);
   const [parentGateOpen, setParentGateOpen] = useState(false);
   const [gateInput, setGateInput] = useState("");
   const [gateError, setGateError] = useState(false);
@@ -2367,15 +2384,15 @@ export function TailTotsApp() {
   }
 
   return (
-    <main className="tailtots-app min-h-screen bg-[#faf8f0] text-[#17231f]">
-      <header className="sticky top-0 z-20 border-b border-[#ded8c7] bg-white/95 backdrop-blur">
+    <main className="tailtots-app min-h-screen bg-tt-cream text-tt-ink">
+      <header className="sticky top-0 z-20 border-b border-tt-line bg-white/95 backdrop-blur">
         <div className="mx-auto flex max-w-7xl flex-col gap-3 px-3 py-2 sm:flex-row sm:items-center sm:justify-between sm:px-5 sm:py-3">
           <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto sm:gap-3">
             <img src="/tailtots-logo.png" alt="TailTots logo" className="h-12 w-auto shrink-0 rounded-lg object-contain sm:h-14" />
             <div className="min-w-0">
-              <p className="hidden text-xs font-bold text-[#69736f] sm:block">Parent-guided real-world growth.</p>
+              <p className="hidden text-xs font-bold text-tt-ink-faint sm:block">Parent-guided real-world growth.</p>
               {!isRouteChooser && (
-                <p className="mt-1 inline-flex max-w-full items-center rounded-full bg-[#fff4d8] px-2 py-1 text-[11px] font-black leading-4 text-[#7a4b12] sm:hidden">
+                <p className="mt-1 inline-flex max-w-full items-center rounded-full bg-tt-sun-soft px-2 py-1 text-[11px] font-black leading-4 text-tt-cocoa sm:hidden">
                   <span className="truncate">{operatorLabel}</span>
                 </p>
               )}
@@ -2383,24 +2400,24 @@ export function TailTotsApp() {
           </div>
           {!isRouteChooser && (
           <div className="flex w-full flex-wrap justify-start gap-2 sm:w-auto sm:shrink-0 sm:justify-end">
-            <div className="hidden min-h-11 items-center rounded-full border border-[#ded8c7] bg-white px-4 text-xs font-black text-[#17231f] md:flex">
+            <div className="hidden min-h-11 items-center rounded-full border border-tt-line bg-white px-4 text-xs font-black text-tt-ink md:flex">
               {operatorLabel}
             </div>
             {role === "child" && dailyChecksEnabled && (
               <div
-                className="flex min-h-11 items-center rounded-full border border-[#ded8c7] bg-[#e7f4ef] px-4 text-xs font-black text-[#165a4b]"
+                className="flex min-h-11 items-center rounded-full border border-tt-line bg-tt-pine-tint px-4 text-xs font-black text-tt-pine"
                 title="About a minute per visit keeps TailTots a helper, not a habit."
               >
                 ⚡ {Math.max(0, maxDailyChecks - checksUsed)} of {maxDailyChecks} check-ins left today
               </div>
             )}
-            <div className="flex rounded-full border border-[#ded8c7] bg-[#faf8f0] p-1 text-xs font-black">
+            <div className="flex rounded-full border border-tt-line bg-tt-cream p-1 text-xs font-black">
               {(["parent", "child"] as Role[]).map((item) => (
                 <button
                   key={item}
                   aria-label={`Switch to ${item} mode`}
                   onClick={() => switchRole(item)}
-                  className={`min-h-10 rounded-full px-3 py-2 capitalize sm:min-h-11 sm:px-5 ${role === item ? "bg-[#165a4b] text-white" : "text-[#4f625b]"}`}
+                  className={`min-h-10 rounded-full px-3 py-2 capitalize sm:min-h-11 sm:px-5 ${role === item ? "bg-tt-pine text-white" : "text-tt-ink-soft"}`}
                 >
                   {item}
                 </button>
@@ -2419,12 +2436,12 @@ export function TailTotsApp() {
       </header>
 
       {!isRouteChooser && (
-        <div className="border-b border-[#ded8c7] bg-[#ffffff]">
+        <div className="border-b border-tt-line bg-[#ffffff]">
           <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-2 px-3 py-2 sm:px-5">
-            <button onClick={openRouteChooser} className="min-h-10 rounded-lg border border-[#ded8c7] bg-white px-3 py-2 text-xs font-black text-[#17231f]">
+            <button onClick={openRouteChooser} className="min-h-10 rounded-lg border border-tt-line bg-white px-3 py-2 text-xs font-black text-tt-ink">
               Start page
             </button>
-            <button onClick={openContactSection} className="min-h-10 rounded-lg bg-[#165a4b] px-3 py-2 text-xs font-black text-white">
+            <button onClick={openContactSection} className="min-h-10 rounded-lg bg-tt-pine px-3 py-2 text-xs font-black text-white">
               Contact us
             </button>
             {/* Stream R2: persistent demo/real mode banner with one-tap path switching. */}
@@ -2432,14 +2449,14 @@ export function TailTotsApp() {
               role="status"
               aria-live="polite"
               className={`flex min-h-10 flex-wrap items-center gap-2 rounded-lg border px-3 py-2 text-xs font-black ${
-                appMode === "demo" ? "border-[#f0c96a] bg-[#fff4d8] text-[#7a4b12]" : "border-[#165a4b]/30 bg-[#e7f4ef] text-[#0d3b30]"
+                appMode === "demo" ? "border-[#f0c96a] bg-tt-sun-soft text-tt-cocoa" : "border-tt-pine/30 bg-tt-pine-tint text-tt-pine-deep"
               }`}
             >
               {appMode === "demo" ? (
                 <>
                   <span aria-hidden="true">🧪</span>
                   <span>Demo mode — you&apos;re exploring the sample family. Nothing here is real.</span>
-                  <button onClick={startFreshFamilySetup} className="tt-btn-press min-h-9 rounded-lg bg-[#17231f] px-3 py-1.5 text-xs font-black text-white">
+                  <button onClick={startFreshFamilySetup} className="tt-btn-press min-h-9 rounded-lg bg-tt-ink px-3 py-1.5 text-xs font-black text-white">
                     Set up my family →
                   </button>
                 </>
@@ -2450,11 +2467,11 @@ export function TailTotsApp() {
                     Your family — real setup{cloudAccountEmail ? ` · signed in as ${cloudAccountEmail}` : " · saved on this device"}
                     {cloudSyncOn ? " · cloud sync on" : ""}.
                   </span>
-                  <button onClick={openParentDemo} className="tt-btn-press min-h-9 rounded-lg border-2 border-[#165a4b]/40 bg-white px-3 py-1.5 text-xs font-black text-[#0d3b30]">
+                  <button onClick={openParentDemo} className="tt-btn-press min-h-9 rounded-lg border-2 border-tt-pine/40 bg-white px-3 py-1.5 text-xs font-black text-tt-pine-deep">
                     Explore the demo
                   </button>
                   {!cloudAccountEmail && (
-                    <button onClick={() => setAuthPage("signin")} className="tt-btn-press min-h-9 rounded-lg px-3 py-1.5 text-xs font-black text-[#165a4b] underline">
+                    <button onClick={() => setAuthPage("signin")} className="tt-btn-press min-h-9 rounded-lg px-3 py-1.5 text-xs font-black text-tt-pine underline">
                       Have an account? Sign in
                     </button>
                   )}
@@ -2469,17 +2486,17 @@ export function TailTotsApp() {
         isRouteChooser ? "grid-cols-1" : "lg:grid-cols-[280px_1fr] xl:grid-cols-[300px_1fr]"
       }`}>
         <aside className={`min-w-0 space-y-3 lg:space-y-4 ${isRouteChooser ? "hidden" : ""}`}>
-          <div className="rounded-lg border border-[#ded8c7] bg-white p-3 shadow-sm">
+          <div className="rounded-lg border border-tt-line bg-white p-3 shadow-sm">
             {familyPhotoUrl ? (
               <figure className="relative rotate-[-1.5deg] rounded-md bg-white p-3 pb-3 shadow-[0_12px_32px_rgba(23,35,31,0.20)] ring-1 ring-[#e5ddc8]">
-                <span aria-hidden="true" className="absolute -top-2.5 left-8 z-10 h-6 w-20 -rotate-[8deg] rounded-[2px] bg-[#ffd166]/85 shadow-sm" />
+                <span aria-hidden="true" className="absolute -top-2.5 left-8 z-10 h-6 w-20 -rotate-[8deg] rounded-[2px] bg-tt-sun/85 shadow-sm" />
                 <span aria-hidden="true" className="absolute -top-2.5 right-8 z-10 h-6 w-20 rotate-[8deg] rounded-[2px] bg-[#7dd3fc]/75 shadow-sm" />
                 <div className="overflow-hidden rounded-[3px]">
                   <img src={familyPhotoUrl} alt={`${familyName} family photo`} className="h-60 w-full object-cover sm:h-72 lg:h-[26rem]" />
                 </div>
                 <figcaption className="flex items-center justify-between gap-2 px-1 pt-3">
-                  <p className="truncate text-sm font-black text-[#17231f]">The {familyName} family 📸</p>
-                  <span className="shrink-0 rounded-full bg-[#e7f4ef] px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-[#165a4b]">
+                  <p className="truncate text-sm font-black text-tt-ink">The {familyName} family 📸</p>
+                  <span className="shrink-0 rounded-full bg-tt-pine-tint px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-tt-pine">
                     {appMode === "real" ? "Your family" : "Demo family"}
                   </span>
                 </figcaption>
@@ -2487,26 +2504,26 @@ export function TailTotsApp() {
             ) : (
               <div className="relative min-h-[220px] max-w-full overflow-hidden rounded-md bg-[linear-gradient(135deg,#165a4b,#f47b20_58%,#2563eb)] sm:min-h-[280px] lg:min-h-[430px]">
                 <div className="absolute inset-0 grid place-items-center">
-                  <div className="absolute left-8 top-16 rounded-full bg-white/90 px-3 py-1 text-xs font-black text-[#6d3ed1] shadow-sm animate-[reward-pop_2.8s_ease-in-out_infinite]">+coins</div>
-                  <div className="absolute right-8 top-24 rounded-full bg-[#ffd166] px-3 py-1 text-xs font-black text-[#17231f] shadow-sm animate-[reward-pop_3.2s_ease-in-out_infinite]">badge</div>
-                  <div className="absolute bottom-28 left-10 rounded-full bg-white/90 px-3 py-1 text-xs font-black text-[#165a4b] shadow-sm animate-[reward-pop_3.5s_ease-in-out_infinite]">done</div>
+                  <div className="absolute left-8 top-16 rounded-full bg-white/90 px-3 py-1 text-xs font-black text-tt-grape shadow-sm animate-[reward-pop_2.8s_ease-in-out_infinite]">+coins</div>
+                  <div className="absolute right-8 top-24 rounded-full bg-tt-sun px-3 py-1 text-xs font-black text-tt-ink shadow-sm animate-[reward-pop_3.2s_ease-in-out_infinite]">badge</div>
+                  <div className="absolute bottom-28 left-10 rounded-full bg-white/90 px-3 py-1 text-xs font-black text-tt-pine shadow-sm animate-[reward-pop_3.5s_ease-in-out_infinite]">done</div>
                   <FamilyFaceParade parents={parents} childProfiles={children} pets={pets} animated />
                 </div>
-                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-white/90 px-3 py-1 text-[11px] font-black text-[#165a4b] shadow-sm">
+                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-white/90 px-3 py-1 text-[11px] font-black text-tt-pine shadow-sm">
                   {appMode === "real" ? "Your family" : "Demo family"}
                 </div>
               </div>
             )}
             <div className="px-1 pb-1 pt-3">
-              <p className="text-xs font-black uppercase tracking-[0.16em] text-[#165a4b]">Household</p>
-              <h2 className="text-2xl font-black leading-tight text-[#17231f] sm:text-3xl">{familyName}</h2>
+              <p className="text-xs font-black uppercase tracking-[0.16em] text-tt-pine">Household</p>
+              <h2 className="text-2xl font-black leading-tight text-tt-ink sm:text-3xl">{familyName}</h2>
               {role === "parent" && isParentUnlocked && (
               <div className="mt-3 flex flex-wrap gap-2">
-                <label className="inline-flex min-h-11 cursor-pointer items-center rounded-lg border border-[#ded8c7] bg-white px-4 py-2 text-xs font-black text-[#17231f] shadow-sm">
+                <label className="inline-flex min-h-11 cursor-pointer items-center rounded-lg border border-tt-line bg-white px-4 py-2 text-xs font-black text-tt-ink shadow-sm">
                   Family photo
                 <input className="sr-only" type="file" accept="image/*" onChange={(event) => updateFamilyPhoto(event.target.files?.[0])} />
                 </label>
-                <button onClick={() => setActiveTab("pets")} className="min-h-11 rounded-lg bg-[#17231f] px-4 py-2 text-xs font-black text-white shadow-sm">
+                <button onClick={() => setActiveTab("pets")} className="min-h-11 rounded-lg bg-tt-ink px-4 py-2 text-xs font-black text-white shadow-sm">
                   Pets
                 </button>
               </div>
@@ -2520,14 +2537,19 @@ export function TailTotsApp() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`min-h-11 min-w-max rounded-lg px-4 py-3 text-left text-sm font-black lg:min-h-12 ${
-                  visibleActiveTab === tab.id ? "bg-[#17231f] text-white" : "border border-[#ded8c7] bg-white text-[#17231f]"
+                className={`flex min-h-11 min-w-max items-center gap-2 rounded-xl px-4 py-3 text-left text-sm font-extrabold lg:min-h-12 ${
+                  visibleActiveTab === tab.id ? "bg-tt-ink text-white shadow-md" : "border border-tt-line bg-tt-paper text-tt-ink"
                 }`}
+                aria-current={visibleActiveTab === tab.id ? "page" : undefined}
               >
-                {tab.label}
+                <svg viewBox="0 0 24 24" className="size-5 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d={tab.icon} />
+                </svg>
+                <span className="hidden sm:inline">{tab.label}</span>
+                <span className="sm:hidden sr-only">{tab.label}</span>
                 {tab.id === "approvals" && role === "parent" && parentPendingCount > 0 && (
                   <span
-                    className="ml-2 inline-flex min-h-5 min-w-5 items-center justify-center rounded-full bg-[#d92626] px-1.5 text-[11px] font-black text-white"
+                    className="ml-2 inline-flex min-h-5 min-w-5 items-center justify-center rounded-full bg-tt-alert px-1.5 text-[11px] font-black text-white"
                     role="status"
                     aria-label={`${parentPendingCount} items need your review`}
                   >
@@ -2542,24 +2564,29 @@ export function TailTotsApp() {
 
         <div className="space-y-5">
           {role === "parent" && visibleActiveTab === "vision" && (
-            <VisionLandingPanel
-              openParentDemo={openParentDemo}
-              openKidDemo={openKidDemo}
-              openSignup={() => setAuthPage("signup")}
-              openSignin={() => setAuthPage("signin")}
-              previewChildName={children[0]?.name ?? "Demo Kid"}
-              previewFamilyName={familyName || "Demo Crew"}
+            <VisualLanding
+              onTryDemo={openKidDemo}
+              onSignup={() => setAuthPage("signup")}
+            />
+          )}
+          {showOnboarding && (
+            <GuidedOnboarding
+              onComplete={() => setShowOnboarding(false)}
+              onSignup={() => {
+                setShowOnboarding(false);
+                setAuthPage("signup");
+              }}
             />
           )}
           {checksExhausted ? (
-            <section className="rounded-3xl border border-[#ded8c7] bg-white p-8 text-center shadow-sm">
+            <section className="rounded-3xl border border-tt-line bg-white p-8 text-center shadow-sm">
               <p className="text-5xl" aria-hidden="true">🌱</p>
-              <p className="text-xs font-black uppercase tracking-[0.22em] text-[#165a4b]">All paced for today</p>
+              <p className="text-xs font-black uppercase tracking-[0.22em] text-tt-pine">All paced for today</p>
               <h2 className="mt-2 text-3xl font-black">That's {maxDailyChecks} check-ins — nicely done!</h2>
-              <p className="mx-auto mt-3 max-w-md text-sm font-semibold leading-6 text-[#4f625b]">
+              <p className="mx-auto mt-3 max-w-md text-sm font-semibold leading-6 text-tt-ink-soft">
                 About a minute per visit keeps TailTots a helper, not a habit. The app will be right here tomorrow — go play, rest, and come back fresh. 💛
               </p>
-              <p className="mt-3 text-xs font-bold text-[#69736f]">Grown-ups: adjust or pause check-ins anytime in Family Setup.</p>
+              <p className="mt-3 text-xs font-bold text-tt-ink-faint">Grown-ups: adjust or pause check-ins anytime in Family Setup.</p>
             </section>
           ) : (
           (role === "child" || isParentUnlocked) && (
@@ -2618,17 +2645,24 @@ export function TailTotsApp() {
             </>
           )}
           {visibleActiveTab === "schedule" && role === "parent" && (
-            <SchedulePanel
-              familyName={familyName}
+            <ParentScheduleView
+              missions={missions}
               childProfiles={children}
+              familyName={familyName}
               kidAvailability={kidAvailability}
               setKidAvailability={setKidAvailability}
             />
           )}
           {visibleActiveTab === "schedule" && role === "child" && (
-            <KidScheduleView
-              activeChild={activeChild}
-              kidAvailability={kidAvailability}
+            <KidMyDay
+              missions={kidVisibleMissions}
+              childName={activeChild?.name ?? "Kid"}
+              childAge={activeChild?.age ?? 7}
+              onStartMission={(id) => {
+                const el = document.getElementById(`mission-${id}`);
+                if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+              }}
+              onCompleteMission={completeMission}
             />
           )}
           {visibleActiveTab === "pets" && (
@@ -2861,15 +2895,15 @@ export function TailTotsApp() {
         />
       )}
       {parentGateOpen && (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-[#17231f]/80 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Grown-ups only">
-          <div className="tt-animate-pop-in w-full max-w-sm rounded-3xl border border-[#ded8c7] bg-white p-6 text-center shadow-2xl sm:p-8">
+        <div className="fixed inset-0 z-50 grid place-items-center bg-tt-ink/80 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Grown-ups only">
+          <div className="tt-animate-pop-in w-full max-w-sm rounded-3xl border border-tt-line bg-white p-6 text-center shadow-2xl sm:p-8">
             <p className="text-5xl" aria-hidden="true">🔒</p>
-            <p className="mt-2 text-xs font-black uppercase tracking-[0.22em] text-[#165a4b]">Grown-ups only</p>
-            <p className="mt-2 text-xl font-black text-[#17231f]">Enter the parent passcode</p>
-            <p className="mx-auto mt-2 max-w-xs text-sm font-semibold leading-6 text-[#4f625b]">
+            <p className="mt-2 text-xs font-black uppercase tracking-[0.22em] text-tt-pine">Grown-ups only</p>
+            <p className="mt-2 text-xl font-black text-tt-ink">Enter the parent passcode</p>
+            <p className="mx-auto mt-2 max-w-xs text-sm font-semibold leading-6 text-tt-ink-soft">
               Parent controls stay behind your passcode. You can change it anytime in Family Setup.
             </p>
-            <label className="mt-4 block text-left text-xs font-black uppercase tracking-[0.14em] text-[#4f625b]">
+            <label className="mt-4 block text-left text-xs font-black uppercase tracking-[0.14em] text-tt-ink-soft">
               Parent passcode
               <input
                 type="password"
@@ -2879,7 +2913,7 @@ export function TailTotsApp() {
                 onChange={(event) => { setGateInput(event.target.value); setGateError(false); }}
                 onKeyDown={(event) => { if (event.key === "Enter") submitParentGate(); }}
                 placeholder="••••"
-                className={`mt-2 w-full rounded-xl border-2 bg-white px-4 py-3 text-center text-2xl font-black tracking-[0.3em] text-[#17231f] outline-none ${gateError ? "border-red-500" : "border-[#ded8c7] focus:border-[#165a4b]"}`}
+                className={`mt-2 w-full rounded-xl border-2 bg-white px-4 py-3 text-center text-2xl font-black tracking-[0.3em] text-tt-ink outline-none ${gateError ? "border-red-500" : "border-tt-line focus:border-tt-pine"}`}
               />
             </label>
             {gateError && <p className="mt-2 text-sm font-black text-red-600">That passcode did not match. Try again.</p>}
@@ -2887,13 +2921,13 @@ export function TailTotsApp() {
             <div className="mt-4 grid gap-2">
               <button
                 onClick={submitParentGate}
-                className="tt-btn-press min-h-12 w-full rounded-xl bg-[#165a4b] px-5 py-3 text-sm font-black text-white"
+                className="tt-btn-press min-h-12 w-full rounded-xl bg-tt-pine px-5 py-3 text-sm font-black text-white"
               >
                 Unlock parent mode
               </button>
               <button
                 onClick={() => setParentGateOpen(false)}
-                className="tt-btn-press min-h-12 w-full rounded-xl border-2 border-[#ded8c7] bg-white px-5 py-3 text-sm font-black text-[#4f625b]"
+                className="tt-btn-press min-h-12 w-full rounded-xl border-2 border-tt-line bg-white px-5 py-3 text-sm font-black text-tt-ink-soft"
               >
                 Back to kid mode
               </button>
@@ -2907,12 +2941,12 @@ export function TailTotsApp() {
         if (!earned) return null;
         const earnedChild = children.find((child) => child.id === earned.childId);
         return (
-          <div className="fixed inset-0 z-50 grid place-items-center bg-[#17231f]/80 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Certificate earned">
-            <div className="tt-animate-pop-in w-full max-w-md rounded-3xl border-4 border-double border-[#6d3ed1]/40 bg-white p-6 text-center shadow-2xl sm:p-8">
+          <div className="fixed inset-0 z-50 grid place-items-center bg-tt-ink/80 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Certificate earned">
+            <div className="tt-animate-pop-in w-full max-w-md rounded-3xl border-4 border-double border-tt-grape/40 bg-white p-6 text-center shadow-2xl sm:p-8">
               <p className="text-5xl" aria-hidden="true">🎓</p>
-              <p className="mt-2 text-xs font-black uppercase tracking-[0.22em] text-[#6d3ed1]">Certificate earned</p>
-              <p className="mt-2 text-2xl font-black text-[#17231f]">{earnedChild?.name ?? "Your kid"} just earned: {earned.title}!</p>
-              <p className="mx-auto mt-3 max-w-sm text-sm font-semibold leading-6 text-[#4f625b]">
+              <p className="mt-2 text-xs font-black uppercase tracking-[0.22em] text-tt-grape">Certificate earned</p>
+              <p className="mt-2 text-2xl font-black text-tt-ink">{earnedChild?.name ?? "Your kid"} just earned: {earned.title}!</p>
+              <p className="mx-auto mt-3 max-w-sm text-sm font-semibold leading-6 text-tt-ink-soft">
                 {earned.kind === "hero"
                   ? "Real pet care, proven over time. From pet owner to pet hero — frame it."
                   : "The pet-care journey, completed. This is the case for a real pet — framed and ready."}
@@ -2920,13 +2954,13 @@ export function TailTotsApp() {
               <div className="mt-6 grid gap-2">
                 <button
                   onClick={() => { if (earnedChild) downloadCertificate(earnedChild, earned, familyName); }}
-                  className="tt-btn-press min-h-12 w-full rounded-xl bg-[#6d3ed1] px-5 py-3 text-sm font-black text-white"
+                  className="tt-btn-press min-h-12 w-full rounded-xl bg-tt-grape px-5 py-3 text-sm font-black text-white"
                 >
                   🖨️ Print / save the certificate
                 </button>
                 <button
                   onClick={() => setJustEarnedCertId(null)}
-                  className="tt-btn-press min-h-12 w-full rounded-xl border-2 border-[#6d3ed1]/30 bg-white px-5 py-3 text-sm font-black text-[#6d3ed1]"
+                  className="tt-btn-press min-h-12 w-full rounded-xl border-2 border-tt-grape/30 bg-white px-5 py-3 text-sm font-black text-tt-grape"
                 >
                   Celebrate 🎉
                 </button>
@@ -2945,6 +2979,7 @@ function VisionLandingPanel({
   openKidDemo,
   openSignup,
   openSignin,
+  openOnboarding,
   previewChildName,
   previewFamilyName,
 }: {
@@ -2952,6 +2987,7 @@ function VisionLandingPanel({
   openKidDemo: () => void;
   openSignup: () => void;
   openSignin: () => void;
+  openOnboarding: () => void;
   previewChildName: string;
   previewFamilyName: string;
 }) {
@@ -3107,41 +3143,55 @@ function VisionLandingPanel({
               The child who cares for animals grows up caring for people. Parent-approved and closed: no strangers, no chats, no doomscroll.
             </p>
 
-            {/* PRIMARY: launch capture. SECONDARY: kid demo. Never equal weight. */}
+            {/* PRIMARY: Try it free (guided onboarding). Email capture demoted to subtle secondary. */}
+            <div className="mt-6 max-w-xl">
+              <button
+                onClick={openOnboarding}
+                className="tt-btn-press inline-flex min-h-14 items-center gap-2 rounded-2xl bg-tt-pine px-10 py-4 text-base font-black text-white shadow-[0_10px_30px_-12px_rgba(22,90,75,0.4)]"
+              >
+                <span aria-hidden="true" className="text-xl">🚀</span>
+                Try it free — 60 seconds
+              </button>
+              <p className="mt-2 text-xs font-semibold text-tt-ink-faint">
+                No signup needed. Pick a pet, try one mission, feel the magic.
+              </p>
+            </div>
             {launchJoined ? (
-              <p className="mt-6 max-w-xl rounded-2xl border-2 border-tt-pine bg-tt-pine-tint p-4 text-sm font-black text-tt-pine">
+              <p className="mt-4 max-w-xl rounded-2xl border-2 border-tt-pine bg-tt-pine-tint p-4 text-sm font-black text-tt-pine">
                 🎉 You’re on the launch list! Watch your inbox for tail wags.
               </p>
             ) : (
-            <form
-              className="mt-6 max-w-xl rounded-2xl border-2 border-tt-pine bg-white p-3 shadow-[0_10px_30px_-12px_rgba(22,90,75,0.35)] sm:p-4"
-              onSubmit={(event) => { event.preventDefault(); joinLaunchList(); }}
-            >
-              <label htmlFor="hero-launch-email" className="text-xs font-black uppercase tracking-[0.14em] text-tt-pine">
-                👨‍👩‍👧 Join the first 500 founding families
-              </label>
-              <div className="mt-2 grid gap-2 sm:grid-cols-[1fr_auto]">
-                <input
-                  id="hero-launch-email"
-                  value={launchInterest.email}
-                  onChange={(event) => setLaunchInterest({ email: event.target.value })}
-                  className="min-h-12 rounded-xl border border-tt-line bg-tt-cream px-4 text-sm font-bold text-tt-ink placeholder:text-tt-ink-faint"
-                  inputMode="email"
-                  placeholder="Parent email (no spam, only tail wags)"
-                  type="email"
-                  required
-                />
-                <button type="submit" disabled={launchInterestStatus === "saving"} className="tt-btn-press min-h-12 rounded-xl bg-tt-tang px-6 py-3 text-sm font-black text-white shadow-md disabled:opacity-60">
-                  {launchInterestStatus === "saving" ? "Saving…" : "Claim our spot 🚀"}
-                </button>
-              </div>
-              {launchInterestMessage && (
-                <p className={`mt-2 text-sm font-bold ${launchInterestStatus === "error" ? "text-[#b44421]" : "text-tt-pine"}`} role="status">
-                  {launchInterestMessage}
-                </p>
-              )}
-              <p className="mt-2 text-xs font-semibold text-tt-ink-faint">Free for families. Unsubscribe anytime. Your inbox stays boring; your kids won’t.</p>
-            </form>
+            <details className="mt-4 max-w-xl">
+              <summary className="cursor-pointer text-sm font-bold text-tt-ink-soft hover:text-tt-pine">
+                Prefer email updates? Join the launch list
+              </summary>
+              <form
+                className="mt-2 rounded-2xl border border-tt-line bg-white p-3"
+                onSubmit={(event) => { event.preventDefault(); joinLaunchList(); }}
+              >
+                <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
+                  <input
+                    id="hero-launch-email"
+                    value={launchInterest.email}
+                    onChange={(event) => setLaunchInterest({ email: event.target.value })}
+                    className="min-h-11 rounded-xl border border-tt-line bg-tt-cream px-4 text-sm font-bold text-tt-ink placeholder:text-tt-ink-faint"
+                    inputMode="email"
+                    placeholder="Parent email"
+                    type="email"
+                    required
+                    aria-label="Parent email for launch list"
+                  />
+                  <button type="submit" disabled={launchInterestStatus === "saving"} className="tt-btn-press min-h-11 rounded-xl bg-tt-pine px-5 py-2.5 text-sm font-black text-white disabled:opacity-60">
+                    {launchInterestStatus === "saving" ? "Saving…" : "Join"}
+                  </button>
+                </div>
+                {launchInterestMessage && (
+                  <p className={`mt-2 text-sm font-bold ${launchInterestStatus === "error" ? "text-tt-error" : "text-tt-pine"}`} role="status">
+                    {launchInterestMessage}
+                  </p>
+                )}
+              </form>
+            </details>
             )}
 
             <button onClick={openKidDemo} className="tt-btn-press group mt-4 inline-flex min-h-11 items-center gap-2 rounded-full px-2 py-2 text-sm font-black text-tt-pine underline decoration-tt-sun decoration-[3px] underline-offset-4">
@@ -3321,6 +3371,12 @@ function VisionLandingPanel({
         </div>
       </section>
 
+      {/* ============ AUDIENCE LANES: parents / shelters / schools / PTOs ============ */}
+      <AudienceLanes onTryFree={openOnboarding} />
+
+      {/* ============ LANTERN PHILOSOPHY: 80/20 explainer ============ */}
+      <LanternPhilosophy />
+
       {/* ============ DEMO: the aha moment ============ */}
       <section id="landing-demo" className="-mx-3 scroll-mt-36 border-y border-tt-line bg-tt-night p-5 text-white shadow-sm sm:mx-0 sm:rounded-3xl sm:border sm:p-8">
         <div className="grid items-center gap-6 lg:grid-cols-2">
@@ -3438,7 +3494,7 @@ function VisionLandingPanel({
 
 
 
-      <section id="landing-contact" className="-mx-3 scroll-mt-36 border-y border-tt-line bg-[#eef2ff] p-4 shadow-sm sm:mx-0 sm:rounded-3xl sm:border sm:p-6">
+      <section id="landing-contact" className="-mx-3 scroll-mt-36 border-y border-tt-line bg-tt-sky p-4 shadow-sm sm:mx-0 sm:rounded-3xl sm:border sm:p-6">
         <div className="grid gap-5 lg:grid-cols-[0.85fr_1.15fr]">
           <div>
             <h3 className="text-2xl tt-display font-black text-tt-navy sm:text-3xl">Questions, feedback, or partnership ideas?</h3>
@@ -3482,7 +3538,7 @@ function VisionLandingPanel({
                 {feedbackStatus === "saving" ? "Sending…" : "Send feedback"}
               </button>
               {feedbackMessage && (
-                <p className={`text-sm font-bold ${feedbackStatus === "error" ? "text-[#b44421]" : "text-tt-pine"}`} role="status">
+                <p className={`text-sm font-bold ${feedbackStatus === "error" ? "text-tt-error" : "text-tt-pine"}`} role="status">
                   {feedbackMessage}
                 </p>
               )}
@@ -3634,10 +3690,10 @@ function KidWeekGrid({
   for (let h = GRID_START_HOUR; h <= GRID_END_HOUR; h++) hours.push(h);
 
   return (
-    <div className="rounded-lg bg-[#faf8f0] p-4">
+    <div className="rounded-lg bg-tt-cream p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="font-black">{childName}</p>
-        <p className="text-xs font-bold text-[#4f625b]">
+        <p className="text-xs font-bold text-tt-ink-soft">
           {selectedKeys.length > 0
             ? `${selectedKeys.length} × 15-min slot${selectedKeys.length === 1 ? "" : "s"} selected`
             : "Tap times to mark them free"}
@@ -3650,7 +3706,7 @@ function KidWeekGrid({
             key={preset.label}
             type="button"
             onClick={() => applyPreset(preset)}
-            className="tt-btn-press min-h-9 rounded-full border-2 border-[#ded8c7] bg-white px-3 py-1 text-xs font-black text-[#165a4b]"
+            className="tt-btn-press min-h-9 rounded-full border-2 border-tt-line bg-white px-3 py-1 text-xs font-black text-tt-pine"
           >
             + {preset.label}
           </button>
@@ -3659,7 +3715,7 @@ function KidWeekGrid({
           <button
             type="button"
             onClick={() => onSetKeys(childId, selectedKeys, false)}
-            className="tt-btn-press min-h-9 rounded-full border-2 border-[#ded8c7] bg-white px-3 py-1 text-xs font-black text-[#b3541e]"
+            className="tt-btn-press min-h-9 rounded-full border-2 border-tt-line bg-white px-3 py-1 text-xs font-black text-[#b3541e]"
           >
             Clear all
           </button>
@@ -3678,11 +3734,11 @@ function KidWeekGrid({
               aria-selected={active}
               onClick={() => setActiveDay(day)}
               className={`tt-btn-press min-h-10 rounded-lg px-2.5 py-1 text-xs font-black ${
-                active ? "bg-[#165a4b] text-white" : "bg-white text-[#4f625b] ring-1 ring-[#ded8c7]"
+                active ? "bg-tt-pine text-white" : "bg-white text-tt-ink-soft ring-1 ring-tt-line"
               }`}
             >
               {day}
-              {count > 0 && <span className={`ml-1 ${active ? "text-[#ffe9a8]" : "text-[#165a4b]"}`}>·{count}</span>}
+              {count > 0 && <span className={`ml-1 ${active ? "text-[#ffe9a8]" : "text-tt-pine"}`}>·{count}</span>}
             </button>
           );
         })}
@@ -3692,14 +3748,14 @@ function KidWeekGrid({
         <button
           type="button"
           onClick={() => onSetKeys(childId, dayKeys(activeDay), true)}
-          className="text-xs font-black text-[#165a4b] underline decoration-[#165a4b]/30 underline-offset-2"
+          className="text-xs font-black text-tt-pine underline decoration-tt-pine/30 underline-offset-2"
         >
           Select all {activeDay}
         </button>
         <button
           type="button"
           onClick={() => onSetKeys(childId, dayKeys(activeDay), false)}
-          className="text-xs font-black text-[#4f625b] underline decoration-[#4f625b]/30 underline-offset-2"
+          className="text-xs font-black text-tt-ink-soft underline decoration-tt-ink-soft/30 underline-offset-2"
         >
           Clear {activeDay}
         </button>
@@ -3708,7 +3764,7 @@ function KidWeekGrid({
       <div className="mt-2 grid gap-1.5" role="group" aria-label={`${childName} ${activeDay} times`}>
         {hours.map((h) => (
           <div key={h} className="flex items-center gap-2">
-            <span className="w-14 shrink-0 text-xs font-black text-[#4f625b]">{formatHourLabel(h)}</span>
+            <span className="w-14 shrink-0 text-xs font-black text-tt-ink-soft">{formatHourLabel(h)}</span>
             <div className="grid flex-1 grid-cols-4 gap-1">
               {[0, 15, 30, 45].map((q) => {
                 const key = slotKey(activeDay, h, q);
@@ -3727,12 +3783,12 @@ function KidWeekGrid({
                     aria-pressed={selected}
                     className={`tt-btn-press min-h-9 rounded-md border-2 px-1 py-1 text-[11px] font-bold disabled:cursor-not-allowed ${
                       claimed
-                        ? "border-[#ded8c7] bg-[#f1ede2] text-[#a09a8c] line-through"
+                        ? "border-tt-line bg-[#f1ede2] text-[#a09a8c] line-through"
                         : busy
-                          ? "border-[#ded8c7] bg-[#f1ede2] text-[#a09a8c]"
+                          ? "border-tt-line bg-[#f1ede2] text-[#a09a8c]"
                           : selected
-                            ? "border-[#165a4b] bg-[#e7f4ef] text-[#165a4b]"
-                            : "border-[#ded8c7] bg-white text-[#4f625b]"
+                            ? "border-tt-pine bg-tt-pine-tint text-tt-pine"
+                            : "border-tt-line bg-white text-tt-ink-soft"
                     }`}
                   >
                     {formatTime12(h, q)}
@@ -3748,7 +3804,7 @@ function KidWeekGrid({
       {mergedSummary.length > 0 && (
         <div className="mt-3 flex flex-wrap gap-1.5">
           {mergedSummary.map((label) => (
-            <span key={label} className="rounded-full bg-[#e7f4ef] px-2.5 py-1 text-xs font-black text-[#165a4b]">
+            <span key={label} className="rounded-full bg-tt-pine-tint px-2.5 py-1 text-xs font-black text-tt-pine">
               {label}
             </span>
           ))}
@@ -3756,7 +3812,7 @@ function KidWeekGrid({
       )}
 
       {legacyLabels.length > 0 && (
-        <div className="mt-3 rounded-lg bg-white p-2.5 ring-1 ring-[#ded8c7]">
+        <div className="mt-3 rounded-lg bg-white p-2.5 ring-1 ring-tt-line">
           <p className="text-[11px] font-black uppercase tracking-[0.14em] text-[#a09a8c]">Earlier saved times</p>
           <div className="mt-1.5 flex flex-wrap gap-1.5">
             {legacyLabels.map((label) => {
@@ -3765,7 +3821,7 @@ function KidWeekGrid({
                 <span
                   key={label}
                   className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold ${
-                    claimed ? "bg-[#f1ede2] text-[#a09a8c] line-through" : "bg-[#eef2ff] text-[#2563eb]"
+                    claimed ? "bg-[#f1ede2] text-[#a09a8c] line-through" : "bg-tt-sky text-tt-blue"
                   }`}
                 >
                   {label}
@@ -3902,7 +3958,7 @@ function CalendarImportCard({
     oauthNotice === "google" ? (
       <>
         <p className="text-sm font-black">Google Calendar isn&apos;t connected yet</p>
-        <p className="mt-1 text-sm font-semibold leading-6 text-[#4f625b]">
+        <p className="mt-1 text-sm font-semibold leading-6 text-tt-ink-soft">
           One-time setup is needed first: a Google Cloud OAuth 2.0 Client ID with the Calendar readonly scope
           (flag <code>SCHEDULE_GOOGLE_OAUTH_CONFIGURED</code> in{" "}
           <code>lib/schedule-calendar.ts</code>). Until then, export your Google Calendar as{" "}
@@ -3913,7 +3969,7 @@ function CalendarImportCard({
     ) : (
       <>
         <p className="text-sm font-black">Apple Calendar (iPhone) can&apos;t connect on the web</p>
-        <p className="mt-1 text-sm font-semibold leading-6 text-[#4f625b]">
+        <p className="mt-1 text-sm font-semibold leading-6 text-tt-ink-soft">
           Apple offers no web sign-in for iCloud Calendar. Two paths instead: (1) in the TailTots iPhone app, grant
           calendar access (EventKit — flag <code>SCHEDULE_APPLE_CALENDAR_CONFIGURED</code> in{" "}
           <code>lib/schedule-calendar.ts</code>); or (2) export an <code>.ics</code> from iCloud.com (Calendar →
@@ -3923,10 +3979,10 @@ function CalendarImportCard({
     );
 
   return (
-    <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
-      <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2563eb]">Step 1b · sync your calendar</p>
+    <section className="rounded-lg border border-tt-line bg-white p-5 shadow-sm">
+      <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-blue">Step 1b · sync your calendar</p>
       <h3 className="mt-2 text-2xl font-black">Import busy times</h3>
-      <p className="mt-1 max-w-3xl text-sm font-semibold leading-6 text-[#4f625b]">
+      <p className="mt-1 max-w-3xl text-sm font-semibold leading-6 text-tt-ink-soft">
         Connect a calendar or drop in an <code>.ics</code> file — imported events block the matching times in the
         grid above so you never offer a time you&apos;re busy. The weekly template repeats by weekday: a Tuesday
         class blocks Tuesdays.
@@ -3936,7 +3992,7 @@ function CalendarImportCard({
         <button
           type="button"
           onClick={() => setOauthNotice(oauthNotice === "google" ? null : "google")}
-          className="tt-btn-press min-h-11 rounded-lg border-2 border-[#ded8c7] bg-white px-4 py-2 text-sm font-black text-[#17231f]"
+          className="tt-btn-press min-h-11 rounded-lg border-2 border-tt-line bg-white px-4 py-2 text-sm font-black text-tt-ink"
         >
           📅 Connect Google Calendar{" "}
           {!SCHEDULE_GOOGLE_OAUTH_CONFIGURED && (
@@ -3946,7 +4002,7 @@ function CalendarImportCard({
         <button
           type="button"
           onClick={() => setOauthNotice(oauthNotice === "apple" ? null : "apple")}
-          className="tt-btn-press min-h-11 rounded-lg border-2 border-[#ded8c7] bg-white px-4 py-2 text-sm font-black text-[#17231f]"
+          className="tt-btn-press min-h-11 rounded-lg border-2 border-tt-line bg-white px-4 py-2 text-sm font-black text-tt-ink"
         >
           🍎 Connect Apple Calendar{" "}
           {!SCHEDULE_APPLE_CALENDAR_CONFIGURED && (
@@ -3964,7 +4020,7 @@ function CalendarImportCard({
         <button
           type="button"
           onClick={() => fileRef.current?.click()}
-          className="tt-btn-press min-h-11 rounded-lg bg-[#165a4b] px-4 py-2 text-sm font-black text-white"
+          className="tt-btn-press min-h-11 rounded-lg bg-tt-pine px-4 py-2 text-sm font-black text-white"
         >
           📂 Import .ics file
         </button>
@@ -3983,27 +4039,27 @@ function CalendarImportCard({
 
       {error && <p className="mt-3 max-w-3xl rounded-lg bg-[#fdeee4] p-3 text-sm font-bold text-[#b3541e]">{error}</p>}
       {message && !review && (
-        <p className="mt-3 max-w-3xl rounded-lg bg-[#e7f4ef] p-3 text-sm font-bold text-[#165a4b]" role="status">
+        <p className="mt-3 max-w-3xl rounded-lg bg-tt-pine-tint p-3 text-sm font-bold text-tt-pine" role="status">
           {message}
         </p>
       )}
 
       {review && (
-        <div className="mt-3 max-w-3xl rounded-lg border-2 border-[#2563eb] bg-[#f4f7ff] p-4">
+        <div className="mt-3 max-w-3xl rounded-lg border-2 border-tt-blue bg-[#f4f7ff] p-4">
           <p className="text-sm font-black">
             {review.fileName} — {review.events.length} event{review.events.length === 1 ? "" : "s"} found
           </p>
           <ul className="mt-2 grid gap-1">
             {review.events.slice(0, 8).map((event, i) => (
-              <li key={`${event.uid}-${i}`} className="text-sm font-semibold text-[#4f625b]">
-                • <b className="text-[#17231f]">{event.summary}</b> — {formatEventWhen(event)}
+              <li key={`${event.uid}-${i}`} className="text-sm font-semibold text-tt-ink-soft">
+                • <b className="text-tt-ink">{event.summary}</b> — {formatEventWhen(event)}
               </li>
             ))}
           </ul>
           {review.events.length > 8 && (
-            <p className="mt-1 text-xs font-bold text-[#4f625b]">+ {review.events.length - 8} more</p>
+            <p className="mt-1 text-xs font-bold text-tt-ink-soft">+ {review.events.length - 8} more</p>
           )}
-          <p className="mt-2 text-xs font-semibold leading-5 text-[#4f625b]">
+          <p className="mt-2 text-xs font-semibold leading-5 text-tt-ink-soft">
             These will block the matching weekday in your weekly grid (a Tuesday event blocks Tuesdays). Any
             currently-selected times that overlap will be cleared — you can undo the whole import afterwards.
           </p>
@@ -4011,14 +4067,14 @@ function CalendarImportCard({
             <button
               type="button"
               onClick={applyImport}
-              className="tt-btn-press min-h-11 rounded-lg bg-[#2563eb] px-4 py-2 text-sm font-black text-white"
+              className="tt-btn-press min-h-11 rounded-lg bg-tt-blue px-4 py-2 text-sm font-black text-white"
             >
               Block these times
             </button>
             <button
               type="button"
               onClick={() => setReview(null)}
-              className="tt-btn-press min-h-11 rounded-lg border-2 border-[#ded8c7] bg-white px-4 py-2 text-sm font-black text-[#4f625b]"
+              className="tt-btn-press min-h-11 rounded-lg border-2 border-tt-line bg-white px-4 py-2 text-sm font-black text-tt-ink-soft"
             >
               Discard
             </button>
@@ -4033,9 +4089,9 @@ function CalendarImportCard({
             {busyState.imports.map((imp) => (
               <li
                 key={imp.id}
-                className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-[#faf8f0] px-3 py-2 ring-1 ring-[#ded8c7]"
+                className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-tt-cream px-3 py-2 ring-1 ring-tt-line"
               >
-                <span className="text-sm font-bold text-[#4f625b]">
+                <span className="text-sm font-bold text-tt-ink-soft">
                   📂 {imp.fileName} · {imp.eventCount} event{imp.eventCount === 1 ? "" : "s"} ·{" "}
                   {formatClaimedAt(imp.importedAt)}
                 </span>
@@ -4085,26 +4141,26 @@ function KidHomeHub({
 
   return (
     <section className="space-y-4">
-      <div className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#165a4b]">Home hub</p>
-        <h2 className="mt-2 text-2xl font-black text-[#17231f]">
+      <div className="rounded-lg border border-tt-line bg-white p-5 shadow-sm">
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-pine">Home hub</p>
+        <h2 className="mt-2 text-2xl font-black text-tt-ink">
           Hey{activeChild ? ` ${activeChild.name}` : ""}! 👋
         </h2>
-        <p className="mt-2 text-sm font-semibold leading-6 text-[#4f625b]">
+        <p className="mt-2 text-sm font-semibold leading-6 text-tt-ink-soft">
           Here's your day at a glance. Pick something fun and go do it in the real world!
         </p>
         <div className="mt-4 grid grid-cols-3 gap-2">
-          <div className="rounded-lg bg-[#e7f4ef] p-3 text-center">
-            <p className="text-2xl font-black text-[#165a4b]">{todoCount}</p>
-            <p className="text-xs font-bold text-[#4f625b]">Missions to do</p>
+          <div className="rounded-lg bg-tt-pine-tint p-3 text-center">
+            <p className="text-2xl font-black text-tt-pine">{todoCount}</p>
+            <p className="text-xs font-bold text-tt-ink-soft">Missions to do</p>
           </div>
-          <div className="rounded-lg bg-[#fff4d8] p-3 text-center">
-            <p className="text-2xl font-black text-[#7a4b12]">{waitingCount}</p>
-            <p className="text-xs font-bold text-[#4f625b]">Waiting for high-five</p>
+          <div className="rounded-lg bg-tt-sun-soft p-3 text-center">
+            <p className="text-2xl font-black text-tt-cocoa">{waitingCount}</p>
+            <p className="text-xs font-bold text-tt-ink-soft">Waiting for high-five</p>
           </div>
           <div className="rounded-lg bg-[#f2f8fd] p-3 text-center">
             <p className="text-2xl font-black text-[#1a56db]">{myBadges.length}</p>
-            <p className="text-xs font-bold text-[#4f625b]">Badges earned</p>
+            <p className="text-xs font-bold text-tt-ink-soft">Badges earned</p>
           </div>
         </div>
       </div>
@@ -4113,20 +4169,20 @@ function KidHomeHub({
           <button
             key={tabId}
             onClick={() => setActiveTab(tabId)}
-            className="rounded-lg border border-[#ded8c7] bg-white p-4 text-left shadow-sm hover:border-[#165a4b] hover:bg-[#f8fffe]"
+            className="rounded-lg border border-tt-line bg-white p-4 text-left shadow-sm hover:border-tt-pine hover:bg-[#f8fffe]"
           >
             <p className="text-2xl" aria-hidden="true">{emoji}</p>
-            <p className="mt-1 text-sm font-black text-[#17231f]">{label}</p>
-            <p className="text-xs font-semibold text-[#4f625b]">{sub}</p>
+            <p className="mt-1 text-sm font-black text-tt-ink">{label}</p>
+            <p className="text-xs font-semibold text-tt-ink-soft">{sub}</p>
           </button>
         ))}
       </div>
       {myBadges.length > 0 && (
-        <div className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
-          <p className="text-sm font-black text-[#17231f]">🏅 Your latest badges</p>
+        <div className="rounded-lg border border-tt-line bg-white p-5 shadow-sm">
+          <p className="text-sm font-black text-tt-ink">🏅 Your latest badges</p>
           <div className="mt-2 flex flex-wrap gap-2">
             {myBadges.slice(0, 3).map((badge) => (
-              <span key={badge.id} className="rounded-full bg-[#fff4d8] px-3 py-1 text-xs font-black text-[#7a4b12]">
+              <span key={badge.id} className="rounded-full bg-tt-sun-soft px-3 py-1 text-xs font-black text-tt-cocoa">
                 {badge.title}
               </span>
             ))}
@@ -4157,33 +4213,33 @@ function KidScheduleView({
 
   return (
     <section className="space-y-4">
-      <div className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#165a4b]">My schedule</p>
-        <h2 className="mt-2 text-2xl font-black text-[#17231f]">
+      <div className="rounded-lg border border-tt-line bg-white p-5 shadow-sm">
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-pine">My schedule</p>
+        <h2 className="mt-2 text-2xl font-black text-tt-ink">
           {activeChild ? `${activeChild.name}'s free time` : "Free time"}
         </h2>
-        <p className="mt-2 text-sm font-semibold leading-6 text-[#4f625b]">
+        <p className="mt-2 text-sm font-semibold leading-6 text-tt-ink-soft">
           Times you're free for playdates and missions. Ask a grown-up to update this in the parent Schedule tab!
         </p>
       </div>
       {slots.length === 0 ? (
-        <div className="rounded-lg border-2 border-dashed border-[#ded8c7] bg-[#faf8f0] p-6 text-center">
-          <p className="text-lg font-black text-[#17231f]">No free time set yet 📅</p>
-          <p className="mx-auto mt-2 max-w-md text-sm font-semibold text-[#4f625b]">
+        <div className="rounded-lg border-2 border-dashed border-tt-line bg-tt-cream p-6 text-center">
+          <p className="text-lg font-black text-tt-ink">No free time set yet 📅</p>
+          <p className="mx-auto mt-2 max-w-md text-sm font-semibold text-tt-ink-soft">
             Once a grown-up adds your free times, they'll show up here so you know when playdates can happen!
           </p>
         </div>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {dayNames.map((day) => (
-            <div key={day} className="rounded-lg border border-[#ded8c7] bg-white p-4">
-              <p className="text-sm font-black text-[#17231f]">{day}</p>
+            <div key={day} className="rounded-lg border border-tt-line bg-white p-4">
+              <p className="text-sm font-black text-tt-ink">{day}</p>
               {(slotsByDay[day] ?? []).length === 0 ? (
                 <p className="mt-1 text-xs font-semibold text-[#8a8f8b]">Busy day</p>
               ) : (
                 <div className="mt-2 flex flex-wrap gap-1">
                   {(slotsByDay[day] ?? []).map((time) => (
-                    <span key={time} className="rounded-full bg-[#e7f4ef] px-2 py-0.5 text-xs font-bold text-[#165a4b]">
+                    <span key={time} className="rounded-full bg-tt-pine-tint px-2 py-0.5 text-xs font-bold text-tt-pine">
                       {time}
                     </span>
                   ))}
@@ -4378,10 +4434,10 @@ function SchedulePanel({
 
   return (
     <section className="space-y-4">
-      <div className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2563eb]">Schedule · parent tool</p>
+      <div className="rounded-lg border border-tt-line bg-white p-5 shadow-sm">
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-blue">Schedule · parent tool</p>
         <h2 className="mt-2 text-3xl font-black">Playdate availability</h2>
-        <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-[#4f625b]">
+        <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-tt-ink-soft">
           Mark each kid&apos;s free times on the 15-minute weekly grid (or import your calendar to block busy times),
           create a real invite link, and send it to the other parents. The first parent to pick a time books it — the
           slot instantly becomes unavailable to everyone else, and you&apos;ll both be notified here the moment it
@@ -4391,10 +4447,10 @@ function SchedulePanel({
       </div>
 
       {claimToast && (
-        <div role="status" className="flex items-start justify-between gap-3 rounded-lg border-2 border-[#165a4b] bg-[#e7f4ef] p-4 shadow-sm">
+        <div role="status" className="flex items-start justify-between gap-3 rounded-lg border-2 border-tt-pine bg-tt-pine-tint p-4 shadow-sm">
           <div>
-            <p className="text-sm font-black text-[#165a4b]">{claimToast}</p>
-            <p className="mt-1 text-xs font-semibold text-[#4f625b]">
+            <p className="text-sm font-black text-tt-pine">{claimToast}</p>
+            <p className="mt-1 text-xs font-semibold text-tt-ink-soft">
               That time is now closed everywhere — it can&apos;t be double-booked. Details are in your notifications below.
             </p>
           </div>
@@ -4402,17 +4458,17 @@ function SchedulePanel({
             type="button"
             onClick={() => setClaimToast(null)}
             aria-label="Dismiss"
-            className="tt-btn-press text-lg font-black text-[#165a4b]"
+            className="tt-btn-press text-lg font-black text-tt-pine"
           >
             ×
           </button>
         </div>
       )}
 
-      <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#165a4b]">Step 1 · free time per kid</p>
+      <section className="rounded-lg border border-tt-line bg-white p-5 shadow-sm">
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-pine">Step 1 · free time per kid</p>
         <h3 className="mt-2 text-2xl font-black">When is each kid free for a playdate?</h3>
-        <p className="mt-1 max-w-3xl text-sm font-semibold text-[#4f625b]">
+        <p className="mt-1 max-w-3xl text-sm font-semibold text-tt-ink-soft">
           Tap 15-minute blocks — adjacent picks merge into tidy windows on the invite. Booked times lock automatically.
         </p>
         <div className="mt-4 grid gap-3 md:grid-cols-2">
@@ -4447,10 +4503,10 @@ function SchedulePanel({
         childProfiles={childProfiles}
       />
 
-      <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2563eb]">Step 2 · invite the other parent</p>
+      <section className="rounded-lg border border-tt-line bg-white p-5 shadow-sm">
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-blue">Step 2 · invite the other parent</p>
         <h3 className="mt-2 text-2xl font-black">Create a playdate invite</h3>
-        <p className="mt-1 text-sm font-semibold text-[#4f625b]">
+        <p className="mt-1 text-sm font-semibold text-tt-ink-soft">
           {openSelections.length > 0
             ? `${openSelections.length} open time${openSelections.length === 1 ? "" : "s"} will go on the invite.`
             : "Select free times in Step 1 — they'll go on the invite."}
@@ -4462,7 +4518,7 @@ function SchedulePanel({
             onChange={(e) => setHostName(e.target.value)}
             placeholder="e.g. Naveen"
             maxLength={40}
-            className="mt-1 min-h-11 w-full rounded-lg border-2 border-[#ded8c7] bg-white px-3 py-2 text-sm font-bold"
+            className="mt-1 min-h-11 w-full rounded-lg border-2 border-tt-line bg-white px-3 py-2 text-sm font-bold"
           />
         </label>
         {createError && (
@@ -4471,25 +4527,25 @@ function SchedulePanel({
         <button
           onClick={createInvite}
           disabled={openSelections.length === 0}
-          className="tt-btn-press mt-3 min-h-11 rounded-lg bg-[#2563eb] px-4 py-2 text-sm font-black text-white disabled:opacity-40"
+          className="tt-btn-press mt-3 min-h-11 rounded-lg bg-tt-blue px-4 py-2 text-sm font-black text-white disabled:opacity-40"
         >
           Create playdate invite
         </button>
-        <p className="mt-2 text-xs font-semibold text-[#4f625b]">
+        <p className="mt-2 text-xs font-semibold text-tt-ink-soft">
           The link opens a claim page for the other parent — first names and time windows only. No addresses, no kid
           last names, no contact details. Share it with 2–3 parents: the first to accept books the time, and it
           becomes unavailable to everyone else.
         </p>
       </section>
 
-      <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
+      <section className="rounded-lg border border-tt-line bg-white p-5 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2563eb]">🔔 Notifications</p>
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-blue">🔔 Notifications</p>
             <h3 className="mt-2 text-2xl font-black">
               Playdate updates{" "}
               {unreadCount > 0 && (
-                <span className="ml-1 rounded-full bg-[#2563eb] px-2.5 py-0.5 align-middle text-xs font-black text-white">
+                <span className="ml-1 rounded-full bg-tt-blue px-2.5 py-0.5 align-middle text-xs font-black text-white">
                   {unreadCount} new
                 </span>
               )}
@@ -4499,14 +4555,14 @@ function SchedulePanel({
             <button
               type="button"
               onClick={markAllNotificationsRead}
-              className="tt-btn-press min-h-9 rounded-lg border-2 border-[#ded8c7] bg-white px-3 py-1 text-xs font-black text-[#4f625b]"
+              className="tt-btn-press min-h-9 rounded-lg border-2 border-tt-line bg-white px-3 py-1 text-xs font-black text-tt-ink-soft"
             >
               Mark all read
             </button>
           )}
         </div>
         {notifications.length === 0 ? (
-          <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-[#4f625b]">
+          <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-tt-ink-soft">
             Nothing yet. When another parent claims one of your invites you&apos;ll be notified here the moment it
             happens — and they get a confirmation receipt on their side too.
           </p>
@@ -4515,13 +4571,13 @@ function SchedulePanel({
             {notifications.map((n) => (
               <li
                 key={n.id}
-                className={`rounded-lg p-3 ring-1 ${n.read ? "bg-[#faf8f0] ring-[#ded8c7]" : "bg-[#f4f7ff] ring-[#2563eb]/40"}`}
+                className={`rounded-lg p-3 ring-1 ${n.read ? "bg-tt-cream ring-tt-line" : "bg-[#f4f7ff] ring-tt-blue/40"}`}
               >
-                <p className="text-sm font-black text-[#17231f]">
-                  {!n.read && <span className="mr-1.5 inline-block size-2 rounded-full bg-[#2563eb]" aria-label="unread" />}
+                <p className="text-sm font-black text-tt-ink">
+                  {!n.read && <span className="mr-1.5 inline-block size-2 rounded-full bg-tt-blue" aria-label="unread" />}
                   {n.title}
                 </p>
-                <p className="mt-0.5 text-sm font-semibold leading-6 text-[#4f625b]">{n.body}</p>
+                <p className="mt-0.5 text-sm font-semibold leading-6 text-tt-ink-soft">{n.body}</p>
                 <p className="mt-1 text-[11px] font-bold text-[#a09a8c]">{formatClaimedAt(n.createdAt)}</p>
               </li>
             ))}
@@ -4530,8 +4586,8 @@ function SchedulePanel({
       </section>
 
       {invites.length > 0 && (
-        <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-[#165a4b]">Your invites</p>
+        <section className="rounded-lg border border-tt-line bg-white p-5 shadow-sm">
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-pine">Your invites</p>
           <h3 className="mt-2 text-2xl font-black">Share &amp; track</h3>
           <div className="mt-3 grid gap-3">
             {invites.map((invite) => {
@@ -4539,28 +4595,28 @@ function SchedulePanel({
               const claimedSlot = invite.slots.find((s) => s.status === "claimed");
               const isNew = justCreatedId === invite.id;
               return (
-                <div key={invite.id} className={`rounded-lg border-2 p-4 ${isNew ? "border-[#2563eb] bg-[#f4f7ff]" : "border-[#ded8c7] bg-[#faf8f0]"}`}>
+                <div key={invite.id} className={`rounded-lg border-2 p-4 ${isNew ? "border-tt-blue bg-[#f4f7ff]" : "border-tt-line bg-tt-cream"}`}>
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <p className="text-sm font-black">
                       Invite · {invite.slots.length} time{invite.slots.length === 1 ? "" : "s"}
-                      <span className={`ml-2 rounded-full px-2 py-0.5 text-xs ${invite.status === "booked" ? "bg-[#e7f4ef] text-[#165a4b]" : "bg-[#eef2ff] text-[#2563eb]"}`}>
+                      <span className={`ml-2 rounded-full px-2 py-0.5 text-xs ${invite.status === "booked" ? "bg-tt-pine-tint text-tt-pine" : "bg-tt-sky text-tt-blue"}`}>
                         {invite.status === "booked" ? "Booked" : "Open"}
                       </span>
                     </p>
                     <p className="text-xs font-semibold text-[#a09a8c]">{formatClaimedAt(invite.createdAt)} created</p>
                   </div>
                   {invite.status === "booked" && claimedSlot && (
-                    <p className="mt-2 rounded-lg bg-[#e7f4ef] p-3 text-sm font-bold text-[#165a4b]">
+                    <p className="mt-2 rounded-lg bg-tt-pine-tint p-3 text-sm font-bold text-tt-pine">
                       ✅ {invite.claimedBy} claimed {claimedSlot.slot} for {claimedSlot.childName}
                       {invite.claimedAt ? ` · ${formatClaimedAt(invite.claimedAt)}` : ""}
                     </p>
                   )}
                   {invite.status === "open" && (
                     <>
-                      <p className="mt-2 break-all rounded-lg bg-white p-3 text-sm font-black text-[#17231f] ring-1 ring-[#ded8c7]">{url}</p>
+                      <p className="mt-2 break-all rounded-lg bg-white p-3 text-sm font-black text-tt-ink ring-1 ring-tt-line">{url}</p>
                       <button
                         onClick={() => copyInviteLink(invite)}
-                        className="tt-btn-press mt-2 min-h-11 rounded-lg bg-[#165a4b] px-4 py-2 text-sm font-black text-white"
+                        className="tt-btn-press mt-2 min-h-11 rounded-lg bg-tt-pine px-4 py-2 text-sm font-black text-white"
                       >
                         {linkCopiedId === invite.id ? "Copied! Send it to the other parent ✓" : "Copy invite link"}
                       </button>
@@ -4574,12 +4630,12 @@ function SchedulePanel({
       )}
 
       {latestClaim && latestClaimedSlot && (
-        <section className="rounded-lg border-2 border-[#165a4b] bg-[#e7f4ef] p-5 shadow-sm">
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-[#165a4b]">Latest confirmation</p>
+        <section className="rounded-lg border-2 border-tt-pine bg-tt-pine-tint p-5 shadow-sm">
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-pine">Latest confirmation</p>
           <h3 className="mt-2 text-2xl font-black">
             ✅ {latestClaim.claimedBy} claimed {latestClaimedSlot.slot} for {latestClaimedSlot.childName}
           </h3>
-          <p className="mt-1 text-sm font-semibold text-[#4f625b]">
+          <p className="mt-1 text-sm font-semibold text-tt-ink-soft">
             {latestClaim.claimedAt ? `Confirmed ${formatClaimedAt(latestClaim.claimedAt)}. ` : ""}
             That time is now closed everywhere — it can&apos;t be double-booked. Reach out parent-to-parent to
             coordinate pickup; kids don&apos;t see this thread.
@@ -4587,6 +4643,53 @@ function SchedulePanel({
         </section>
       )}
     </section>
+  );
+}
+/**
+ * Parent schedule: visual "Today" timeline first, playdate planning behind a toggle.
+ * (Schedule = what's happening. Availability = a setting. Never shared a tab again.)
+ */
+function ParentScheduleView({
+  missions,
+  childProfiles,
+  familyName,
+  kidAvailability,
+  setKidAvailability,
+}: {
+  missions: Mission[];
+  childProfiles: Child[];
+  familyName: string;
+  kidAvailability: Record<string, string[]>;
+  setKidAvailability: (value: Record<string, string[]>) => void;
+}) {
+  const [showPlaydates, setShowPlaydates] = useState(false);
+  if (showPlaydates) {
+    return (
+      <div className="space-y-4">
+        <button
+          onClick={() => setShowPlaydates(false)}
+          className="tt-btn-press inline-flex min-h-11 items-center gap-2 rounded-xl border border-tt-line bg-tt-paper px-4 py-2.5 text-sm font-extrabold text-tt-ink"
+        >
+          <svg viewBox="0 0 20 20" className="size-4" fill="currentColor" aria-hidden="true">
+            <path fillRule="evenodd" d="M11.78 5.22a.75.75 0 0 1 0 1.06L8.06 10l3.72 3.72a.75.75 0 1 1-1.06 1.06l-4.25-4.25a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 0Z" clipRule="evenodd" />
+          </svg>
+          Back to Today
+        </button>
+        <SchedulePanel
+          familyName={familyName}
+          childProfiles={childProfiles}
+          kidAvailability={kidAvailability}
+          setKidAvailability={setKidAvailability}
+        />
+      </div>
+    );
+  }
+  return (
+    <ParentToday
+      missions={missions}
+      children={childProfiles.map((c) => ({ id: c.id, name: c.name }))}
+      onOpenPlaydates={() => setShowPlaydates(true)}
+    />
   );
 }
 /**
@@ -4800,49 +4903,49 @@ function KidAiBuddyPanel({
 
   return (
     <section className="space-y-4">
-      <div className="rounded-lg border border-[#ded8c7] bg-[#e7f4ef] p-5 shadow-sm">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#165a4b]">Kid-safe AI buddy</p>
+      <div className="rounded-lg border border-tt-line bg-tt-pine-tint p-5 shadow-sm">
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-pine">Kid-safe AI buddy</p>
         <h2 className="mt-2 text-3xl font-black">Your AI Buddy has answers ✨</h2>
-        <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-[#4f625b]">
+        <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-tt-ink-soft">
           One safe question, one helpful answer — {activeChild?.name ?? "kiddo"} picks the question, the helper does the rest.
         </p>
-        <p className="mt-2 max-w-2xl text-xs font-bold leading-5 text-[#165a4b]">🛡️ {BUDDY_GUARDRAIL_NOTE}</p>
+        <p className="mt-2 max-w-2xl text-xs font-bold leading-5 text-tt-pine">🛡️ {BUDDY_GUARDRAIL_NOTE}</p>
         {suggestedQuestion && (
           <button
             onClick={askSuggested}
-            className="tt-btn-press mt-4 min-h-14 w-full rounded-xl bg-[#165a4b] px-5 py-3 text-base font-black text-white sm:w-auto"
+            className="tt-btn-press mt-4 min-h-14 w-full rounded-xl bg-tt-pine px-5 py-3 text-base font-black text-white sm:w-auto"
           >
             {suggestedQuestion[1]} →
           </button>
         )}
       </div>
 
-      <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#6d3ed1]">
+      <section className="rounded-lg border border-tt-line bg-white p-5 shadow-sm">
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-grape">
           {boostIsAiGenerated ? "✨ AI-generated for today" : "Today's buddy boost"}
         </p>
         <h3 className="mt-2 text-2xl font-black">Today&apos;s buddy boost</h3>
         <div className="mt-4 grid gap-3">
           <article className="rounded-lg bg-[#f4efff] p-4">
-            <p className="text-xs font-black uppercase tracking-[0.14em] text-[#6d3ed1]">Question of the day</p>
+            <p className="text-xs font-black uppercase tracking-[0.14em] text-tt-grape">Question of the day</p>
             <p className="mt-1 text-base font-black leading-6">{dailyQuestion}</p>
           </article>
-          <article className="rounded-lg bg-[#e7f4ef] p-4">
-            <p className="text-xs font-black uppercase tracking-[0.14em] text-[#165a4b]">Tiny mission</p>
+          <article className="rounded-lg bg-tt-pine-tint p-4">
+            <p className="text-xs font-black uppercase tracking-[0.14em] text-tt-pine">Tiny mission</p>
             <p className="mt-1 text-base font-black leading-6">{dailyMission}</p>
           </article>
-          <article className="rounded-lg bg-[#fff4d8] p-4">
-            <p className="text-xs font-black uppercase tracking-[0.14em] text-[#7a4b12]">Encouragement</p>
+          <article className="rounded-lg bg-tt-sun-soft p-4">
+            <p className="text-xs font-black uppercase tracking-[0.14em] text-tt-cocoa">Encouragement</p>
             <p className="mt-1 text-base font-black leading-6">{dailyEncouragement}</p>
           </article>
         </div>
         {!aiBuddyDailyRotate && (
-          <p className="mt-2 text-xs font-bold text-[#4f625b]">Daily rotation is off — your parent can turn it on in Family Setup.</p>
+          <p className="mt-2 text-xs font-bold text-tt-ink-soft">Daily rotation is off — your parent can turn it on in Family Setup.</p>
         )}
       </section>
 
-      <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#f47b20]">Suggested for you</p>
+      <section className="rounded-lg border border-tt-line bg-white p-5 shadow-sm">
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-tang">Suggested for you</p>
         <h3 className="mt-2 text-2xl font-black">Tap a question to try</h3>
         {kidQuestions.length > 0 ? (
           <>
@@ -4852,21 +4955,21 @@ function KidAiBuddyPanel({
                   key={id}
                   onClick={() => askQuestion(id, question)}
                   className={`min-h-14 rounded-lg px-4 py-3 text-left text-sm font-black leading-5 ${
-                    selectedQuestion === id ? "bg-[#165a4b] text-white" : "border border-[#ded8c7] bg-[#faf8f0] text-[#17231f]"
+                    selectedQuestion === id ? "bg-tt-pine text-white" : "border border-tt-line bg-tt-cream text-tt-ink"
                   }`}
                 >
                   {question}
                 </button>
               ))}
             </div>
-            <div key={selectedQuestion ?? "default"} id="ai-buddy-answer" className="mt-4 scroll-mt-24 rounded-lg bg-[#e7f4ef] p-4 animate-[answer-pop_0.6s_ease-out]">
-              <p className="text-xs font-black uppercase tracking-[0.14em] text-[#165a4b]">TailTots suggestion ✨ new!</p>
+            <div key={selectedQuestion ?? "default"} id="ai-buddy-answer" className="mt-4 scroll-mt-24 rounded-lg bg-tt-pine-tint p-4 animate-[answer-pop_0.6s_ease-out]">
+              <p className="text-xs font-black uppercase tracking-[0.14em] text-tt-pine">TailTots suggestion ✨ new!</p>
               <p className="mt-2 text-lg font-black leading-7">{aiSuggestion.title}</p>
-              <p className="mt-2 text-sm font-semibold leading-6 text-[#4f625b]">{aiSuggestion.body}</p>
+              <p className="mt-2 text-sm font-semibold leading-6 text-tt-ink-soft">{aiSuggestion.body}</p>
             </div>
           </>
         ) : (
-          <p className="mt-3 rounded-lg bg-[#faf8f0] p-4 text-sm font-bold text-[#4f625b]">
+          <p className="mt-3 rounded-lg bg-tt-cream p-4 text-sm font-bold text-tt-ink-soft">
             Your parent is choosing which question topics you can explore — check back soon! 💭
           </p>
         )}
@@ -5035,10 +5138,10 @@ function BuddyParentQuestionsEditor({
     setDraft({ question: "", category: categories[0] ?? "Pet care", answerTitle: "", answerBody: "" });
   };
   return (
-    <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
-      <p className="text-xs font-black uppercase tracking-[0.18em] text-[#6d3ed1]">Parent only · AI Buddy</p>
+    <section className="rounded-lg border border-tt-line bg-white p-5 shadow-sm">
+      <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-grape">Parent only · AI Buddy</p>
       <h3 className="mt-2 text-2xl font-black">Questions you want your kid to explore</h3>
-      <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-[#4f625b]">
+      <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-tt-ink-soft">
         Add a question and the answer you&apos;d like the Buddy to give. It appears in your kid&apos;s AI Buddy as a
         predefined question — no open chat — and follows the same topic filters as the built-in questions. When your
         kid asks it, the moment is logged in the activity feed so you can track it.
@@ -5048,14 +5151,14 @@ function BuddyParentQuestionsEditor({
           {questions.map((item) => (
             <li key={item.id} className="flex items-start justify-between gap-3 rounded-lg bg-[#f4efff] p-3">
               <div className="min-w-0">
-                <p className="text-sm font-black text-[#17231f]">{item.question}</p>
-                <p className="mt-1 text-xs font-bold text-[#6d3ed1]">
+                <p className="text-sm font-black text-tt-ink">{item.question}</p>
+                <p className="mt-1 text-xs font-bold text-tt-grape">
                   {item.category} · {item.answerTitle || "Picked by your parent!"}
                 </p>
               </div>
               <button
                 onClick={() => onChange(questions.filter((entry) => entry.id !== item.id))}
-                className="min-h-10 shrink-0 rounded-lg border border-[#ded8c7] bg-white px-3 py-2 text-xs font-black text-[#7a4b12]"
+                className="min-h-10 shrink-0 rounded-lg border border-tt-line bg-white px-3 py-2 text-xs font-black text-tt-cocoa"
                 aria-label={`Remove question: ${item.question}`}
               >
                 Remove
@@ -5064,42 +5167,42 @@ function BuddyParentQuestionsEditor({
           ))}
         </ul>
       )}
-      <div className="mt-4 grid gap-3 rounded-lg bg-[#faf8f0] p-4">
-        <label className="block text-sm font-black text-[#17231f]">
+      <div className="mt-4 grid gap-3 rounded-lg bg-tt-cream p-4">
+        <label className="block text-sm font-black text-tt-ink">
           Question for the Buddy
           <input
             value={draft.question}
             onChange={(event) => setDraft({ ...draft, question: event.target.value })}
             maxLength={140}
             placeholder="e.g. What should I do when Jack seems bored?"
-            className="mt-2 w-full rounded-lg border border-[#ded8c7] px-4 py-3 text-base font-semibold"
+            className="mt-2 w-full rounded-lg border border-tt-line px-4 py-3 text-base font-semibold"
           />
         </label>
         <div className="grid gap-3 sm:grid-cols-2">
-          <label className="block text-sm font-black text-[#17231f]">
+          <label className="block text-sm font-black text-tt-ink">
             Topic
             <select
               value={draft.category}
               onChange={(event) => setDraft({ ...draft, category: event.target.value })}
-              className="mt-2 w-full rounded-lg border border-[#ded8c7] bg-white px-4 py-3 text-base font-semibold"
+              className="mt-2 w-full rounded-lg border border-tt-line bg-white px-4 py-3 text-base font-semibold"
             >
               {categories.map((category) => (
                 <option key={category} value={category}>{category}</option>
               ))}
             </select>
           </label>
-          <label className="block text-sm font-black text-[#17231f]">
+          <label className="block text-sm font-black text-tt-ink">
             Answer headline (optional)
             <input
               value={draft.answerTitle}
               onChange={(event) => setDraft({ ...draft, answerTitle: event.target.value })}
               maxLength={80}
               placeholder="Picked by your parent!"
-              className="mt-2 w-full rounded-lg border border-[#ded8c7] px-4 py-3 text-base font-semibold"
+              className="mt-2 w-full rounded-lg border border-tt-line px-4 py-3 text-base font-semibold"
             />
           </label>
         </div>
-        <label className="block text-sm font-black text-[#17231f]">
+        <label className="block text-sm font-black text-tt-ink">
           The answer the Buddy gives
           <textarea
             value={draft.answerBody}
@@ -5107,13 +5210,13 @@ function BuddyParentQuestionsEditor({
             maxLength={500}
             rows={3}
             placeholder="Write the guidance you'd give — the Buddy shows it when your kid taps the question."
-            className="mt-2 w-full rounded-lg border border-[#ded8c7] px-4 py-3 text-base font-semibold"
+            className="mt-2 w-full rounded-lg border border-tt-line px-4 py-3 text-base font-semibold"
           />
         </label>
         <button
           onClick={addQuestion}
           disabled={!canAdd}
-          className="min-h-11 justify-self-start rounded-lg bg-[#6d3ed1] px-5 py-2 text-sm font-black text-white disabled:opacity-40"
+          className="min-h-11 justify-self-start rounded-lg bg-tt-grape px-5 py-2 text-sm font-black text-white disabled:opacity-40"
         >
           Add to my kid&apos;s Buddy
         </button>
@@ -5159,7 +5262,7 @@ function ChildProfileDropdown({
         onClick={() => setIsOpen(!isOpen)}
         aria-label={`Switch kid profile, currently ${activeChild?.name ?? "no kid selected"}`}
         aria-expanded={isOpen}
-        className="flex min-h-11 items-center gap-2 rounded-full border border-[#ded8c7] bg-white py-1 pl-1 pr-3 text-xs font-black text-[#17231f] shadow-sm"
+        className="flex min-h-11 items-center gap-2 rounded-full border border-tt-line bg-white py-1 pl-1 pr-3 text-xs font-black text-tt-ink shadow-sm"
       >
         <ProfilePhoto
           label={activeChild?.name ?? "Kid"}
@@ -5174,8 +5277,8 @@ function ChildProfileDropdown({
         <span aria-hidden="true" className={`text-[10px] transition-transform ${isOpen ? "rotate-180" : ""}`}>▼</span>
       </button>
       {isOpen && (
-        <div className="absolute left-0 top-full z-30 mt-2 w-56 overflow-hidden rounded-xl border border-[#ded8c7] bg-white shadow-lg">
-          <p className="border-b border-[#ded8c7] bg-[#fff4d8] px-3 py-2 text-[10px] font-black uppercase tracking-[0.14em] text-[#7a4b12]">
+        <div className="absolute left-0 top-full z-30 mt-2 w-56 overflow-hidden rounded-xl border border-tt-line bg-white shadow-lg">
+          <p className="border-b border-tt-line bg-tt-sun-soft px-3 py-2 text-[10px] font-black uppercase tracking-[0.14em] text-tt-cocoa">
             Who is using TailTots?
           </p>
           <div className="max-h-64 overflow-y-auto p-2">
@@ -5188,12 +5291,12 @@ function ChildProfileDropdown({
                   type="button"
                   onClick={() => handleSwitch(child.id)}
                   className={`flex min-h-12 w-full items-center gap-3 rounded-lg px-2 py-2 text-left text-sm font-black ${
-                    isActive ? "bg-[#e7f4ef] text-[#165a4b]" : "text-[#17231f] hover:bg-[#faf8f0]"
+                    isActive ? "bg-tt-pine-tint text-tt-pine" : "text-tt-ink hover:bg-tt-cream"
                   }`}
                 >
                   <ProfilePhoto label={child.name} initial={look.initial} colors={look.colors} size="xs" variant="kid" hair={look.hair} photoUrl={child.photoUrl} />
                   <span className="min-w-0 flex-1 truncate">{child.name}</span>
-                  {isActive && <span aria-hidden="true" className="text-[#165a4b]">✓</span>}
+                  {isActive && <span aria-hidden="true" className="text-tt-pine">✓</span>}
                 </button>
               );
             })}
@@ -5226,11 +5329,11 @@ function Hero({
   const childLook = getChildLook(child?.id);
   return (
     <section className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
-      <div className="overflow-hidden rounded-lg bg-[#165a4b] text-white shadow-sm">
+      <div className="overflow-hidden rounded-lg bg-tt-pine text-white shadow-sm">
         <div className="p-4">
           <div>
             <div className="mt-4 flex flex-wrap gap-3">
-              <button onClick={() => document.getElementById("today-mission-list")?.scrollIntoView({ behavior: "smooth", block: "start" })} className="min-h-11 rounded-lg bg-[#f47b20] px-4 py-3 text-sm font-black text-white sm:min-h-12 sm:px-5">
+              <button onClick={() => document.getElementById("today-mission-list")?.scrollIntoView({ behavior: "smooth", block: "start" })} className="min-h-11 rounded-lg bg-tt-tang px-4 py-3 text-sm font-black text-white sm:min-h-12 sm:px-5">
                 Start today&apos;s missions
               </button>
               {role === "parent" && (
@@ -5255,13 +5358,13 @@ function Hero({
           ))}
         </div>
       </div>
-      <div className="flex flex-col rounded-lg border border-[#ded8c7] bg-white p-4 shadow-sm">
+      <div className="flex flex-col rounded-lg border border-tt-line bg-white p-4 shadow-sm">
         <div className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
           <div>
             <div className="flex items-center gap-3">
               <ProfilePhoto label={child?.name ?? "Kid"} initial={childLook.initial} colors={childLook.colors} variant="kid" hair={childLook.hair} photoUrl={child?.photoUrl} />
               <div>
-                <p className="text-xs font-black uppercase tracking-[0.18em] text-[#f47b20]">Selected child</p>
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-tang">Selected child</p>
                 <h3 className="text-2xl font-black">{child?.name ?? "Add a child"}</h3>
               </div>
             </div>
@@ -5270,14 +5373,14 @@ function Hero({
                 const look = getChildLook(item.id);
                 const isSelected = item.id === child?.id;
                 return (
-                  <div key={item.id} className={`rounded-lg border ${isSelected ? "border-[#f47b20] bg-[#fff4d8]" : "border-[#ded8c7] bg-[#faf8f0]"}`}>
+                  <div key={item.id} className={`rounded-lg border ${isSelected ? "border-tt-tang bg-tt-sun-soft" : "border-tt-line bg-tt-cream"}`}>
                     <button
                       onClick={() => setActiveChildId(item.id)}
-                      className="flex min-h-12 w-full items-center gap-3 px-3 py-2 text-left text-sm font-black text-[#17231f]"
+                      className="flex min-h-12 w-full items-center gap-3 px-3 py-2 text-left text-sm font-black text-tt-ink"
                     >
                       <ProfilePhoto label={item.name} initial={look.initial} colors={look.colors} size="xs" variant="kid" hair={look.hair} photoUrl={item.photoUrl} />
                       <span className="min-w-0 flex-1 truncate">{item.name}</span>
-                      {isSelected && <span className="rounded-full bg-[#17231f] px-2 py-1 text-[10px] uppercase tracking-[0.1em] text-white">Selected</span>}
+                      {isSelected && <span className="rounded-full bg-tt-ink px-2 py-1 text-[10px] uppercase tracking-[0.1em] text-white">Selected</span>}
                     </button>
                   </div>
                 );
@@ -5292,23 +5395,23 @@ function Hero({
                 <span>{taskProgress}%</span>
               </div>
               <div className="h-4 rounded-full bg-[#f5f1e5]">
-                <div className="h-4 rounded-full bg-[#f47b20]" style={{ width: `${taskProgress}%` }} />
+                <div className="h-4 rounded-full bg-tt-tang" style={{ width: `${taskProgress}%` }} />
               </div>
             </div>
             <div className="mt-4 grid grid-cols-3 gap-2 text-center text-xs font-black">
-              <span className="rounded-lg bg-[#ecf7f0] p-3 text-[#0d3b30]"><b className="block text-lg">{child?.points ?? 0}</b>points</span>
-              <span className="rounded-lg bg-[#fff4d8] p-3 text-[#7a4b12]"><b className="block text-lg">{approvedMissionCount}</b>approved</span>
-              <span className="rounded-lg bg-[#eef4ff] p-3 text-[#1e3a8a]"><b className="block text-lg">{pendingCount}</b>pending</span>
+              <span className="rounded-lg bg-[#ecf7f0] p-3 text-tt-pine-deep"><b className="block text-lg">{child?.points ?? 0}</b>points</span>
+              <span className="rounded-lg bg-tt-sun-soft p-3 text-tt-cocoa"><b className="block text-lg">{approvedMissionCount}</b>approved</span>
+              <span className="rounded-lg bg-[#eef4ff] p-3 text-tt-ocean"><b className="block text-lg">{pendingCount}</b>pending</span>
             </div>
             {role === "parent" && (
               <div className="mt-4 grid gap-3">
-                <Meter label="Loving the app" value={childLook.love} color="#6d3ed1" />
-                <Meter label="Happiness today" value={childLook.joy} color="#165a4b" />
+                <Meter label="Loving the app" value={childLook.love} color="var(--tt-grape)" />
+                <Meter label="Happiness today" value={childLook.joy} color="var(--tt-pine)" />
               </div>
             )}
           </div>
         </div>
-        <button onClick={() => setActiveTab("pets")} className="mt-auto min-h-11 rounded-lg bg-[#17231f] px-4 py-2 text-sm font-black text-white">
+        <button onClick={() => setActiveTab("pets")} className="mt-auto min-h-11 rounded-lg bg-tt-ink px-4 py-2 text-sm font-black text-white">
           View pet passports
         </button>
       </div>
@@ -5452,19 +5555,19 @@ function PhotoCropModal({
   }, [draft]);
 
   return (
-    <div className="fixed inset-0 z-50 grid overflow-y-auto bg-[#17231f]/60 p-4 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 grid overflow-y-auto bg-tt-ink/60 p-4 backdrop-blur-sm">
       <section className="m-auto w-full max-w-4xl rounded-lg bg-white p-5 shadow-2xl">
-        <div className="flex items-start justify-between gap-4 border-b border-[#ded8c7] pb-4">
+        <div className="flex items-start justify-between gap-4 border-b border-tt-line pb-4">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-[#f47b20]">Head-focused profile crop</p>
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-tang">Head-focused profile crop</p>
             <h2 className="mt-2 text-3xl font-black">Fit {draft.label}&apos;s face into the character</h2>
-            <p className="mt-2 text-sm font-semibold text-[#4f625b]">People photos start zoomed toward the head, ears, and hair so background stays out of the animated profile.</p>
+            <p className="mt-2 text-sm font-semibold text-tt-ink-soft">People photos start zoomed toward the head, ears, and hair so background stays out of the animated profile.</p>
           </div>
-          <button onClick={close} className="rounded-lg border border-[#ded8c7] px-4 py-2 text-sm font-black">Close</button>
+          <button onClick={close} className="rounded-lg border border-tt-line px-4 py-2 text-sm font-black">Close</button>
         </div>
 
         <div className="mt-5 grid gap-5 md:grid-cols-[1fr_260px]">
-          <div className="overflow-hidden rounded-lg border border-[#ded8c7] bg-[#0b100e]">
+          <div className="overflow-hidden rounded-lg border border-tt-line bg-[#0b100e]">
             <div className="relative h-[360px] touch-none sm:h-[430px]">
               <Cropper
                 image={draft.imageUrl}
@@ -5482,17 +5585,17 @@ function PhotoCropModal({
                 onCropComplete={(_, croppedAreaPixels) => setDraft({ ...draft, croppedAreaPixels })}
               />
             </div>
-            <div className="flex items-center justify-between gap-3 bg-[#faf8f0] px-4 py-3 text-sm font-black text-[#17231f]">
+            <div className="flex items-center justify-between gap-3 bg-tt-cream px-4 py-3 text-sm font-black text-tt-ink">
               <span>{draft.fit === "contain" ? "Pet mode keeps more of the body visible" : "Face mode fills the profile circle"}</span>
-              <span className="shrink-0 rounded-full bg-white px-3 py-1 text-xs text-[#4f625b]">Drag photo</span>
+              <span className="shrink-0 rounded-full bg-white px-3 py-1 text-xs text-tt-ink-soft">Drag photo</span>
             </div>
           </div>
 
           <div className="flex flex-col justify-between gap-4">
-            <div className="rounded-lg bg-[#faf8f0] p-4">
-              <p className="text-xs font-black uppercase tracking-[0.16em] text-[#7a4b12]">Final shape</p>
+            <div className="rounded-lg bg-tt-cream p-4">
+              <p className="text-xs font-black uppercase tracking-[0.16em] text-tt-cocoa">Final shape</p>
               <div className="mt-4 grid place-items-center">
-                <div className="relative size-36 overflow-hidden rounded-full border-4 border-white bg-[#ded8c7] shadow-sm">
+                <div className="relative size-36 overflow-hidden rounded-full border-4 border-white bg-tt-line shadow-sm">
                   <Image src={previewUrl} alt={`${draft.label} selected photo`} fill sizes="144px" className="object-cover" unoptimized />
                 </div>
               </div>
@@ -5513,19 +5616,19 @@ function PhotoCropModal({
             </label>
 
             <div className="grid grid-cols-2 gap-3">
-              <button onClick={() => updateZoom(draft.zoom - zoomStep)} className="min-h-12 rounded-lg border border-[#ded8c7] px-4 py-3 text-sm font-black">
+              <button onClick={() => updateZoom(draft.zoom - zoomStep)} className="min-h-12 rounded-lg border border-tt-line px-4 py-3 text-sm font-black">
                 Zoom out
               </button>
-              <button onClick={() => updateZoom(draft.zoom + zoomStep)} className="min-h-12 rounded-lg border border-[#ded8c7] px-4 py-3 text-sm font-black">
+              <button onClick={() => updateZoom(draft.zoom + zoomStep)} className="min-h-12 rounded-lg border border-tt-line px-4 py-3 text-sm font-black">
                 Zoom in
               </button>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
-              <button onClick={resetCrop} className="min-h-12 rounded-lg border border-[#ded8c7] px-4 py-3 text-sm font-black">
+              <button onClick={resetCrop} className="min-h-12 rounded-lg border border-tt-line px-4 py-3 text-sm font-black">
                 Reset
               </button>
-              <button onClick={saveCrop} className="min-h-12 rounded-lg bg-[#165a4b] px-4 py-3 text-sm font-black text-white">
+              <button onClick={saveCrop} className="min-h-12 rounded-lg bg-tt-pine px-4 py-3 text-sm font-black text-white">
                 Save photo
               </button>
             </div>
@@ -5611,7 +5714,7 @@ function FamilyFaceParade({
   animated?: boolean;
 }) {
   const people = [
-    ...parents.map((parent) => ({ id: parent.id, name: parent.name, photoUrl: parent.photoUrl, initial: parent.name.trim()[0]?.toUpperCase() ?? "P", colors: "from-[#ffd166] via-[#f47b20] to-[#6d3ed1]", hair: "#4a2718" })),
+    ...parents.map((parent) => ({ id: parent.id, name: parent.name, photoUrl: parent.photoUrl, initial: parent.name.trim()[0]?.toUpperCase() ?? "P", colors: "from-tt-sun via-tt-tang to-tt-grape", hair: "#4a2718" })),
     ...childProfiles.map((child) => {
       const look = getChildLook(child.id);
       return { id: child.id, name: child.name, photoUrl: child.photoUrl, initial: look.initial, colors: look.colors, hair: look.hair };
@@ -5625,15 +5728,15 @@ function FamilyFaceParade({
         {people.map((person, index) => (
           <AnimatedFamilyCharacter
             key={person.id}
-            tone={["#ffd166", "#f6b38a", "#c58b6a", "#f4c7a1"][index % 4]}
-            shirt={["#165a4b", "#6d3ed1", "#f47b20", "#2563eb"][index % 4]}
+            tone={["var(--tt-sun)", "#f6b38a", "#c58b6a", "#f4c7a1"][index % 4]}
+            shirt={["var(--tt-pine)", "var(--tt-grape)", "var(--tt-tang)", "var(--tt-blue)"][index % 4]}
             delay={`${index * 0.12}s`}
             photoUrl={person.photoUrl}
             label={person.name}
           />
         ))}
         {visiblePets.map((pet, index) => (
-          <AnimatedPetBuddy key={pet.id} color={index % 2 === 0 ? "#f47b20" : "#165a4b"} delay={`${(people.length + index) * 0.12}s`} photoUrl={pet.photoUrl} label={pet.name} kind={getPetLook(pet.id, pet).kind} />
+          <AnimatedPetBuddy key={pet.id} color={index % 2 === 0 ? "var(--tt-tang)" : "var(--tt-pine)"} delay={`${(people.length + index) * 0.12}s`} photoUrl={pet.photoUrl} label={pet.name} kind={getPetLook(pet.id, pet).kind} />
         ))}
       </div>
     );
@@ -5675,8 +5778,8 @@ function isNeighborhoodSchoolMission(mission: Mission): boolean {
 }
 
 const MISSION_CATEGORY_VISUAL: Record<Mission["category"], { emoji: string; bg: string }> = {
-  pet_care: { emoji: "🐾", bg: "bg-[#e7f4ef]" },
-  chore: { emoji: "🧹", bg: "bg-[#fff4d8]" },
+  pet_care: { emoji: "🐾", bg: "bg-tt-pine-tint" },
+  chore: { emoji: "🧹", bg: "bg-tt-sun-soft" },
   kindness: { emoji: "💛", bg: "bg-[#ffe4e6]" },
   money: { emoji: "💰", bg: "bg-[#dcfce7]" },
   community: { emoji: "🤝", bg: "bg-[#e0f2fe]" },
@@ -5741,9 +5844,42 @@ function MissionsPanel(props: {
   const isKidView = props.role === "child";
   const [confirmingMissionId, setConfirmingMissionId] = useState<string | null>(null);
   const [patienceMissionId, setPatienceMissionId] = useState<string | null>(null);
+  // Celebration engine: which mission just got completed (kid view only).
+  const [celebrating, setCelebrating] = useState<{ mission: Mission; braveTry: boolean } | null>(null);
+  const [braveTryCount, setBraveTryCount] = useState(0);
   const tapPatience = (missionId: string) => {
     setPatienceMissionId(missionId);
     window.setTimeout(() => setPatienceMissionId((current) => (current === missionId ? null : current)), 2600);
+  };
+  /** Kid-view completion: run the mission update, then fire the celebration sequence. */
+  const celebrateAndComplete = (mission: Mission) => {
+    playClick();
+    const isBraveTry = mission.difficulty === "hard" || mission.difficulty === "super_hard";
+    if (isKidView) {
+      if (isBraveTry) {
+        setBraveTryCount((c) => c + 1);
+      }
+      setCelebrating({ mission, braveTry: isBraveTry });
+    }
+    props.completeMission(mission.id);
+  };
+  /** Build reward cards for the celebration from the mission's traits/points. */
+  const rewardsFor = (mission: Mission): CelebrationReward[] => {
+    const rewards: CelebrationReward[] = [];
+    if (mission.curriculum) {
+      const meta = TRAIT_META[mission.curriculum.trait];
+      if (meta) {
+        rewards.push({
+          icon: meta.emoji,
+          title: `${meta.label} growing!`,
+          detail: meta.blurb,
+        });
+      }
+    }
+    if (mission.coins > 0) {
+      rewards.push({ icon: "🪙", title: `+${mission.coins} treats`, detail: "For your pet buddy!" });
+    }
+    return rewards;
   };
   // Pet status card: the first pet is the kid's "today" companion.
   const statusPet = props.pets[0];
@@ -5754,14 +5890,17 @@ function MissionsPanel(props: {
     : undefined;
   const scrollToMissions = () => document.getElementById("today-mission-list")?.scrollIntoView({ behavior: "smooth", block: "start" });
   return (
-    <section className="rounded-lg border border-[#ded8c7] bg-white p-4 shadow-sm sm:p-5">
+    <section className="rounded-lg border border-tt-line bg-white p-4 shadow-sm sm:p-5">
       <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
-        <div>
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-[#165a4b]">Today</p>
-          <h2 className="mt-2 text-2xl font-black sm:text-3xl">Today&apos;s care and helper missions</h2>
-          <p className="mt-2 max-w-xl text-sm font-semibold leading-6 text-[#4f625b]">
-            Pick a mission, do it in the real world, then send it for a parent high-five.
-          </p>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-pine">Today</p>
+            <h2 className="mt-2 text-2xl font-black sm:text-3xl">Today&apos;s care and helper missions</h2>
+            <p className="mt-2 max-w-xl text-sm font-semibold leading-6 text-tt-ink-soft">
+              Pick a mission, do it in the real world, then send it for a parent high-five.
+            </p>
+          </div>
+          {isKidView && <SoundToggle />}
         </div>
       </div>
       {isKidView && (props.activeChild ?? props.allChildren[0]) && (
@@ -5773,8 +5912,30 @@ function MissionsPanel(props: {
           />
         </div>
       )}
+      {/* Explore mode — lantern, not leash: untracked free time for kids */}
+      {isKidView && (props.activeChild ?? props.allChildren[0]) && (
+        <div className="mt-4">
+          <ExploreMode childName={(props.activeChild ?? props.allChildren[0]).name} />
+        </div>
+      )}
+      {/* Choice Adventures — decision intelligence: branching stories + rewind */}
+      {isKidView && (props.activeChild ?? props.allChildren[0]) && (
+        <ChoiceAdventureSpot child={props.activeChild ?? props.allChildren[0]} />
+      )}
+      {/* Curiosity missions — wonder (ask) + listening (hear) */}
+      {isKidView && (props.activeChild ?? props.allChildren[0]) && (
+        <CuriosityMissions child={props.activeChild ?? props.allChildren[0]} />
+      )}
+      {/* Synthesis moments — connect dots, teach pet, spot patterns, weekly synthesis */}
+      {isKidView && (props.activeChild ?? props.allChildren[0]) && (
+        <SynthesisZone
+          child={props.activeChild ?? props.allChildren[0]}
+          missions={props.missions}
+          petName={props.pets[0]?.name}
+        />
+      )}
       {isKidView && statusPet && statusPetStats && statusPetLook && (
-        <div className="mt-4 overflow-hidden rounded-xl border border-[#ded8c7] bg-[#faf8f0]">
+        <div className="mt-4 overflow-hidden rounded-xl border border-tt-line bg-tt-cream">
           <div className="flex items-center gap-4 p-4">
             <PetMedallion
               label={statusPet.name}
@@ -5786,34 +5947,34 @@ function MissionsPanel(props: {
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
                 <p className="text-xl font-black">{statusPet.name}</p>
-                <span className="rounded-full bg-white px-3 py-1 text-xs font-black ring-1 ring-[#ded8c7]">{statusPetStats.stage}</span>
-                <span className="rounded-full bg-[#e7f4ef] px-3 py-1 text-xs font-black text-[#0d3b30]">{statusPetStats.mood}</span>
+                <span className="rounded-full bg-white px-3 py-1 text-xs font-black ring-1 ring-tt-line">{statusPetStats.stage}</span>
+                <span className="rounded-full bg-tt-pine-tint px-3 py-1 text-xs font-black text-tt-pine-deep">{statusPetStats.mood}</span>
               </div>
-              <p className="mt-1 text-sm font-semibold text-[#4f625b]">
+              <p className="mt-1 text-sm font-semibold text-tt-ink-soft">
                 {firstOpenNeed ? `${statusPet.name} is waiting on: “${firstOpenNeed.title}” 🐾` : statusPetStats.approved === 0 ? `Say hi to ${statusPet.name} — your first care mission is below! 👋` : `${statusPet.name} is all cared for — nice work! 🌟`}
               </p>
             </div>
           </div>
-          <button onClick={scrollToMissions} className="tt-btn-press w-full bg-[#165a4b] px-4 py-3 text-sm font-black text-white">
+          <button onClick={scrollToMissions} className="tt-btn-press w-full bg-tt-pine px-4 py-3 text-sm font-black text-white">
             Check on {statusPet.name} →
           </button>
         </div>
       )}
       {isKidView && !statusPet && (
-        <div className="mt-4 rounded-xl border-2 border-dashed border-[#165a4b] bg-[#e7f4ef] p-4">
-          <p className="text-lg font-black text-[#0d3b30]">Your future pet is waiting… 🐾</p>
-          <p className="mt-1 text-sm font-semibold text-[#4f625b]">
+        <div className="mt-4 rounded-xl border-2 border-dashed border-tt-pine bg-tt-pine-tint p-4">
+          <p className="text-lg font-black text-tt-pine-deep">Your future pet is waiting… 🐾</p>
+          <p className="mt-1 text-sm font-semibold text-tt-ink-soft">
             Every mission below is practice for the real thing. Finish them and you build the case for a pet of your own.
           </p>
-          <button onClick={scrollToMissions} className="tt-btn-press mt-3 min-h-11 rounded-lg bg-[#165a4b] px-4 py-2 text-sm font-black text-white">
+          <button onClick={scrollToMissions} className="tt-btn-press mt-3 min-h-11 rounded-lg bg-tt-pine px-4 py-2 text-sm font-black text-white">
             Start the readiness path →
           </button>
         </div>
       )}
       {!isKidView && props.activeChild && (
-        <div className="mt-4 rounded-lg border border-[#ded8c7] bg-[#f0edff] p-4" aria-label="Character progress">
-          <p className="text-sm font-black text-[#17231f]">🦸 Character journey</p>
-          <p className="mt-1 text-xs font-bold text-[#4f625b]">
+        <div className="mt-4 rounded-lg border border-tt-line bg-tt-grape-soft p-4" aria-label="Character progress">
+          <p className="text-sm font-black text-tt-ink">🦸 Character journey</p>
+          <p className="mt-1 text-xs font-bold text-tt-ink-soft">
             {props.activeChild.name}&apos;s character track — grown-ups only, never shown to kids. Approve every mission in a level to award a star.
           </p>
           <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -5823,7 +5984,7 @@ function MissionsPanel(props: {
                 <p className="mt-1 text-xs font-black">{entry.label}</p>
                 <p className="mt-1 text-sm tracking-widest" aria-label={`${entry.levelsDone} of 3 ${entry.label} levels complete`}>
                   {entry.levels.map((levelEntry) => (
-                    <span key={levelEntry.levelIndex} className={levelEntry.done ? "text-[#6d3ed1]" : "text-[#c9c2b2]"}>
+                    <span key={levelEntry.levelIndex} className={levelEntry.done ? "text-tt-grape" : "text-[#c9c2b2]"}>
                       {levelEntry.done ? "★" : "☆"}
                     </span>
                   ))}
@@ -5835,15 +5996,15 @@ function MissionsPanel(props: {
       )}
       <div id="today-mission-list" className="mt-5 grid gap-3 scroll-mt-24">
         {props.missions.length === 0 && (
-          <div className="rounded-xl border-2 border-dashed border-[#165a4b] bg-[#e7f4ef] p-6 text-center">
-            <p className="text-lg font-black text-[#0d3b30]">No missions yet 🐾</p>
-            <p className="mx-auto mt-2 max-w-md text-sm font-semibold text-[#4f625b]">
+          <div className="rounded-xl border-2 border-dashed border-tt-pine bg-tt-pine-tint p-6 text-center">
+            <p className="text-lg font-black text-tt-pine-deep">No missions yet 🐾</p>
+            <p className="mx-auto mt-2 max-w-md text-sm font-semibold text-tt-ink-soft">
               {isKidView
                 ? "Your first mission is the start of the adventure — ask a grown-up to add one, or try the demo missions above!"
                 : "Add the first mission so your kid has something to care for today — pet care, chores, or kindness."}
             </p>
             {isKidView && (
-              <p className="mt-3 text-sm font-black text-[#165a4b]">Ask a grown-up to add your first one →</p>
+              <p className="mt-3 text-sm font-black text-tt-pine">Ask a grown-up to add your first one →</p>
             )}
           </div>
         )}
@@ -5857,8 +6018,8 @@ function MissionsPanel(props: {
               key={mission.id}
               className={`relative grid gap-4 overflow-hidden rounded-lg border p-4 lg:grid-cols-[1fr_auto] lg:items-center ${
                 missionDone
-                  ? "border-[#165a4b]/40 bg-[#e7f4ef] shadow-[0_8px_24px_-12px_rgba(22,90,75,0.45)]"
-                  : "border-[#ded8c7] bg-[#faf8f0]"
+                  ? "border-tt-pine/40 bg-tt-pine-tint shadow-[0_8px_24px_-12px_rgba(22,90,75,0.45)]"
+                  : "border-tt-line bg-tt-cream"
               }`}
             >
               {missionDone && (
@@ -5875,11 +6036,11 @@ function MissionsPanel(props: {
                       <MissionThumb mission={mission} pet={pet} />
                       <h3 className="text-xl font-black">{mission.title}</h3>
                     </div>
-                    <p className="mt-1 text-sm font-semibold text-[#4f625b]">{mission.question}</p>
-                    <div className="mt-2 flex flex-wrap items-center gap-2 text-xs font-black text-[#4f625b]">
+                    <p className="mt-1 text-sm font-semibold text-tt-ink-soft">{mission.question}</p>
+                    <div className="mt-2 flex flex-wrap items-center gap-2 text-xs font-black text-tt-ink-soft">
                       {isNeighborhoodSchoolMission(mission) && (
                         <>
-                          <span className="rounded-full bg-[#eef2ff] px-2.5 py-1 text-xs font-black">Neighborhood</span>
+                          <span className="rounded-full bg-tt-sky px-2.5 py-1 text-xs font-black">Neighborhood</span>
                           <span aria-hidden="true">·</span>
                         </>
                       )}
@@ -5887,36 +6048,36 @@ function MissionsPanel(props: {
                       {curriculumMissionLabel(mission) && (
                         <>
                           <span aria-hidden="true">·</span>
-                          <span className="text-[#6d3ed1]">{curriculumMissionLabel(mission)}</span>
+                          <span className="text-tt-grape">{curriculumMissionLabel(mission)}</span>
                         </>
                       )}
                     </div>
                     {mission.status === "rejected" && mission.note && (
-                      <p className="mt-2 rounded-lg bg-[#fff4d8] p-2 text-xs font-bold text-[#7a4b12]">↩️ Sent back: {mission.note}</p>
+                      <p className="mt-2 rounded-lg bg-tt-sun-soft p-2 text-xs font-bold text-tt-cocoa">↩️ Sent back: {mission.note}</p>
                     )}
                   </div>
                   <div className="grid gap-2">
                     {confirmingMissionId === mission.id ? (
-                      <div className="rounded-lg bg-white p-3 ring-1 ring-[#ded8c7]">
-                        <label className="text-xs font-black uppercase tracking-[0.12em] text-[#165a4b]">
+                      <div className="rounded-lg bg-white p-3 ring-1 ring-tt-line">
+                        <label className="text-xs font-black uppercase tracking-[0.12em] text-tt-pine">
                           Step 2 · What did you notice?
                           <textarea
                             value={props.missionNote}
                             onChange={(event) => props.setMissionNote(event.target.value)}
-                            className="mt-2 min-h-20 w-full rounded-lg border border-[#ded8c7] bg-[#faf8f0] px-3 py-2 text-sm font-semibold"
+                            className="mt-2 min-h-20 w-full rounded-lg border border-tt-line bg-tt-cream px-3 py-2 text-sm font-semibold"
                             placeholder="What did you notice?"
                           />
                         </label>
                         <div className="mt-2 grid grid-cols-2 gap-2">
                           <button
                             onClick={() => setConfirmingMissionId(null)}
-                            className="tt-btn-press min-h-11 rounded-lg border-2 border-[#ded8c7] bg-white px-4 py-2 text-sm font-black text-[#4f625b]"
+                            className="tt-btn-press min-h-11 rounded-lg border-2 border-tt-line bg-white px-4 py-2 text-sm font-black text-tt-ink-soft"
                           >
                             Back
                           </button>
                           <button
                             onClick={() => { props.completeMission(mission.id); setConfirmingMissionId(null); }}
-                            className="tt-btn-press min-h-11 rounded-lg bg-[#f47b20] px-4 py-2 text-sm font-black text-white"
+                            className="tt-btn-press min-h-11 rounded-lg bg-tt-tang px-4 py-2 text-sm font-black text-white"
                           >
                             Send for high-five →
                           </button>
@@ -5932,25 +6093,25 @@ function MissionsPanel(props: {
                         disabled={!props.activeChild || mission.status === "approved"}
                         className={`tt-btn-press min-h-14 w-full rounded-lg px-6 py-3 text-base font-black disabled:opacity-95 lg:w-auto ${
                           mission.status === "approved"
-                            ? "bg-[#165a4b] text-white"
+                            ? "bg-tt-pine text-white"
                             : mission.completedBy
-                              ? "bg-[#ffd166] text-[#7a4b12]"
-                              : "bg-[#f47b20] text-white"
+                              ? "bg-tt-sun text-tt-cocoa"
+                              : "bg-tt-tang text-white"
                         }`}
                       >
                         {mission.status === "approved" ? "Approved ✓" : mission.completedBy ? "⏳ Sent for a parent high-five" : "Mark done"}
                       </button>
                     )}
                     {patienceMissionId === mission.id && (
-                      <p className="text-center text-xs font-black text-[#7a4b12]">Still waiting — nice patience! 🌟</p>
+                      <p className="text-center text-xs font-black text-tt-cocoa">Still waiting — nice patience! 🌟</p>
                     )}
                     {mission.completedBy && mission.status !== "approved" && (
                       props.nudgedMissionIds.includes(mission.id) ? (
-                        <p className="text-center text-xs font-black text-[#165a4b]">Nudged ✓ — a parent got the memo</p>
+                        <p className="text-center text-xs font-black text-tt-pine">Nudged ✓ — a parent got the memo</p>
                       ) : (
                         <button
                           onClick={() => props.onNudgeMission(mission.id)}
-                          className="tt-btn-press min-h-10 rounded-lg border-2 border-dashed border-[#f4b400] bg-[#fff4d8] px-4 py-2 text-xs font-black text-[#7a4b12]"
+                          className="tt-btn-press min-h-10 rounded-lg border-2 border-dashed border-tt-gold bg-tt-sun-soft px-4 py-2 text-xs font-black text-tt-cocoa"
                         >
                           Nudge parent 👋
                         </button>
@@ -5959,7 +6120,7 @@ function MissionsPanel(props: {
                     {mission.status === "approved" && (
                       <button
                         onClick={() => props.repeatMission(mission.id)}
-                        className="min-h-11 rounded-lg border border-[#165a4b] bg-white px-4 py-2 text-sm font-black text-[#165a4b]"
+                        className="min-h-11 rounded-lg border border-tt-pine bg-white px-4 py-2 text-sm font-black text-tt-pine"
                       >
                         Do again 🔁
                       </button>
@@ -5972,17 +6133,17 @@ function MissionsPanel(props: {
                 <div className="flex flex-wrap gap-2">
                   <span className="rounded-full bg-white px-3 py-1 text-xs font-black">{levelLabels[mission.difficulty]}</span>
                   {isNeighborhoodSchoolMission(mission) && (
-                    <span className="rounded-full bg-[#eef2ff] px-3 py-1 text-xs font-black">Neighborhood</span>
+                    <span className="rounded-full bg-tt-sky px-3 py-1 text-xs font-black">Neighborhood</span>
                   )}
-                  <span className="rounded-full bg-[#fff4d8] px-3 py-1 text-xs font-black">+{mission.points} pts</span>
+                  <span className="rounded-full bg-tt-sun-soft px-3 py-1 text-xs font-black">+{mission.points} pts</span>
                   <span className="rounded-full bg-white px-3 py-1 text-xs font-black">
                     {mission.allowanceDollars ? `+$${mission.allowanceDollars}` : "No dollars"}
                   </span>
-                  <span className="rounded-full bg-[#f0edff] px-3 py-1 text-xs font-black text-[#6d3ed1]">
+                  <span className="rounded-full bg-tt-grape-soft px-3 py-1 text-xs font-black text-tt-grape">
                     {getLifeSkillLabel(skill)}
                   </span>
                   {curriculumMissionLabel(mission) && (
-                    <span className="rounded-full bg-[#6d3ed1] px-3 py-1 text-xs font-black text-white">
+                    <span className="rounded-full bg-tt-grape px-3 py-1 text-xs font-black text-white">
                       {curriculumMissionLabel(mission)}
                     </span>
                   )}
@@ -5991,33 +6152,33 @@ function MissionsPanel(props: {
                   <MissionThumb mission={mission} pet={pet} />
                   <h3 className="text-xl font-black">{mission.title}</h3>
                 </div>
-                <p className="mt-1 text-sm font-semibold text-[#4f625b]">{mission.question}</p>
+                <p className="mt-1 text-sm font-semibold text-tt-ink-soft">{mission.question}</p>
                 <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                  <p className="rounded-lg bg-white p-3 text-xs font-black text-[#165a4b]">
+                  <p className="rounded-lg bg-white p-3 text-xs font-black text-tt-pine">
                     Why this is for you: {getKidMissionReason(mission, props.activeChild)}
                   </p>
-                  <p className="rounded-lg bg-white p-3 text-xs font-black text-[#7a4b12]">
+                  <p className="rounded-lg bg-white p-3 text-xs font-black text-tt-cocoa">
                     Fairness note: {assignedChild ? `${assignedChild.name} owns this one task.` : "Parent can assign one owner so kids do not fight over it."}
                   </p>
                 </div>
               </div>
               <div className="grid gap-2">
                 <button
-                  onClick={() => props.completeMission(mission.id)}
+                  onClick={() => celebrateAndComplete(mission)}
                   disabled={!props.activeChild || mission.status === "approved"}
-                  className={`tt-btn-press min-h-14 w-full rounded-lg px-6 py-3 text-base font-black text-white disabled:bg-[#b9b2a2] lg:w-auto ${missionDone ? "bg-[#165a4b]" : "bg-[#f47b20]"}`}
+                  className={`tt-btn-press min-h-14 w-full rounded-lg px-6 py-3 text-base font-black text-white disabled:bg-[#b9b2a2] lg:w-auto ${missionDone ? "bg-tt-pine" : "bg-tt-tang"}`}
                 >
                   {mission.status === "approved" ? "Approved ✓" : mission.completedBy ? "Needs approval 👀" : "Mark done"}
                 </button>
                 {missionDone && (
-                  <p className="text-center text-xs font-black text-[#165a4b] lg:text-right">
+                  <p className="text-center text-xs font-black text-tt-pine lg:text-right">
                     {mission.status === "approved" ? "🎉 Mission crushed. Treats earned." : "🎉 Done! Awaiting the parent high-five."}
                   </p>
                 )}
                 {mission.status === "approved" && (
                   <button
                     onClick={() => props.repeatMission(mission.id)}
-                    className="min-h-11 rounded-lg border border-[#165a4b] bg-white px-4 py-2 text-sm font-black text-[#165a4b]"
+                    className="min-h-11 rounded-lg border border-tt-pine bg-white px-4 py-2 text-sm font-black text-tt-pine"
                   >
                     Do again 🔁
                   </button>
@@ -6032,6 +6193,43 @@ function MissionsPanel(props: {
       {isKidView && (props.activeChild ?? props.allChildren[0]) && (
         <KidExperienceBottom child={props.activeChild ?? props.allChildren[0]} missions={props.missions} />
       )}
+      {/* Celebration overlays — kid view only */}
+      {isKidView && celebrating && !celebrating.braveTry && (() => {
+        const pet = props.pets[0];
+        return (
+          <CelebrationEngine
+            missionTitle={celebrating.mission.title}
+            points={celebrating.mission.points}
+            coins={celebrating.mission.coins}
+            rewards={rewardsFor(celebrating.mission)}
+            petName={pet?.name}
+            petKind={pet ? petKindForSpecies(pet.species) : undefined}
+            petPhotoUrl={pet?.photoUrl}
+            onDone={() => setCelebrating(null)}
+          />
+        );
+      })()}
+      {isKidView && celebrating?.braveTry && (
+        <BraveTryCelebration
+          childName={(props.activeChild ?? props.allChildren[0])?.name ?? "Brave one"}
+          missionTitle={celebrating.mission.title}
+          tryCount={braveTryCount}
+          onDone={() => setCelebrating(null)}
+        />
+      )}
+      {isKidView && (() => {
+        const kid = props.activeChild ?? props.allChildren[0];
+        const pet = props.pets[0];
+        return kid && pet ? (
+          <WelcomeBack
+            petName={pet.name}
+            petKind={petKindForSpecies(pet.species)}
+            petPhotoUrl={pet.photoUrl}
+            childName={kid.name}
+            onDone={() => {}}
+          />
+        ) : null;
+      })()}
     </section>
   );
 }
@@ -6170,18 +6368,18 @@ function PassportPanel({ pets, missions, allowEditing, updatePet, updatePetPhoto
   const [editingPetId, setEditingPetId] = useState<string | null>(null);
   return (
     <section className="space-y-4">
-      <div className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#165a4b]">Pet passports</p>
+      <div className="rounded-lg border border-tt-line bg-white p-5 shadow-sm">
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-pine">Pet passports</p>
         <h2 className="mt-2 text-3xl font-black">Everything kids need to care correctly</h2>
-        <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-[#4f625b]">
+        <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-tt-ink-soft">
           Each passport keeps the pet&apos;s food, care notes, vet, and medicine in one place so kids do not have to guess.
         </p>
       </div>
       {pets.length === 0 && (
-        <div className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-[#6d3ed1]">📚 No pet yet? Start here</p>
+        <div className="rounded-lg border border-tt-line bg-white p-5 shadow-sm">
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-grape">📚 No pet yet? Start here</p>
           <h3 className="mt-2 text-2xl font-black">Learning passports</h3>
-          <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-[#4f625b]">
+          <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-tt-ink-soft">
             No pet needed to start becoming responsible. Study an animal&apos;s real needs — food, space, costs, lifespan —
             and it counts as journey progress in the Growth Log.
           </p>
@@ -6189,26 +6387,26 @@ function PassportPanel({ pets, missions, allowEditing, updatePet, updatePetPhoto
             {learningPassports.map((passport) => {
               const studied = studiedAnimals.includes(passport.animal);
               return (
-                <article key={passport.animal} className="rounded-lg bg-[#faf8f0] p-4">
+                <article key={passport.animal} className="rounded-lg bg-tt-cream p-4">
                   <div className="flex items-start justify-between gap-2">
                     <div>
                       <h4 className="text-lg font-black">{passport.animal}</h4>
-                      <p className="text-xs font-bold text-[#4f625b]">{passport.tagline}</p>
+                      <p className="text-xs font-bold text-tt-ink-soft">{passport.tagline}</p>
                     </div>
-                    {studied && <span className="rounded-full bg-[#165a4b] px-3 py-1 text-xs font-black text-white">Studied ✓</span>}
+                    {studied && <span className="rounded-full bg-tt-pine px-3 py-1 text-xs font-black text-white">Studied ✓</span>}
                   </div>
                   <dl className="mt-3 grid gap-2">
                     {passport.facts.map(([label, fact]) => (
                       <div key={label} className="rounded-lg bg-white p-3 text-sm">
                         <dt className="font-black">{label}</dt>
-                        <dd className="mt-1 font-semibold leading-5 text-[#4f625b]">{fact}</dd>
+                        <dd className="mt-1 font-semibold leading-5 text-tt-ink-soft">{fact}</dd>
                       </div>
                     ))}
                   </dl>
                   {!studied && (
                     <button
                       onClick={() => onStudyComplete(passport.animal)}
-                      className="mt-3 min-h-11 w-full rounded-lg bg-[#6d3ed1] px-4 py-2 text-sm font-black text-white"
+                      className="mt-3 min-h-11 w-full rounded-lg bg-tt-grape px-4 py-2 text-sm font-black text-white"
                     >
                       We studied the {passport.animal} ✓
                     </button>
@@ -6223,19 +6421,19 @@ function PassportPanel({ pets, missions, allowEditing, updatePet, updatePetPhoto
         {pets.map((pet) => {
           const care = getPetCareStats(pet.id, missions);
           return (
-          <article key={pet.id} className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
+          <article key={pet.id} className="rounded-lg border border-tt-line bg-white p-5 shadow-sm">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
             <PetMedallion label={pet.name} petKind={getPetLook(pet.id, pet).kind} photoUrl={pet.photoUrl} stage={care.stage} stageRing={care.stageRing} />
             <div className="flex-1">
-              <p className="text-xs font-black uppercase tracking-[0.18em] text-[#7a4b12]">{pet.name}&apos;s passport</p>
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-cocoa">{pet.name}&apos;s passport</p>
               <h2 className="text-3xl font-black">{pet.name}</h2>
-              <p className="text-sm font-black text-[#165a4b]">{pet.species}</p>
+              <p className="text-sm font-black text-tt-pine">{pet.species}</p>
               <div className="mt-2 flex flex-wrap gap-2">
-                <span className="rounded-full bg-[#e7f4ef] px-3 py-1 text-xs font-black text-[#165a4b]">{care.mood}</span>
+                <span className="rounded-full bg-tt-pine-tint px-3 py-1 text-xs font-black text-tt-pine">{care.mood}</span>
                 <span className={`rounded-full bg-white px-3 py-1 text-xs font-black ring-2 ${care.stageRing}`}>{care.stage} · {care.approved} care {care.approved === 1 ? "mission" : "missions"}</span>
               </div>
               {updatePetPhoto && (
-              <label className="mt-3 inline-flex cursor-pointer rounded-lg bg-[#165a4b] px-3 py-2 text-xs font-black text-white">
+              <label className="mt-3 inline-flex cursor-pointer rounded-lg bg-tt-pine px-3 py-2 text-xs font-black text-white">
                 Capture pet photo
                 <input className="sr-only" type="file" accept="image/*" capture="environment" onChange={(event) => updatePetPhoto(pet.id, event.target.files?.[0])} />
               </label>
@@ -6244,43 +6442,43 @@ function PassportPanel({ pets, missions, allowEditing, updatePet, updatePetPhoto
             {allowEditing && (
               <button
                 onClick={() => setEditingPetId(editingPetId === pet.id ? null : pet.id)}
-                className="min-h-11 rounded-lg border border-[#ded8c7] bg-white px-4 py-2 text-sm font-black text-[#17231f]"
+                className="min-h-11 rounded-lg border border-tt-line bg-white px-4 py-2 text-sm font-black text-tt-ink"
               >
                 {editingPetId === pet.id ? "Done" : "Edit"}
               </button>
             )}
           </div>
           <div className="mt-5 grid gap-3">
-            <Meter label={`${pet.name} happiness`} value={care.happiness} color="#f47b20" />
-            <Meter label={`${pet.name} feeling loved`} value={care.loved} color="#165a4b" />
+            <Meter label={`${pet.name} happiness`} value={care.happiness} color="var(--tt-tang)" />
+            <Meter label={`${pet.name} feeling loved`} value={care.loved} color="var(--tt-pine)" />
           </div>
           {allowEditing && editingPetId === pet.id ? (
             <div className="mt-5 grid gap-3">
               <label className="block text-sm font-black">Name
-                <input className="mt-1 w-full rounded-lg border border-[#ded8c7] px-4 py-3 font-semibold" value={pet.name} onChange={(event) => updatePet(pet.id, { name: event.target.value })} />
+                <input className="mt-1 w-full rounded-lg border border-tt-line px-4 py-3 font-semibold" value={pet.name} onChange={(event) => updatePet(pet.id, { name: event.target.value })} />
               </label>
               <label className="block text-sm font-black">Species
-                <input className="mt-1 w-full rounded-lg border border-[#ded8c7] px-4 py-3 font-semibold" value={pet.species} onChange={(event) => updatePet(pet.id, { species: event.target.value })} />
+                <input className="mt-1 w-full rounded-lg border border-tt-line px-4 py-3 font-semibold" value={pet.species} onChange={(event) => updatePet(pet.id, { species: event.target.value })} />
               </label>
               <label className="block text-sm font-black">Favorite food
-                <input className="mt-1 w-full rounded-lg border border-[#ded8c7] px-4 py-3 font-semibold" value={pet.favoriteFood} onChange={(event) => updatePet(pet.id, { favoriteFood: event.target.value })} />
+                <input className="mt-1 w-full rounded-lg border border-tt-line px-4 py-3 font-semibold" value={pet.favoriteFood} onChange={(event) => updatePet(pet.id, { favoriteFood: event.target.value })} />
               </label>
               <label className="block text-sm font-black">Care notes
-                <textarea className="mt-1 min-h-24 w-full rounded-lg border border-[#ded8c7] px-4 py-3 font-semibold" value={pet.careNotes} onChange={(event) => updatePet(pet.id, { careNotes: event.target.value })} />
+                <textarea className="mt-1 min-h-24 w-full rounded-lg border border-tt-line px-4 py-3 font-semibold" value={pet.careNotes} onChange={(event) => updatePet(pet.id, { careNotes: event.target.value })} />
               </label>
               <label className="block text-sm font-black">Vet
-                <input className="mt-1 w-full rounded-lg border border-[#ded8c7] px-4 py-3 font-semibold" value={pet.vet} onChange={(event) => updatePet(pet.id, { vet: event.target.value })} />
+                <input className="mt-1 w-full rounded-lg border border-tt-line px-4 py-3 font-semibold" value={pet.vet} onChange={(event) => updatePet(pet.id, { vet: event.target.value })} />
               </label>
               <label className="block text-sm font-black">Medicine
-                <input className="mt-1 w-full rounded-lg border border-[#ded8c7] px-4 py-3 font-semibold" value={pet.medicine} onChange={(event) => updatePet(pet.id, { medicine: event.target.value })} />
+                <input className="mt-1 w-full rounded-lg border border-tt-line px-4 py-3 font-semibold" value={pet.medicine} onChange={(event) => updatePet(pet.id, { medicine: event.target.value })} />
               </label>
             </div>
           ) : (
           <dl className="mt-5 grid gap-3 text-sm">
-            <div className="rounded-lg bg-[#faf8f0] p-3"><dt className="font-black">Favorite food</dt><dd>{pet.favoriteFood}</dd></div>
-            <div className="rounded-lg bg-[#faf8f0] p-3"><dt className="font-black">Care notes</dt><dd>{pet.careNotes}</dd></div>
-            <div className="rounded-lg bg-[#faf8f0] p-3"><dt className="font-black">Vet</dt><dd>{pet.vet}</dd></div>
-            <div className="rounded-lg bg-[#faf8f0] p-3"><dt className="font-black">Medicine</dt><dd>{pet.medicine}</dd></div>
+            <div className="rounded-lg bg-tt-cream p-3"><dt className="font-black">Favorite food</dt><dd>{pet.favoriteFood}</dd></div>
+            <div className="rounded-lg bg-tt-cream p-3"><dt className="font-black">Care notes</dt><dd>{pet.careNotes}</dd></div>
+            <div className="rounded-lg bg-tt-cream p-3"><dt className="font-black">Vet</dt><dd>{pet.vet}</dd></div>
+            <div className="rounded-lg bg-tt-cream p-3"><dt className="font-black">Medicine</dt><dd>{pet.medicine}</dd></div>
           </dl>
           )}
           </article>
@@ -6344,7 +6542,7 @@ const JAR_VISUALS: JarVisual[] = [
     label: "SAVE jar",
     caption: "For your goals — toys, treats, big dreams!",
     liquidFrom: "#7dd3fc",
-    liquidTo: "#2563eb",
+    liquidTo: "var(--tt-blue)",
   },
   {
     key: "spend",
@@ -6384,7 +6582,7 @@ function JarMeter({
   const pct = jarFillPercent(balance, scale);
   return (
     <div className="flex flex-col items-center text-center">
-      <p className="text-3xl font-black text-[#17231f]">${balance}</p>
+      <p className="text-3xl font-black text-tt-ink">${balance}</p>
       <div className="relative mt-2">
         <div className="relative mx-auto h-48 w-32 overflow-hidden rounded-b-[2.5rem] rounded-t-[1rem] border-4 border-[#aec6dc] bg-[#eef5fb] shadow-[inset_0_2px_8px_rgba(23,35,31,0.12)]">
           {/* blue liquid */}
@@ -6410,8 +6608,8 @@ function JarMeter({
         {ring && <div className="absolute -right-7 -top-3">{ring}</div>}
       </div>
       <p className="mt-3 text-2xl" aria-hidden="true">{visual.emoji}</p>
-      <p className="text-lg font-black text-[#17231f]">{visual.label}</p>
-      <p className="max-w-40 text-xs font-bold leading-4 text-[#4f625b]">{visual.caption}</p>
+      <p className="text-lg font-black text-tt-ink">{visual.label}</p>
+      <p className="max-w-40 text-xs font-bold leading-4 text-tt-ink-soft">{visual.caption}</p>
     </div>
   );
 }
@@ -6424,7 +6622,7 @@ function DriveProgressRing({ percent, label }: { percent: number; label: string 
       href="#kid-bank-drives"
       title={label}
       aria-label={label}
-      className="tt-btn-press relative block h-14 w-14 rounded-full bg-white shadow-md ring-2 ring-[#f4b400]"
+      className="tt-btn-press relative block h-14 w-14 rounded-full bg-white shadow-md ring-2 ring-tt-gold"
     >
       <svg viewBox="0 0 42 42" className="h-14 w-14 -rotate-90">
         <circle cx="21" cy="21" r={radius} fill="none" stroke="#f1e8d2" strokeWidth="5" />
@@ -6433,14 +6631,14 @@ function DriveProgressRing({ percent, label }: { percent: number; label: string 
           cy="21"
           r={radius}
           fill="none"
-          stroke="#f4b400"
+          stroke="var(--tt-gold)"
           strokeWidth="5"
           strokeLinecap="round"
           strokeDasharray={`${Math.round(percent * 100)} 100`}
           className="transition-[stroke-dasharray] duration-700"
         />
       </svg>
-      <span className="absolute inset-0 flex items-center justify-center text-[11px] font-black text-[#7a4b12]">
+      <span className="absolute inset-0 flex items-center justify-center text-[11px] font-black text-tt-cocoa">
         {Math.round(percent * 100)}%
       </span>
     </a>
@@ -6523,8 +6721,8 @@ function JarAllocator({
   if (balances.unallocated <= 0 && sessionMoves.length === 0) {
     return (
       <div className="rounded-lg border-2 border-dashed border-[#aec6dc] bg-[#f2f8fd] p-5 text-center">
-        <p className="text-lg font-black text-[#17231f]">🫙 Your jars are all sorted!</p>
-        <p className="mt-1 text-sm font-bold text-[#4f625b]">
+        <p className="text-lg font-black text-tt-ink">🫙 Your jars are all sorted!</p>
+        <p className="mt-1 text-sm font-bold text-tt-ink-soft">
           Finish a parent-approved mission to earn new money, then come back and sort it into jars.
         </p>
       </div>
@@ -6532,13 +6730,13 @@ function JarAllocator({
   }
 
   return (
-    <div className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
-      <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2563eb]">Sort your money</p>
-      <h3 className="mt-2 text-2xl font-black text-[#17231f]">
-        🪙 ${balances.unallocated} waiting — <span className="text-[#2563eb]">you decide where it goes!</span>
+    <div className="rounded-lg border border-tt-line bg-white p-5 shadow-sm">
+      <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-blue">Sort your money</p>
+      <h3 className="mt-2 text-2xl font-black text-tt-ink">
+        🪙 ${balances.unallocated} waiting — <span className="text-tt-blue">you decide where it goes!</span>
       </h3>
 
-      <p className="mt-4 text-sm font-black text-[#17231f]">1️⃣ How much?</p>
+      <p className="mt-4 text-sm font-black text-tt-ink">1️⃣ How much?</p>
       <div className="mt-2 flex flex-wrap gap-2">
         {[1, 2, 5].map((choice) => (
           <button
@@ -6546,7 +6744,7 @@ function JarAllocator({
             onClick={() => { setAmount(choice); setBlockReason(null); }}
             disabled={choice > maxPerTap}
             className={`min-h-12 rounded-lg px-5 py-2 text-lg font-black disabled:cursor-not-allowed disabled:opacity-40 ${
-              amount === choice && effectiveAmount !== maxPerTap ? "bg-[#2563eb] text-white" : "border-2 border-[#aec6dc] bg-white text-[#17231f]"
+              amount === choice && effectiveAmount !== maxPerTap ? "bg-tt-blue text-white" : "border-2 border-[#aec6dc] bg-white text-tt-ink"
             }`}
           >
             ${choice}
@@ -6556,24 +6754,24 @@ function JarAllocator({
           onClick={() => { setAmount(maxPerTap); setBlockReason(null); }}
           disabled={maxPerTap < 1}
           className={`min-h-12 rounded-lg px-5 py-2 text-lg font-black disabled:cursor-not-allowed disabled:opacity-40 ${
-            amount === maxPerTap ? "bg-[#2563eb] text-white" : "border-2 border-[#aec6dc] bg-white text-[#17231f]"
+            amount === maxPerTap ? "bg-tt-blue text-white" : "border-2 border-[#aec6dc] bg-white text-tt-ink"
           }`}
         >
           All ${maxPerTap}
         </button>
       </div>
       {settings.maxSingleJarMove > 0 && (
-        <p className="mt-2 text-xs font-bold text-[#4f625b]">A grown-up set the biggest single move to ${settings.maxSingleJarMove}.</p>
+        <p className="mt-2 text-xs font-bold text-tt-ink-soft">A grown-up set the biggest single move to ${settings.maxSingleJarMove}.</p>
       )}
 
-      <p className="mt-5 text-sm font-black text-[#17231f]">2️⃣ Which jar?</p>
+      <p className="mt-5 text-sm font-black text-tt-ink">2️⃣ Which jar?</p>
       <div className="mt-2 grid grid-cols-3 gap-2">
         {JAR_VISUALS.map((visual) => (
           <button
             key={visual.key}
             onClick={() => startJar(visual.key)}
             className={`tt-btn-press min-h-16 rounded-xl border-2 px-2 py-3 text-center ${
-              pendingJar === visual.key ? "border-[#17231f] bg-[#17231f] text-white" : "border-[#ded8c7] bg-[#faf8f0] text-[#17231f]"
+              pendingJar === visual.key ? "border-tt-ink bg-tt-ink text-white" : "border-tt-line bg-tt-cream text-tt-ink"
             }`}
           >
             <span className="block text-2xl" aria-hidden="true">{visual.emoji}</span>
@@ -6584,14 +6782,14 @@ function JarAllocator({
 
       {pendingJar && (pendingJar === "save" || pendingJar === "give") && (
         <div className="mt-4">
-          <p className="text-sm font-black text-[#17231f]">
+          <p className="text-sm font-black text-tt-ink">
             {pendingJar === "save" ? "3️⃣ Which goal should it grow?" : "3️⃣ Which kindness drive should it help?"}
           </p>
           <div className="mt-2 flex flex-wrap gap-2">
             <button
               onClick={() => setPickedGoalId("")}
               className={`min-h-11 rounded-full px-4 py-2 text-sm font-black ${
-                pickedGoalId === "" ? "bg-[#17231f] text-white" : "border border-[#ded8c7] bg-white text-[#17231f]"
+                pickedGoalId === "" ? "bg-tt-ink text-white" : "border border-tt-line bg-white text-tt-ink"
               }`}
             >
               {pendingJar === "save" ? "🫙 Just my jar" : "💛 Just kindness"}
@@ -6601,7 +6799,7 @@ function JarAllocator({
                 key={goal.id}
                 onClick={() => setPickedGoalId(goal.id)}
                 className={`min-h-11 rounded-full px-4 py-2 text-sm font-black ${
-                  pickedGoalId === goal.id ? "bg-[#17231f] text-white" : "border border-[#ded8c7] bg-white text-[#17231f]"
+                  pickedGoalId === goal.id ? "bg-tt-ink text-white" : "border border-tt-line bg-white text-tt-ink"
                 }`}
               >
                 {goal.title} (${goal.saved}/${goal.target})
@@ -6609,7 +6807,7 @@ function JarAllocator({
             ))}
           </div>
           {!goalChoices.length && (
-            <p className="mt-2 text-xs font-bold text-[#4f625b]">
+            <p className="mt-2 text-xs font-bold text-tt-ink-soft">
               {pendingJar === "save" ? "No goals yet — your money will wait safely in the jar." : "No drives yet — your kindness will wait in the jar."}
             </p>
           )}
@@ -6618,47 +6816,47 @@ function JarAllocator({
 
       {pendingJar && (
         <div className="mt-4 rounded-lg bg-[#eef5fd] p-4">
-          <p className="text-base font-black text-[#17231f]">
+          <p className="text-base font-black text-tt-ink">
             Put ${effectiveAmount} in your {pendingVisual!.label.toUpperCase()}
             {pickedGoal ? ` for “${pickedGoal.title}”?` : "?"}
           </p>
           <div className="mt-3 flex gap-2">
             <button
               onClick={confirmMove}
-              className="tt-btn-press min-h-12 flex-1 rounded-lg bg-[#165a4b] px-5 py-3 text-base font-black text-white"
+              className="tt-btn-press min-h-12 flex-1 rounded-lg bg-tt-pine px-5 py-3 text-base font-black text-white"
             >
               Yes, do it! 🎉
             </button>
             <button
               onClick={() => { setPendingJar(null); setBlockReason(null); }}
-              className="min-h-12 rounded-lg border-2 border-[#ded8c7] bg-white px-5 py-3 text-base font-black text-[#4f625b]"
+              className="min-h-12 rounded-lg border-2 border-tt-line bg-white px-5 py-3 text-base font-black text-tt-ink-soft"
             >
               Wait
             </button>
           </div>
-          {blockReason && <p className="mt-2 text-sm font-bold text-[#7a4b12]">{blockReason}</p>}
+          {blockReason && <p className="mt-2 text-sm font-bold text-tt-cocoa">{blockReason}</p>}
         </div>
       )}
 
       {celebration && (
-        <p className="mt-4 rounded-lg bg-[#e7f4ef] p-4 text-center text-base font-black text-[#0d3b30]" role="status">
+        <p className="mt-4 rounded-lg bg-tt-pine-tint p-4 text-center text-base font-black text-tt-pine-deep" role="status">
           {celebration}
         </p>
       )}
 
       {settings.allowKidUndo && sessionMoves.length > 0 && (
         <div className="mt-4">
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-[#4f625b]">Changed your mind?</p>
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-ink-soft">Changed your mind?</p>
           <div className="mt-2 grid gap-2">
             {sessionMoves.map((txId) => {
               const moved = transactions.find((tx) => tx.id === txId);
               if (!moved) return null;
               return (
-                <div key={txId} className="flex items-center justify-between gap-3 rounded-lg bg-[#faf8f0] p-3">
-                  <p className="text-sm font-bold text-[#4f625b]">{moved.description}</p>
+                <div key={txId} className="flex items-center justify-between gap-3 rounded-lg bg-tt-cream p-3">
+                  <p className="text-sm font-bold text-tt-ink-soft">{moved.description}</p>
                   <button
                     onClick={() => undoMove(txId)}
-                    className="min-h-10 shrink-0 rounded-lg border border-[#ded8c7] bg-white px-4 py-2 text-sm font-black text-[#17231f]"
+                    className="min-h-10 shrink-0 rounded-lg border border-tt-line bg-white px-4 py-2 text-sm font-black text-tt-ink"
                   >
                     Undo ↩️
                   </button>
@@ -6676,15 +6874,15 @@ function JarAllocator({
 function SaveGoalCard({ goal }: { goal: SavingsGoal }) {
   const percent = Math.min(100, (goal.saved / Math.max(1, goal.target)) * 100);
   return (
-    <article className="rounded-lg bg-[#faf8f0] p-4">
+    <article className="rounded-lg bg-tt-cream p-4">
       <div className="flex items-start justify-between gap-3">
-        <p className="text-lg font-black text-[#17231f]">🎯 {goal.title}</p>
-        <span className="rounded-full bg-white px-3 py-1 text-sm font-black text-[#17231f]">${goal.saved}/${goal.target}</span>
+        <p className="text-lg font-black text-tt-ink">🎯 {goal.title}</p>
+        <span className="rounded-full bg-white px-3 py-1 text-sm font-black text-tt-ink">${goal.saved}/${goal.target}</span>
       </div>
       <div className="mt-3 h-4 overflow-hidden rounded-full bg-white">
-        <div className="h-4 rounded-full bg-[#165a4b] transition-[width] duration-700" style={{ width: `${percent}%` }} />
+        <div className="h-4 rounded-full bg-tt-pine transition-[width] duration-700" style={{ width: `${percent}%` }} />
       </div>
-      <p className="mt-2 text-sm font-bold text-[#4f625b]">
+      <p className="mt-2 text-sm font-bold text-tt-ink-soft">
         {goal.completedAt ? "🎉 Goal reached — amazing saving!" : `$${goal.target - goal.saved} left to go — your SAVE jar feeds this!`}
       </p>
     </article>
@@ -6710,23 +6908,23 @@ function DriveCard({
   const percent = driveProgress(goal) * 100;
   const contributions = goalContributions(goal.id, transactions, childProfiles);
   return (
-    <article className="rounded-lg bg-[#fff8ef] p-4 ring-1 ring-[#f4b400]/40">
+    <article className="rounded-lg bg-[#fff8ef] p-4 ring-1 ring-tt-gold/40">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-lg font-black text-[#17231f]">{meta?.emoji ?? "💛"} {goal.title}</p>
+          <p className="text-lg font-black text-tt-ink">{meta?.emoji ?? "💛"} {goal.title}</p>
           {meta && (
-            <p className="mt-1 inline-block rounded-full bg-[#ffe9a8] px-2 py-0.5 text-xs font-black text-[#7a4b12]">{meta.label}</p>
+            <p className="mt-1 inline-block rounded-full bg-[#ffe9a8] px-2 py-0.5 text-xs font-black text-tt-cocoa">{meta.label}</p>
           )}
           {goal.causeNote && meta && goal.causeNote !== meta.causeNote && (
-            <p className="mt-1 text-xs font-bold text-[#69736f]">{goal.causeNote}</p>
+            <p className="mt-1 text-xs font-bold text-tt-ink-faint">{goal.causeNote}</p>
           )}
         </div>
-        <span className="rounded-full bg-white px-3 py-1 text-sm font-black text-[#17231f]">${goal.saved}/${goal.target}</span>
+        <span className="rounded-full bg-white px-3 py-1 text-sm font-black text-tt-ink">${goal.saved}/${goal.target}</span>
       </div>
       <div className="mt-3 h-4 overflow-hidden rounded-full bg-white">
-        <div className="h-4 rounded-full bg-[#f4b400] transition-[width] duration-700" style={{ width: `${percent}%` }} />
+        <div className="h-4 rounded-full bg-tt-gold transition-[width] duration-700" style={{ width: `${percent}%` }} />
       </div>
-      <p className="mt-2 text-sm font-bold text-[#4f625b]">
+      <p className="mt-2 text-sm font-bold text-tt-ink-soft">
         {goal.donationConfirmedAt
           ? "🎉 Donated — thank you for the real-world kindness!"
           : goal.completedAt
@@ -6734,17 +6932,17 @@ function DriveCard({
             : `$${goal.target - goal.saved} left — your GIVE jar feeds this drive!`}
       </p>
       {goal.seededByParent ? (
-        <p className="mt-1 text-xs font-bold text-[#69736f]">Grown-ups started it with ${goal.seededByParent} 🌱</p>
+        <p className="mt-1 text-xs font-bold text-tt-ink-faint">Grown-ups started it with ${goal.seededByParent} 🌱</p>
       ) : null}
       {contributions.length > 0 && (
-        <p className="mt-1 text-xs font-bold text-[#69736f]">
+        <p className="mt-1 text-xs font-bold text-tt-ink-faint">
           {contributions.map((entry) => `${entry.name} gave $${entry.amount}`).join(" · ")}
         </p>
       )}
       {goal.completedAt && !goal.donationConfirmedAt && isParentView && (
         <button
           onClick={() => onConfirmDonation(goal.id)}
-          className="tt-btn-press mt-3 min-h-11 w-full rounded-lg bg-[#165a4b] px-4 py-2 text-sm font-black text-white"
+          className="tt-btn-press mt-3 min-h-11 w-full rounded-lg bg-tt-pine px-4 py-2 text-sm font-black text-white"
         >
           Confirm: we donated ${goal.target} ✓
         </button>
@@ -6779,21 +6977,21 @@ export function DriveProgressMini({
     .slice(0, Math.max(1, maxItems));
   if (!drives.length) return null;
   return (
-    <section className="rounded-lg border border-[#ded8c7] bg-white p-4 shadow-sm" aria-label={title}>
-      <p className="text-xs font-black uppercase tracking-[0.18em] text-[#f4b400]">{title}</p>
+    <section className="rounded-lg border border-tt-line bg-white p-4 shadow-sm" aria-label={title}>
+      <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-gold">{title}</p>
       <div className="mt-3 grid gap-2">
         {drives.map((goal) => {
           const kind = driveKindFromGoal(goal);
           const emoji = kind === "save" ? "💛" : DRIVE_KIND_META[kind].emoji;
           const percent = driveProgress(goal) * 100;
           return (
-            <div key={goal.id} className="rounded-lg bg-[#fff8ef] p-3 ring-1 ring-[#f4b400]/30">
+            <div key={goal.id} className="rounded-lg bg-[#fff8ef] p-3 ring-1 ring-tt-gold/30">
               <div className="flex items-center justify-between gap-2">
-                <p className="truncate text-sm font-black text-[#17231f]">{emoji} {goal.title}</p>
-                <p className="shrink-0 text-xs font-black text-[#7a4b12]">${goal.saved}/${goal.target}</p>
+                <p className="truncate text-sm font-black text-tt-ink">{emoji} {goal.title}</p>
+                <p className="shrink-0 text-xs font-black text-tt-cocoa">${goal.saved}/${goal.target}</p>
               </div>
               <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-white">
-                <div className="h-2.5 rounded-full bg-[#f4b400]" style={{ width: `${percent}%` }} />
+                <div className="h-2.5 rounded-full bg-tt-gold" style={{ width: `${percent}%` }} />
               </div>
             </div>
           );
@@ -6816,16 +7014,16 @@ function BankSettingsPanel({
   onSettingsChange: (settings: KidBankSettings) => void;
 }) {
   const numberField =
-    "mt-1 w-full rounded-lg border border-[#ded8c7] bg-white px-4 py-3 text-lg font-semibold text-[#17231f]";
+    "mt-1 w-full rounded-lg border border-tt-line bg-white px-4 py-3 text-lg font-semibold text-tt-ink";
   return (
-    <div className="rounded-lg border-2 border-[#17231f] bg-white p-5 shadow-sm">
-      <p className="text-xs font-black uppercase tracking-[0.18em] text-[#17231f]">🔒 Grown-up controls</p>
-      <h3 className="mt-2 text-2xl font-black text-[#17231f]">Kid Bank rules</h3>
-      <p className="mt-1 text-sm font-bold leading-6 text-[#4f625b]">
+    <div className="rounded-lg border-2 border-tt-ink bg-white p-5 shadow-sm">
+      <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-ink">🔒 Grown-up controls</p>
+      <h3 className="mt-2 text-2xl font-black text-tt-ink">Kid Bank rules</h3>
+      <p className="mt-1 text-sm font-bold leading-6 text-tt-ink-soft">
         Set these once. After that, your kids sort their own earnings into jars — no asking, no per-move approval.
       </p>
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
-        <label className="block text-sm font-black text-[#17231f]">
+        <label className="block text-sm font-black text-tt-ink">
           Points for $1
           <input
             className={numberField}
@@ -6833,9 +7031,9 @@ function BankSettingsPanel({
             value={pointsPerDollar}
             onChange={(event) => setPointsPerDollar(Math.max(1, Number(event.target.value) || 20))}
           />
-          <span className="mt-1 block text-xs font-bold text-[#4f625b]">Kids turn points into dollars at this rate, by themselves.</span>
+          <span className="mt-1 block text-xs font-bold text-tt-ink-soft">Kids turn points into dollars at this rate, by themselves.</span>
         </label>
-        <label className="block text-sm font-black text-[#17231f]">
+        <label className="block text-sm font-black text-tt-ink">
           Biggest single jar move ($)
           <input
             className={numberField}
@@ -6846,9 +7044,9 @@ function BankSettingsPanel({
               onSettingsChange({ ...settings, maxSingleJarMove: Math.max(0, Number(event.target.value) || 0) })
             }
           />
-          <span className="mt-1 block text-xs font-bold text-[#4f625b]">Caps one tap. 0 means no cap.</span>
+          <span className="mt-1 block text-xs font-bold text-tt-ink-soft">Caps one tap. 0 means no cap.</span>
         </label>
-        <label className="block text-sm font-black text-[#17231f]">
+        <label className="block text-sm font-black text-tt-ink">
           Spend jar can hold ($)
           <input
             className={numberField}
@@ -6859,18 +7057,18 @@ function BankSettingsPanel({
               onSettingsChange({ ...settings, spendJarCap: Math.max(0, Number(event.target.value) || 0) })
             }
           />
-          <span className="mt-1 block text-xs font-bold text-[#4f625b]">Kids spend with the family before piling on more.</span>
+          <span className="mt-1 block text-xs font-bold text-tt-ink-soft">Kids spend with the family before piling on more.</span>
         </label>
-        <label className="flex cursor-pointer items-start gap-3 rounded-lg bg-[#faf8f0] p-4 text-sm font-black text-[#17231f]">
+        <label className="flex cursor-pointer items-start gap-3 rounded-lg bg-tt-cream p-4 text-sm font-black text-tt-ink">
           <input
             type="checkbox"
-            className="mt-1 h-5 w-5 accent-[#165a4b]"
+            className="mt-1 h-5 w-5 accent-tt-pine"
             checked={settings.allowKidUndo}
             onChange={(event) => onSettingsChange({ ...settings, allowKidUndo: event.target.checked })}
           />
           <span>
             Let kids undo their own jar moves
-            <span className="mt-1 block text-xs font-bold text-[#4f625b]">Shows an “Undo” button on moves they just made.</span>
+            <span className="mt-1 block text-xs font-bold text-tt-ink-soft">Shows an “Undo” button on moves they just made.</span>
           </span>
         </label>
       </div>
@@ -6906,10 +7104,10 @@ function DriveEnrollmentForm({
   };
 
   return (
-    <div className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
-      <p className="text-xs font-black uppercase tracking-[0.18em] text-[#f4b400]">🔒 Grown-up controls</p>
-      <h3 className="mt-2 text-2xl font-black text-[#17231f]">Enroll in a kindness drive</h3>
-      <p className="mt-1 text-sm font-bold text-[#4f625b]">
+    <div className="rounded-lg border border-tt-line bg-white p-5 shadow-sm">
+      <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-gold">🔒 Grown-up controls</p>
+      <h3 className="mt-2 text-2xl font-black text-tt-ink">Enroll in a kindness drive</h3>
+      <p className="mt-1 text-sm font-bold text-tt-ink-soft">
         School PTO, neighborhood, or animal-shelter drives appear in your kid&apos;s bank right away — they feed it from their GIVE jar.
       </p>
       <div className="mt-4 flex flex-wrap gap-2">
@@ -6918,7 +7116,7 @@ function DriveEnrollmentForm({
             key={option}
             onClick={() => setKind(option)}
             className={`min-h-11 rounded-full px-4 py-2 text-sm font-black ${
-              kind === option ? "bg-[#17231f] text-white" : "border border-[#ded8c7] bg-[#faf8f0] text-[#17231f]"
+              kind === option ? "bg-tt-ink text-white" : "border border-tt-line bg-tt-cream text-tt-ink"
             }`}
           >
             {DRIVE_KIND_META[option].emoji} {DRIVE_KIND_META[option].label}
@@ -6927,20 +7125,20 @@ function DriveEnrollmentForm({
       </div>
       <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_120px_120px_auto]">
         <input
-          className="rounded-lg border border-[#ded8c7] px-4 py-3 font-semibold text-[#17231f]"
+          className="rounded-lg border border-tt-line px-4 py-3 font-semibold text-tt-ink"
           placeholder="Example: Blankets for Sunny Paws Shelter"
           value={title}
           onChange={(event) => setTitle(event.target.value)}
         />
         <input
-          className="rounded-lg border border-[#ded8c7] px-4 py-3 font-semibold text-[#17231f]"
+          className="rounded-lg border border-tt-line px-4 py-3 font-semibold text-tt-ink"
           inputMode="numeric"
           placeholder="$ target"
           value={target}
           onChange={(event) => setTarget(event.target.value)}
         />
         <input
-          className="rounded-lg border border-[#ded8c7] px-4 py-3 font-semibold text-[#17231f]"
+          className="rounded-lg border border-tt-line px-4 py-3 font-semibold text-tt-ink"
           inputMode="numeric"
           placeholder="Seed $"
           value={seed}
@@ -6949,7 +7147,7 @@ function DriveEnrollmentForm({
         <button
           onClick={submit}
           disabled={!canSubmit}
-          className="tt-btn-press min-h-12 rounded-lg bg-[#f47b20] px-5 py-3 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-50"
+          className="tt-btn-press min-h-12 rounded-lg bg-tt-tang px-5 py-3 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-50"
         >
           Enroll 🌱
         </button>
@@ -6988,22 +7186,22 @@ function KidGoalCreator({
     return (
       <button
         onClick={() => setOpen(true)}
-        className="tt-btn-press mt-3 min-h-12 w-full rounded-lg border-2 border-dashed border-[#165a4b] bg-[#e7f4ef] px-4 py-3 text-base font-black text-[#0d3b30]"
+        className="tt-btn-press mt-3 min-h-12 w-full rounded-lg border-2 border-dashed border-tt-pine bg-tt-pine-tint px-4 py-3 text-base font-black text-tt-pine-deep"
       >
         + Start my own goal 🌱
       </button>
     );
   }
   return (
-    <div className="mt-3 rounded-lg bg-[#e7f4ef] p-4">
-      <p className="text-base font-black text-[#0d3b30]">My new goal</p>
+    <div className="mt-3 rounded-lg bg-tt-pine-tint p-4">
+      <p className="text-base font-black text-tt-pine-deep">My new goal</p>
       <div className="mt-3 grid grid-cols-2 gap-2">
         {(["save", "give"] as const).map((option) => (
           <button
             key={option}
             onClick={() => setKind(option)}
             className={`min-h-11 rounded-lg px-4 py-2 text-sm font-black ${
-              kind === option ? "bg-[#17231f] text-white" : "border border-[#ded8c7] bg-white text-[#17231f]"
+              kind === option ? "bg-tt-ink text-white" : "border border-tt-line bg-white text-tt-ink"
             }`}
           >
             {option === "save" ? "💰 Save for something" : "💛 Give kindness"}
@@ -7011,14 +7209,14 @@ function KidGoalCreator({
         ))}
       </div>
       <input
-        className="mt-3 w-full rounded-lg border border-[#ded8c7] px-4 py-3 font-semibold text-[#17231f]"
+        className="mt-3 w-full rounded-lg border border-tt-line px-4 py-3 font-semibold text-tt-ink"
         placeholder={kind === "give" ? "Example: Toys for the shelter" : "Example: New skateboard"}
         value={title}
         onChange={(event) => setTitle(event.target.value)}
       />
       <div className="mt-3 flex gap-2">
         <input
-          className="w-32 rounded-lg border border-[#ded8c7] px-4 py-3 font-semibold text-[#17231f]"
+          className="w-32 rounded-lg border border-tt-line px-4 py-3 font-semibold text-tt-ink"
           inputMode="numeric"
           placeholder="$ goal"
           value={target}
@@ -7027,13 +7225,13 @@ function KidGoalCreator({
         <button
           onClick={submit}
           disabled={!title.trim()}
-          className="tt-btn-press min-h-12 flex-1 rounded-lg bg-[#165a4b] px-5 py-3 text-base font-black text-white disabled:cursor-not-allowed disabled:opacity-50"
+          className="tt-btn-press min-h-12 flex-1 rounded-lg bg-tt-pine px-5 py-3 text-base font-black text-white disabled:cursor-not-allowed disabled:opacity-50"
         >
           Start it! 🚀
         </button>
         <button
           onClick={() => setOpen(false)}
-          className="min-h-12 rounded-lg border border-[#ded8c7] bg-white px-4 py-3 text-sm font-black text-[#4f625b]"
+          className="min-h-12 rounded-lg border border-tt-line bg-white px-4 py-3 text-sm font-black text-tt-ink-soft"
         >
           Not yet
         </button>
@@ -7087,7 +7285,7 @@ function BankPanel(props: {
 
   return (
     <section className="space-y-4">
-      <div className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
+      <div className="rounded-lg border border-tt-line bg-white p-5 shadow-sm">
         <div className="flex items-center gap-4">
           <ProfilePhoto
             label={props.child?.name ?? "Kid"}
@@ -7099,41 +7297,41 @@ function BankPanel(props: {
             photoUrl={props.child?.photoUrl}
           />
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2563eb]">Kid Bank</p>
-            <h2 className="mt-1 text-3xl font-black text-[#17231f]">{props.child?.name ?? "Kid"}&apos;s money jars</h2>
-            <p className="mt-1 text-base font-bold text-[#4f625b]">Money you earned → <span className="text-[#2563eb]">you decide where it goes!</span> 🫙</p>
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-blue">Kid Bank</p>
+            <h2 className="mt-1 text-3xl font-black text-tt-ink">{props.child?.name ?? "Kid"}&apos;s money jars</h2>
+            <p className="mt-1 text-base font-bold text-tt-ink-soft">Money you earned → <span className="text-tt-blue">you decide where it goes!</span> 🫙</p>
           </div>
         </div>
         {points > 0 && (
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg bg-[#fff4d8] p-4">
-            <p className="text-sm font-black text-[#7a4b12]">
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg bg-tt-sun-soft p-4">
+            <p className="text-sm font-black text-tt-cocoa">
               🐾 {points.toLocaleString()} points = ${pointDollars} <span className="font-bold">({props.pointsPerDollar} points = $1)</span>
             </p>
             {pointDollars > 0 ? (
               <button
                 onClick={props.convertPointsToDollars}
-                className="tt-btn-press min-h-11 rounded-lg bg-[#f47b20] px-4 py-2 text-sm font-black text-white"
+                className="tt-btn-press min-h-11 rounded-lg bg-tt-tang px-4 py-2 text-sm font-black text-white"
               >
                 Turn {pointsUsed} points into ${pointDollars}! ✨
               </button>
             ) : (
-              <p className="text-xs font-bold text-[#7a4b12]">Earn {props.pointsPerDollar - points} more points to make $1!</p>
+              <p className="text-xs font-bold text-tt-cocoa">Earn {props.pointsPerDollar - points} more points to make $1!</p>
             )}
           </div>
         )}
       </div>
 
       {balances.unallocated > 0 && (
-        <div className="rounded-lg border-2 border-[#2563eb] bg-[#eef5fd] p-5 text-center shadow-sm">
-          <p className="text-2xl font-black text-[#17231f]">🎉 You have ${balances.unallocated} to sort!</p>
-          <p className="mt-1 text-sm font-bold text-[#4f625b]">
+        <div className="rounded-lg border-2 border-tt-blue bg-[#eef5fd] p-5 text-center shadow-sm">
+          <p className="text-2xl font-black text-tt-ink">🎉 You have ${balances.unallocated} to sort!</p>
+          <p className="mt-1 text-sm font-bold text-tt-ink-soft">
             A grown-up approved your work and the money landed in your bank. Now <b>you</b> choose the jars — no asking needed!
           </p>
         </div>
       )}
 
-      <div className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2563eb]">The three jars</p>
+      <div className="rounded-lg border border-tt-line bg-white p-5 shadow-sm">
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-blue">The three jars</p>
         <div className="mt-4 grid grid-cols-3 gap-2 sm:gap-4">
           {JAR_VISUALS.map((visual) => (
             <JarMeter
@@ -7149,7 +7347,7 @@ function BankPanel(props: {
             />
           ))}
         </div>
-        <p className="mt-4 text-center text-sm font-bold text-[#4f625b]">
+        <p className="mt-4 text-center text-sm font-bold text-tt-ink-soft">
           💧 Blue water rises as your jars fill up. {featured ? "Tap the gold ring on the GIVE jar to see your kindness drives!" : ""}
         </p>
       </div>
@@ -7166,13 +7364,13 @@ function BankPanel(props: {
       />
 
       <div className="grid gap-4 2xl:grid-cols-2">
-        <div className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-[#165a4b]">My goals</p>
-          <h3 className="mt-2 text-2xl font-black text-[#17231f]">What are you saving for?</h3>
+        <div className="rounded-lg border border-tt-line bg-white p-5 shadow-sm">
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-pine">My goals</p>
+          <h3 className="mt-2 text-2xl font-black text-tt-ink">What are you saving for?</h3>
           <div className="mt-4 grid gap-3">
             {!kidSaveGoals.length && (
-              <div className="rounded-lg border-2 border-dashed border-[#165a4b] bg-[#e7f4ef] p-4 text-center">
-                <p className="text-sm font-black text-[#0d3b30]">No goals yet — start your very own below! 🌱</p>
+              <div className="rounded-lg border-2 border-dashed border-tt-pine bg-tt-pine-tint p-4 text-center">
+                <p className="text-sm font-black text-tt-pine-deep">No goals yet — start your very own below! 🌱</p>
               </div>
             )}
             {kidSaveGoals.map((goal) => <SaveGoalCard key={goal.id} goal={goal} />)}
@@ -7180,13 +7378,13 @@ function BankPanel(props: {
           <KidGoalCreator onCreate={props.createBankGoal} />
         </div>
 
-        <div id="kid-bank-drives" className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-[#f4b400]">Kindness drives</p>
-          <h3 className="mt-2 text-2xl font-black text-[#17231f]">Helping, together 💛</h3>
+        <div id="kid-bank-drives" className="rounded-lg border border-tt-line bg-white p-5 shadow-sm">
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-gold">Kindness drives</p>
+          <h3 className="mt-2 text-2xl font-black text-tt-ink">Helping, together 💛</h3>
           <div className="mt-4 grid gap-3">
             {!drives.length && (
-              <div className="rounded-lg border-2 border-dashed border-[#f4b400] bg-[#fff8ef] p-4 text-center">
-                <p className="text-sm font-black text-[#7a4b12]">
+              <div className="rounded-lg border-2 border-dashed border-tt-gold bg-[#fff8ef] p-4 text-center">
+                <p className="text-sm font-black text-tt-cocoa">
                   {props.isParentView ? "No drives yet — enroll this kid in one below! 👇" : "No drives yet — ask a grown-up to enroll you in a kindness drive! 💛"}
                 </p>
               </div>
@@ -7202,7 +7400,7 @@ function BankPanel(props: {
               />
             ))}
           </div>
-          <p className="mt-3 text-center text-xs font-bold text-[#4f625b]">
+          <p className="mt-3 text-center text-xs font-bold text-tt-ink-soft">
             Feed a drive from your GIVE jar in the sorting station above ⬆️
           </p>
         </div>
@@ -7220,16 +7418,16 @@ function BankPanel(props: {
         </div>
       )}
 
-      <div className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
-        <h3 className="text-lg font-black text-[#17231f]">Your money story 📖</h3>
+      <div className="rounded-lg border border-tt-line bg-white p-5 shadow-sm">
+        <h3 className="text-lg font-black text-tt-ink">Your money story 📖</h3>
         {pendingTransactions.length > 0 && (
           <div className="mt-3">
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-[#f4b400]">⏳ Waiting for a grown-up</p>
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-gold">⏳ Waiting for a grown-up</p>
             <div className="mt-2 grid gap-2">
               {pendingTransactions.map((tx) => (
-                <p key={tx.id} className="rounded-lg border-2 border-[#f4b400] bg-[#fff4d8] p-3 text-sm font-semibold text-[#17231f]">
+                <p key={tx.id} className="rounded-lg border-2 border-tt-gold bg-tt-sun-soft p-3 text-sm font-semibold text-tt-ink">
                   {txIcon(tx)} <b className="capitalize">{tx.category}</b> ${tx.amount}
-                  <span className="mt-1 block font-bold text-[#7a4b12]">{tx.description}</span>
+                  <span className="mt-1 block font-bold text-tt-cocoa">{tx.description}</span>
                 </p>
               ))}
             </div>
@@ -7237,13 +7435,13 @@ function BankPanel(props: {
         )}
         <div className="mt-3 grid gap-2">
           {moneyStory.map((tx) => (
-            <p key={tx.id} className="rounded-lg bg-[#faf8f0] p-3 text-sm font-semibold text-[#4f625b]">
+            <p key={tx.id} className="rounded-lg bg-tt-cream p-3 text-sm font-semibold text-tt-ink-soft">
               {txIcon(tx)} <b className="capitalize">{tx.category}</b> {tx.amount < 0 ? `−$${Math.abs(tx.amount)}` : `$${tx.amount}`}
               <span className="mt-1 block">{tx.description}</span>
             </p>
           ))}
           {!moneyStory.length && !pendingTransactions.length && (
-            <p className="rounded-lg bg-[#faf8f0] p-3 text-sm font-semibold text-[#4f625b]">
+            <p className="rounded-lg bg-tt-cream p-3 text-sm font-semibold text-tt-ink-soft">
               No money moves yet — earn your first dollars by finishing a mission!
             </p>
           )}
@@ -7614,16 +7812,16 @@ function ApprovalsPanel(props: {
   const [sendBackFor, setSendBackFor] = useState<string | null>(null);
   return (
     <section className="space-y-5">
-      <div className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
+      <div className="rounded-lg border border-tt-line bg-white p-5 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-[#f47b20]">Missions</p>
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-tang">Missions</p>
             <h2 className="mt-1 text-2xl font-black">Kid missions waiting on you</h2>
           </div>
           {pendingMissions.length > 0 && (
             <button
               onClick={() => pendingMissions.forEach((mission) => props.approveMission(mission.id))}
-              className="tt-btn-press min-h-11 rounded-lg bg-[#165a4b] px-5 py-2 text-sm font-black text-white"
+              className="tt-btn-press min-h-11 rounded-lg bg-tt-pine px-5 py-2 text-sm font-black text-white"
             >
               Approve all ({pendingMissions.length})
             </button>
@@ -7631,14 +7829,14 @@ function ApprovalsPanel(props: {
         </div>
         <div className="mt-4 grid gap-3">
           {!pendingMissions.length && (
-            <p className="rounded-lg bg-[#faf8f0] p-4 text-sm font-semibold text-[#4f625b]">No missions waiting right now. When your kid finishes a mission, it'll show up here for your high-five! 🌟</p>
+            <p className="rounded-lg bg-tt-cream p-4 text-sm font-semibold text-tt-ink-soft">No missions waiting right now. When your kid finishes a mission, it'll show up here for your high-five! 🌟</p>
           )}
           {pendingMissions.map((mission) => {
             const child = props.childProfiles.find((entry) => entry.id === mission.completedBy);
             const childLook = getChildLook(child?.id);
             const pet = props.pets?.find((item) => item.id === mission.petId);
             return (
-              <article key={mission.id} className="flex gap-4 rounded-lg bg-[#faf8f0] p-4">
+              <article key={mission.id} className="flex gap-4 rounded-lg bg-tt-cream p-4">
                 <ProfilePhoto
                   label={child?.name ?? "Kid"}
                   initial={childLook.initial}
@@ -7649,15 +7847,15 @@ function ApprovalsPanel(props: {
                   photoUrl={child?.photoUrl}
                 />
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs font-black uppercase tracking-[0.12em] text-[#4f625b]">{child?.name ?? "Kid"} finished</p>
+                  <p className="text-xs font-black uppercase tracking-[0.12em] text-tt-ink-soft">{child?.name ?? "Kid"} finished</p>
                   <div className="mt-1 flex items-center gap-2">
                     <MissionThumb mission={mission} pet={pet} size="sm" />
                     <h3 className="text-xl font-black">{mission.title}</h3>
                   </div>
                   {mission.note ? (
-                    <p className="mt-2 rounded-lg bg-white p-3 text-sm font-semibold leading-6 text-[#17231f]">“{mission.note}”</p>
+                    <p className="mt-2 rounded-lg bg-white p-3 text-sm font-semibold leading-6 text-tt-ink">“{mission.note}”</p>
                   ) : (
-                    <p className="mt-2 text-sm font-semibold italic text-[#69736f]">No note from {child?.name ?? "kid"} this time.</p>
+                    <p className="mt-2 text-sm font-semibold italic text-tt-ink-faint">No note from {child?.name ?? "kid"} this time.</p>
                   )}
                   <div className="mt-2 flex flex-wrap gap-2">
                     <span className="rounded-full bg-white px-3 py-1 text-xs font-black">🪙 +{mission.coins} coins</span>
@@ -7669,7 +7867,7 @@ function ApprovalsPanel(props: {
                   <div className="mt-3 flex flex-wrap items-center gap-3">
                     <button
                       onClick={() => props.approveMission(mission.id)}
-                      className="tt-btn-press min-h-11 rounded-lg bg-[#165a4b] px-5 py-2 text-sm font-black text-white"
+                      className="tt-btn-press min-h-11 rounded-lg bg-tt-pine px-5 py-2 text-sm font-black text-white"
                     >
                       Approve
                     </button>
@@ -7677,19 +7875,19 @@ function ApprovalsPanel(props: {
                       <div className="flex flex-wrap gap-2">
                         <button
                           onClick={() => { props.rejectMission(mission.id, "Not done yet — give it another try! 💪"); setSendBackFor(null); }}
-                          className="min-h-11 rounded-lg border border-[#ded8c7] bg-white px-4 py-2 text-sm font-black text-[#b44421]"
+                          className="min-h-11 rounded-lg border border-tt-line bg-white px-4 py-2 text-sm font-black text-tt-error"
                         >
                           Not done yet
                         </button>
                         <button
                           onClick={() => { props.rejectMission(mission.id, "Needs a photo — snap one and send it again 📸"); setSendBackFor(null); }}
-                          className="min-h-11 rounded-lg border border-[#ded8c7] bg-white px-4 py-2 text-sm font-black text-[#b44421]"
+                          className="min-h-11 rounded-lg border border-tt-line bg-white px-4 py-2 text-sm font-black text-tt-error"
                         >
                           Needs a photo
                         </button>
                       </div>
                     ) : (
-                      <button onClick={() => setSendBackFor(mission.id)} className="min-h-11 px-2 py-2 text-sm font-bold text-[#69736f] underline underline-offset-2">
+                      <button onClick={() => setSendBackFor(mission.id)} className="min-h-11 px-2 py-2 text-sm font-bold text-tt-ink-faint underline underline-offset-2">
                         Send back
                       </button>
                     )}
@@ -7700,16 +7898,16 @@ function ApprovalsPanel(props: {
           })}
         </div>
       </div>
-      <div className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
+      <div className="rounded-lg border border-tt-line bg-white p-5 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2563eb]">Kid Bank</p>
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-blue">Kid Bank</p>
             <h2 className="mt-1 text-2xl font-black">Money requests</h2>
           </div>
           {pendingTransactions.length > 0 && (
             <button
               onClick={() => pendingTransactions.forEach((tx) => props.approveTransaction(tx.id))}
-              className="tt-btn-press min-h-11 rounded-lg bg-[#165a4b] px-5 py-2 text-sm font-black text-white"
+              className="tt-btn-press min-h-11 rounded-lg bg-tt-pine px-5 py-2 text-sm font-black text-white"
             >
               Approve all ({pendingTransactions.length})
             </button>
@@ -7717,13 +7915,13 @@ function ApprovalsPanel(props: {
         </div>
         <div className="mt-4 grid gap-3">
           {!pendingTransactions.length && (
-            <p className="rounded-lg bg-[#faf8f0] p-4 text-sm font-semibold text-[#4f625b]">No money requests waiting right now.</p>
+            <p className="rounded-lg bg-tt-cream p-4 text-sm font-semibold text-tt-ink-soft">No money requests waiting right now.</p>
           )}
           {pendingTransactions.map((tx) => {
             const child = props.childProfiles.find((entry) => entry.id === tx.childId);
             const childLook = getChildLook(child?.id);
             return (
-              <article key={tx.id} className="flex gap-4 rounded-lg bg-[#fff4d8] p-4">
+              <article key={tx.id} className="flex gap-4 rounded-lg bg-tt-sun-soft p-4">
                 <ProfilePhoto
                   label={child?.name ?? "Kid"}
                   initial={childLook.initial}
@@ -7735,16 +7933,16 @@ function ApprovalsPanel(props: {
                 />
                 <div className="min-w-0 flex-1">
                   <h3 className="text-xl font-black capitalize">{tx.category} · ${tx.amount}</h3>
-                  <p className="mt-1 text-sm font-semibold text-[#17231f]">{tx.description}</p>
-                  <p className="mt-1 text-xs font-bold text-[#4f625b]">{child?.name ?? "Kid"} requested this</p>
+                  <p className="mt-1 text-sm font-semibold text-tt-ink">{tx.description}</p>
+                  <p className="mt-1 text-xs font-bold text-tt-ink-soft">{child?.name ?? "Kid"} requested this</p>
                   <div className="mt-3 flex flex-wrap items-center gap-3">
                     <button
                       onClick={() => props.approveTransaction(tx.id)}
-                      className="tt-btn-press min-h-11 rounded-lg bg-[#165a4b] px-5 py-2 text-sm font-black text-white"
+                      className="tt-btn-press min-h-11 rounded-lg bg-tt-pine px-5 py-2 text-sm font-black text-white"
                     >
                       Approve
                     </button>
-                    <button onClick={() => props.rejectTransaction(tx.id)} className="min-h-11 px-2 py-2 text-sm font-bold text-[#69736f] underline underline-offset-2">
+                    <button onClick={() => props.rejectTransaction(tx.id)} className="min-h-11 px-2 py-2 text-sm font-bold text-tt-ink-faint underline underline-offset-2">
                       Decline
                     </button>
                   </div>
@@ -7810,46 +8008,46 @@ function MissionAssignmentPanel(props: {
   }
 
   return (
-    <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
-      <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2563eb]">Fair mission assignment</p>
+    <section className="rounded-lg border border-tt-line bg-white p-5 shadow-sm">
+      <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-blue">Fair mission assignment</p>
       <h2 className="mt-2 text-2xl font-black sm:text-3xl">One owner per task, balanced points</h2>
-      <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-[#4f625b]">
+      <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-tt-ink-soft">
         Kids only see missions assigned to their profile. Harder work is worth more, and auto-balance prefers age-fit tasks before evening out points.
       </p>
       <div className="mt-4 flex flex-wrap gap-3">
-        <button onClick={props.autoBalanceMissions} className="min-h-11 rounded-lg bg-[#2563eb] px-5 py-2 text-sm font-black text-white">
+        <button onClick={props.autoBalanceMissions} className="min-h-11 rounded-lg bg-tt-blue px-5 py-2 text-sm font-black text-white">
           Auto balance tasks
         </button>
-        <span className="inline-flex min-h-11 items-center rounded-lg bg-[#eef2ff] px-4 py-2 text-sm font-black text-[#2563eb]">
+        <span className="inline-flex min-h-11 items-center rounded-lg bg-tt-sky px-4 py-2 text-sm font-black text-tt-blue">
           Harder tasks automatically carry more points
         </span>
       </div>
       <div className="mt-4 grid gap-3 lg:grid-cols-3">
-        <div className="rounded-lg bg-[#e7f4ef] p-4">
-          <p className="text-xs font-black uppercase tracking-[0.14em] text-[#165a4b]">Fairness engine</p>
+        <div className="rounded-lg bg-tt-pine-tint p-4">
+          <p className="text-xs font-black uppercase tracking-[0.14em] text-tt-pine">Fairness engine</p>
           <p className="mt-2 text-lg font-black">Fairness, not first-click competition</p>
-          <p className="mt-1 text-sm font-bold text-[#4f625b]">Every task has one owner, age guidance, and point balancing across kids.</p>
+          <p className="mt-1 text-sm font-bold text-tt-ink-soft">Every task has one owner, age guidance, and point balancing across kids.</p>
         </div>
-        <div className="rounded-lg bg-[#f0edff] p-4">
-          <p className="text-xs font-black uppercase tracking-[0.14em] text-[#6d3ed1]">Values tracked</p>
+        <div className="rounded-lg bg-tt-grape-soft p-4">
+          <p className="text-xs font-black uppercase tracking-[0.14em] text-tt-grape">Values tracked</p>
           <p className="mt-2 text-lg font-black">{familySkillSummary.topLabel}</p>
-          <p className="mt-1 text-sm font-bold text-[#4f625b]">Badges become parent-visible proof of growth, not just stickers.</p>
+          <p className="mt-1 text-sm font-bold text-tt-ink-soft">Badges become parent-visible proof of growth, not just stickers.</p>
         </div>
-        <div className="rounded-lg bg-[#fff4d8] p-4">
-          <p className="text-xs font-black uppercase tracking-[0.14em] text-[#7a4b12]">Current spread</p>
+        <div className="rounded-lg bg-tt-sun-soft p-4">
+          <p className="text-xs font-black uppercase tracking-[0.14em] text-tt-cocoa">Current spread</p>
           <p className="mt-2 text-lg font-black">{spread} planned points</p>
-          <p className="mt-1 text-sm font-bold text-[#7a4b12]">Keep kids near the same total while harder work still earns more.</p>
+          <p className="mt-1 text-sm font-bold text-tt-cocoa">Keep kids near the same total while harder work still earns more.</p>
         </div>
       </div>
-      <div className="mt-4 rounded-lg border border-[#ded8c7] bg-[#faf8f0] p-4">
+      <div className="mt-4 rounded-lg border border-tt-line bg-tt-cream p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.14em] text-[#165a4b]">Fairness engine · AI-backed</p>
+            <p className="text-xs font-black uppercase tracking-[0.14em] text-tt-pine">Fairness engine · AI-backed</p>
             <h3 className="mt-1 text-xl font-black">Workload analysis</h3>
           </div>
           {fairness.moves.length > 0 && (
             <span
-              className="inline-flex min-h-6 min-w-6 items-center justify-center rounded-full bg-[#d92626] px-2 text-xs font-black text-white"
+              className="inline-flex min-h-6 min-w-6 items-center justify-center rounded-full bg-tt-alert px-2 text-xs font-black text-white"
               role="status"
               aria-label={`${fairness.moves.length} rebalancing suggestions`}
             >
@@ -7857,17 +8055,17 @@ function MissionAssignmentPanel(props: {
             </span>
           )}
         </div>
-        <p className="mt-2 text-sm font-semibold leading-6 text-[#4f625b]">{fairness.insight}</p>
+        <p className="mt-2 text-sm font-semibold leading-6 text-tt-ink-soft">{fairness.insight}</p>
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
           {fairness.kids.map((kid) => (
             <div key={kid.childId} className="rounded-lg bg-white p-3">
               <p className="font-black">
-                {kid.name} <span className="text-xs font-bold text-[#69736f]">· age {kid.age}</span>
+                {kid.name} <span className="text-xs font-bold text-tt-ink-faint">· age {kid.age}</span>
               </p>
-              <p className="mt-1 text-sm font-bold text-[#4f625b]">
+              <p className="mt-1 text-sm font-bold text-tt-ink-soft">
                 {kid.plannedPoints} planned pts · {kid.openCount} open · {kid.awaitingApproval} awaiting approval
               </p>
-              <p className="mt-1 text-xs font-bold text-[#69736f]">
+              <p className="mt-1 text-xs font-bold text-tt-ink-faint">
                 Avg difficulty {kid.avgDifficulty ? kid.avgDifficulty.toFixed(1) : "—"}/4 · easy {kid.byDifficulty.easy} ·
                 medium {kid.byDifficulty.medium} · hard {kid.byDifficulty.hard + kid.byDifficulty.super_hard}
               </p>
@@ -7879,17 +8077,17 @@ function MissionAssignmentPanel(props: {
             <p className="text-sm font-black">Suggested rebalancing — you stay in charge</p>
             <div className="mt-2 grid gap-2">
               {fairness.moves.map((move) => (
-                <div key={move.missionId} className="rounded-lg bg-[#fff4d8] p-3">
+                <div key={move.missionId} className="rounded-lg bg-tt-sun-soft p-3">
                   <p className="text-sm font-black">
                     “{move.title}” ({move.points} pts): {move.fromName} → {move.toName}
                   </p>
-                  <p className="mt-1 text-xs font-semibold text-[#4f625b]">{move.reason}</p>
+                  <p className="mt-1 text-xs font-semibold text-tt-ink-soft">{move.reason}</p>
                 </div>
               ))}
             </div>
             <button
               onClick={() => applyRebalancePlan(fairness.moves)}
-              className="tt-btn-press mt-3 min-h-11 rounded-lg bg-[#165a4b] px-5 py-2 text-sm font-black text-white"
+              className="tt-btn-press mt-3 min-h-11 rounded-lg bg-tt-pine px-5 py-2 text-sm font-black text-white"
             >
               Apply rebalancing ({fairness.moves.length})
             </button>
@@ -7899,42 +8097,42 @@ function MissionAssignmentPanel(props: {
           <button
             onClick={askFairnessCoach}
             disabled={coachLoading}
-            className="min-h-11 rounded-lg bg-[#6d3ed1] px-5 py-2 text-sm font-black text-white disabled:opacity-50"
+            className="min-h-11 rounded-lg bg-tt-grape px-5 py-2 text-sm font-black text-white disabled:opacity-50"
           >
             {coachLoading ? "Asking the coach…" : "Ask AI coach"}
           </button>
           {coachTip && (
             <div className="mt-2 rounded-lg bg-white p-3">
-              <p className="text-[11px] font-black uppercase tracking-[0.14em] text-[#6d3ed1]">
+              <p className="text-[11px] font-black uppercase tracking-[0.14em] text-tt-grape">
                 {coachSource === "live" ? "✨ AI coach" : "Built-in coach · works offline"}
               </p>
-              <p className="mt-1 text-sm font-semibold leading-6 text-[#17231f]">{coachTip}</p>
+              <p className="mt-1 text-sm font-semibold leading-6 text-tt-ink">{coachTip}</p>
             </div>
           )}
         </div>
       </div>
       <div className="mt-4 grid gap-3">
         {props.missions.map((mission) => (
-          <article key={mission.id} className="grid gap-3 rounded-lg border border-[#ded8c7] bg-[#faf8f0] p-4 md:grid-cols-[1fr_190px] md:items-center">
+          <article key={mission.id} className="grid gap-3 rounded-lg border border-tt-line bg-tt-cream p-4 md:grid-cols-[1fr_190px] md:items-center">
             <div>
               <div className="flex flex-wrap gap-2">
                 <span className="rounded-full bg-white px-3 py-1 text-xs font-black">{levelLabels[mission.difficulty]}</span>
-                <span className="rounded-full bg-[#eef2ff] px-3 py-1 text-xs font-black text-[#2563eb]">{difficultyAgeGuidance[mission.difficulty].label}</span>
-                <span className="rounded-full bg-[#fff4d8] px-3 py-1 text-xs font-black">+{mission.points} pts</span>
-                <span className="rounded-full bg-[#f0edff] px-3 py-1 text-xs font-black text-[#6d3ed1]">{getLifeSkillLabel(getMissionLifeSkill(mission))}</span>
-                {mission.status === "approved" && <span className="rounded-full bg-[#e7f4ef] px-3 py-1 text-xs font-black text-[#165a4b]">Approved</span>}
+                <span className="rounded-full bg-tt-sky px-3 py-1 text-xs font-black text-tt-blue">{difficultyAgeGuidance[mission.difficulty].label}</span>
+                <span className="rounded-full bg-tt-sun-soft px-3 py-1 text-xs font-black">+{mission.points} pts</span>
+                <span className="rounded-full bg-tt-grape-soft px-3 py-1 text-xs font-black text-tt-grape">{getLifeSkillLabel(getMissionLifeSkill(mission))}</span>
+                {mission.status === "approved" && <span className="rounded-full bg-tt-pine-tint px-3 py-1 text-xs font-black text-tt-pine">Approved</span>}
               </div>
               <h3 className="mt-2 text-lg font-black">{mission.title}</h3>
-              <p className="mt-1 text-sm font-semibold text-[#4f625b]">{mission.question}</p>
-              <p className="mt-2 text-xs font-black text-[#7a4b12]">{getAgeFitCopy(mission, props.childProfiles.find((child) => child.id === mission.assignedChildId))}</p>
+              <p className="mt-1 text-sm font-semibold text-tt-ink-soft">{mission.question}</p>
+              <p className="mt-2 text-xs font-black text-tt-cocoa">{getAgeFitCopy(mission, props.childProfiles.find((child) => child.id === mission.assignedChildId))}</p>
             </div>
-            <label className="text-sm font-black text-[#17231f]">
+            <label className="text-sm font-black text-tt-ink">
               Assigned kid
               <select
                 value={mission.assignedChildId ?? props.childProfiles[0]?.id ?? ""}
                 onChange={(event) => props.assignMission(mission.id, event.target.value)}
                 disabled={mission.status === "approved"}
-                className="mt-2 min-h-11 w-full rounded-lg border border-[#ded8c7] bg-white px-3 py-2 font-bold disabled:bg-[#ede8db]"
+                className="mt-2 min-h-11 w-full rounded-lg border border-tt-line bg-white px-3 py-2 font-bold disabled:bg-[#ede8db]"
               >
                 {props.childProfiles.map((child) => (
                   <option key={child.id} value={child.id}>{child.name}</option>
@@ -7963,7 +8161,7 @@ function NotificationsCard(props: {
   const childName = (id?: string) => props.childProfiles.find((entry) => entry.id === id)?.name ?? "Kid";
   const countBadge = (count: number, label: string) => (
     <span
-      className="ml-2 inline-flex min-h-6 min-w-6 items-center justify-center rounded-full bg-[#d92626] px-2 text-xs font-black text-white"
+      className="ml-2 inline-flex min-h-6 min-w-6 items-center justify-center rounded-full bg-tt-alert px-2 text-xs font-black text-white"
       role="status"
       aria-label={label}
     >
@@ -7971,7 +8169,7 @@ function NotificationsCard(props: {
     </span>
   );
   return (
-    <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm" aria-label="Notifications">
+    <section className="rounded-lg border border-tt-line bg-white p-5 shadow-sm" aria-label="Notifications">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <p className="text-xs font-black uppercase tracking-[0.18em] text-[#d92626]">Notifications</p>
@@ -7980,17 +8178,17 @@ function NotificationsCard(props: {
         <h2 className="text-2xl font-black">{total > 0 ? "Needs your review" : "All caught up 🎉"}</h2>
       </div>
       {total === 0 ? (
-        <p className="mt-3 rounded-lg bg-[#e7f4ef] p-4 text-sm font-semibold text-[#165a4b]">
+        <p className="mt-3 rounded-lg bg-tt-pine-tint p-4 text-sm font-semibold text-tt-pine">
           Nothing waiting — you're all caught up! 🎉 Missions your kids finish, money requests, and playdate claims will appear here.
         </p>
       ) : (
         <div className="mt-4 grid gap-3">
           {pendingMissions.length > 0 && (
-            <div className="rounded-lg bg-[#faf8f0] p-4">
+            <div className="rounded-lg bg-tt-cream p-4">
               <p className="font-black">
                 Missions waiting{countBadge(pendingMissions.length, `${pendingMissions.length} missions waiting`)}
               </p>
-              <ul className="mt-2 grid gap-1 text-sm font-semibold text-[#4f625b]">
+              <ul className="mt-2 grid gap-1 text-sm font-semibold text-tt-ink-soft">
                 {pendingMissions.slice(0, 3).map((mission) => (
                   <li key={mission.id}>
                     • “{mission.title}” — {childName(mission.completedBy)} finished it
@@ -8001,11 +8199,11 @@ function NotificationsCard(props: {
             </div>
           )}
           {pendingTransactions.length > 0 && (
-            <div className="rounded-lg bg-[#fff4d8] p-4">
+            <div className="rounded-lg bg-tt-sun-soft p-4">
               <p className="font-black">
                 Money requests{countBadge(pendingTransactions.length, `${pendingTransactions.length} money requests`)}
               </p>
-              <ul className="mt-2 grid gap-1 text-sm font-semibold text-[#4f625b]">
+              <ul className="mt-2 grid gap-1 text-sm font-semibold text-tt-ink-soft">
                 {pendingTransactions.slice(0, 3).map((tx) => (
                   <li key={tx.id}>
                     • ${tx.amount} {tx.category} — {childName(tx.childId)}: {tx.description}
@@ -8016,7 +8214,7 @@ function NotificationsCard(props: {
             </div>
           )}
           {props.pendingPlaydates.length > 0 && (
-            <div className="rounded-lg bg-[#eef2ff] p-4">
+            <div className="rounded-lg bg-tt-sky p-4">
               <p className="font-black">
                 Playdate claims{countBadge(props.pendingPlaydates.length, `${props.pendingPlaydates.length} playdate claims`)}
               </p>
@@ -8025,19 +8223,19 @@ function NotificationsCard(props: {
                   const claimedSlot = invite.slots.find((slot) => slot.status === "claimed");
                   return (
                     <div key={invite.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-white p-3">
-                      <p className="text-sm font-bold text-[#17231f]">
+                      <p className="text-sm font-bold text-tt-ink">
                         ✅ {invite.claimedBy} claimed {claimedSlot?.slot} for {claimedSlot?.childName}
                       </p>
                       <div className="flex flex-wrap gap-2">
                         <button
                           onClick={() => props.setActiveTab("schedule")}
-                          className="min-h-11 rounded-lg bg-[#2563eb] px-4 py-2 text-xs font-black text-white"
+                          className="min-h-11 rounded-lg bg-tt-blue px-4 py-2 text-xs font-black text-white"
                         >
                           Open Schedule
                         </button>
                         <button
                           onClick={() => props.acknowledgePlaydate(invite.id)}
-                          className="min-h-11 rounded-lg border border-[#ded8c7] bg-white px-4 py-2 text-xs font-black text-[#4f625b]"
+                          className="min-h-11 rounded-lg border border-tt-line bg-white px-4 py-2 text-xs font-black text-tt-ink-soft"
                         >
                           Mark reviewed
                         </button>
@@ -8131,26 +8329,26 @@ function PetChoreBuilderCard(props: {
   }
 
   return (
-    <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm" aria-label="AI pet-chores builder">
-      <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2563eb]">AI pet-chores builder</p>
+    <section className="rounded-lg border border-tt-line bg-white p-5 shadow-sm" aria-label="AI pet-chores builder">
+      <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-blue">AI pet-chores builder</p>
       <h2 className="mt-2 text-2xl font-black sm:text-3xl">Teach one skill today — AI builds the chores</h2>
-      <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-[#4f625b]">
+      <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-tt-ink-soft">
         Pick the character or life skill to teach. The builder uses your family’s exact pets and returns 4–5 trackable
         chores, each tagged with the skill it grows. Nothing becomes a mission until you save it.
       </p>
       {props.pets.length === 0 ? (
-        <p className="mt-4 rounded-lg bg-[#fff4d8] p-4 text-sm font-semibold text-[#7a4b12]">
+        <p className="mt-4 rounded-lg bg-tt-sun-soft p-4 text-sm font-semibold text-tt-cocoa">
           Add your pets in Pet Passports first — the builder crafts chores from your family’s exact pets.
         </p>
       ) : (
         <>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            <label className="text-sm font-black text-[#17231f]">
+            <label className="text-sm font-black text-tt-ink">
               Skill to teach
               <select
                 value={skill}
                 onChange={(event) => setSkill(event.target.value as PetChoreSkill)}
-                className="mt-2 min-h-11 w-full rounded-lg border border-[#ded8c7] bg-white px-3 py-2 font-bold"
+                className="mt-2 min-h-11 w-full rounded-lg border border-tt-line bg-white px-3 py-2 font-bold"
               >
                 {(filteredSkills.length ? filteredSkills : PET_CHORE_SKILLS).map((option) => (
                   <option key={option} value={option}>
@@ -8159,13 +8357,13 @@ function PetChoreBuilderCard(props: {
                 ))}
               </select>
             </label>
-            <label className="text-sm font-black text-[#17231f]">
+            <label className="text-sm font-black text-tt-ink">
               Search skills
               <input
                 value={skillSearch}
                 onChange={(event) => setSkillSearch(event.target.value)}
                 placeholder="Type to filter…"
-                className="mt-2 min-h-11 w-full rounded-lg border border-[#ded8c7] bg-white px-3 py-2 font-bold"
+                className="mt-2 min-h-11 w-full rounded-lg border border-tt-line bg-white px-3 py-2 font-bold"
               />
             </label>
           </div>
@@ -8173,48 +8371,48 @@ function PetChoreBuilderCard(props: {
             <button
               onClick={generateChores}
               disabled={choreLoading}
-              className="tt-btn-press min-h-11 rounded-lg bg-[#17231f] px-5 py-2 text-sm font-black text-white disabled:opacity-50"
+              className="tt-btn-press min-h-11 rounded-lg bg-tt-ink px-5 py-2 text-sm font-black text-white disabled:opacity-50"
             >
               {choreLoading ? "Building chores…" : "Build chore set with AI"}
             </button>
             {!props.parentSignedIn && (
-              <p className="text-xs font-semibold text-[#7a4b12]">
+              <p className="text-xs font-semibold text-tt-cocoa">
                 Signed-in parents get live AI generation; otherwise built-in templates are used.
               </p>
             )}
           </div>
           {chores && (
-            <div className="mt-4 rounded-lg bg-[#eef2ff] p-4">
-              <p className={`text-[11px] font-black uppercase tracking-[0.14em] ${choreSource === "live" ? "text-[#2563eb]" : "text-[#7a4b12]"}`}>
+            <div className="mt-4 rounded-lg bg-tt-sky p-4">
+              <p className={`text-[11px] font-black uppercase tracking-[0.14em] ${choreSource === "live" ? "text-tt-blue" : "text-tt-cocoa"}`}>
                 {choreSource === "live" ? "✨ AI-built chore set — review before saving" : "Built-in templates · built from your exact pets"}
               </p>
               <div className="mt-2 grid gap-2">
                 {chores.map((chore) => (
                   <div key={`${chore.title}-${chore.skill}`} className="rounded-lg bg-white p-3">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="rounded-full bg-[#f0edff] px-3 py-1 text-xs font-black text-[#6d3ed1]">
+                      <span className="rounded-full bg-tt-grape-soft px-3 py-1 text-xs font-black text-tt-grape">
                         {getLifeSkillLabel(chore.skill)}
                       </span>
-                      <span className="rounded-full bg-[#fff4d8] px-3 py-1 text-xs font-black">+{chore.points} pts</span>
-                      <span className="rounded-full bg-white px-3 py-1 text-xs font-black capitalize ring-1 ring-[#ded8c7]">
+                      <span className="rounded-full bg-tt-sun-soft px-3 py-1 text-xs font-black">+{chore.points} pts</span>
+                      <span className="rounded-full bg-white px-3 py-1 text-xs font-black capitalize ring-1 ring-tt-line">
                         {chore.difficulty}
                       </span>
                       {chore.petName && (
-                        <span className="text-xs font-bold text-[#4f625b]">🐾 {chore.petName}</span>
+                        <span className="text-xs font-bold text-tt-ink-soft">🐾 {chore.petName}</span>
                       )}
                     </div>
-                    <p className="mt-2 text-sm font-black text-[#17231f]">{chore.title}</p>
-                    {chore.detail && <p className="mt-1 text-sm font-semibold leading-5 text-[#4f625b]">{chore.detail}</p>}
+                    <p className="mt-2 text-sm font-black text-tt-ink">{chore.title}</p>
+                    {chore.detail && <p className="mt-1 text-sm font-semibold leading-5 text-tt-ink-soft">{chore.detail}</p>}
                   </div>
                 ))}
               </div>
               <div className="mt-3 flex flex-wrap items-center gap-3">
-                <label className="text-sm font-black text-[#17231f]">
+                <label className="text-sm font-black text-tt-ink">
                   Save for
                   <select
                     value={assignTo}
                     onChange={(event) => setAssignTo(event.target.value)}
-                    className="ml-2 min-h-11 rounded-lg border border-[#ded8c7] bg-white px-3 py-2 font-bold"
+                    className="ml-2 min-h-11 rounded-lg border border-tt-line bg-white px-3 py-2 font-bold"
                   >
                     {props.childProfiles.map((child) => (
                       <option key={child.id} value={child.id}>
@@ -8226,32 +8424,32 @@ function PetChoreBuilderCard(props: {
                 <button
                   onClick={saveAsMissions}
                   disabled={!chores.length || !assignTo}
-                  className="tt-btn-press min-h-11 rounded-lg bg-[#165a4b] px-5 py-2 text-sm font-black text-white disabled:opacity-50"
+                  className="tt-btn-press min-h-11 rounded-lg bg-tt-pine px-5 py-2 text-sm font-black text-white disabled:opacity-50"
                 >
                   Save as today’s missions
                 </button>
               </div>
               {savedFlash && (
-                <p className="mt-2 rounded-lg bg-[#e7f4ef] p-3 text-sm font-semibold text-[#165a4b]">{savedFlash}</p>
+                <p className="mt-2 rounded-lg bg-tt-pine-tint p-3 text-sm font-semibold text-tt-pine">{savedFlash}</p>
               )}
             </div>
           )}
           {history.length > 0 && (
             <div className="mt-4">
-              <p className="text-xs font-black uppercase tracking-[0.14em] text-[#69736f]">Chore-set history</p>
+              <p className="text-xs font-black uppercase tracking-[0.14em] text-tt-ink-faint">Chore-set history</p>
               <div className="mt-2 grid gap-2">
                 {history.map((record) => (
-                  <div key={record.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-[#faf8f0] p-3">
-                    <p className="text-sm font-bold text-[#17231f]">
+                  <div key={record.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-tt-cream p-3">
+                    <p className="text-sm font-bold text-tt-ink">
                       {record.dateKey} · {getLifeSkillLabel(record.skill)} · {record.petNames.join(", ") || "pets"} ·{" "}
                       {record.chores.length} chores
-                      <span className="ml-2 text-xs font-bold text-[#69736f]">
+                      <span className="ml-2 text-xs font-bold text-tt-ink-faint">
                         {record.source === "live" ? "✨ AI" : "templates"}
                       </span>
                     </p>
                     <button
                       onClick={() => reuseRecord(record)}
-                      className="min-h-11 rounded-lg border border-[#ded8c7] bg-white px-4 py-2 text-xs font-black text-[#17231f]"
+                      className="min-h-11 rounded-lg border border-tt-line bg-white px-4 py-2 text-xs font-black text-tt-ink"
                     >
                       Use for today
                     </button>
@@ -8328,10 +8526,10 @@ function AskKidPromptCard({ childProfiles, parentSignedIn }: { childProfiles: Ch
   }
 
   return (
-    <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm" aria-label="Ask your kid with AI">
-      <p className="text-xs font-black uppercase tracking-[0.18em] text-[#6d3ed1]">AI in the background</p>
+    <section className="rounded-lg border border-tt-line bg-white p-5 shadow-sm" aria-label="Ask your kid with AI">
+      <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-grape">AI in the background</p>
       <h2 className="mt-2 text-2xl font-black">Ask your kid with AI 💬</h2>
-      <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-[#4f625b]">
+      <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-tt-ink-soft">
         Pick a topic — AI writes one conversation prompt you can ask your kid tonight. Signed-in parents get a fresh
         AI-written prompt; otherwise a built-in demo prompt.
       </p>
@@ -8345,7 +8543,7 @@ function AskKidPromptCard({ childProfiles, parentSignedIn }: { childProfiles: Ch
               setAskPromptSource(null);
             }}
             className={`min-h-11 rounded-lg px-4 py-2 text-sm font-black capitalize ${
-              askTopic === topic ? "bg-[#6d3ed1] text-white" : "bg-white text-[#17231f] ring-2 ring-[#ded8c7]"
+              askTopic === topic ? "bg-tt-grape text-white" : "bg-white text-tt-ink ring-2 ring-tt-line"
             }`}
           >
             {topic}
@@ -8355,23 +8553,23 @@ function AskKidPromptCard({ childProfiles, parentSignedIn }: { childProfiles: Ch
       <button
         onClick={generateAskPrompt}
         disabled={askLoading}
-        className="mt-3 min-h-11 rounded-lg bg-[#6d3ed1] px-4 py-2 text-sm font-black text-white disabled:opacity-50"
+        className="mt-3 min-h-11 rounded-lg bg-tt-grape px-4 py-2 text-sm font-black text-white disabled:opacity-50"
       >
         {askLoading ? "Generating prompt…" : "Generate a prompt"}
       </button>
       {!parentSignedIn && (
-        <p className="mt-2 text-xs font-semibold text-[#7a4b12]">
+        <p className="mt-2 text-xs font-semibold text-tt-cocoa">
           AI prompts need a signed-in parent account — set one up in Family Setup, under Parent account. Until then you
           get the built-in demo prompts.
         </p>
       )}
       {askPrompt && (
         <div className="mt-3 rounded-lg bg-[#f4efff] p-4">
-          <p className="text-xs font-black uppercase tracking-[0.14em] text-[#6d3ed1]">
+          <p className="text-xs font-black uppercase tracking-[0.14em] text-tt-grape">
             {askPromptSource === "live" ? "✨ AI-generated prompt" : "Demo prompt · generated locally"}
           </p>
           <p className="mt-2 text-base font-black leading-6">“{askPrompt}”</p>
-          <p className="mt-2 text-xs font-semibold text-[#4f625b]">
+          <p className="mt-2 text-xs font-semibold text-tt-ink-soft">
             Tip: ask it at dinner, listen fully, then share your own answer first next time.
           </p>
         </div>
@@ -8402,22 +8600,22 @@ function KidPasscodeCard(props: {
   }
 
   return (
-    <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm" aria-label="Kid profile passcodes">
-      <p className="text-xs font-black uppercase tracking-[0.18em] text-[#f47b20]">Kid profiles</p>
+    <section className="rounded-lg border border-tt-line bg-white p-5 shadow-sm" aria-label="Kid profile passcodes">
+      <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-tang">Kid profiles</p>
       <h2 className="mt-2 text-2xl font-black">Profile passcodes</h2>
-      <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-[#4f625b]">
+      <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-tt-ink-soft">
         Set a passcode for each kid’s profile — settable when the profile is created or any time after, right here.
         Only a parent on this tab can set or change them.
       </p>
-      {flash && <p className="mt-3 rounded-lg bg-[#e7f4ef] p-3 text-sm font-semibold text-[#165a4b]">{flash}</p>}
+      {flash && <p className="mt-3 rounded-lg bg-tt-pine-tint p-3 text-sm font-semibold text-tt-pine">{flash}</p>}
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         {props.childProfiles.map((child) => (
-          <div key={child.id} className="rounded-lg bg-[#faf8f0] p-4">
+          <div key={child.id} className="rounded-lg bg-tt-cream p-4">
             <div className="flex items-center justify-between gap-2">
               <p className="text-lg font-black">{child.name}</p>
               <span
                 className={`rounded-full px-3 py-1 text-xs font-black ${
-                  child.passcode ? "bg-[#e7f4ef] text-[#165a4b]" : "bg-[#fff4d8] text-[#7a4b12]"
+                  child.passcode ? "bg-tt-pine-tint text-tt-pine" : "bg-tt-sun-soft text-tt-cocoa"
                 }`}
               >
                 {child.passcode ? "Passcode set" : "No passcode"}
@@ -8433,19 +8631,19 @@ function KidPasscodeCard(props: {
                 onChange={(event) => setDrafts((items) => ({ ...items, [child.id]: event.target.value }))}
                 placeholder={child.passcode ? "Enter a new passcode" : "Set a passcode"}
                 aria-label={`Passcode for ${child.name}`}
-                className="min-h-11 min-w-0 flex-1 rounded-lg border border-[#ded8c7] bg-white px-3 py-2 text-sm font-bold"
+                className="min-h-11 min-w-0 flex-1 rounded-lg border border-tt-line bg-white px-3 py-2 text-sm font-bold"
               />
               <button
                 onClick={() => save(child.id, child.name)}
                 disabled={!(drafts[child.id] ?? "").trim()}
-                className="tt-btn-press min-h-11 rounded-lg bg-[#165a4b] px-4 py-2 text-sm font-black text-white disabled:opacity-50"
+                className="tt-btn-press min-h-11 rounded-lg bg-tt-pine px-4 py-2 text-sm font-black text-white disabled:opacity-50"
               >
                 {child.passcode ? "Change" : "Set"}
               </button>
               {child.passcode && (
                 <button
                   onClick={() => clear(child.id, child.name)}
-                  className="min-h-11 rounded-lg border border-[#ded8c7] bg-white px-4 py-2 text-sm font-black text-[#b44421]"
+                  className="min-h-11 rounded-lg border border-tt-line bg-white px-4 py-2 text-sm font-black text-tt-error"
                 >
                   Clear
                 </button>
@@ -8527,25 +8725,25 @@ function FamilySetupPanel(props: {
 
   return (
     <section className="space-y-4">
-      <div className="rounded-lg border border-[#ded8c7] bg-[#ffffff] p-5 shadow-sm">
+      <div className="rounded-lg border border-tt-line bg-[#ffffff] p-5 shadow-sm">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-[#f47b20]">Real family setup</p>
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-tang">Real family setup</p>
             <h2 className="mt-2 text-2xl font-black sm:text-3xl">Start simple. Add the family pieces first.</h2>
-            <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-[#4f625b]">
+            <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-tt-ink-soft">
               Set up the parent account, household, kids, and pets. TailTots can grow into goals, rewards, and Kid Bank after the first mission.
-              Read our <a className="font-black text-[#165a4b] underline" href="https://tailtots.com/privacy" target="_blank" rel="noreferrer">Privacy Policy</a>.
+              Read our <a className="font-black text-tt-pine underline" href="https://tailtots.com/privacy" target="_blank" rel="noreferrer">Privacy Policy</a>.
             </p>
           </div>
-          <div className="rounded-lg bg-[#165a4b] px-4 py-3 text-sm font-black text-white">
+          <div className="rounded-lg bg-tt-pine px-4 py-3 text-sm font-black text-white">
             {completedSteps} of {setupSteps.length} ready
           </div>
         </div>
         <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
           {setupSteps.map(([label, done, detail]) => (
-            <div key={label} className={`rounded-lg border p-3 ${done ? "border-[#ded8c7] bg-[#e7f4ef]" : "border-[#ded8c7] bg-white"}`}>
-              <p className="text-sm font-black text-[#17231f]">{label}</p>
-              <p className={`mt-1 text-xs font-bold ${done ? "text-[#165a4b]" : "text-[#7a4b12]"}`}>{detail}</p>
+            <div key={label} className={`rounded-lg border p-3 ${done ? "border-tt-line bg-tt-pine-tint" : "border-tt-line bg-white"}`}>
+              <p className="text-sm font-black text-tt-ink">{label}</p>
+              <p className={`mt-1 text-xs font-bold ${done ? "text-tt-pine" : "text-tt-cocoa"}`}>{detail}</p>
             </div>
           ))}
         </div>
@@ -8553,12 +8751,12 @@ function FamilySetupPanel(props: {
           <div className="mt-4 rounded-lg border border-dashed border-[#f0c96a] bg-[#fffdf5] p-4">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <p className="text-sm font-black text-[#7a4b12]">Demo data</p>
+                <p className="text-sm font-black text-tt-cocoa">Demo data</p>
                 <p className="mt-1 text-xs font-semibold text-[#8a7a5a]">You're exploring with sample family data. Reset anytime to restore the original demo missions, jars, and moments.</p>
               </div>
               <button
                 onClick={props.onResetDemo}
-                className="min-h-11 shrink-0 rounded-lg border border-[#f0c96a] bg-white px-4 py-2 text-sm font-black text-[#7a4b12] hover:bg-[#fff4d8]"
+                className="min-h-11 shrink-0 rounded-lg border border-[#f0c96a] bg-white px-4 py-2 text-sm font-black text-tt-cocoa hover:bg-tt-sun-soft"
               >
                 ↺ Reset demo
               </button>
@@ -8570,13 +8768,13 @@ function FamilySetupPanel(props: {
       <div className="rounded-lg border border-[#dce6f8] bg-white p-5 shadow-sm">
         <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-[#165a4b]">Parent account</p>
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-pine">Parent account</p>
             <h2 className="mt-2 text-3xl font-black">Save this family setup</h2>
-            <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-[#4f625b]">
+            <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-tt-ink-soft">
               A signed-in parent account can keep this family&apos;s profiles, family photos, kids, pets, goals, points, coins, Kid Bank, badges, and parent settings together.
             </p>
           </div>
-          <div className={`rounded-lg px-4 py-3 text-sm font-black ${props.cloudAccountEmail ? "bg-[#e7f4ef] text-[#165a4b]" : "bg-[#fff4d8] text-[#7a4b12]"}`}>
+          <div className={`rounded-lg px-4 py-3 text-sm font-black ${props.cloudAccountEmail ? "bg-tt-pine-tint text-tt-pine" : "bg-tt-sun-soft text-tt-cocoa"}`}>
             {props.cloudAccountEmail ? `Signed in: ${props.cloudAccountEmail}` : isSupabaseConfigured ? "Ready for account sign in" : "Account setup"}
           </div>
         </div>
@@ -8585,10 +8783,10 @@ function FamilySetupPanel(props: {
             just routes there instead of burying a form inside setup. */}
         {!props.cloudAccountEmail && (
           <div className="mt-4 flex flex-wrap gap-3">
-            <button onClick={props.onOpenSignup} className="min-h-12 rounded-lg bg-[#165a4b] px-5 py-3 text-sm font-black text-white">
+            <button onClick={props.onOpenSignup} className="min-h-12 rounded-lg bg-tt-pine px-5 py-3 text-sm font-black text-white">
               Create parent account
             </button>
-            <button onClick={props.onOpenSignin} className="min-h-12 rounded-lg border border-[#dce6f8] bg-white px-5 py-3 text-sm font-black text-[#1e3a8a]">
+            <button onClick={props.onOpenSignin} className="min-h-12 rounded-lg border border-[#dce6f8] bg-white px-5 py-3 text-sm font-black text-tt-ocean">
               Sign in
             </button>
           </div>
@@ -8596,34 +8794,34 @@ function FamilySetupPanel(props: {
 
         {isSupabaseConfigured && props.cloudAccountEmail && (
           <div className="mt-4 flex flex-wrap gap-3">
-            <button onClick={props.saveCurrentFamilyAccount} disabled={props.accountStatus === "saving"} className="min-h-12 rounded-lg bg-[#165a4b] px-5 py-3 text-sm font-black text-white disabled:opacity-60">
+            <button onClick={props.saveCurrentFamilyAccount} disabled={props.accountStatus === "saving"} className="min-h-12 rounded-lg bg-tt-pine px-5 py-3 text-sm font-black text-white disabled:opacity-60">
               {props.accountStatus === "saving" ? "Saving..." : "Save to parent account"}
             </button>
-            <button onClick={props.loadCurrentFamilyAccount} disabled={props.accountStatus === "loading"} className="min-h-12 rounded-lg border border-[#dce6f8] bg-white px-5 py-3 text-sm font-black text-[#1e3a8a] disabled:opacity-60">
+            <button onClick={props.loadCurrentFamilyAccount} disabled={props.accountStatus === "loading"} className="min-h-12 rounded-lg border border-[#dce6f8] bg-white px-5 py-3 text-sm font-black text-tt-ocean disabled:opacity-60">
               Load from parent account
             </button>
-            <button onClick={props.signOutParentAccount} disabled={props.accountStatus === "loading"} className="min-h-12 rounded-lg border border-[#ded8c7] bg-[#faf8f0] px-5 py-3 text-sm font-black text-[#7a4b12] disabled:opacity-60">
+            <button onClick={props.signOutParentAccount} disabled={props.accountStatus === "loading"} className="min-h-12 rounded-lg border border-tt-line bg-tt-cream px-5 py-3 text-sm font-black text-tt-cocoa disabled:opacity-60">
               Sign out
             </button>
           </div>
         )}
 
         {props.accountMessage && (
-          <p className={`mt-3 text-sm font-bold ${props.accountStatus === "error" ? "text-[#b44421]" : "text-[#165a4b]"}`}>
+          <p className={`mt-3 text-sm font-bold ${props.accountStatus === "error" ? "text-tt-error" : "text-tt-pine"}`}>
             {props.accountMessage}
           </p>
         )}
 
         {props.cloudAccountEmail && props.cloudFamilyReady && !props.cloudSyncOn && (
-          <div className="mt-4 rounded-lg border border-[#dce6f8] bg-[#eef2ff] p-4">
-            <p className="text-sm font-black text-[#1e3a8a]">Cloud sync is ready — turn it on?</p>
-            <p className="mt-1 text-sm font-semibold leading-6 text-[#4f625b]">
+          <div className="mt-4 rounded-lg border border-[#dce6f8] bg-tt-sky p-4">
+            <p className="text-sm font-black text-tt-ocean">Cloud sync is ready — turn it on?</p>
+            <p className="mt-1 text-sm font-semibold leading-6 text-tt-ink-soft">
               This pushes the kids, pets, missions, Kid Bank, goals, badges, and jobs on this device into your family&apos;s private cloud tables, then keeps them in sync automatically.
             </p>
             <button
               onClick={props.enableCloudSyncNow}
               disabled={props.cloudSyncStatus === "working"}
-              className="mt-3 min-h-12 rounded-lg bg-[#1e3a8a] px-5 py-3 text-sm font-black text-white disabled:opacity-60"
+              className="mt-3 min-h-12 rounded-lg bg-tt-ocean px-5 py-3 text-sm font-black text-white disabled:opacity-60"
             >
               {props.cloudSyncStatus === "working" ? "Starting sync..." : "Turn on cloud sync"}
             </button>
@@ -8631,43 +8829,43 @@ function FamilySetupPanel(props: {
         )}
 
         {props.cloudSyncOn && (
-          <div className={`mt-4 rounded-lg border p-4 ${props.cloudSyncStatus === "error" ? "border-[#e8b4a0] bg-[#fdf1ec]" : "border-[#ded8c7] bg-[#e7f4ef]"}`}>
-            <p className={`text-sm font-black ${props.cloudSyncStatus === "error" ? "text-[#b44421]" : "text-[#165a4b]"}`}>
+          <div className={`mt-4 rounded-lg border p-4 ${props.cloudSyncStatus === "error" ? "border-[#e8b4a0] bg-[#fdf1ec]" : "border-tt-line bg-tt-pine-tint"}`}>
+            <p className={`text-sm font-black ${props.cloudSyncStatus === "error" ? "text-tt-error" : "text-tt-pine"}`}>
               {props.cloudSyncStatus === "working" ? "Syncing with your family's cloud..." : props.cloudSyncStatus === "error" ? "Cloud sync hit a snag" : "Cloud sync is on"}
             </p>
             {props.cloudSyncMessage && (
-              <p className="mt-1 text-sm font-semibold leading-6 text-[#4f625b]">{props.cloudSyncMessage}</p>
+              <p className="mt-1 text-sm font-semibold leading-6 text-tt-ink-soft">{props.cloudSyncMessage}</p>
             )}
           </div>
         )}
       </div>
 
-      <div className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#f47b20]">Family setup</p>
+      <div className="rounded-lg border border-tt-line bg-white p-5 shadow-sm">
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-tang">Family setup</p>
         <div className="mt-2 flex flex-wrap items-center gap-3">
           <h2 className="text-3xl font-black">Household, kids, and pets</h2>
           {props.lastSavedAt && (
-            <span className="rounded-full bg-[#e7f4ef] px-3 py-1 text-xs font-black text-[#0d3b30]" aria-live="polite">
+            <span className="rounded-full bg-tt-pine-tint px-3 py-1 text-xs font-black text-tt-pine-deep" aria-live="polite">
               Saved ✓ {props.lastSavedAt.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
             </span>
           )}
         </div>
-        <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-[#4f625b]">
+        <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-tt-ink-soft">
           This is the control room for who uses TailTots. Keep parent info simple, make each kid easy to recognize, and make every pet passport easy to scan.
         </p>
-        <label className="mt-5 block text-sm font-black text-[#17231f]">
+        <label className="mt-5 block text-sm font-black text-tt-ink">
           Household name
           <input
-            className="mt-2 w-full rounded-lg border border-[#ded8c7] px-4 py-3 text-base font-semibold"
+            className="mt-2 w-full rounded-lg border border-tt-line px-4 py-3 text-base font-semibold"
             value={props.familyName}
             onChange={(event) => props.setFamilyName(event.target.value)}
             placeholder="The Smith Crew"
           />
         </label>
-        <label className="mt-4 block max-w-xs text-sm font-black text-[#17231f]">
+        <label className="mt-4 block max-w-xs text-sm font-black text-tt-ink">
           Parent passcode
           <input
-            className="mt-2 w-full rounded-lg border border-[#ded8c7] px-4 py-3 text-base font-semibold"
+            className="mt-2 w-full rounded-lg border border-tt-line px-4 py-3 text-base font-semibold"
             value={props.parentPasscode}
             onChange={(event) => props.setParentPasscode(event.target.value)}
             inputMode="numeric"
@@ -8683,23 +8881,23 @@ function FamilySetupPanel(props: {
         setFamilyNeighborhood={props.setFamilyNeighborhood}
       />
 
-      <div className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#165a4b]">Healthy app habits</p>
+      <div className="rounded-lg border border-tt-line bg-white p-5 shadow-sm">
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-pine">Healthy app habits</p>
         <h3 className="mt-2 text-2xl font-black">Pacing and points, set by you</h3>
-        <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-[#4f625b]">
+        <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-tt-ink-soft">
           About a minute per visit keeps TailTots a helper, not a habit. Limit how many times kids can open the app each day, and set what their points are worth in dollars.
         </p>
-        <label className="mt-4 flex cursor-pointer items-center gap-3 rounded-lg bg-[#faf8f0] p-4">
+        <label className="mt-4 flex cursor-pointer items-center gap-3 rounded-lg bg-tt-cream p-4">
           <input
             type="checkbox"
             checked={props.dailyChecksEnabled}
             onChange={(event) => props.setDailyChecksEnabled(event.target.checked)}
             className="h-5 w-5"
           />
-          <span className="text-sm font-black text-[#17231f]">Limit kid check-ins per day</span>
+          <span className="text-sm font-black text-tt-ink">Limit kid check-ins per day</span>
         </label>
         {props.dailyChecksEnabled && (
-          <label className="mt-3 block max-w-xs text-sm font-black text-[#17231f]">
+          <label className="mt-3 block max-w-xs text-sm font-black text-tt-ink">
             Max check-ins per day
             <input
               type="number"
@@ -8707,27 +8905,27 @@ function FamilySetupPanel(props: {
               max={50}
               value={props.maxDailyChecks}
               onChange={(event) => props.setMaxDailyChecks(Math.max(1, Math.min(50, Number(event.target.value) || 10)))}
-              className="mt-2 w-full rounded-lg border border-[#ded8c7] px-4 py-3 text-base font-semibold"
+              className="mt-2 w-full rounded-lg border border-tt-line px-4 py-3 text-base font-semibold"
             />
           </label>
         )}
-        <label className="mt-4 block max-w-xs text-sm font-black text-[#17231f]">
+        <label className="mt-4 block max-w-xs text-sm font-black text-tt-ink">
           Points per $1
           <input
             type="number"
             min={1}
             value={props.pointsPerDollar}
             onChange={(event) => props.setPointsPerDollar(Math.max(1, Number(event.target.value) || 20))}
-            className="mt-2 w-full rounded-lg border border-[#ded8c7] px-4 py-3 text-base font-semibold"
+            className="mt-2 w-full rounded-lg border border-tt-line px-4 py-3 text-base font-semibold"
           />
-          <span className="mt-1 block text-xs font-semibold text-[#4f625b]">Kids see the converted value in Kid Bank; only parents set the rate.</span>
+          <span className="mt-1 block text-xs font-semibold text-tt-ink-soft">Kids see the converted value in Kid Bank; only parents set the rate.</span>
         </label>
       </div>
 
-      <div className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#6d3ed1]">AI Buddy questions</p>
+      <div className="rounded-lg border border-tt-line bg-white p-5 shadow-sm">
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-grape">AI Buddy questions</p>
         <h3 className="mt-2 text-2xl font-black">Choose what your kid may ask the AI Buddy</h3>
-        <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-[#4f625b]">
+        <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-tt-ink-soft">
           The AI Buddy only suggests predefined questions — no open chat. Pick the topics your kid can explore.
         </p>
         <div className="mt-4 grid gap-2 sm:grid-cols-2">
@@ -8736,7 +8934,7 @@ function FamilySetupPanel(props: {
             return (
               <label
                 key={category}
-                className={`flex cursor-pointer items-center gap-3 rounded-lg border-2 p-3 text-sm font-black ${checked ? "border-[#6d3ed1] bg-[#f4efff]" : "border-[#ded8c7] bg-white"}`}
+                className={`flex cursor-pointer items-center gap-3 rounded-lg border-2 p-3 text-sm font-black ${checked ? "border-tt-grape bg-[#f4efff]" : "border-tt-line bg-white"}`}
               >
                 <input
                   type="checkbox"
@@ -8747,48 +8945,48 @@ function FamilySetupPanel(props: {
                       : [...props.aiBuddyCategories, category];
                     props.setAiBuddyCategories(next);
                   }}
-                  className="size-5 accent-[#6d3ed1]"
+                  className="size-5 accent-tt-grape"
                 />
                 {category}
               </label>
             );
           })}
         </div>
-        <label className="mt-4 flex cursor-pointer items-center gap-3 text-sm font-bold text-[#4f625b]">
+        <label className="mt-4 flex cursor-pointer items-center gap-3 text-sm font-bold text-tt-ink-soft">
           <input
             type="checkbox"
             checked={props.aiBuddyDailyRotate}
             onChange={(event) => props.setAiBuddyDailyRotate(event.target.checked)}
-            className="size-6 accent-[#6d3ed1]"
+            className="size-6 accent-tt-grape"
           />
           Let AI rotate new questions daily
         </label>
         {!props.aiBuddyDailyRotate && (
-          <p className="mt-2 text-xs font-semibold text-[#4f625b]">Daily rotation is off — the AI Buddy repeats the same starter set.</p>
+          <p className="mt-2 text-xs font-semibold text-tt-ink-soft">Daily rotation is off — the AI Buddy repeats the same starter set.</p>
         )}
       </div>
 
-      <div className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#6d3ed1]">Photo setup</p>
+      <div className="rounded-lg border border-tt-line bg-white p-5 shadow-sm">
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-grape">Photo setup</p>
         <h3 className="mt-2 text-2xl font-black">One photo, guided cropping</h3>
-        <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-[#4f625b]">
+        <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-tt-ink-soft">
           Upload one family picture and TailTots walks you through cropping the parent and kids from that same photo — or set the picture as-is and skip cropping. Pets keep their own passport photos below.
         </p>
         <div className="mt-4 flex flex-wrap gap-3">
           {props.hasFamilyPhoto ? (
             <button
               onClick={props.pickProfilesFromSavedFamilyPhoto}
-              className="min-h-12 rounded-lg bg-[#165a4b] px-5 py-3 text-sm font-black text-white"
+              className="min-h-12 rounded-lg bg-tt-pine px-5 py-3 text-sm font-black text-white"
             >
               ✂️ Crop profiles from family photo
             </button>
           ) : (
-            <label className="inline-flex min-h-12 cursor-pointer items-center rounded-lg bg-[#17231f] px-5 py-3 text-sm font-black text-white">
+            <label className="inline-flex min-h-12 cursor-pointer items-center rounded-lg bg-tt-ink px-5 py-3 text-sm font-black text-white">
               📸 Upload family photo — then crop each profile
               <input className="sr-only" type="file" accept="image/*" onChange={(event) => props.updateFamilyPhotoAndPickProfiles(event.target.files?.[0])} />
             </label>
           )}
-          <label className="inline-flex min-h-12 cursor-pointer items-center rounded-lg border border-[#ded8c7] bg-white px-5 py-3 text-sm font-black text-[#17231f]">
+          <label className="inline-flex min-h-12 cursor-pointer items-center rounded-lg border border-tt-line bg-white px-5 py-3 text-sm font-black text-tt-ink">
             Just set the family picture (skip cropping)
             <input className="sr-only" type="file" accept="image/*" onChange={(event) => props.updateFamilyPhoto(event.target.files?.[0])} />
           </label>
@@ -8796,24 +8994,24 @@ function FamilySetupPanel(props: {
       </div>
 
       <section className="grid gap-4 2xl:grid-cols-[0.8fr_1.2fr]">
-        <div className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-[#165a4b]">Parents</p>
+        <div className="rounded-lg border border-tt-line bg-white p-5 shadow-sm">
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-pine">Parents</p>
           <h3 className="mt-2 text-2xl font-black">Grown-up profiles</h3>
           <div className="mt-4 grid gap-3">
             {props.parents.map((parent) => (
-              <article key={parent.id} className="rounded-lg bg-[#faf8f0] p-4">
+              <article key={parent.id} className="rounded-lg bg-tt-cream p-4">
                 <div className="flex items-center gap-3">
-                  <ProfilePhoto label={parent.name} initial={parent.name.trim()[0]?.toUpperCase() ?? "P"} colors="from-[#ffd166] via-[#f47b20] to-[#6d3ed1]" variant="kid" hair="#4a2718" photoUrl={parent.photoUrl} />
+                  <ProfilePhoto label={parent.name} initial={parent.name.trim()[0]?.toUpperCase() ?? "P"} colors="from-tt-sun via-tt-tang to-tt-grape" variant="kid" hair="#4a2718" photoUrl={parent.photoUrl} />
                   <label className="min-w-0 flex-1 text-sm font-black">
                     Parent name
                     <input
-                      className="mt-2 w-full rounded-lg border border-[#ded8c7] bg-white px-4 py-3 text-base font-semibold"
+                      className="mt-2 w-full rounded-lg border border-tt-line bg-white px-4 py-3 text-base font-semibold"
                       value={parent.name}
                       onChange={(event) => props.updateParent(parent.id, { name: event.target.value })}
                     />
                   </label>
                 </div>
-                <label className="mt-3 inline-flex min-h-11 cursor-pointer items-center rounded-lg bg-white px-4 py-2 text-xs font-black text-[#17231f]">
+                <label className="mt-3 inline-flex min-h-11 cursor-pointer items-center rounded-lg bg-white px-4 py-2 text-xs font-black text-tt-ink">
                   Upload parent face
                   <input className="sr-only" type="file" accept="image/*" capture="user" onChange={(event) => props.updateParentPhoto(parent.id, event.target.files?.[0])} />
                 </label>
@@ -8822,29 +9020,29 @@ function FamilySetupPanel(props: {
           </div>
         </div>
 
-        <div className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-[#f47b20]">Kids</p>
+        <div className="rounded-lg border border-tt-line bg-white p-5 shadow-sm">
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-tang">Kids</p>
           <h3 className="mt-2 text-2xl font-black">Kid profiles</h3>
           <div className="mt-4 grid gap-3 lg:grid-cols-2">
             {props.childProfiles.map((child) => {
               const look = getChildLook(child.id);
               return (
-                <article key={child.id} className="rounded-lg border border-[#ded8c7] bg-[#faf8f0] p-4">
+                <article key={child.id} className="rounded-lg border border-tt-line bg-tt-cream p-4">
                   <div className="flex items-center gap-3">
                     <ProfilePhoto label={child.name} initial={look.initial} colors={look.colors} variant="kid" hair={look.hair} photoUrl={child.photoUrl} />
                     <div className="min-w-0">
                       <p className="truncate text-xl font-black">{child.name || "Kid profile"}</p>
-                      <p className="text-xs font-bold text-[#69736f]">Age {child.age} • {levelLabels[child.level]} helper</p>
+                      <p className="text-xs font-bold text-tt-ink-faint">Age {child.age} • {levelLabels[child.level]} helper</p>
                     </div>
                   </div>
                   <label className="mt-4 block text-sm font-black">
                     Kid name
-                    <input className="mt-2 w-full rounded-lg border border-[#ded8c7] bg-white px-4 py-3 text-base font-semibold" value={child.name} onChange={(event) => props.updateChild(child.id, { name: event.target.value })} />
+                    <input className="mt-2 w-full rounded-lg border border-tt-line bg-white px-4 py-3 text-base font-semibold" value={child.name} onChange={(event) => props.updateChild(child.id, { name: event.target.value })} />
                   </label>
                   <label className="mt-3 block text-sm font-black">
                     Age
                     <input
-                      className="mt-2 w-full rounded-lg border border-[#ded8c7] bg-white px-4 py-3 text-base font-semibold"
+                      className="mt-2 w-full rounded-lg border border-tt-line bg-white px-4 py-3 text-base font-semibold"
                       value={child.age}
                       onChange={(event) => props.updateChild(child.id, { age: Math.max(3, Math.min(18, Number(event.target.value) || child.age || 8)) })}
                       inputMode="numeric"
@@ -8853,7 +9051,7 @@ function FamilySetupPanel(props: {
                       max={18}
                     />
                   </label>
-                  <label className="mt-3 inline-flex min-h-11 cursor-pointer items-center rounded-lg bg-white px-4 py-2 text-xs font-black text-[#17231f]">
+                  <label className="mt-3 inline-flex min-h-11 cursor-pointer items-center rounded-lg bg-white px-4 py-2 text-xs font-black text-tt-ink">
                     Capture kid face
                     <input className="sr-only" type="file" accept="image/*" capture="user" onChange={(event) => props.updateChildPhoto(child.id, event.target.files?.[0])} />
                   </label>
@@ -8863,7 +9061,7 @@ function FamilySetupPanel(props: {
                         props.removeChild(child.id);
                       }
                     }}
-                    className="mt-3 min-h-11 rounded-lg border border-[#e5b8b8] bg-white px-4 py-2 text-xs font-black text-[#b44421]"
+                    className="mt-3 min-h-11 rounded-lg border border-[#e5b8b8] bg-white px-4 py-2 text-xs font-black text-tt-error"
                   >
                     Remove profile
                   </button>
@@ -8871,61 +9069,61 @@ function FamilySetupPanel(props: {
               );
             })}
           </div>
-          <div className="mt-4 rounded-lg bg-[#fff4d8] p-4">
+          <div className="mt-4 rounded-lg bg-tt-sun-soft p-4">
             <h4 className="text-lg font-black">Add another kid</h4>
             <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_120px_auto]">
-              <input className="rounded-lg border border-[#ded8c7] px-4 py-3 font-semibold" placeholder="Child name" value={props.newChild.name} onChange={(event) => props.setNewChild({ ...props.newChild, name: event.target.value })} />
-              <input className="rounded-lg border border-[#ded8c7] px-4 py-3 font-semibold" placeholder="Age" value={props.newChild.age} onChange={(event) => props.setNewChild({ ...props.newChild, age: event.target.value })} inputMode="numeric" type="number" min={3} max={18} />
-              <button onClick={props.addChild} className="min-h-12 rounded-lg bg-[#f47b20] px-5 py-3 text-sm font-black text-white">Add kid</button>
+              <input className="rounded-lg border border-tt-line px-4 py-3 font-semibold" placeholder="Child name" value={props.newChild.name} onChange={(event) => props.setNewChild({ ...props.newChild, name: event.target.value })} />
+              <input className="rounded-lg border border-tt-line px-4 py-3 font-semibold" placeholder="Age" value={props.newChild.age} onChange={(event) => props.setNewChild({ ...props.newChild, age: event.target.value })} inputMode="numeric" type="number" min={3} max={18} />
+              <button onClick={props.addChild} className="min-h-12 rounded-lg bg-tt-tang px-5 py-3 text-sm font-black text-white">Add kid</button>
             </div>
           </div>
         </div>
       </section>
 
-      <div className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#165a4b]">Pets</p>
+      <div className="rounded-lg border border-tt-line bg-white p-5 shadow-sm">
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-pine">Pets</p>
         <h3 className="mt-2 text-2xl font-black">Pet passports</h3>
         <div className="mt-4 grid gap-3 lg:grid-cols-2">
           {props.pets.map((pet) => {
             const look = getPetLook(pet.id, pet);
             return (
-              <article key={pet.id} className="rounded-lg border border-[#ded8c7] bg-[#faf8f0] p-4">
+              <article key={pet.id} className="rounded-lg border border-tt-line bg-tt-cream p-4">
                 <div className="flex items-center gap-3">
                   <ProfilePhoto label={pet.name} initial={look.face} colors={look.colors} variant="pet" petKind={look.kind} photoUrl={pet.photoUrl} />
                   <div className="min-w-0">
                     <p className="truncate text-xl font-black">{pet.name || "Pet profile"}</p>
-                    <p className="text-xs font-bold text-[#69736f]">{pet.species || "Species"}</p>
+                    <p className="text-xs font-bold text-tt-ink-faint">{pet.species || "Species"}</p>
                   </div>
                 </div>
                 <div className="mt-4 grid gap-3 sm:grid-cols-2">
                   <label className="text-sm font-black">
                     Pet name
-                    <input className="mt-2 w-full rounded-lg border border-[#ded8c7] bg-white px-4 py-3 text-base font-semibold" value={pet.name} onChange={(event) => props.updatePet(pet.id, { name: event.target.value })} />
+                    <input className="mt-2 w-full rounded-lg border border-tt-line bg-white px-4 py-3 text-base font-semibold" value={pet.name} onChange={(event) => props.updatePet(pet.id, { name: event.target.value })} />
                   </label>
                   <label className="text-sm font-black">
                     Species
-                    <input className="mt-2 w-full rounded-lg border border-[#ded8c7] bg-white px-4 py-3 text-base font-semibold" value={pet.species} onChange={(event) => props.updatePet(pet.id, { species: event.target.value })} />
+                    <input className="mt-2 w-full rounded-lg border border-tt-line bg-white px-4 py-3 text-base font-semibold" value={pet.species} onChange={(event) => props.updatePet(pet.id, { species: event.target.value })} />
                   </label>
                 </div>
                 <label className="mt-3 block text-sm font-black">
                   Favorite food
-                  <input className="mt-2 w-full rounded-lg border border-[#ded8c7] bg-white px-4 py-3 text-base font-semibold" value={pet.favoriteFood} onChange={(event) => props.updatePet(pet.id, { favoriteFood: event.target.value })} />
+                  <input className="mt-2 w-full rounded-lg border border-tt-line bg-white px-4 py-3 text-base font-semibold" value={pet.favoriteFood} onChange={(event) => props.updatePet(pet.id, { favoriteFood: event.target.value })} />
                 </label>
                 <label className="mt-3 block text-sm font-black">
                   Care notes
-                  <textarea className="mt-2 min-h-24 w-full rounded-lg border border-[#ded8c7] bg-white px-4 py-3 text-base font-semibold" value={pet.careNotes} onChange={(event) => props.updatePet(pet.id, { careNotes: event.target.value })} />
+                  <textarea className="mt-2 min-h-24 w-full rounded-lg border border-tt-line bg-white px-4 py-3 text-base font-semibold" value={pet.careNotes} onChange={(event) => props.updatePet(pet.id, { careNotes: event.target.value })} />
                 </label>
                 <div className="mt-3 grid gap-3 sm:grid-cols-2">
                   <label className="text-sm font-black">
                     Vet
-                    <input className="mt-2 w-full rounded-lg border border-[#ded8c7] bg-white px-4 py-3 text-base font-semibold" value={pet.vet} onChange={(event) => props.updatePet(pet.id, { vet: event.target.value })} />
+                    <input className="mt-2 w-full rounded-lg border border-tt-line bg-white px-4 py-3 text-base font-semibold" value={pet.vet} onChange={(event) => props.updatePet(pet.id, { vet: event.target.value })} />
                   </label>
                   <label className="text-sm font-black">
                     Medicine
-                    <input className="mt-2 w-full rounded-lg border border-[#ded8c7] bg-white px-4 py-3 text-base font-semibold" value={pet.medicine} onChange={(event) => props.updatePet(pet.id, { medicine: event.target.value })} />
+                    <input className="mt-2 w-full rounded-lg border border-tt-line bg-white px-4 py-3 text-base font-semibold" value={pet.medicine} onChange={(event) => props.updatePet(pet.id, { medicine: event.target.value })} />
                   </label>
                 </div>
-                <label className="mt-3 inline-flex min-h-11 cursor-pointer items-center rounded-lg bg-[#165a4b] px-4 py-2 text-xs font-black text-white">
+                <label className="mt-3 inline-flex min-h-11 cursor-pointer items-center rounded-lg bg-tt-pine px-4 py-2 text-xs font-black text-white">
                   Capture pet face
                   <input className="sr-only" type="file" accept="image/*" capture="environment" onChange={(event) => props.updatePetPhoto(pet.id, event.target.files?.[0])} />
                 </label>
@@ -8933,13 +9131,13 @@ function FamilySetupPanel(props: {
             );
           })}
         </div>
-        <div className="mt-4 rounded-lg bg-[#e7f4ef] p-4">
+        <div className="mt-4 rounded-lg bg-tt-pine-tint p-4">
           <h4 className="text-lg font-black">Add another pet</h4>
           <div className="mt-3 grid gap-3 xl:grid-cols-[1fr_1fr_1fr_auto]">
-            <input className="rounded-lg border border-[#ded8c7] px-4 py-3 font-semibold" placeholder="Pet name" value={props.newPet.name} onChange={(event) => props.setNewPet({ ...props.newPet, name: event.target.value })} />
-            <input className="rounded-lg border border-[#ded8c7] px-4 py-3 font-semibold" placeholder="Species" value={props.newPet.species} onChange={(event) => props.setNewPet({ ...props.newPet, species: event.target.value })} />
-            <input className="rounded-lg border border-[#ded8c7] px-4 py-3 font-semibold" placeholder="Favorite food" value={props.newPet.food} onChange={(event) => props.setNewPet({ ...props.newPet, food: event.target.value })} />
-            <button onClick={props.addPet} className="min-h-12 rounded-lg bg-[#165a4b] px-5 py-3 text-sm font-black text-white">Add pet</button>
+            <input className="rounded-lg border border-tt-line px-4 py-3 font-semibold" placeholder="Pet name" value={props.newPet.name} onChange={(event) => props.setNewPet({ ...props.newPet, name: event.target.value })} />
+            <input className="rounded-lg border border-tt-line px-4 py-3 font-semibold" placeholder="Species" value={props.newPet.species} onChange={(event) => props.setNewPet({ ...props.newPet, species: event.target.value })} />
+            <input className="rounded-lg border border-tt-line px-4 py-3 font-semibold" placeholder="Favorite food" value={props.newPet.food} onChange={(event) => props.setNewPet({ ...props.newPet, food: event.target.value })} />
+            <button onClick={props.addPet} className="min-h-12 rounded-lg bg-tt-pine px-5 py-3 text-sm font-black text-white">Add pet</button>
           </div>
         </div>
       </div>
@@ -8972,30 +9170,30 @@ function NeighborhoodPickerCard(props: {
   }
 
   return (
-    <div className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
-      <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2563eb]">Neighborhood</p>
+    <div className="rounded-lg border border-tt-line bg-white p-5 shadow-sm">
+      <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-blue">Neighborhood</p>
       <h3 className="mt-2 text-2xl font-black">Where does your family live?</h3>
-      <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-[#4f625b]">
+      <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-tt-ink-soft">
         Your ZIP plus your neighborhood or apartment community powers future neighborhood job and chore discovery. Only a ZIP and a place name are stored — never a street address.
       </p>
       {props.familyNeighborhood ? (
-        <div className="mt-4 flex flex-wrap items-center gap-3 rounded-lg bg-[#eef2ff] p-4">
-          <span className="rounded-full bg-[#1e3a8a] px-4 py-2 text-sm font-black text-white">
+        <div className="mt-4 flex flex-wrap items-center gap-3 rounded-lg bg-tt-sky p-4">
+          <span className="rounded-full bg-tt-ocean px-4 py-2 text-sm font-black text-white">
             📍 {props.familyNeighborhood}{validZip ? ` · ${validZip}` : ""}
           </span>
           <button
             onClick={() => props.setFamilyNeighborhood("")}
-            className="min-h-10 rounded-lg border border-[#dce6f8] bg-white px-4 py-2 text-xs font-black text-[#1e3a8a]"
+            className="min-h-10 rounded-lg border border-[#dce6f8] bg-white px-4 py-2 text-xs font-black text-tt-ocean"
           >
             Change
           </button>
         </div>
       ) : (
         <>
-          <label className="mt-4 block max-w-xs text-sm font-black text-[#17231f]">
+          <label className="mt-4 block max-w-xs text-sm font-black text-tt-ink">
             ZIP code
             <input
-              className="mt-2 w-full rounded-lg border border-[#ded8c7] px-4 py-3 text-base font-semibold"
+              className="mt-2 w-full rounded-lg border border-tt-line px-4 py-3 text-base font-semibold"
               value={props.familyZip}
               onChange={(event) => props.setFamilyZip(event.target.value)}
               inputMode="numeric"
@@ -9005,17 +9203,17 @@ function NeighborhoodPickerCard(props: {
             />
           </label>
           {props.familyZip && !validZip && (
-            <p className="mt-2 text-sm font-bold text-[#b44421]">Enter a valid 5-digit ZIP code.</p>
+            <p className="mt-2 text-sm font-bold text-tt-error">Enter a valid 5-digit ZIP code.</p>
           )}
           {validZip && (
             <div className="mt-4">
-              <p className="text-sm font-black text-[#17231f]">Pick your neighborhood or apartment community</p>
+              <p className="text-sm font-black text-tt-ink">Pick your neighborhood or apartment community</p>
               <div className="mt-2 flex flex-wrap gap-2">
                 {suggestions.map((suggestion) => (
                   <button
                     key={suggestion}
                     onClick={() => props.setFamilyNeighborhood(suggestion)}
-                    className="tt-btn-press min-h-10 rounded-full border-2 border-[#dce6f8] bg-white px-4 py-2 text-xs font-black text-[#1e3a8a]"
+                    className="tt-btn-press min-h-10 rounded-full border-2 border-[#dce6f8] bg-white px-4 py-2 text-xs font-black text-tt-ocean"
                   >
                     {suggestion}
                   </button>
@@ -9023,14 +9221,14 @@ function NeighborhoodPickerCard(props: {
               </div>
               <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_auto]">
                 <input
-                  className="min-h-11 rounded-lg border border-[#ded8c7] px-4 py-2 text-sm font-semibold"
+                  className="min-h-11 rounded-lg border border-tt-line px-4 py-2 text-sm font-semibold"
                   value={customName}
                   onChange={(event) => setCustomName(event.target.value)}
                   onKeyDown={(event) => { if (event.key === "Enter") applyCustomName(); }}
                   placeholder="Or type your own: e.g. Maple Grove Apartments"
                   aria-label="Custom neighborhood or apartment name"
                 />
-                <button onClick={applyCustomName} disabled={!customName.trim()} className="min-h-11 rounded-lg bg-[#1e3a8a] px-4 py-2 text-xs font-black text-white disabled:opacity-60">
+                <button onClick={applyCustomName} disabled={!customName.trim()} className="min-h-11 rounded-lg bg-tt-ocean px-4 py-2 text-xs font-black text-white disabled:opacity-60">
                   Use this name
                 </button>
               </div>
@@ -9062,19 +9260,19 @@ function ParentAuthView(props: {
 }) {
   const isSignup = props.mode === "signup";
   return (
-    <main className="tailtots-app grid min-h-screen place-items-center bg-[#faf8f0] px-4 py-10 text-[#17231f]">
+    <main className="tailtots-app grid min-h-screen place-items-center bg-tt-cream px-4 py-10 text-tt-ink">
       <div className="w-full max-w-lg">
         <div className="flex items-center justify-between gap-3">
-          <button onClick={props.onBack} className="tt-btn-press min-h-10 rounded-lg border border-[#ded8c7] bg-white px-4 py-2 text-xs font-black text-[#17231f]">
+          <button onClick={props.onBack} className="tt-btn-press min-h-10 rounded-lg border border-tt-line bg-white px-4 py-2 text-xs font-black text-tt-ink">
             ← Start page
           </button>
           <img src="/tailtots-logo.png" alt="TailTots logo" className="h-12 w-auto rounded-lg object-contain" />
         </div>
 
-        <div className="mt-6 rounded-3xl border border-[#ded8c7] bg-white p-6 shadow-xl sm:p-8">
-          <p className="text-xs font-black uppercase tracking-[0.22em] text-[#165a4b]">{isSignup ? "New parent account" : "Returning parent"}</p>
+        <div className="mt-6 rounded-3xl border border-tt-line bg-white p-6 shadow-xl sm:p-8">
+          <p className="text-xs font-black uppercase tracking-[0.22em] text-tt-pine">{isSignup ? "New parent account" : "Returning parent"}</p>
           <h1 className="mt-2 text-3xl font-black sm:text-4xl">{isSignup ? "Create your parent account" : "Welcome back"}</h1>
-          <p className="mt-3 text-sm font-semibold leading-6 text-[#4f625b]">
+          <p className="mt-3 text-sm font-semibold leading-6 text-tt-ink-soft">
             {isSignup
               ? "One email, one magic link — no passwords to remember. Your family setup stays private to your account and syncs across your devices."
               : "We'll email you a fresh sign-in link — no password needed. Your family's cloud setup is waiting."}
@@ -9082,8 +9280,8 @@ function ParentAuthView(props: {
 
           <ol className="mt-5 grid gap-2">
             {["Enter your parent email below", "Tap the sign-in link we email you", isSignup ? "Add your kids, pets, and photos in Family Setup" : "Pick up right where you left off"].map((step, index) => (
-              <li key={step} className="flex items-center gap-3 rounded-xl bg-[#faf8f0] px-4 py-3 text-sm font-bold text-[#17231f]">
-                <span className="grid size-7 shrink-0 place-items-center rounded-full bg-[#165a4b] text-xs font-black text-white">{index + 1}</span>
+              <li key={step} className="flex items-center gap-3 rounded-xl bg-tt-cream px-4 py-3 text-sm font-bold text-tt-ink">
+                <span className="grid size-7 shrink-0 place-items-center rounded-full bg-tt-pine text-xs font-black text-white">{index + 1}</span>
                 {step}
               </li>
             ))}
@@ -9093,14 +9291,14 @@ function ParentAuthView(props: {
             className="mt-6"
             onSubmit={(event) => { event.preventDefault(); props.sendParentSignInLink(); }}
           >
-            <label htmlFor="parent-auth-email" className="text-xs font-black uppercase tracking-[0.14em] text-[#4f625b]">
+            <label htmlFor="parent-auth-email" className="text-xs font-black uppercase tracking-[0.14em] text-tt-ink-soft">
               Parent email
             </label>
             <input
               id="parent-auth-email"
               value={props.accountDraft.email}
               onChange={(event) => props.setAccountDraft({ email: event.target.value })}
-              className="mt-2 w-full rounded-xl border-2 border-[#ded8c7] px-4 py-3 text-base font-semibold outline-none focus:border-[#165a4b]"
+              className="mt-2 w-full rounded-xl border-2 border-tt-line px-4 py-3 text-base font-semibold outline-none focus:border-tt-pine"
               inputMode="email"
               placeholder="you@example.com"
               type="email"
@@ -9109,31 +9307,31 @@ function ParentAuthView(props: {
             <button
               type="submit"
               disabled={props.accountStatus === "loading"}
-              className="tt-btn-press mt-3 min-h-12 w-full rounded-xl bg-[#165a4b] px-5 py-3 text-sm font-black text-white disabled:opacity-60"
+              className="tt-btn-press mt-3 min-h-12 w-full rounded-xl bg-tt-pine px-5 py-3 text-sm font-black text-white disabled:opacity-60"
             >
               {props.accountStatus === "loading" ? "Sending…" : isSignup ? "Email me my sign-in link" : "Email me a sign-in link"}
             </button>
           </form>
 
           {props.magicLinkSent && (
-            <div className="mt-4 rounded-xl bg-[#e7f4ef] px-4 py-3 text-sm font-bold text-[#165a4b]" role="status">
+            <div className="mt-4 rounded-xl bg-tt-pine-tint px-4 py-3 text-sm font-bold text-tt-pine" role="status">
               ✉️ Check your inbox — tap the sign-in link to finish. The link expires in about an hour. You&apos;ll land straight in Family Setup.
             </div>
           )}
           {props.accountMessage && !props.magicLinkSent && (
-            <p className={`mt-3 text-sm font-bold ${props.accountStatus === "error" ? "text-[#b44421]" : "text-[#165a4b]"}`} role="status">
+            <p className={`mt-3 text-sm font-bold ${props.accountStatus === "error" ? "text-tt-error" : "text-tt-pine"}`} role="status">
               {props.accountMessage}
             </p>
           )}
 
-          <div className="mt-6 border-t border-[#ded8c7] pt-5 text-center">
-            <button onClick={props.onSwitchMode} className="text-sm font-black text-[#165a4b] underline">
+          <div className="mt-6 border-t border-tt-line pt-5 text-center">
+            <button onClick={props.onSwitchMode} className="text-sm font-black text-tt-pine underline">
               {isSignup ? "Already have a parent account? Sign in" : "New here? Create a parent account"}
             </button>
             {isSignup && (
-              <p className="mt-3 text-xs font-semibold text-[#69736f]">
+              <p className="mt-3 text-xs font-semibold text-tt-ink-faint">
                 Just exploring?{" "}
-                <button onClick={props.onSkip} className="font-black text-[#17231f] underline">
+                <button onClick={props.onSkip} className="font-black text-tt-ink underline">
                   Set up on this device without an account
                 </button>
               </p>
@@ -9143,7 +9341,7 @@ function ParentAuthView(props: {
 
         <p className="mt-4 text-center text-xs font-semibold text-[#8a8f8b]">
           Kids never see this screen — parent accounts stay behind the parent passcode. Read our{" "}
-          <a className="font-black text-[#165a4b] underline" href="https://tailtots.com/privacy" target="_blank" rel="noreferrer">Privacy Policy</a>.
+          <a className="font-black text-tt-pine underline" href="https://tailtots.com/privacy" target="_blank" rel="noreferrer">Privacy Policy</a>.
         </p>
       </div>
     </main>
@@ -9168,12 +9366,12 @@ function CertificateCard(props: {
       ? earned.earnedAt
       : earnedDate.toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
     return (
-      <div className="mt-4 rounded-3xl border-4 border-double border-[#6d3ed1]/40 bg-white p-5 text-center shadow-sm">
-        <p className="text-[11px] font-black uppercase tracking-[0.22em] text-[#6d3ed1]">TailTots · Official</p>
-        <p className="mt-1 text-xl font-black text-[#17231f]">{earned.title}</p>
-        <p className="mx-auto mt-2 max-w-[18rem] text-sm font-semibold leading-6 text-[#4f625b]">
-          This certifies that <span className="font-black text-[#17231f]">{props.child.name}</span> of the{" "}
-          <span className="font-black text-[#17231f]">{props.familyName}</span> family earned this honor on {dateLabel} —
+      <div className="mt-4 rounded-3xl border-4 border-double border-tt-grape/40 bg-white p-5 text-center shadow-sm">
+        <p className="text-[11px] font-black uppercase tracking-[0.22em] text-tt-grape">TailTots · Official</p>
+        <p className="mt-1 text-xl font-black text-tt-ink">{earned.title}</p>
+        <p className="mx-auto mt-2 max-w-[18rem] text-sm font-semibold leading-6 text-tt-ink-soft">
+          This certifies that <span className="font-black text-tt-ink">{props.child.name}</span> of the{" "}
+          <span className="font-black text-tt-ink">{props.familyName}</span> family earned this honor on {dateLabel} —
           real missions, parent-approved, streak kept alive.
         </p>
         <div className="mt-3 flex items-center justify-center gap-4 text-2xl" aria-hidden="true">
@@ -9181,11 +9379,11 @@ function CertificateCard(props: {
         </div>
         <button
           onClick={() => downloadCertificate(props.child, earned, props.familyName)}
-          className="mt-4 min-h-11 rounded-lg bg-[#6d3ed1] px-5 py-2 text-sm font-black text-white"
+          className="mt-4 min-h-11 rounded-lg bg-tt-grape px-5 py-2 text-sm font-black text-white"
         >
           Download certificate 🖨️
         </button>
-        <p className="mt-2 text-xs font-semibold text-[#4f625b]">Saves as a printable page — frame it, or share it with grandparents.</p>
+        <p className="mt-2 text-xs font-semibold text-tt-ink-soft">Saves as a printable page — frame it, or share it with grandparents.</p>
       </div>
     );
 }
@@ -9318,28 +9516,28 @@ function SocialPracticeOverrideEditor({
   };
   const hasOverride = override !== null && (override.heading.trim() !== "" || override.scenarios.length > 0);
   return (
-    <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
-      <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2563eb]">Parent only · Safe social practice</p>
+    <section className="rounded-lg border border-tt-line bg-white p-5 shadow-sm">
+      <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-blue">Parent only · Safe social practice</p>
       <h3 className="mt-2 text-2xl font-black">Your family&apos;s social practice content</h3>
-      <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-[#4f625b]">
+      <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-tt-ink-soft">
         Override the heading and the practice scenarios your kid sees — or leave it alone and kids keep the TailTots
         default: Safe social practice (6 built-in scenarios).{" "}
-        <span className="font-black text-[#17231f]">
+        <span className="font-black text-tt-ink">
           {hasOverride ? "Your custom content is live in your kid's Safe social practice." : "Kids currently see the TailTots default."}
         </span>
       </p>
       <div className="mt-4 grid gap-3">
-        <label className="block text-sm font-black text-[#17231f]">
+        <label className="block text-sm font-black text-tt-ink">
           Section heading
           <input
             value={draft.heading}
             onChange={(event) => update({ ...draft, heading: event.target.value })}
             maxLength={80}
             placeholder="e.g. Our family's online smarts"
-            className="mt-2 w-full rounded-lg border border-[#ded8c7] px-4 py-3 text-base font-semibold"
+            className="mt-2 w-full rounded-lg border border-tt-line px-4 py-3 text-base font-semibold"
           />
         </label>
-        <label className="block text-sm font-black text-[#17231f]">
+        <label className="block text-sm font-black text-tt-ink">
           Intro line
           <textarea
             value={draft.intro}
@@ -9347,7 +9545,7 @@ function SocialPracticeOverrideEditor({
             maxLength={300}
             rows={2}
             placeholder="One line under the heading — leave blank to use the default."
-            className="mt-2 w-full rounded-lg border border-[#ded8c7] px-4 py-3 text-base font-semibold"
+            className="mt-2 w-full rounded-lg border border-tt-line px-4 py-3 text-base font-semibold"
           />
         </label>
       </div>
@@ -9355,12 +9553,12 @@ function SocialPracticeOverrideEditor({
         <button
           onClick={generateWithAi}
           disabled={aiLoading}
-          className="min-h-11 rounded-lg bg-[#2563eb] px-5 py-2 text-sm font-black text-white disabled:opacity-60"
+          className="min-h-11 rounded-lg bg-tt-blue px-5 py-2 text-sm font-black text-white disabled:opacity-60"
         >
           {aiLoading ? "Generating..." : "✨ Generate starter scenarios with AI"}
         </button>
         {aiSource && (
-          <p className="text-xs font-bold text-[#4f625b]">
+          <p className="text-xs font-bold text-tt-ink-soft">
             {aiSource === "live"
               ? "AI-generated starters — review and edit before your kid sees them."
               : "Built-in starter template (AI unavailable) — review and edit freely."}
@@ -9370,28 +9568,28 @@ function SocialPracticeOverrideEditor({
       {draft.scenarios.length > 0 && (
         <div className="mt-4 grid gap-3">
           {draft.scenarios.map((scenario, index) => (
-            <article key={index} className="rounded-lg bg-[#eef2ff] p-4">
+            <article key={index} className="rounded-lg bg-tt-sky p-4">
               <div className="flex items-start justify-between gap-3">
-                <p className="text-sm font-black text-[#1e3a8a]">Scenario {index + 1}</p>
+                <p className="text-sm font-black text-tt-ocean">Scenario {index + 1}</p>
                 <button
                   onClick={() => removeScenario(index)}
-                  className="min-h-10 shrink-0 rounded-lg border border-[#ded8c7] bg-white px-3 py-2 text-xs font-black text-[#7a4b12]"
+                  className="min-h-10 shrink-0 rounded-lg border border-tt-line bg-white px-3 py-2 text-xs font-black text-tt-cocoa"
                   aria-label={`Remove scenario ${index + 1}`}
                 >
                   Remove
                 </button>
               </div>
-              <label className="mt-2 block text-xs font-black text-[#17231f]">
+              <label className="mt-2 block text-xs font-black text-tt-ink">
                 Title
                 <input
                   value={scenario.title}
                   onChange={(event) => updateScenario(index, { title: event.target.value })}
                   maxLength={80}
                   placeholder="e.g. The unkind comment"
-                  className="mt-1 w-full rounded-lg border border-[#ded8c7] bg-white px-3 py-2 text-sm font-semibold"
+                  className="mt-1 w-full rounded-lg border border-tt-line bg-white px-3 py-2 text-sm font-semibold"
                 />
               </label>
-              <label className="mt-2 block text-xs font-black text-[#17231f]">
+              <label className="mt-2 block text-xs font-black text-tt-ink">
                 Situation your kid practices
                 <textarea
                   value={scenario.situation}
@@ -9399,10 +9597,10 @@ function SocialPracticeOverrideEditor({
                   maxLength={400}
                   rows={2}
                   placeholder="Describe the tricky moment..."
-                  className="mt-1 w-full rounded-lg border border-[#ded8c7] bg-white px-3 py-2 text-sm font-semibold"
+                  className="mt-1 w-full rounded-lg border border-tt-line bg-white px-3 py-2 text-sm font-semibold"
                 />
               </label>
-              <label className="mt-2 block text-xs font-black text-[#17231f]">
+              <label className="mt-2 block text-xs font-black text-tt-ink">
                 Coaching they reveal after thinking it through
                 <textarea
                   value={scenario.coaching}
@@ -9410,7 +9608,7 @@ function SocialPracticeOverrideEditor({
                   maxLength={400}
                   rows={2}
                   placeholder="What should they do?"
-                  className="mt-1 w-full rounded-lg border border-[#ded8c7] bg-white px-3 py-2 text-sm font-semibold"
+                  className="mt-1 w-full rounded-lg border border-tt-line bg-white px-3 py-2 text-sm font-semibold"
                 />
               </label>
             </article>
@@ -9421,7 +9619,7 @@ function SocialPracticeOverrideEditor({
         {draft.scenarios.length < 6 && (
           <button
             onClick={addScenario}
-            className="min-h-11 rounded-lg border border-[#2563eb] bg-white px-5 py-2 text-sm font-black text-[#2563eb]"
+            className="min-h-11 rounded-lg border border-tt-blue bg-white px-5 py-2 text-sm font-black text-tt-blue"
           >
             + Add a scenario
           </button>
@@ -9429,7 +9627,7 @@ function SocialPracticeOverrideEditor({
         {hasOverride && (
           <button
             onClick={restoreDefault}
-            className="min-h-11 rounded-lg border border-[#ded8c7] bg-[#faf8f0] px-5 py-2 text-sm font-black text-[#7a4b12]"
+            className="min-h-11 rounded-lg border border-tt-line bg-tt-cream px-5 py-2 text-sm font-black text-tt-cocoa"
           >
             Restore TailTots default
           </button>
@@ -9479,12 +9677,12 @@ function SocialPracticeSection({ childProfiles, activeChildId, onSelectChild, do
     : `Practice tricky online moments with zero strangers, zero feeds, zero DMs. Pick what you'd do, get instant coaching, and earn the Safe Social Star badge when ${child?.name ?? "your kid"} finishes all ${scenarios.length}.`);
   if (!child) return null;
   return (
-    <section className="mt-5 rounded-lg border border-[#ded8c7] bg-white p-5">
-      <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2563eb]">
-        🌐 Safe social practice{isOverride && <span className="ml-2 rounded-full bg-[#eef2ff] px-2 py-0.5 text-[#1e3a8a]">Picked by your parent</span>}
+    <section className="mt-5 rounded-lg border border-tt-line bg-white p-5">
+      <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-blue">
+        🌐 Safe social practice{isOverride && <span className="ml-2 rounded-full bg-tt-sky px-2 py-0.5 text-tt-ocean">Picked by your parent</span>}
       </p>
       <h3 className="mt-2 text-2xl font-black">{headingOverride?.trim() || "Training wheels for real-world social life"}</h3>
-      <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-[#4f625b]">
+      <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-tt-ink-soft">
         {intro}
       </p>
       {onSelectChild && childProfiles.length > 1 && (
@@ -9493,7 +9691,7 @@ function SocialPracticeSection({ childProfiles, activeChildId, onSelectChild, do
             <button
               key={item.id}
               onClick={() => { setSelectedId(item.id); onSelectChild(item.id); }}
-              className={`min-h-10 rounded-full px-4 py-2 text-xs font-black ${item.id === childId ? "bg-[#2563eb] text-white" : "bg-[#eef2ff] text-[#1e3a8a]"}`}
+              className={`min-h-10 rounded-full px-4 py-2 text-xs font-black ${item.id === childId ? "bg-tt-blue text-white" : "bg-tt-sky text-tt-ocean"}`}
             >
               {item.name}
             </button>
@@ -9501,10 +9699,10 @@ function SocialPracticeSection({ childProfiles, activeChildId, onSelectChild, do
         </div>
       )}
       <div className="mt-3 flex items-center gap-3">
-        <div className="h-2 flex-1 rounded-full bg-[#eef2ff]">
-          <div className="h-2 rounded-full bg-[#2563eb]" style={{ width: `${Math.round((completed.length / scenarios.length) * 100)}%` }} />
+        <div className="h-2 flex-1 rounded-full bg-tt-sky">
+          <div className="h-2 rounded-full bg-tt-blue" style={{ width: `${Math.round((completed.length / scenarios.length) * 100)}%` }} />
         </div>
-        <span className="text-xs font-black text-[#1e3a8a]">{completed.length}/{scenarios.length} practiced</span>
+        <span className="text-xs font-black text-tt-ocean">{completed.length}/{scenarios.length} practiced</span>
       </div>
       <div className="mt-4 grid gap-3 lg:grid-cols-2">
         {scenarios.map((scenario) => {
@@ -9514,21 +9712,21 @@ function SocialPracticeSection({ childProfiles, activeChildId, onSelectChild, do
             ? scenario.choices[picked].feedback
             : scenario.choices.find((choice) => choice.best)?.feedback;
           return (
-            <article key={scenario.id} className="rounded-lg bg-[#faf8f0] p-4">
+            <article key={scenario.id} className="rounded-lg bg-tt-cream p-4">
               <div className="flex items-start justify-between gap-2">
                 <h4 className="font-black">{scenario.title}</h4>
-                {isDone && <span className="shrink-0 rounded-full bg-[#2563eb] px-3 py-1 text-xs font-black text-white">Practiced ✓</span>}
+                {isDone && <span className="shrink-0 rounded-full bg-tt-blue px-3 py-1 text-xs font-black text-white">Practiced ✓</span>}
               </div>
-              <p className="mt-2 text-sm font-semibold leading-5 text-[#4f625b]">{scenario.situation}</p>
+              <p className="mt-2 text-sm font-semibold leading-5 text-tt-ink-soft">{scenario.situation}</p>
               {isDone ? (
-                <p className="mt-3 rounded-lg bg-white p-3 text-sm font-semibold leading-5 text-[#1e3a8a]">💡 {shownFeedback}</p>
+                <p className="mt-3 rounded-lg bg-white p-3 text-sm font-semibold leading-5 text-tt-ocean">💡 {shownFeedback}</p>
               ) : (
                 <div className="mt-3 grid gap-2">
                   {scenario.choices.map((choice, index) => (
                     <button
                       key={choice.text}
                       onClick={() => { setRevealed((prev) => ({ ...prev, [scenario.id]: index })); onAnswer(child.id, scenario.id); }}
-                      className="min-h-11 rounded-lg border border-[#dce6f8] bg-white px-3 py-2 text-left text-sm font-bold text-[#17231f] hover:bg-[#eef2ff]"
+                      className="min-h-11 rounded-lg border border-[#dce6f8] bg-white px-3 py-2 text-left text-sm font-bold text-tt-ink hover:bg-tt-sky"
                     >
                       {choice.text}
                     </button>
@@ -9571,10 +9769,10 @@ function CharacterCurriculumPanel(props: {
   const openCount = openKeysForLevel.size;
 
   return (
-    <section className="mt-5 rounded-lg border border-[#ded8c7] bg-white p-5">
-      <p className="text-xs font-black uppercase tracking-[0.18em] text-[#6d3ed1]">Character curriculum</p>
+    <section className="mt-5 rounded-lg border border-tt-line bg-white p-5">
+      <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-grape">Character curriculum</p>
       <h2 className="mt-2 text-2xl font-black sm:text-3xl">Character, on purpose — taught through missions</h2>
-      <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-[#4f625b]">
+      <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-tt-ink-soft">
         Pick a trait and a level, then assign the whole mission pack with one tap. Missions land in your kid&apos;s
         normal Today checklist; when every mission in a level is approved, they earn a trait-level badge and their
         skill meters grow.
@@ -9587,7 +9785,7 @@ function CharacterCurriculumPanel(props: {
               key={kid.id}
               onClick={() => props.onSelectChild?.(kid.id)}
               className={`min-h-11 rounded-full px-4 py-2 text-sm font-black ${
-                child?.id === kid.id ? "bg-[#6d3ed1] text-white" : "bg-[#f0edff] text-[#6d3ed1]"
+                child?.id === kid.id ? "bg-tt-grape text-white" : "bg-tt-grape-soft text-tt-grape"
               }`}
             >
               {kid.name}
@@ -9604,14 +9802,14 @@ function CharacterCurriculumPanel(props: {
             <button
               key={entry.key}
               onClick={() => { setSelectedTrait(entry.key); setSelectedLevel(0); }}
-              className={`rounded-lg border p-4 text-left ${isActive ? "border-[#6d3ed1] ring-2 ring-[#6d3ed1]/30" : "border-[#ded8c7]"}`}
+              className={`rounded-lg border p-4 text-left ${isActive ? "border-tt-grape ring-2 ring-tt-grape/30" : "border-tt-line"}`}
             >
               <div className={`flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br text-2xl ${entry.colors}`}>
                 <span aria-hidden="true">{entry.emoji}</span>
               </div>
               <p className="mt-2 text-lg font-black">{entry.label}</p>
-              <p className="mt-1 text-xs font-bold text-[#4f625b]">{entry.blurb}</p>
-              <p className="mt-2 text-xs font-black text-[#6d3ed1]">
+              <p className="mt-1 text-xs font-bold text-tt-ink-soft">{entry.blurb}</p>
+              <p className="mt-2 text-xs font-black text-tt-grape">
                 {entrySummary ? `${entrySummary.levelsDone} of 3 levels complete` : "No kid selected"}
               </p>
               <div className="mt-2 flex gap-1">
@@ -9620,7 +9818,7 @@ function CharacterCurriculumPanel(props: {
                     key={levelEntry.levelIndex}
                     title={`${levelEntry.levelName}: ${levelEntry.done ? "complete" : `${levelEntry.approvedCount}/${levelEntry.total} missions approved`}`}
                     className={`flex h-6 w-6 items-center justify-center rounded-full text-xs ${
-                      levelEntry.done ? "bg-[#6d3ed1] text-white" : "bg-[#ede8db] text-[#69736f]"
+                      levelEntry.done ? "bg-tt-grape text-white" : "bg-[#ede8db] text-tt-ink-faint"
                     }`}
                   >
                     {levelEntry.done ? "★" : levelEntry.levelIndex + 1}
@@ -9638,7 +9836,7 @@ function CharacterCurriculumPanel(props: {
             key={levelEntry.index}
             onClick={() => setSelectedLevel(levelEntry.index)}
             className={`min-h-11 rounded-full px-4 py-2 text-sm font-black ${
-              levelEntry.index === selectedLevel ? "bg-[#165a4b] text-white" : "bg-[#e7f4ef] text-[#165a4b]"
+              levelEntry.index === selectedLevel ? "bg-tt-pine text-white" : "bg-tt-pine-tint text-tt-pine"
             }`}
           >
             {levelEntry.name} · {levelEntry.ageBand}
@@ -9646,15 +9844,15 @@ function CharacterCurriculumPanel(props: {
         ))}
       </div>
 
-      <div className="mt-4 rounded-lg bg-[#faf8f0] p-4">
+      <div className="mt-4 rounded-lg bg-tt-cream p-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-lg font-black">
               {trait.emoji} {trait.label} — {level.name}
             </p>
-            <p className="mt-1 text-sm font-semibold text-[#4f625b]">{level.tagline}</p>
+            <p className="mt-1 text-sm font-semibold text-tt-ink-soft">{level.tagline}</p>
             {levelStatus && (
-              <p className="mt-1 text-xs font-black text-[#6d3ed1]">
+              <p className="mt-1 text-xs font-black text-tt-grape">
                 {levelStatus.done
                   ? "★ Level complete — badge earned"
                   : `${levelStatus.approvedCount} of ${levelStatus.total} missions approved`}
@@ -9665,7 +9863,7 @@ function CharacterCurriculumPanel(props: {
           <button
             onClick={() => child && props.assignCurriculumMissions(selectedTrait, selectedLevel, child.id)}
             disabled={!child || (levelStatus?.done ?? false)}
-            className="min-h-11 shrink-0 rounded-lg bg-[#6d3ed1] px-5 py-2 text-sm font-black text-white disabled:bg-[#ede8db] disabled:text-[#69736f]"
+            className="min-h-11 shrink-0 rounded-lg bg-tt-grape px-5 py-2 text-sm font-black text-white disabled:bg-[#ede8db] disabled:text-tt-ink-faint"
           >
             {levelStatus?.done
               ? "Level complete ★"
@@ -9675,7 +9873,7 @@ function CharacterCurriculumPanel(props: {
           </button>
         </div>
         {!props.hasPets && (
-          <p className="mt-3 rounded-lg bg-[#e7f4ef] p-3 text-xs font-bold text-[#165a4b]">
+          <p className="mt-3 rounded-lg bg-tt-pine-tint p-3 text-xs font-bold text-tt-pine">
             No-pet family: pet missions automatically use their no-pet alternative, so every mission is doable.
           </p>
         )}
@@ -9686,22 +9884,22 @@ function CharacterCurriculumPanel(props: {
               ? child.age >= missionTemplate.minAge && child.age <= missionTemplate.maxAge
               : true;
             return (
-              <div key={missionTemplate.key} className="rounded-lg border border-[#ded8c7] bg-white p-3">
+              <div key={missionTemplate.key} className="rounded-lg border border-tt-line bg-white p-3">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="rounded-full bg-white px-3 py-1 text-xs font-black ring-1 ring-[#ded8c7]">{levelLabels[missionTemplate.difficulty]}</span>
-                  <span className="rounded-full bg-[#fff4d8] px-3 py-1 text-xs font-black">+{missionTemplate.points} pts</span>
-                  <span className={`rounded-full px-3 py-1 text-xs font-black ${ageFit ? "bg-[#e7f4ef] text-[#165a4b]" : "bg-[#fff4d8] text-[#7a4b12]"}`}>
+                  <span className="rounded-full bg-white px-3 py-1 text-xs font-black ring-1 ring-tt-line">{levelLabels[missionTemplate.difficulty]}</span>
+                  <span className="rounded-full bg-tt-sun-soft px-3 py-1 text-xs font-black">+{missionTemplate.points} pts</span>
+                  <span className={`rounded-full px-3 py-1 text-xs font-black ${ageFit ? "bg-tt-pine-tint text-tt-pine" : "bg-tt-sun-soft text-tt-cocoa"}`}>
                     Ages {missionTemplate.minAge}–{missionTemplate.maxAge}{ageFit ? "" : " · parent help"}
                   </span>
                   {useNoPet && (
-                    <span className="rounded-full bg-[#eef2ff] px-3 py-1 text-xs font-black text-[#2563eb]">No-pet version</span>
+                    <span className="rounded-full bg-tt-sky px-3 py-1 text-xs font-black text-tt-blue">No-pet version</span>
                   )}
                   {openKeysForLevel.has(missionTemplate.key) && (
-                    <span className="rounded-full bg-[#f0edff] px-3 py-1 text-xs font-black text-[#6d3ed1]">On checklist</span>
+                    <span className="rounded-full bg-tt-grape-soft px-3 py-1 text-xs font-black text-tt-grape">On checklist</span>
                   )}
                 </div>
                 <p className="mt-2 text-sm font-black">{useNoPet ? missionTemplate.noPetTitle : missionTemplate.title}</p>
-                <p className="mt-1 text-xs font-semibold text-[#4f625b]">{useNoPet ? missionTemplate.noPetQuestion : missionTemplate.question}</p>
+                <p className="mt-1 text-xs font-semibold text-tt-ink-soft">{useNoPet ? missionTemplate.noPetQuestion : missionTemplate.question}</p>
               </div>
             );
           })}
@@ -9787,19 +9985,19 @@ function GrowthPanel(props: {
     count: props.badges.filter((badge) => badge.skill === skill && props.childProfiles.some((child) => child.id === badge.childId)).length,
   }));
   return (
-    <section className="rounded-lg border border-[#ded8c7] bg-white p-5">
-      <p className="text-xs font-black uppercase tracking-[0.18em] text-[#6d3ed1]">Character growth</p>
+    <section className="rounded-lg border border-tt-line bg-white p-5">
+      <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-grape">Character growth</p>
       <h2 className="mt-2 text-3xl font-black">Responsibility, empathy, kindness, leadership</h2>
       {/* Phase 3 — PERMA Growth Log: weekly flourishing bloom (parent view). */}
       <div className="mt-5">
         <FlourishingPanel snapshot={flourishingSnapshot} childName={flourishingChild?.name ?? "your child"} />
       </div>
       {/* R2-30: memory moments are the hero of the growth log. */}
-      <div className="mt-5 overflow-hidden rounded-2xl border-2 border-[#6d3ed1]/25 bg-gradient-to-br from-[#f0edff] via-white to-[#faf8f0]">
+      <div className="mt-5 overflow-hidden rounded-2xl border-2 border-tt-grape/25 bg-gradient-to-br from-tt-grape-soft via-white to-tt-cream">
         <div className="p-5">
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-[#6d3ed1]">🌟 Relive memory moments</p>
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-grape">🌟 Relive memory moments</p>
           <h3 className="mt-2 text-2xl font-black">The moments that made them proud</h3>
-          <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-[#4f625b]">
+          <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-tt-ink-soft">
             {props.moments.length === 0
               ? "No moments saved yet — capture the first proud, kind, or silly moment below."
               : `${props.moments.length} moment${props.moments.length === 1 ? "" : "s"} worth reliving, saved by your family.`}
@@ -9807,26 +10005,26 @@ function GrowthPanel(props: {
           <div className="mt-4 flex flex-col gap-2 sm:flex-row">
             <input
               placeholder="e.g. Maya waited calmly while Jack drank water…"
-              className="min-w-0 flex-1 rounded-lg border border-[#ded8c7] bg-white px-3 py-3 font-semibold"
+              className="min-w-0 flex-1 rounded-lg border border-tt-line bg-white px-3 py-3 font-semibold"
               value={props.momentDraft}
               onChange={(event) => props.setMomentDraft(event.target.value)}
             />
-            <button onClick={props.addMoment} className="rounded-lg bg-[#6d3ed1] px-5 py-3 text-sm font-black text-white">Save moment</button>
+            <button onClick={props.addMoment} className="rounded-lg bg-tt-grape px-5 py-3 text-sm font-black text-white">Save moment</button>
           </div>
         </div>
         {props.moments.length > 0 && (
-          <div className="grid gap-3 border-t border-[#6d3ed1]/15 bg-white/60 p-5 sm:grid-cols-2">
+          <div className="grid gap-3 border-t border-tt-grape/15 bg-white/60 p-5 sm:grid-cols-2">
             {props.moments.map((moment) => {
               const child = props.childProfiles.find((entry) => entry.id === moment.childId);
               return (
-                <article key={moment.id} className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-[#ded8c7]">
+                <article key={moment.id} className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-tt-line">
                   <div className="flex items-center gap-2">
                     <span className="text-xl" aria-hidden="true">{MOOD_EMOJI[moment.mood]}</span>
-                    <p className="text-xs font-black uppercase tracking-[0.12em] text-[#4f625b]">
+                    <p className="text-xs font-black uppercase tracking-[0.12em] text-tt-ink-soft">
                       {child?.name ?? "Family"} · feeling {moment.mood}
                     </p>
                   </div>
-                  <p className="mt-2 text-sm font-semibold leading-6 text-[#17231f]">“{moment.note}”</p>
+                  <p className="mt-2 text-sm font-semibold leading-6 text-tt-ink">“{moment.note}”</p>
                 </article>
               );
             })}
@@ -9834,16 +10032,16 @@ function GrowthPanel(props: {
         )}
       </div>
       {/* R2-30: life skills, summarized per family. */}
-      <div className="mt-5 rounded-lg bg-[#faf8f0] p-4">
+      <div className="mt-5 rounded-lg bg-tt-cream p-4">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-[#165a4b]">Family life skills</p>
-          <p className="text-sm font-black text-[#17231f]">{familySkills.topLabel} · {familySkills.totalBadges} badge{familySkills.totalBadges === 1 ? "" : "s"} earned</p>
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-pine">Family life skills</p>
+          <p className="text-sm font-black text-tt-ink">{familySkills.topLabel} · {familySkills.totalBadges} badge{familySkills.totalBadges === 1 ? "" : "s"} earned</p>
         </div>
         <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-5">
           {skillCounts.map(({ skill, label, count }) => (
             <div key={skill} className="rounded-lg bg-white p-3 text-center">
-              <p className="text-2xl font-black text-[#6d3ed1]">{count}</p>
-              <p className="mt-1 text-xs font-black capitalize text-[#4f625b]">{label}</p>
+              <p className="text-2xl font-black text-tt-grape">{count}</p>
+              <p className="mt-1 text-xs font-black capitalize text-tt-ink-soft">{label}</p>
             </div>
           ))}
         </div>
@@ -9859,7 +10057,7 @@ function GrowthPanel(props: {
       />
       <div className="mt-5 grid gap-4 lg:grid-cols-2">
         {props.childProfiles.map((child) => (
-          <div key={child.id} className="rounded-lg bg-[#faf8f0] p-4">
+          <div key={child.id} className="rounded-lg bg-tt-cream p-4">
             <div className="flex items-center justify-between gap-2">
               <div className="flex min-w-0 items-center gap-3">
                 <ProfilePhoto label={child.name} initial={getChildLook(child.id).initial} colors={getChildLook(child.id).colors} variant="kid" hair={getChildLook(child.id).hair} photoUrl={child.photoUrl} />
@@ -9876,9 +10074,9 @@ function GrowthPanel(props: {
               hasPets={props.hasPets}
             />
             <div className="mt-4 grid gap-3">
-              <Meter label="Task progress" value={Math.min(100, Math.round((child.points / 220) * 100))} color="#f47b20" />
-              <Meter label="Loving it" value={getChildLook(child.id).love} color="#6d3ed1" />
-              <Meter label="Happiness" value={getChildLook(child.id).joy} color="#165a4b" />
+              <Meter label="Task progress" value={Math.min(100, Math.round((child.points / 220) * 100))} color="var(--tt-tang)" />
+              <Meter label="Loving it" value={getChildLook(child.id).love} color="var(--tt-grape)" />
+              <Meter label="Happiness" value={getChildLook(child.id).joy} color="var(--tt-pine)" />
             </div>
             <div className="mt-4 grid grid-cols-3 gap-2 text-center text-xs font-black">
               <span className="rounded-lg bg-white p-3">{child.points}<br />points</span>
@@ -9895,7 +10093,7 @@ function GrowthPanel(props: {
                       <span>{count} badge{count === 1 ? "" : "s"}</span>
                     </div>
                     <div className="h-2 rounded-full bg-white">
-                      <div className="h-2 rounded-full bg-[#6d3ed1]" style={{ width: `${Math.min(100, count * 25)}%` }} />
+                      <div className="h-2 rounded-full bg-tt-grape" style={{ width: `${Math.min(100, count * 25)}%` }} />
                     </div>
                   </div>
                 );
@@ -9903,8 +10101,8 @@ function GrowthPanel(props: {
             </div>
             <div className="mt-4 grid gap-2">
               {props.badges.filter((badge) => badge.childId === child.id).slice(0, 3).map((badge) => (
-                <p key={badge.id} className="rounded-lg bg-white p-3 text-xs font-bold text-[#4f625b]">
-                  <b className="block text-sm text-[#17231f]">{badge.title}</b>
+                <p key={badge.id} className="rounded-lg bg-white p-3 text-xs font-bold text-tt-ink-soft">
+                  <b className="block text-sm text-tt-ink">{badge.title}</b>
                   {badge.note}
                 </p>
               ))}
@@ -9935,19 +10133,19 @@ function SkillJobBuilder({ fillJobTemplate, onUseTemplate }: {
   onUseTemplate?: () => void;
 }) {
   return (
-    <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
-      <p className="text-xs font-black uppercase tracking-[0.18em] text-[#6d3ed1]">Skill job builder</p>
+    <section className="rounded-lg border border-tt-line bg-white p-5 shadow-sm">
+      <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-grape">Skill job builder</p>
       <h3 className="mt-2 text-2xl font-black">Post a job around the life skill you want to teach</h3>
-      <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-[#4f625b]">
+      <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-tt-ink-soft">
         Parents can start from a value, not just a task. TailTots can suggest checklist, points, money, and badge language before anything is visible to kids or neighbors.
         Using a template fills the job draft — finish and post it from the Neighborhood tab.
       </p>
       <div className="mt-4 grid gap-3 lg:grid-cols-4">
         {SKILL_JOB_TEMPLATES.map(([skill, title, detail]) => (
-          <article key={skill} className="rounded-lg bg-[#f0edff] p-4">
-            <p className="text-xs font-black uppercase tracking-[0.14em] text-[#6d3ed1]">{skill}</p>
+          <article key={skill} className="rounded-lg bg-tt-grape-soft p-4">
+            <p className="text-xs font-black uppercase tracking-[0.14em] text-tt-grape">{skill}</p>
             <p className="mt-2 text-base font-black leading-5">{title}</p>
-            <p className="mt-2 text-xs font-semibold leading-5 text-[#4f625b]">{detail}</p>
+            <p className="mt-2 text-xs font-semibold leading-5 text-tt-ink-soft">{detail}</p>
             <button
               onClick={() => { fillJobTemplate(skill); onUseTemplate?.(); }}
               className="mt-3 min-h-10 rounded-lg bg-white px-3 py-2 text-xs font-black text-[#4c1d95]"
@@ -9972,9 +10170,9 @@ function SkillJobBuilder({ fillJobTemplate, onUseTemplate }: {
  */
 function ShareWithFamilyExplainer({ role }: { role: Role }) {
   return (
-    <div className="rounded-lg bg-[#faf8f0] p-4">
-      <p className="text-xs font-black uppercase tracking-[0.14em] text-[#165a4b]">What “share with family” means</p>
-      <p className="mt-2 text-sm font-semibold leading-6 text-[#17231f]">
+    <div className="rounded-lg bg-tt-cream p-4">
+      <p className="text-xs font-black uppercase tracking-[0.14em] text-tt-pine">What “share with family” means</p>
+      <p className="mt-2 text-sm font-semibold leading-6 text-tt-ink">
         {role === "parent"
           ? "You pick a giving goal or a neighborhood job. TailTots makes a family-safe summary — the title, the cause, and your first name. Nothing else leaves this app: no kid names, photos, ages, or addresses. Grandparents, aunts, and uncles see the summary and chip in through you. Sharing is always started by you, and a goal link can be revoked any time."
           : "Grown-ups can share some goals with grandparents and family so they can cheer you on and chip in. Family never sees your name, photo, or details — only what your grown-up wrote."}
@@ -10134,17 +10332,17 @@ function NeighborhoodPanel({
   return (
     <section className="space-y-4">
       {role === "parent" && (
-      <div className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#165a4b]">Neighborhood</p>
+      <div className="rounded-lg border border-tt-line bg-white p-5 shadow-sm">
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-pine">Neighborhood</p>
         <h2 className="mt-2 text-3xl font-black">Parent-led pet jobs and safe playdates</h2>
-        <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-[#4f625b]">
+        <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-tt-ink-soft">
           Parents post and approve every detail before kids can see anything. Kids only see parent-approved helper jobs, simple checklists, and rewards that teach responsibility, empathy, teamwork, leadership, and time management.
         </p>
       </div>
       )}
 
       {role === "parent" && (
-        <div className="grid gap-3 rounded-lg border border-[#ded8c7] bg-[#e7f4ef] p-4 sm:grid-cols-2 xl:grid-cols-4 sm:p-5">
+        <div className="grid gap-3 rounded-lg border border-tt-line bg-tt-pine-tint p-4 sm:grid-cols-2 xl:grid-cols-4 sm:p-5">
           {[
             "Parent picks neighborhood jobs in the popup",
             "Only allowed jobs appear in the kid's profile",
@@ -10152,20 +10350,20 @@ function NeighborhoodPanel({
             "Parent approves, then thanks the poster parent-to-parent",
           ].map((step, index) => (
             <div key={step} className="rounded-lg bg-white p-4">
-              <p className="text-xs font-black uppercase tracking-[0.16em] text-[#165a4b]">Step {index + 1}</p>
-              <p className="mt-2 text-sm font-bold leading-5 text-[#17231f]">{step}</p>
+              <p className="text-xs font-black uppercase tracking-[0.16em] text-tt-pine">Step {index + 1}</p>
+              <p className="mt-2 text-sm font-bold leading-5 text-tt-ink">{step}</p>
             </div>
           ))}
         </div>
       )}
 
       {role === "parent" && (
-        <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
+        <section className="rounded-lg border border-tt-line bg-white p-5 shadow-sm">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2563eb]">Parent gate</p>
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-blue">Parent gate</p>
               <h3 className="mt-2 text-2xl font-black">Choose which neighborhood jobs your kids may see</h3>
-              <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-[#4f625b]">
+              <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-tt-ink-soft">
                 {postedJobs.length === 0
                   ? "No posted jobs are waiting right now. New jobs from the neighborhood land here first — never directly with kids."
                   : `${postedJobs.length} posted job${postedJobs.length === 1 ? " is" : "s are"} waiting for your pick. Only jobs you allow appear in your kid's profile.`}
@@ -10173,7 +10371,7 @@ function NeighborhoodPanel({
             </div>
             <button
               onClick={() => setJobPickerOpen(true)}
-              className="min-h-12 shrink-0 rounded-lg bg-[#2563eb] px-5 py-3 text-sm font-black text-white"
+              className="min-h-12 shrink-0 rounded-lg bg-tt-blue px-5 py-3 text-sm font-black text-white"
             >
               Review neighborhood jobs
             </button>
@@ -10186,32 +10384,32 @@ function NeighborhoodPanel({
           <div className="max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-lg bg-white p-5 shadow-xl">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2563eb]">Neighborhood job inbox</p>
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-blue">Neighborhood job inbox</p>
                 <h3 className="mt-2 text-2xl font-black">Allow jobs for your kids</h3>
-                <p className="mt-2 text-sm font-semibold text-[#4f625b]">
+                <p className="mt-2 text-sm font-semibold text-tt-ink-soft">
                   Pick the jobs your kids may see. Nothing here reaches a kid profile until you allow it — and kids never see who posted.
                 </p>
               </div>
               <button
                 onClick={() => setJobPickerOpen(false)}
                 aria-label="Close job picker"
-                className="min-h-11 min-w-11 rounded-lg bg-[#faf8f0] px-3 py-2 text-lg font-black text-[#4f625b]"
+                className="min-h-11 min-w-11 rounded-lg bg-tt-cream px-3 py-2 text-lg font-black text-tt-ink-soft"
               >
                 ✕
               </button>
             </div>
             <div className="mt-4 grid gap-3">
               {postedJobs.map((job) => (
-                <article key={job.id} className="rounded-lg border border-[#ded8c7] bg-[#faf8f0] p-4">
+                <article key={job.id} className="rounded-lg border border-tt-line bg-tt-cream p-4">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                       <p className="text-lg font-black">{job.title}</p>
-                      <p className="mt-1 text-sm font-semibold text-[#4f625b]">{job.family} • {job.pet} • {job.time}</p>
-                      <p className="mt-1 text-sm font-black text-[#7a4b12]">{job.rewardDollars ? `$${job.rewardDollars} allowance` : job.badgeTitle}</p>
+                      <p className="mt-1 text-sm font-semibold text-tt-ink-soft">{job.family} • {job.pet} • {job.time}</p>
+                      <p className="mt-1 text-sm font-black text-tt-cocoa">{job.rewardDollars ? `$${job.rewardDollars} allowance` : job.badgeTitle}</p>
                     </div>
                     <button
                       onClick={() => toggleJobVisibility(job.id)}
-                      className={`min-h-11 shrink-0 rounded-lg px-4 py-2 text-sm font-black ${job.visibleToKids ? "bg-white text-[#b44421] border border-[#ded8c7]" : "bg-[#2563eb] text-white"}`}
+                      className={`min-h-11 shrink-0 rounded-lg px-4 py-2 text-sm font-black ${job.visibleToKids ? "bg-white text-tt-error border border-tt-line" : "bg-tt-blue text-white"}`}
                     >
                       {job.visibleToKids ? "Remove from kids" : "Allow for kids"}
                     </button>
@@ -10219,12 +10417,12 @@ function NeighborhoodPanel({
                 </article>
               ))}
               {postedJobs.length === 0 && (
-                <p className="rounded-lg bg-[#faf8f0] p-4 text-sm font-semibold text-[#4f625b]">No posted jobs waiting.</p>
+                <p className="rounded-lg bg-tt-cream p-4 text-sm font-semibold text-tt-ink-soft">No posted jobs waiting.</p>
               )}
             </div>
             <button
               onClick={() => setJobPickerOpen(false)}
-              className="mt-4 min-h-12 w-full rounded-lg bg-[#165a4b] px-5 py-3 text-sm font-black text-white"
+              className="mt-4 min-h-12 w-full rounded-lg bg-tt-pine px-5 py-3 text-sm font-black text-white"
             >
               Done — {jobs.filter((job) => job.visibleToKids).length} job{jobs.filter((job) => job.visibleToKids).length === 1 ? "" : "s"} visible to kids
             </button>
@@ -10233,123 +10431,123 @@ function NeighborhoodPanel({
       )}
 
       {role === "parent" && (
-        <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-[#f47b20]">Post a job</p>
+        <section className="rounded-lg border border-tt-line bg-white p-5 shadow-sm">
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-tang">Post a job</p>
           <h3 className="mt-2 text-2xl font-black">Create a parent-screened helper mission</h3>
-          <p className="mt-2 text-sm font-semibold text-[#4f625b]">New jobs stay hidden from kids until a parent explicitly approves them for kid view below.</p>
+          <p className="mt-2 text-sm font-semibold text-tt-ink-soft">New jobs stay hidden from kids until a parent explicitly approves them for kid view below.</p>
           <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            <input className="rounded-lg border border-[#ded8c7] px-3 py-3 text-sm font-semibold" value={jobDraft.title} onChange={(event) => setJobDraft({ ...jobDraft, title: event.target.value })} placeholder="Job title" />
-            <input className="rounded-lg border border-[#ded8c7] px-3 py-3 text-sm font-semibold" value={jobDraft.family} onChange={(event) => setJobDraft({ ...jobDraft, family: event.target.value })} placeholder="Family" />
-            <input className="rounded-lg border border-[#ded8c7] px-3 py-3 text-sm font-semibold" value={jobDraft.pet} onChange={(event) => setJobDraft({ ...jobDraft, pet: event.target.value })} placeholder="Pet" />
-            <input className="rounded-lg border border-[#ded8c7] px-3 py-3 text-sm font-semibold" value={jobDraft.time} onChange={(event) => setJobDraft({ ...jobDraft, time: event.target.value })} placeholder="Time" />
-            <input className="rounded-lg border border-[#ded8c7] px-3 py-3 text-sm font-semibold" value={jobDraft.rewardDollars} onChange={(event) => setJobDraft({ ...jobDraft, rewardDollars: event.target.value })} inputMode="numeric" placeholder="$ reward" />
-            <input className="rounded-lg border border-[#ded8c7] px-3 py-3 text-sm font-semibold" value={jobDraft.badgeTitle} onChange={(event) => setJobDraft({ ...jobDraft, badgeTitle: event.target.value })} placeholder="Badge" />
+            <input className="rounded-lg border border-tt-line px-3 py-3 text-sm font-semibold" value={jobDraft.title} onChange={(event) => setJobDraft({ ...jobDraft, title: event.target.value })} placeholder="Job title" />
+            <input className="rounded-lg border border-tt-line px-3 py-3 text-sm font-semibold" value={jobDraft.family} onChange={(event) => setJobDraft({ ...jobDraft, family: event.target.value })} placeholder="Family" />
+            <input className="rounded-lg border border-tt-line px-3 py-3 text-sm font-semibold" value={jobDraft.pet} onChange={(event) => setJobDraft({ ...jobDraft, pet: event.target.value })} placeholder="Pet" />
+            <input className="rounded-lg border border-tt-line px-3 py-3 text-sm font-semibold" value={jobDraft.time} onChange={(event) => setJobDraft({ ...jobDraft, time: event.target.value })} placeholder="Time" />
+            <input className="rounded-lg border border-tt-line px-3 py-3 text-sm font-semibold" value={jobDraft.rewardDollars} onChange={(event) => setJobDraft({ ...jobDraft, rewardDollars: event.target.value })} inputMode="numeric" placeholder="$ reward" />
+            <input className="rounded-lg border border-tt-line px-3 py-3 text-sm font-semibold" value={jobDraft.badgeTitle} onChange={(event) => setJobDraft({ ...jobDraft, badgeTitle: event.target.value })} placeholder="Badge" />
           </div>
-          <textarea className="mt-3 min-h-20 w-full rounded-lg border border-[#ded8c7] px-3 py-3 text-sm font-semibold" value={jobDraft.safety} onChange={(event) => setJobDraft({ ...jobDraft, safety: event.target.value })} placeholder="Safety note" />
-          <button onClick={postJob} className="mt-3 min-h-12 rounded-lg bg-[#165a4b] px-5 py-3 text-sm font-black text-white">Save for parent review</button>
+          <textarea className="mt-3 min-h-20 w-full rounded-lg border border-tt-line px-3 py-3 text-sm font-semibold" value={jobDraft.safety} onChange={(event) => setJobDraft({ ...jobDraft, safety: event.target.value })} placeholder="Safety note" />
+          <button onClick={postJob} className="mt-3 min-h-12 rounded-lg bg-tt-pine px-5 py-3 text-sm font-black text-white">Save for parent review</button>
         </section>
       )}
 
-      <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2563eb]">{role === "parent" ? "Job pipeline" : "Jobs for you"}</p>
+      <section className="rounded-lg border border-tt-line bg-white p-5 shadow-sm">
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-blue">{role === "parent" ? "Job pipeline" : "Jobs for you"}</p>
         <h3 className="mt-2 text-2xl font-black">{role === "parent" ? "Kid confirmations waiting for final approval" : "Confirm a job, then wait for grown-up approval"}</h3>
         {zipReady && (
-          <p className="mt-2 text-xs font-black uppercase tracking-[0.14em] text-[#2563eb]">Showing jobs in {familyZip} — your area</p>
+          <p className="mt-2 text-xs font-black uppercase tracking-[0.14em] text-tt-blue">Showing jobs in {familyZip} — your area</p>
         )}
         <div className="mt-4 grid gap-3">
           {visibleJobs.map((job) => {
             const acceptedChild = childProfiles.find((child) => child.id === job.acceptedBy);
             const skill = job.skillFocus ?? "teamwork";
             return (
-              <article key={job.id} className="rounded-lg bg-[#fff4d8] p-4">
+              <article key={job.id} className="rounded-lg bg-tt-sun-soft p-4">
                 <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
                   <div>
                     <p className="text-lg font-black">{job.title}</p>
                     {/* Kids-data rule: kid surfaces show the job only — never the posting family's name. */}
-                    <p className="mt-1 text-sm font-semibold text-[#4f625b]">{role === "parent" ? `${job.family} • ` : ""}{job.pet} • {job.time}</p>
-                    <p className="mt-1 text-sm font-black text-[#7a4b12]">{job.rewardDollars ? `$${job.rewardDollars} allowance` : job.badgeTitle}</p>
-                    {role === "parent" && acceptedChild && <p className="mt-1 text-xs font-black text-[#165a4b]">Accepted by {acceptedChild.name}</p>}
+                    <p className="mt-1 text-sm font-semibold text-tt-ink-soft">{role === "parent" ? `${job.family} • ` : ""}{job.pet} • {job.time}</p>
+                    <p className="mt-1 text-sm font-black text-tt-cocoa">{job.rewardDollars ? `$${job.rewardDollars} allowance` : job.badgeTitle}</p>
+                    {role === "parent" && acceptedChild && <p className="mt-1 text-xs font-black text-tt-pine">Accepted by {acceptedChild.name}</p>}
                     <div className="mt-2 flex flex-wrap gap-2">
-                      <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-[#6d3ed1]">{getLifeSkillLabel(skill)}</span>
-                      <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-[#2563eb]">Age {job.minAge ?? 4}+</span>
+                      <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-tt-grape">{getLifeSkillLabel(skill)}</span>
+                      <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-tt-blue">Age {job.minAge ?? 4}+</span>
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-[#7a4b12]">{job.status}</span>
-                    <span className={`rounded-full px-3 py-1 text-xs font-black ${job.visibleToKids ? "bg-[#e7f4ef] text-[#165a4b]" : "bg-white text-[#b44421]"}`}>
+                    <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-tt-cocoa">{job.status}</span>
+                    <span className={`rounded-full px-3 py-1 text-xs font-black ${job.visibleToKids ? "bg-tt-pine-tint text-tt-pine" : "bg-white text-tt-error"}`}>
                       {job.visibleToKids ? "Parent approved for kids" : "Hidden until parent approves"}
                     </span>
                   </div>
                 </div>
                 <div className="mt-3 grid gap-3 lg:grid-cols-2">
                   <div className="rounded-lg bg-white p-3">
-                    <p className="text-xs font-black uppercase tracking-[0.14em] text-[#165a4b]">Kid checklist</p>
-                    <ul className="mt-2 grid gap-1 text-sm font-semibold text-[#17231f]">
+                    <p className="text-xs font-black uppercase tracking-[0.14em] text-tt-pine">Kid checklist</p>
+                    <ul className="mt-2 grid gap-1 text-sm font-semibold text-tt-ink">
                       {job.checklist.map((step) => <li key={step}>{step}</li>)}
                     </ul>
                   </div>
                   <div className="rounded-lg bg-white p-3">
-                    <p className="text-xs font-black uppercase tracking-[0.14em] text-[#7a4b12]">Safety note</p>
-                    <p className="mt-2 text-sm font-semibold text-[#17231f]">{job.safety}</p>
+                    <p className="text-xs font-black uppercase tracking-[0.14em] text-tt-cocoa">Safety note</p>
+                    <p className="mt-2 text-sm font-semibold text-tt-ink">{job.safety}</p>
                   </div>
                 </div>
                 <div className="mt-3 flex flex-wrap gap-2">
                   {(job.trustSignals ?? ["parent_gate", "private_child"]).map((signal) => (
-                    <span key={signal} className="rounded-full bg-white px-3 py-1 text-xs font-black text-[#165a4b]">
+                    <span key={signal} className="rounded-full bg-white px-3 py-1 text-xs font-black text-tt-pine">
                       {getTrustSignalLabel(signal)}
                     </span>
                   ))}
                 </div>
                 {role === "child" && job.status === "posted" && (
-                  <button onClick={() => acceptJob(job.id)} className="mt-3 min-h-12 w-full rounded-lg bg-[#f47b20] px-4 py-2 text-sm font-black text-white">Confirm I want this job</button>
+                  <button onClick={() => acceptJob(job.id)} className="mt-3 min-h-12 w-full rounded-lg bg-tt-tang px-4 py-2 text-sm font-black text-white">Confirm I want this job</button>
                 )}
                 {role === "child" && job.status !== "posted" && (
-                  <p className="mt-3 rounded-lg bg-white p-3 text-sm font-black text-[#4f625b]">{job.status === "accepted" ? "Waiting for a parent to make it final." : job.status === "approved" ? "Added to Today. Money goes to Kid Bank after parent approves completion." : "Completed and paid if this job had allowance."}</p>
+                  <p className="mt-3 rounded-lg bg-white p-3 text-sm font-black text-tt-ink-soft">{job.status === "accepted" ? "Waiting for a parent to make it final." : job.status === "approved" ? "Added to Today. Money goes to Kid Bank after parent approves completion." : "Completed and paid if this job had allowance."}</p>
                 )}
                 {role === "parent" && (
                   <div className="mt-3 grid gap-2 sm:grid-cols-[auto_auto_auto_1fr]">
                     <button
                       onClick={() => toggleJobVisibility(job.id)}
-                      className={`min-h-11 rounded-lg px-4 py-2 text-sm font-black ${job.visibleToKids ? "bg-white text-[#b44421]" : "bg-[#2563eb] text-white"}`}
+                      className={`min-h-11 rounded-lg px-4 py-2 text-sm font-black ${job.visibleToKids ? "bg-white text-tt-error" : "bg-tt-blue text-white"}`}
                     >
                       {job.visibleToKids ? "Remove kid visibility" : "Approve for kids to see"}
                     </button>
-                    <button onClick={() => approveJob(job.id)} disabled={job.status !== "accepted"} className="min-h-11 rounded-lg bg-[#165a4b] px-4 py-2 text-sm font-black text-white disabled:bg-[#b9b2a2]">Make final and add to Today</button>
+                    <button onClick={() => approveJob(job.id)} disabled={job.status !== "accepted"} className="min-h-11 rounded-lg bg-tt-pine px-4 py-2 text-sm font-black text-white disabled:bg-[#b9b2a2]">Make final and add to Today</button>
                     <button
                       onClick={() => shareJobWithFamily(job)}
                       title="Copy a family-safe summary (no kid details) to paste into your family chat"
-                      className="min-h-11 rounded-lg border border-[#165a4b] bg-white px-4 py-2 text-sm font-black text-[#165a4b]"
+                      className="min-h-11 rounded-lg border border-tt-pine bg-white px-4 py-2 text-sm font-black text-tt-pine"
                     >
                       {jobShareCopiedId === job.id ? "Summary copied ✓" : "Share with family"}
                     </button>
-                    <p className="rounded-lg bg-white p-3 text-xs font-bold text-[#4f625b]">Allowed kids: {job.assignedChildIds.map((id) => childProfiles.find((child) => child.id === id)?.name).filter(Boolean).join(", ")}</p>
+                    <p className="rounded-lg bg-white p-3 text-xs font-bold text-tt-ink-soft">Allowed kids: {job.assignedChildIds.map((id) => childProfiles.find((child) => child.id === id)?.name).filter(Boolean).join(", ")}</p>
                   </div>
                 )}
                 {role === "parent" && job.status === "completed" && !job.posterThanked && (
                   <div className="mt-3 rounded-lg bg-white p-4">
                     {thankYouJobId === job.id ? (
                       <div>
-                        <p className="text-xs font-black uppercase tracking-[0.14em] text-[#165a4b]">Thank the poster — parent to parent</p>
-                        <p className="mt-2 whitespace-pre-line rounded-lg bg-[#faf8f0] p-3 text-sm font-semibold leading-6 text-[#17231f]">{buildPosterThankYou(job)}</p>
-                        <p className="mt-2 text-xs font-bold text-[#4f625b]">
+                        <p className="text-xs font-black uppercase tracking-[0.14em] text-tt-pine">Thank the poster — parent to parent</p>
+                        <p className="mt-2 whitespace-pre-line rounded-lg bg-tt-cream p-3 text-sm font-semibold leading-6 text-tt-ink">{buildPosterThankYou(job)}</p>
+                        <p className="mt-2 text-xs font-bold text-tt-ink-soft">
                           Anonymized on purpose: the poster reads “a neighborhood family” — never your kid&apos;s name, photo, or age.
                         </p>
                         <div className="mt-3 flex flex-wrap gap-2">
                           <button
                             onClick={() => copyThankYou(buildPosterThankYou(job))}
-                            className="min-h-11 rounded-lg bg-[#2563eb] px-4 py-2 text-sm font-black text-white"
+                            className="min-h-11 rounded-lg bg-tt-blue px-4 py-2 text-sm font-black text-white"
                           >
                             {thankYouCopied && thankYouJobId === job.id ? "Copied ✓" : "Copy message"}
                           </button>
                           <button
                             onClick={() => { markPosterThanked(job.id); setThankYouJobId(null); }}
-                            className="min-h-11 rounded-lg bg-[#165a4b] px-4 py-2 text-sm font-black text-white"
+                            className="min-h-11 rounded-lg bg-tt-pine px-4 py-2 text-sm font-black text-white"
                           >
                             Mark as sent
                           </button>
                           <button
                             onClick={() => setThankYouJobId(null)}
-                            className="min-h-11 rounded-lg bg-[#faf8f0] px-4 py-2 text-sm font-black text-[#4f625b]"
+                            className="min-h-11 rounded-lg bg-tt-cream px-4 py-2 text-sm font-black text-tt-ink-soft"
                           >
                             Cancel
                           </button>
@@ -10358,7 +10556,7 @@ function NeighborhoodPanel({
                     ) : (
                       <button
                         onClick={() => { setThankYouJobId(job.id); setThankYouCopied(false); }}
-                        className="min-h-11 rounded-lg bg-[#7a4b12] px-4 py-2 text-sm font-black text-white"
+                        className="min-h-11 rounded-lg bg-tt-cocoa px-4 py-2 text-sm font-black text-white"
                       >
                         Send thank-you to poster
                       </button>
@@ -10366,12 +10564,12 @@ function NeighborhoodPanel({
                   </div>
                 )}
                 {role === "parent" && job.status === "completed" && job.posterThanked && (
-                  <p className="mt-3 rounded-lg bg-[#e7f4ef] p-3 text-sm font-black text-[#165a4b]">Thank-you sent to the poster ✓ — parent to parent, anonymized.</p>
+                  <p className="mt-3 rounded-lg bg-tt-pine-tint p-3 text-sm font-black text-tt-pine">Thank-you sent to the poster ✓ — parent to parent, anonymized.</p>
                 )}
               </article>
             );
           })}
-          {!visibleJobs.length && <p className="rounded-lg bg-[#faf8f0] p-4 text-sm font-semibold text-[#4f625b]">No parent-approved jobs are available yet.</p>}
+          {!visibleJobs.length && <p className="rounded-lg bg-tt-cream p-4 text-sm font-semibold text-tt-ink-soft">No parent-approved jobs are available yet.</p>}
         </div>
       </section>
 
@@ -10379,10 +10577,10 @@ function NeighborhoodPanel({
 
 
       {role === "parent" && (
-        <div className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2563eb]">Choose what kids can see</p>
+        <div className="rounded-lg border border-tt-line bg-white p-5 shadow-sm">
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-blue">Choose what kids can see</p>
           <h3 className="mt-2 text-2xl font-black">You control what's visible</h3>
-          <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-[#4f625b]">
+          <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-tt-ink-soft">
             Approved missions and donation goals are visible to kids by default. Hide any you&apos;re not ready to show yet — neighborhood jobs are picked separately in the review popup above.
           </p>
           <div className="mt-4 grid gap-4 lg:grid-cols-2">
@@ -10390,19 +10588,19 @@ function NeighborhoodPanel({
               <p className="text-sm font-black">Approved missions</p>
               <div className="mt-2 space-y-2">
                 {allMissions.filter((mission) => mission.status === "approved").map((mission) => (
-                  <div key={mission.id} className="flex items-center justify-between gap-3 rounded-lg bg-[#faf8f0] p-3">
+                  <div key={mission.id} className="flex items-center justify-between gap-3 rounded-lg bg-tt-cream p-3">
                     <span className="min-w-0 flex-1 truncate text-sm font-bold">{mission.title}</span>
                     <button
                       onClick={() => toggleMissionVisibility(mission.id)}
                       aria-pressed={mission.visibleToKids ?? true}
-                      className={`min-h-10 rounded-lg px-3 py-2 text-xs font-black ${mission.visibleToKids === false ? "bg-[#ded8c7] text-[#4f625b]" : "bg-[#165a4b] text-white"}`}
+                      className={`min-h-10 rounded-lg px-3 py-2 text-xs font-black ${mission.visibleToKids === false ? "bg-tt-line text-tt-ink-soft" : "bg-tt-pine text-white"}`}
                     >
                       {mission.visibleToKids === false ? "Hidden" : "Visible"}
                     </button>
                   </div>
                 ))}
                 {allMissions.filter((mission) => mission.status === "approved").length === 0 && (
-                  <p className="text-sm font-semibold text-[#4f625b]">No approved missions yet.</p>
+                  <p className="text-sm font-semibold text-tt-ink-soft">No approved missions yet.</p>
                 )}
               </div>
             </div>
@@ -10410,19 +10608,19 @@ function NeighborhoodPanel({
               <p className="text-sm font-black">Shared donation goals</p>
               <div className="mt-2 space-y-2">
                 {goals.filter((goal) => goal.sharedWithTrustedFamilies && goal.type === "donation").map((goal) => (
-                  <div key={goal.id} className="flex items-center justify-between gap-3 rounded-lg bg-[#faf8f0] p-3">
+                  <div key={goal.id} className="flex items-center justify-between gap-3 rounded-lg bg-tt-cream p-3">
                     <span className="min-w-0 flex-1 truncate text-sm font-bold">{goal.title}</span>
                     <button
                       onClick={() => toggleGoalVisibility(goal.id)}
                       aria-pressed={goal.visibleToKids ?? true}
-                      className={`min-h-10 rounded-lg px-3 py-2 text-xs font-black ${goal.visibleToKids === false ? "bg-[#ded8c7] text-[#4f625b]" : "bg-[#165a4b] text-white"}`}
+                      className={`min-h-10 rounded-lg px-3 py-2 text-xs font-black ${goal.visibleToKids === false ? "bg-tt-line text-tt-ink-soft" : "bg-tt-pine text-white"}`}
                     >
                       {goal.visibleToKids === false ? "Hidden" : "Visible"}
                     </button>
                   </div>
                 ))}
                 {goals.filter((goal) => goal.sharedWithTrustedFamilies && goal.type === "donation").length === 0 && (
-                  <p className="text-sm font-semibold text-[#4f625b]">No shared donation goals yet.</p>
+                  <p className="text-sm font-semibold text-tt-ink-soft">No shared donation goals yet.</p>
                 )}
               </div>
             </div>
@@ -10430,10 +10628,10 @@ function NeighborhoodPanel({
         </div>
       )}
 
-      <div className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#165a4b]">{role === "parent" ? "Share with family" : "Giving goals"}</p>
+      <div className="rounded-lg border border-tt-line bg-white p-5 shadow-sm">
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-pine">{role === "parent" ? "Share with family" : "Giving goals"}</p>
         <h3 className="mt-2 text-2xl font-black">{role === "parent" ? "Let grandparents chip in" : "Giving goals your family shares"}</h3>
-        <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-[#4f625b]">
+        <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-tt-ink-soft">
           {role === "parent"
             ? "Pick a goal your kid is working toward and share it with family — grandparents, aunts, uncles. They see the goal (never kid details) and chip in through you. Sharing is always parent-initiated, and no child is publicly searchable."
             : "These are donation goals your grown-up shared with the family — shelters, schools, and neighborhood causes. Every dollar moves only after a parent approves."}
@@ -10447,20 +10645,20 @@ function NeighborhoodPanel({
             const percent = Math.min(100, (goal.saved / goal.target) * 100);
             const contributions = goalContributions(goal.id, transactions, childProfiles);
             return (
-              <article key={goal.id} className="rounded-lg bg-[#e7f4ef] p-4">
+              <article key={goal.id} className="rounded-lg bg-tt-pine-tint p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-lg font-black">{goal.title}</p>
-                    <p className="mt-1 text-sm font-semibold text-[#4f625b]">{goal.causeNote}</p>
-                    <p className="mt-1 text-xs font-bold text-[#165a4b]">Started by {child?.name ?? "family"}</p>
+                    <p className="mt-1 text-sm font-semibold text-tt-ink-soft">{goal.causeNote}</p>
+                    <p className="mt-1 text-xs font-bold text-tt-pine">Started by {child?.name ?? "family"}</p>
                   </div>
-                  <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-[#165a4b]">${goal.saved}/${goal.target}</span>
+                  <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-tt-pine">${goal.saved}/${goal.target}</span>
                 </div>
                 <div className="mt-3 h-3 rounded-full bg-white">
-                  <div className="h-3 rounded-full bg-[#165a4b]" style={{ width: `${percent}%` }} />
+                  <div className="h-3 rounded-full bg-tt-pine" style={{ width: `${percent}%` }} />
                 </div>
                 {(contributions.length > 0 || goal.seededByParent) && (
-                  <p className="mt-2 text-xs font-bold text-[#4f625b]">
+                  <p className="mt-2 text-xs font-bold text-tt-ink-soft">
                     {[
                       ...contributions.map((c) => `${c.name} $${c.amount}`),
                       ...(goal.seededByParent ? [`Parent seed $${goal.seededByParent}`] : []),
@@ -10469,7 +10667,7 @@ function NeighborhoodPanel({
                 )}
                 <button
                   onClick={() => setActiveTab("bank")}
-                  className="mt-3 min-h-11 w-full rounded-lg bg-[#165a4b] px-4 py-2 text-sm font-black text-white"
+                  className="mt-3 min-h-11 w-full rounded-lg bg-tt-pine px-4 py-2 text-sm font-black text-white"
                 >
                   Contribute in Kid Bank →
                 </button>
@@ -10477,13 +10675,13 @@ function NeighborhoodPanel({
                   <>
                     <button
                       onClick={() => (shareComposerFor === goal.id ? setShareComposerFor(null) : openShareComposer(goal))}
-                      className="mt-2 min-h-11 w-full rounded-lg border border-[#165a4b] bg-white px-4 py-2 text-sm font-black text-[#165a4b]"
+                      className="mt-2 min-h-11 w-full rounded-lg border border-tt-pine bg-white px-4 py-2 text-sm font-black text-tt-pine"
                     >
                       {shareComposerFor === goal.id ? "Cancel sharing" : "Share this goal with family"}
                     </button>
                     {shareComposerFor === goal.id && (
-                      <div className="mt-2 rounded-lg border-2 border-[#165a4b] bg-white p-3">
-                        <p className="text-xs font-black text-[#165a4b]">
+                      <div className="mt-2 rounded-lg border-2 border-tt-pine bg-white p-3">
+                        <p className="text-xs font-black text-tt-pine">
                           Family sees exactly what you write below — no kid names, no kid details.
                         </p>
                         <label className="mt-2 block">
@@ -10492,7 +10690,7 @@ function NeighborhoodPanel({
                             value={shareForm.goalTitle}
                             onChange={(e) => setShareForm((f) => ({ ...f, goalTitle: e.target.value }))}
                             maxLength={80}
-                            className="mt-1 min-h-11 w-full rounded-lg border-2 border-[#ded8c7] px-3 py-2 text-sm font-bold"
+                            className="mt-1 min-h-11 w-full rounded-lg border-2 border-tt-line px-3 py-2 text-sm font-bold"
                           />
                         </label>
                         <label className="mt-2 block">
@@ -10501,7 +10699,7 @@ function NeighborhoodPanel({
                             value={shareForm.cause}
                             onChange={(e) => setShareForm((f) => ({ ...f, cause: e.target.value }))}
                             maxLength={80}
-                            className="mt-1 min-h-11 w-full rounded-lg border-2 border-[#ded8c7] px-3 py-2 text-sm font-bold"
+                            className="mt-1 min-h-11 w-full rounded-lg border-2 border-tt-line px-3 py-2 text-sm font-bold"
                           />
                         </label>
                         <label className="mt-2 block">
@@ -10511,7 +10709,7 @@ function NeighborhoodPanel({
                             onChange={(e) => setShareForm((f) => ({ ...f, parentName: e.target.value }))}
                             placeholder="e.g. Priya"
                             maxLength={40}
-                            className="mt-1 min-h-11 w-full rounded-lg border-2 border-[#ded8c7] px-3 py-2 text-sm font-bold"
+                            className="mt-1 min-h-11 w-full rounded-lg border-2 border-tt-line px-3 py-2 text-sm font-bold"
                           />
                         </label>
                         <label className="mt-2 block">
@@ -10521,13 +10719,13 @@ function NeighborhoodPanel({
                             onChange={(e) => setShareForm((f) => ({ ...f, parentMessage: e.target.value }))}
                             maxLength={280}
                             rows={3}
-                            className="mt-1 w-full rounded-lg border-2 border-[#ded8c7] px-3 py-2 text-sm font-bold"
+                            className="mt-1 w-full rounded-lg border-2 border-tt-line px-3 py-2 text-sm font-bold"
                           />
                         </label>
                         <button
                           onClick={() => createGoalShare(goal)}
                           disabled={!shareForm.goalTitle.trim()}
-                          className="mt-3 min-h-11 w-full rounded-lg bg-[#165a4b] px-4 py-2 text-sm font-black text-white disabled:opacity-40"
+                          className="mt-3 min-h-11 w-full rounded-lg bg-tt-pine px-4 py-2 text-sm font-black text-white disabled:opacity-40"
                         >
                           Create family share link
                         </button>
@@ -10543,7 +10741,7 @@ function NeighborhoodPanel({
             );
           })}
           {sharedGoals.length === 0 && (
-            <p className="rounded-lg bg-[#faf8f0] p-4 text-sm font-semibold text-[#4f625b]">
+            <p className="rounded-lg bg-tt-cream p-4 text-sm font-semibold text-tt-ink-soft">
               {role === "parent"
                 ? "No shared goals yet. Create a giving goal in Kid Bank, share it, then create a family share link so grandparents can chip in."
                 : "No shared goals yet — ask a grown-up to share one with the family."}
@@ -10553,42 +10751,42 @@ function NeighborhoodPanel({
       </div>
 
       {role === "parent" && (
-        <div className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2563eb]">Nearby families</p>
+        <div className="rounded-lg border border-tt-line bg-white p-5 shadow-sm">
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-blue">Nearby families</p>
           <h3 className="mt-2 text-2xl font-black">Discover families near you</h3>
-          <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-[#4f625b]">
+          <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-tt-ink-soft">
             Make friends with TailTots families in your ZIP code. Demo preview: families are anonymized and parent-gated — in the real app only opted-in families appear, and no child information is ever shown.
           </p>
           {!zipReady ? (
-            <div className="mt-4 rounded-lg bg-[#faf8f0] p-4">
-              <p className="text-sm font-black text-[#17231f]">🗺️ Set your ZIP code in Family setup</p>
-              <p className="mt-1 text-sm font-semibold text-[#4f625b]">
+            <div className="mt-4 rounded-lg bg-tt-cream p-4">
+              <p className="text-sm font-black text-tt-ink">🗺️ Set your ZIP code in Family setup</p>
+              <p className="mt-1 text-sm font-semibold text-tt-ink-soft">
                 Add your ZIP in Family setup to discover nearby families and see neighborhood jobs in your area.
               </p>
             </div>
           ) : (
             <>
-              <p className="mt-4 text-xs font-black uppercase tracking-[0.14em] text-[#2563eb]">Families near {familyZip}</p>
+              <p className="mt-4 text-xs font-black uppercase tracking-[0.14em] text-tt-blue">Families near {familyZip}</p>
               {friendFamilies.length > 0 && (
-                <div className="mt-3 rounded-lg bg-[#e7f4ef] p-4">
-                  <p className="text-xs font-black uppercase tracking-[0.14em] text-[#165a4b]">
+                <div className="mt-3 rounded-lg bg-tt-pine-tint p-4">
+                  <p className="text-xs font-black uppercase tracking-[0.14em] text-tt-pine">
                     Your neighborhood friends ({friendFamilies.length})
                   </p>
                   <div className="mt-2 flex flex-wrap gap-2">
                     {friendFamilies.map((family) => (
-                      <span key={family.id} className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-xs font-black text-[#17231f]">
+                      <span key={family.id} className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-xs font-black text-tt-ink">
                         🤝 {family.name}
                         <button
                           onClick={() => toggleNeighborFriend(family.id)}
                           aria-label={`Remove ${family.name} from friends`}
-                          className="rounded-full bg-[#faf8f0] px-2 py-0.5 text-[#b44421]"
+                          className="rounded-full bg-tt-cream px-2 py-0.5 text-tt-error"
                         >
                           ✕
                         </button>
                       </span>
                     ))}
                   </div>
-                  <p className="mt-2 text-[11px] font-semibold text-[#4f625b]">
+                  <p className="mt-2 text-[11px] font-semibold text-tt-ink-soft">
                     Demo: friends are saved on this device only. In the real app both families opt in — and no child details are ever shown.
                   </p>
                 </div>
@@ -10597,14 +10795,14 @@ function NeighborhoodPanel({
                 {nearbyFamilies(familyZip).map((family) => {
                   const isFriend = neighborFriendIds.includes(family.id);
                   return (
-                    <article key={family.id} className="rounded-lg bg-[#faf8f0] p-4">
+                    <article key={family.id} className="rounded-lg bg-tt-cream p-4">
                       <p className="text-base font-black">{family.name}</p>
-                      <p className="mt-1 text-xs font-black text-[#2563eb]">{family.distance}</p>
-                      <p className="mt-1 text-sm font-semibold text-[#4f625b]">{family.detail}</p>
-                      <p className="mt-2 text-[11px] font-black uppercase tracking-[0.12em] text-[#69736f]">Demo family · anonymized</p>
+                      <p className="mt-1 text-xs font-black text-tt-blue">{family.distance}</p>
+                      <p className="mt-1 text-sm font-semibold text-tt-ink-soft">{family.detail}</p>
+                      <p className="mt-2 text-[11px] font-black uppercase tracking-[0.12em] text-tt-ink-faint">Demo family · anonymized</p>
                       <button
                         onClick={() => toggleNeighborFriend(family.id)}
-                        className={`mt-3 min-h-10 w-full rounded-lg px-3 py-2 text-xs font-black ${isFriend ? "bg-[#e7f4ef] text-[#165a4b]" : "bg-[#2563eb] text-white"}`}
+                        className={`mt-3 min-h-10 w-full rounded-lg px-3 py-2 text-xs font-black ${isFriend ? "bg-tt-pine-tint text-tt-pine" : "bg-tt-blue text-white"}`}
                       >
                         {isFriend ? "✓ Friends" : "＋ Add as friend"}
                       </button>
@@ -10677,14 +10875,14 @@ function GoalFamilyShareLinks({ goalId }: { goalId: string }) {
   if (shares.length === 0) return null;
 
   return (
-    <div className="mt-2 rounded-lg bg-[#faf8f0] p-3">
-      <p className="text-xs font-black uppercase tracking-[0.14em] text-[#165a4b]">
+    <div className="mt-2 rounded-lg bg-tt-cream p-3">
+      <p className="text-xs font-black uppercase tracking-[0.14em] text-tt-pine">
         Family share links ({shares.length})
       </p>
       <div className="mt-2 space-y-2">
         {shares.map((share) => (
-          <div key={share.id} className="rounded-lg border border-[#ded8c7] bg-white p-3">
-            <p className="break-all text-xs font-bold text-[#4f625b]">{givingShareUrl(share.id)}</p>
+          <div key={share.id} className="rounded-lg border border-tt-line bg-white p-3">
+            <p className="break-all text-xs font-bold text-tt-ink-soft">{givingShareUrl(share.id)}</p>
             <p className="mt-1 text-[11px] font-semibold text-[#a09a8c]">
               Created {new Date(share.createdAt).toLocaleDateString()} · &ldquo;{share.goalTitle}&rdquo;
             </p>
@@ -10693,7 +10891,7 @@ function GoalFamilyShareLinks({ goalId }: { goalId: string }) {
                 onClick={async () => {
                   if (await copyText(givingShareUrl(share.id))) flash(setLinkCopiedId, share.id);
                 }}
-                className="min-h-10 rounded-lg bg-[#165a4b] px-3 py-1.5 text-xs font-black text-white"
+                className="min-h-10 rounded-lg bg-tt-pine px-3 py-1.5 text-xs font-black text-white"
               >
                 {linkCopiedId === share.id ? "Link copied ✓" : "Copy link"}
               </button>
@@ -10701,7 +10899,7 @@ function GoalFamilyShareLinks({ goalId }: { goalId: string }) {
                 onClick={async () => {
                   if (await copyText(familyShareMessage(share))) flash(setMessageCopiedId, share.id);
                 }}
-                className="min-h-10 rounded-lg border border-[#165a4b] px-3 py-1.5 text-xs font-black text-[#165a4b]"
+                className="min-h-10 rounded-lg border border-tt-pine px-3 py-1.5 text-xs font-black text-tt-pine"
               >
                 {messageCopiedId === share.id ? "Message copied ✓" : "Copy family message"}
               </button>
@@ -10754,15 +10952,15 @@ function LegacyNeighborhoodPanel({ goals, childProfiles }: { goals: SavingsGoal[
 
   return (
     <section className="space-y-4">
-      <div className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#165a4b]">Neighborhood</p>
+      <div className="rounded-lg border border-tt-line bg-white p-5 shadow-sm">
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-pine">Neighborhood</p>
         <h2 className="mt-2 text-3xl font-black">Parent-led pet friends and helper requests</h2>
-        <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-[#4f625b]">
+        <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-tt-ink-soft">
           Kids do not browse or message other kids. Parents discover nearby pet families, compare pets and schedules, then decide whether a playdate, shared care task, or pet-sitting request is safe to show.
         </p>
       </div>
 
-      <div className="grid gap-3 rounded-lg border border-[#ded8c7] bg-[#e7f4ef] p-4 sm:grid-cols-2 xl:grid-cols-4 sm:p-5">
+      <div className="grid gap-3 rounded-lg border border-tt-line bg-tt-pine-tint p-4 sm:grid-cols-2 xl:grid-cols-4 sm:p-5">
         {[
           "Parents match by pet type, distance, and availability",
           "Parents chat and schedule first",
@@ -10770,64 +10968,64 @@ function LegacyNeighborhoodPanel({ goals, childProfiles }: { goals: SavingsGoal[
           "Parent closes the loop with pickup, reward, and notes",
         ].map((step, index) => (
           <div key={step} className="rounded-lg bg-white p-4">
-            <p className="text-xs font-black uppercase tracking-[0.16em] text-[#165a4b]">Step {index + 1}</p>
-            <p className="mt-2 text-sm font-bold leading-5 text-[#17231f]">{step}</p>
+            <p className="text-xs font-black uppercase tracking-[0.16em] text-tt-pine">Step {index + 1}</p>
+            <p className="mt-2 text-sm font-bold leading-5 text-tt-ink">{step}</p>
           </div>
         ))}
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
-        <div className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2563eb]">Family matching</p>
+        <div className="rounded-lg border border-tt-line bg-white p-5 shadow-sm">
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-blue">Family matching</p>
           <h3 className="mt-2 text-2xl font-black">Pet families parents can review</h3>
           <div className="mt-4 grid gap-3">
             {trustedFamilies.map((family) => (
-              <article key={family.name} className="rounded-lg bg-[#faf8f0] p-4">
+              <article key={family.name} className="rounded-lg bg-tt-cream p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-lg font-black">{family.name}</p>
-                    <p className="text-sm font-semibold text-[#4f625b]">{family.pets}</p>
-                    <p className="mt-1 text-xs font-bold text-[#69736f]">{family.match}</p>
+                    <p className="text-sm font-semibold text-tt-ink-soft">{family.pets}</p>
+                    <p className="mt-1 text-xs font-bold text-tt-ink-faint">{family.match}</p>
                   </div>
-                  <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-[#165a4b]">{family.status}</span>
+                  <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-tt-pine">{family.status}</span>
                 </div>
               </article>
             ))}
           </div>
-          <button className="mt-4 min-h-12 rounded-lg bg-[#17231f] px-5 py-3 text-sm font-black text-white">
+          <button className="mt-4 min-h-12 rounded-lg bg-tt-ink px-5 py-3 text-sm font-black text-white">
             Review pet family match
           </button>
         </div>
 
-        <div className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-[#f47b20]">Parent calendar</p>
+        <div className="rounded-lg border border-tt-line bg-white p-5 shadow-sm">
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-tang">Parent calendar</p>
           <h3 className="mt-2 text-2xl font-black">Pet care requests before kids see them</h3>
           <div className="mt-4 grid gap-3">
             {sittingRequests.map((request) => (
-              <article key={request.title} className="rounded-lg bg-[#fff4d8] p-4">
+              <article key={request.title} className="rounded-lg bg-tt-sun-soft p-4">
                 <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
                   <div>
                     <p className="text-lg font-black">{request.title}</p>
-                    <p className="mt-1 text-sm font-semibold text-[#4f625b]">{request.family} - {request.pet} - {request.time}</p>
-                    <p className="mt-1 text-sm font-black text-[#7a4b12]">{request.reward}</p>
+                    <p className="mt-1 text-sm font-semibold text-tt-ink-soft">{request.family} - {request.pet} - {request.time}</p>
+                    <p className="mt-1 text-sm font-black text-tt-cocoa">{request.reward}</p>
                   </div>
-                  <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-[#7a4b12]">{request.status}</span>
+                  <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-tt-cocoa">{request.status}</span>
                 </div>
                 <div className="mt-3 grid gap-3 lg:grid-cols-2">
                   <div className="rounded-lg bg-white p-3">
-                    <p className="text-xs font-black uppercase tracking-[0.14em] text-[#165a4b]">Kid checklist</p>
-                    <ul className="mt-2 grid gap-1 text-sm font-semibold text-[#17231f]">
+                    <p className="text-xs font-black uppercase tracking-[0.14em] text-tt-pine">Kid checklist</p>
+                    <ul className="mt-2 grid gap-1 text-sm font-semibold text-tt-ink">
                       {request.steps.map((step) => <li key={step}>{step}</li>)}
                     </ul>
                   </div>
                   <div className="rounded-lg bg-white p-3">
-                    <p className="text-xs font-black uppercase tracking-[0.14em] text-[#7a4b12]">Safety note</p>
-                    <p className="mt-2 text-sm font-semibold text-[#17231f]">{request.safety}</p>
+                    <p className="text-xs font-black uppercase tracking-[0.14em] text-tt-cocoa">Safety note</p>
+                    <p className="mt-2 text-sm font-semibold text-tt-ink">{request.safety}</p>
                   </div>
                 </div>
                 <div className="mt-3 grid grid-cols-2 gap-2">
-                  <button className="min-h-11 rounded-lg bg-[#165a4b] px-4 py-2 text-sm font-black text-white">Create kid care mission</button>
-                  <button className="min-h-11 rounded-lg border border-[#ded8c7] bg-white px-4 py-2 text-sm font-black">Confirm adult details</button>
+                  <button className="min-h-11 rounded-lg bg-tt-pine px-4 py-2 text-sm font-black text-white">Create kid care mission</button>
+                  <button className="min-h-11 rounded-lg border border-tt-line bg-white px-4 py-2 text-sm font-black">Confirm adult details</button>
                 </div>
               </article>
             ))}
@@ -10835,10 +11033,10 @@ function LegacyNeighborhoodPanel({ goals, childProfiles }: { goals: SavingsGoal[
         </div>
       </div>
 
-      <div className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#165a4b]">Family-supported goals</p>
+      <div className="rounded-lg border border-tt-line bg-white p-5 shadow-sm">
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-pine">Family-supported goals</p>
         <h3 className="mt-2 text-2xl font-black">Trusted families can help a cause</h3>
-        <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-[#4f625b]">
+        <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-tt-ink-soft">
           Parents can expose selected goals to trusted families so a neighbor can support the purpose, like pet enrichment or care supplies. The child is not publicly searchable, and parents control who sees it.
         </p>
         <div className="mt-4 grid gap-3 lg:grid-cols-2">
@@ -10846,21 +11044,21 @@ function LegacyNeighborhoodPanel({ goals, childProfiles }: { goals: SavingsGoal[
             const child = childProfiles.find((item) => item.id === goal.childId);
             const percent = Math.min(100, (goal.saved / goal.target) * 100);
             return (
-              <article key={goal.id} className="rounded-lg bg-[#e7f4ef] p-4">
+              <article key={goal.id} className="rounded-lg bg-tt-pine-tint p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-lg font-black">{goal.title}</p>
-                    <p className="mt-1 text-sm font-semibold text-[#4f625b]">{goal.causeNote}</p>
-                    <p className="mt-1 text-xs font-bold text-[#165a4b]">Parent-shared by {child?.name ?? "family"}</p>
+                    <p className="mt-1 text-sm font-semibold text-tt-ink-soft">{goal.causeNote}</p>
+                    <p className="mt-1 text-xs font-bold text-tt-pine">Parent-shared by {child?.name ?? "family"}</p>
                   </div>
-                  <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-[#165a4b]">${goal.saved}/${goal.target}</span>
+                  <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-tt-pine">${goal.saved}/${goal.target}</span>
                 </div>
                 <div className="mt-3 h-3 rounded-full bg-white">
-                  <div className="h-3 rounded-full bg-[#165a4b]" style={{ width: `${percent}%` }} />
+                  <div className="h-3 rounded-full bg-tt-pine" style={{ width: `${percent}%` }} />
                 </div>
                 <div className="mt-3 grid grid-cols-2 gap-2">
-                  <button className="min-h-11 rounded-lg bg-[#165a4b] px-4 py-2 text-sm font-black text-white">Offer support</button>
-                  <button className="min-h-11 rounded-lg border border-[#ded8c7] bg-white px-4 py-2 text-sm font-black">Message parent</button>
+                  <button className="min-h-11 rounded-lg bg-tt-pine px-4 py-2 text-sm font-black text-white">Offer support</button>
+                  <button className="min-h-11 rounded-lg border border-tt-line bg-white px-4 py-2 text-sm font-black">Message parent</button>
                 </div>
               </article>
             );
@@ -10868,8 +11066,8 @@ function LegacyNeighborhoodPanel({ goals, childProfiles }: { goals: SavingsGoal[
         </div>
       </div>
 
-      <div className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#6d3ed1]">Pet-sitting and helper workflow</p>
+      <div className="rounded-lg border border-tt-line bg-white p-5 shadow-sm">
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-grape">Pet-sitting and helper workflow</p>
         <h3 className="mt-2 text-2xl font-black">What a parent must approve</h3>
         <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {[
@@ -10878,30 +11076,30 @@ function LegacyNeighborhoodPanel({ goals, childProfiles }: { goals: SavingsGoal[
             ["Kid mission", "A simple checklist with proof photo or parent note."],
             ["Reward", "Allowance dollars for jobs, reward coins for app progress, or kindness badges for favors."],
           ].map(([title, body]) => (
-            <article key={title} className="rounded-lg bg-[#faf8f0] p-4">
+            <article key={title} className="rounded-lg bg-tt-cream p-4">
               <h4 className="font-black">{title}</h4>
-              <p className="mt-2 text-sm font-semibold leading-5 text-[#4f625b]">{body}</p>
+              <p className="mt-2 text-sm font-semibold leading-5 text-tt-ink-soft">{body}</p>
             </article>
           ))}
         </div>
       </div>
 
-      <div className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2563eb]">Neighborhood helper jobs</p>
+      <div className="rounded-lg border border-tt-line bg-white p-5 shadow-sm">
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-blue">Neighborhood helper jobs</p>
         <h3 className="mt-2 text-2xl font-black">Parent-approved ways kids can earn allowance</h3>
         <div className="mt-4 grid gap-3 lg:grid-cols-2">
           {helperJobs.map((job) => (
-            <article key={job.title} className="rounded-lg bg-[#eef2ff] p-4">
+            <article key={job.title} className="rounded-lg bg-tt-sky p-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-lg font-black">{job.title}</p>
-                  <p className="mt-1 text-sm font-semibold text-[#4f625b]">{job.family} - {job.time}</p>
-                  <p className="mt-1 text-sm font-black text-[#1e3a8a]">{job.reward}</p>
+                  <p className="mt-1 text-sm font-semibold text-tt-ink-soft">{job.family} - {job.time}</p>
+                  <p className="mt-1 text-sm font-black text-tt-ocean">{job.reward}</p>
                 </div>
-                <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-[#2563eb]">Parent-led</span>
+                <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-tt-blue">Parent-led</span>
               </div>
-              <p className="mt-3 rounded-lg bg-white p-3 text-sm font-semibold text-[#17231f]">{job.safety}</p>
-              <button className="mt-3 min-h-11 rounded-lg bg-[#2563eb] px-4 py-2 text-sm font-black text-white">Create helper mission</button>
+              <p className="mt-3 rounded-lg bg-white p-3 text-sm font-semibold text-tt-ink">{job.safety}</p>
+              <button className="mt-3 min-h-11 rounded-lg bg-tt-blue px-4 py-2 text-sm font-black text-white">Create helper mission</button>
             </article>
           ))}
         </div>
@@ -10931,13 +11129,13 @@ function PetMedallion({
   const dashBorder = stageRing.replace("ring-", "border-");
   return (
     <div className="relative w-fit shrink-0 px-2 pb-7 pt-2">
-      <svg aria-hidden="true" viewBox="0 0 24 24" className="absolute right-0.5 top-0 z-10 size-6 rotate-12 text-[#f4b400] drop-shadow-sm" fill="currentColor">
+      <svg aria-hidden="true" viewBox="0 0 24 24" className="absolute right-0.5 top-0 z-10 size-6 rotate-12 text-tt-gold drop-shadow-sm" fill="currentColor">
         <path d="M12 2c.6 4.8 3.2 7.4 8 8-4.8.6-7.4 3.2-8 8-.6-4.8-3.2-7.4-8-8 4.8-.6 7.4-3.2 8-8z" />
       </svg>
       <div className={`rounded-[1.75rem] border-4 border-dashed ${dashBorder} bg-white p-2 shadow-[0_10px_28px_rgba(23,35,31,0.16)]`}>
         <PetCharacter kind={petKind} size="lg" photoUrl={photoUrl} label={label} />
       </div>
-      <div className="absolute bottom-1 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-[#17231f] px-3.5 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-[#ffd166] shadow-lg ring-2 ring-white">
+      <div className="absolute bottom-1 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-tt-ink px-3.5 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-tt-sun shadow-lg ring-2 ring-white">
         ★ {stage}
       </div>
     </div>
@@ -11010,13 +11208,13 @@ function KidCharacter({
         ) : (
           <>
             <div className="absolute -top-2 left-2 right-2 h-5 rounded-t-full" style={{ backgroundColor: hair }} />
-            <div className="absolute left-4 top-6 size-1.5 rounded-full bg-[#17231f]" />
-            <div className="absolute right-4 top-6 size-1.5 rounded-full bg-[#17231f]" />
-            <div className="absolute bottom-3 left-1/2 h-2 w-5 -translate-x-1/2 rounded-b-full border-b-2 border-[#17231f]" />
+            <div className="absolute left-4 top-6 size-1.5 rounded-full bg-tt-ink" />
+            <div className="absolute right-4 top-6 size-1.5 rounded-full bg-tt-ink" />
+            <div className="absolute bottom-3 left-1/2 h-2 w-5 -translate-x-1/2 rounded-b-full border-b-2 border-tt-ink" />
           </>
         )}
       </div>
-      <div className="mx-auto -mt-1 grid h-8 w-12 place-items-center rounded-t-2xl bg-white/90 text-sm font-black text-[#17231f]">
+      <div className="mx-auto -mt-1 grid h-8 w-12 place-items-center rounded-t-2xl bg-white/90 text-sm font-black text-tt-ink">
         {initial}
       </div>
     </div>
@@ -11064,7 +11262,7 @@ function PetCharacter({
         <div className="absolute -left-2 top-5 h-7 w-6 rounded-l-full bg-[#38bdf8] [clip-path:polygon(100%_50%,0_0,0_100%)] origin-right animate-[tail-wag_1.8s_ease-in-out_infinite]" />
         <div className="relative h-14 w-20 overflow-hidden rounded-[999px] bg-[#06b6d4] shadow-inner ring-2 ring-white/80">
           <div className="absolute left-2 top-1 h-12 w-12 rounded-full bg-[#67e8f9]" />
-          <div className="absolute right-5 top-5 size-2 rounded-full bg-[#17231f]" />
+          <div className="absolute right-5 top-5 size-2 rounded-full bg-tt-ink" />
           <div className="absolute bottom-2 left-8 h-3 w-8 rounded-full bg-[#0e7490] opacity-35" />
         </div>
       </div>
@@ -11121,10 +11319,10 @@ function PetCharacter({
               </>
             ) : (
               <>
-                <div className="absolute left-4 top-6 size-2 rounded-full bg-[#17231f]" />
-                <div className="absolute right-4 top-6 size-2 rounded-full bg-[#17231f]" />
-                <div className="absolute left-1/2 top-8 size-3 -translate-x-1/2 rounded-full bg-[#17231f]" />
-                <div className="absolute bottom-3 left-1/2 h-2 w-6 -translate-x-1/2 rounded-b-full border-b-2 border-[#17231f]" />
+                <div className="absolute left-4 top-6 size-2 rounded-full bg-tt-ink" />
+                <div className="absolute right-4 top-6 size-2 rounded-full bg-tt-ink" />
+                <div className="absolute left-1/2 top-8 size-3 -translate-x-1/2 rounded-full bg-tt-ink" />
+                <div className="absolute bottom-3 left-1/2 h-2 w-6 -translate-x-1/2 rounded-b-full border-b-2 border-tt-ink" />
                 <div className="absolute -bottom-1 right-2 h-3 w-6 rounded-full bg-[#ff7a7a] animate-[tongue-pop_2.5s_ease-in-out_infinite]" />
               </>
             )}
@@ -11150,15 +11348,15 @@ function AnimatedFamilyCharacter({
 }) {
   return (
     <div className="relative h-24 w-16 animate-[character-bob_2.6s_ease-in-out_infinite]" style={{ animationDelay: delay }}>
-      <span className="absolute -right-2 -top-2 size-3 rounded-full bg-[#ffd166] shadow-[0_0_14px_rgba(255,209,102,0.9)] animate-[reward-pop_2.4s_ease-in-out_infinite]" />
+      <span className="absolute -right-2 -top-2 size-3 rounded-full bg-tt-sun shadow-[0_0_14px_rgba(255,209,102,0.9)] animate-[reward-pop_2.4s_ease-in-out_infinite]" />
       <div className="absolute left-1/2 top-0 size-12 -translate-x-1/2 overflow-hidden rounded-full shadow-inner ring-2 ring-white/80" style={{ backgroundColor: tone }}>
         {photoUrl ? (
           <Image src={photoUrl} alt={`${label ?? "Family member"} captured face`} fill sizes="56px" className="object-cover" unoptimized />
         ) : (
           <>
-            <div className="absolute left-3 top-6 size-1.5 rounded-full bg-[#17231f]" />
-            <div className="absolute right-3 top-6 size-1.5 rounded-full bg-[#17231f]" />
-            <div className="absolute bottom-2 left-1/2 h-2 w-5 -translate-x-1/2 rounded-b-full border-b-2 border-[#17231f]" />
+            <div className="absolute left-3 top-6 size-1.5 rounded-full bg-tt-ink" />
+            <div className="absolute right-3 top-6 size-1.5 rounded-full bg-tt-ink" />
+            <div className="absolute bottom-2 left-1/2 h-2 w-5 -translate-x-1/2 rounded-b-full border-b-2 border-tt-ink" />
           </>
         )}
       </div>
@@ -11191,7 +11389,7 @@ function AnimatedPetBuddy({ color, delay, photoUrl, label, kind = "pet" }: { col
         <div className="absolute left-2 top-7 size-3 rounded-full bg-[#bae6fd] animate-[bubble-rise_2.4s_ease-in-out_infinite]" />
         <div className="absolute -left-1 top-8 h-8 w-7 bg-[#38bdf8] [clip-path:polygon(100%_50%,0_0,0_100%)] origin-right animate-[tail-wag_1.8s_ease-in-out_infinite]" />
         <div className="absolute bottom-4 left-1/2 h-12 w-16 -translate-x-1/2 rounded-[999px] bg-[#06b6d4] ring-2 ring-white/80">
-          <div className="absolute right-5 top-4 size-2 rounded-full bg-[#17231f]" />
+          <div className="absolute right-5 top-4 size-2 rounded-full bg-tt-ink" />
         </div>
       </div>
     );
@@ -11220,9 +11418,9 @@ function AnimatedPetBuddy({ color, delay, photoUrl, label, kind = "pet" }: { col
       <div className="absolute left-2 top-3 h-9 w-5 -rotate-12 rounded-full bg-[#6b3b19]" />
       <div className="absolute right-2 top-3 h-9 w-5 rotate-12 rounded-full bg-[#6b3b19]" />
       <div className="absolute bottom-0 left-1/2 size-16 -translate-x-1/2 overflow-hidden rounded-full ring-2 ring-white/80" style={{ backgroundColor: color }}>
-        <div className="absolute left-5 top-7 size-2 rounded-full bg-[#17231f]" />
-        <div className="absolute right-5 top-7 size-2 rounded-full bg-[#17231f]" />
-        <div className="absolute bottom-4 left-1/2 size-3 -translate-x-1/2 rounded-full bg-[#17231f]" />
+        <div className="absolute left-5 top-7 size-2 rounded-full bg-tt-ink" />
+        <div className="absolute right-5 top-7 size-2 rounded-full bg-tt-ink" />
+        <div className="absolute bottom-4 left-1/2 size-3 -translate-x-1/2 rounded-full bg-tt-ink" />
       </div>
     </div>
   );
@@ -11231,7 +11429,7 @@ function AnimatedPetBuddy({ color, delay, photoUrl, label, kind = "pet" }: { col
 function Meter({ label, value, color, dark = false }: { label: string; value: number; color: string; dark?: boolean }) {
   return (
     <div>
-      <div className={`mb-2 flex justify-between text-xs font-black ${dark ? "text-white" : "text-[#17231f]"}`}>
+      <div className={`mb-2 flex justify-between text-xs font-black ${dark ? "text-white" : "text-tt-ink"}`}>
         <span>{label}</span>
         <span>{value}%</span>
       </div>
@@ -11243,13 +11441,13 @@ function Meter({ label, value, color, dark = false }: { label: string; value: nu
 }
 
 function getChildLook(childId?: string) {
-  return childLooks[childId ?? ""] ?? { initial: "K", colors: "from-[#ffd166] via-[#f47b20] to-[#165a4b]", joy: 80, love: 80, hair: "#2f1b12" };
+  return childLooks[childId ?? ""] ?? { initial: "K", colors: "from-tt-sun via-tt-tang to-tt-pine", joy: 80, love: 80, hair: "#2f1b12" };
 }
 
 function getPetLook(petId?: string, pet?: Pet) {
   const known = petLooks[petId ?? ""];
   if (known) return known;
-  return { face: "P", colors: "from-[#ffd166] via-[#f47b20] to-[#165a4b]", happiness: 80, loved: 80, kind: inferPetKind(pet?.species) };
+  return { face: "P", colors: "from-tt-sun via-tt-tang to-tt-pine", happiness: 80, loved: 80, kind: inferPetKind(pet?.species) };
 }
 
 function getMissionLifeSkill(mission: Mission): LifeSkillKey {
@@ -11306,7 +11504,7 @@ function getFairnessSummary(missions: Mission[], children: Child[], isKidView = 
     label: balanced ? "Balanced today" : isKidView ? "Fair turns for everyone" : "Needs balancing",
     detail: balanced
       ? isKidView
-        ? "Everyone gets fair turns today. Finish your missions to shine!"
+        ? "Everyone gets fair turns today. Pick something fun when you're ready!"
         : "Kids are set up to finish with similar points."
       : isKidView
         ? "Grown-ups are balancing everyone's turns behind the scenes."

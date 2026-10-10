@@ -66,6 +66,16 @@ function EggVisual({ progress }: { progress: number }) {
   );
 }
 
+export type PetReactionMood = "idle" | "celebrate" | "excited" | "sleepy" | "encourage";
+
+const MOOD_ANIMATION: Record<PetReactionMood, string> = {
+  idle: "",
+  celebrate: "pet-celebrate",
+  excited: "pet-excited",
+  sleepy: "pet-sleepy",
+  encourage: "pet-encourage",
+};
+
 export function PetEvolution({
   approvedCount,
   petKind,
@@ -73,6 +83,7 @@ export function PetEvolution({
   petName,
   personalityQuirk,
   compact = false,
+  mood = "idle",
 }: {
   approvedCount: number;
   petKind: PetKind;
@@ -81,6 +92,8 @@ export function PetEvolution({
   /** Optional quirk line from the pet-personality engine. */
   personalityQuirk?: string;
   compact?: boolean;
+  /** Reaction state from the delight layer — animates the pet visual. */
+  mood?: PetReactionMood;
 }) {
   const stage = evolutionStageFor(approvedCount);
   const next = nextEvolutionStage(approvedCount);
@@ -99,11 +112,11 @@ export function PetEvolution({
       <div className="flex items-center gap-4">
         <div className="relative shrink-0">
           {stage.stage === "egg" ? (
-            <div className="animate-[pet-wiggle_3s_ease-in-out_infinite]">
+            <div className={mood === "idle" ? "animate-[pet-wiggle_3s_ease-in-out_infinite]" : MOOD_ANIMATION[mood]}>
               <EggVisual progress={progress} />
             </div>
           ) : (
-            <div className={`relative ${sizeClass}`}>
+            <div className={`relative ${sizeClass} ${MOOD_ANIMATION[mood]}`}>
               {stage.stage === "wise" && (
                 <>
                   <span className="absolute -left-1 top-2 z-20 animate-[reward-pop_2.2s_ease-in-out_infinite] text-lg" aria-hidden="true">✨</span>

@@ -11,6 +11,23 @@ import { levelLabels } from "@/lib/domain/starter-data";
 import { getChildLook } from "../avatar-looks";
 import { Meter, ProfilePhoto } from "../ui";
 import { PetReadyJourneyPanel } from "./PetReadyJourneyPanel";
+import { DecisionGrowthCard } from "../../DecisionGrowthCard";
+import { playthroughsThisWeek, choiceEventsFor } from "../../ChoiceAdventureSpot";
+import { curiosityCountsFor } from "../../CuriosityMissions";
+import { synthesisCountsFor } from "../../SynthesisMoments";
+import { questionCountFor } from "../../DecisionJournal";
+
+function weeklyInsightFor(childId: string): string | undefined {
+  try {
+    const raw = localStorage.getItem("tailtots-weekly-synthesis-v1");
+    if (!raw) return undefined;
+    const arr = JSON.parse(raw);
+    const mine = (Array.isArray(arr) ? arr : []).filter((e) => e.childId === childId);
+    return mine.length > 0 ? mine[mine.length - 1].text : undefined;
+  } catch {
+    return undefined;
+  }
+}
 export function GrowthPanel(props: {
   childProfiles: Child[];
   badges: BadgeAward[];
@@ -84,9 +101,40 @@ export function GrowthPanel(props: {
           </div>
         ))}
       </div>
+      {/* Thinking growth — decision intelligence (Choice Adventures) */}
+      <div className="mt-5 grid gap-4 lg:grid-cols-2">
+        {props.childProfiles.map((child) => {
+          const week = playthroughsThisWeek(child.id);
+          const summaries = week.map((p) => ({
+            scenarioId: p.scenarioId,
+            scenarioTitle: p.scenarioTitle,
+            exploredCount: p.exploredChoiceIds.length,
+            rewindCount: p.rewindCount,
+            completedAt: p.completedAt,
+          }));
+          const curiosity = curiosityCountsFor(child.id);
+          const synth = synthesisCountsFor(child.id);
+          return (
+            <DecisionGrowthCard
+              key={`thinking-${child.id}`}
+              childName={child.name}
+              summaries={summaries}
+              events={choiceEventsFor(child.id)}
+              curiosity={{
+                questions: curiosity.questions + questionCountFor(child.id),
+                listens: curiosity.listens,
+              }}
+              synthesis={{
+                dotsConnected: synth.dotsConnected,
+                taughtPet: synth.taughtPet,
+                weeklyInsight: weeklyInsightFor(child.id),
+              }}
+            />
+          );
+        })}
+      </div>
       <div className="mt-5 rounded-lg bg-[#f0edff] p-4">
-        <h3 className="font-black">Memory moments</h3>
-        <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+        <h3 className="font-black">Memory moments</h3>        <div className="mt-3 flex flex-col gap-2 sm:flex-row">
           <input className="min-w-0 flex-1 rounded-lg border border-[#ded8c7] px-3 py-3 font-semibold" value={props.momentDraft} onChange={(event) => props.setMomentDraft(event.target.value)} />
           <button onClick={props.addMoment} className="rounded-lg bg-[#7c3aed] px-5 py-3 text-sm font-black text-white">Save moment</button>
         </div>
