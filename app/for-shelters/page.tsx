@@ -24,7 +24,9 @@ export default function ForShelters() {
         <Link href="/" className="text-sm font-bold text-tt-pine hover:underline">← Back to TailTots</Link>
 
         <div className="mt-6 text-center">
-          <p className="text-6xl" aria-hidden="true">🐾</p>
+          <div className="overflow-hidden rounded-3xl shadow-xl">
+            <img src="/landing/audience-shelter-hero.jpg" alt="Young volunteers playing with shelter dogs in the outdoor play yard" className="aspect-[21/9] w-full object-cover" />
+          </div>
           <p className="mt-4 text-xs font-black uppercase tracking-[0.2em] text-tt-pine">For animal shelters</p>
           <h1 className="mt-2 text-4xl font-black tracking-tight text-tt-navy sm:text-5xl">
             Turn shelter visits into character missions

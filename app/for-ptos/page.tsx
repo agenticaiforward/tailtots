@@ -25,7 +25,9 @@ export default function ForPTOs() {
         <Link href="/" className="text-sm font-bold text-tt-pine hover:underline">← Back to TailTots</Link>
 
         <div className="mt-6 text-center">
-          <p className="text-6xl" aria-hidden="true">🎉</p>
+          <div className="overflow-hidden rounded-3xl shadow-xl">
+            <img src="/landing/audience-pto-hero.jpg" alt="Families at a school community fundraiser with a friendly dog" className="aspect-[21/9] w-full object-cover" />
+          </div>
           <p className="mt-4 text-xs font-black uppercase tracking-[0.2em] text-tt-pine">For PTOs & PTAs</p>
           <h1 className="mt-2 text-4xl font-black tracking-tight text-tt-navy sm:text-5xl">
             Fundraise through family challenges
