@@ -7,39 +7,6 @@ import { useState } from "react";
  * Rule: if it takes >12 words to explain, it needs a picture.
  */
 
-export type AudienceLane = "parents" | "shelters" | "schools" | "ptos";
-
-const LANES: Record<AudienceLane, { icon: string; label: string; headline: string; bullets: [string, string, string]; cta: string }> = {
-  parents: {
-    icon: "M24 12a8 8 0 1 0 0 16 8 8 0 0 0 0-16Zm-9 20c0-4 4-7 9-7s9 3 9 7v2H15v-2Z",
-    label: "Parents",
-    headline: "10 minutes a day to raise kind, capable kids.",
-    bullets: ["AI missions built for your child", "See growth you couldn't see before", "You approve everything"],
-    cta: "Start free",
-  },
-  shelters: {
-    icon: "M24 8c-4 0-7 3-7 7 0 2 1 4 2 5l-3 8 4-2 2 3 2-3 4 2-3-8c1-1 2-3 2-5 0-4-3-7-7-7Zm-7 7a2 2 0 1 0 4 0 2 2 0 0 0-4 0Zm14 0a2 2 0 1 0 4 0 2 2 0 0 0-4 0Z",
-    label: "Shelters",
-    headline: "Turn kid missions into donation dollars.",
-    bullets: ["Kids raise money for real animals", "List your shelter in 5 minutes", "Zero cost, live progress tracking"],
-    cta: "List our shelter",
-  },
-  schools: {
-    icon: "M8 10 24 4l16 6v24l-16-6-16 6V10Zm16 6v18",
-    label: "Schools",
-    headline: "Character growth without the testing.",
-    bullets: ["48-mission curriculum, zero teacher prep", "No student scores, ever", "Aggregate kindness reports only"],
-    cta: "Start a pilot",
-  },
-  ptos: {
-    icon: "M12 8v24M8 12l4-4 4 4M16 32l4 4 4-4M6 20h36M6 28h36",
-    label: "PTOs",
-    headline: "Fundraise while building character.",
-    bullets: ["Family challenges that raise money", "Parents see where every dollar goes", "Values + funding in one program"],
-    cta: "Run a drive",
-  },
-};
-
 /** Visual metaphors for Thrivers traits — pictures, not definitions. */
 const TRAIT_METAPHORS = [
   { trait: "Perseverance", visual: "sprout", caption: "Keep going", svg: (
@@ -159,8 +126,6 @@ export function VisualLanding({
   onTryDemo: () => void;
   onSignup: () => void;
 }) {
-  const [lane, setLane] = useState<AudienceLane>("parents");
-  const active = LANES[lane];
 
   return (
     <div className="space-y-6">
@@ -175,44 +140,33 @@ export function VisualLanding({
         <div className="absolute inset-0 bg-gradient-to-t from-tt-navy via-tt-navy/60 to-transparent" aria-hidden="true" />
         <div className="relative p-6 pb-8 pt-16 sm:p-10 sm:pt-24">
           <h1 className="max-w-lg text-4xl font-black leading-[1.05] sm:text-5xl">
-            Kind kids. Capable kids. Ten minutes a day.
+            Turn 10 minutes with your pet into character that lasts a lifetime.
           </h1>
+          <p className="mt-4 max-w-md text-base font-semibold leading-relaxed text-white/85">
+            Kids complete daily missions with your real pet — practicing kindness, responsibility, and courage. You get a simple weekly report on the traits they're building.
+          </p>
           <button
             onClick={onTryDemo}
             className="tt-btn-press mt-6 min-h-14 rounded-2xl bg-tt-sun px-8 py-4 text-base font-black text-tt-ink shadow-xl"
           >
-            Try it now — free
+            Try the first mission free
           </button>
           <p className="mt-3 text-sm font-semibold text-white/70">
-            No signup. Your kid does a mission in 60 seconds.
+            No account needed to start · No ads, ever
           </p>
         </div>
       </section>
 
-      {/* AUDIENCE LANES — 10-second test */}
+      {/* PARENT PROMISE — why parents trust this */}
       <section className="rounded-3xl border border-tt-line bg-tt-paper p-5 sm:p-6">
-        <div className="grid grid-cols-4 gap-2" role="tablist" aria-label="Who is this for?">
-          {(Object.keys(LANES) as AudienceLane[]).map((key) => (
-            <button
-              key={key}
-              role="tab"
-              aria-selected={lane === key}
-              onClick={() => setLane(key)}
-              className={`flex flex-col items-center gap-1.5 rounded-2xl p-3 transition-all ${
-                lane === key ? "bg-tt-navy text-white shadow-md" : "bg-tt-cream text-tt-ink-soft"
-              }`}
-            >
-              <svg viewBox="0 0 48 48" className="size-7" fill="currentColor" aria-hidden="true">
-                <path d={LANES[key].icon} />
-              </svg>
-              <span className="text-xs font-extrabold">{LANES[key].label}</span>
-            </button>
-          ))}
-        </div>
-        <div className="mt-5 text-center" key={lane}>
-          <h2 className="tt-animate-pop-in text-2xl font-black text-tt-ink">{active.headline}</h2>
-          <ul className="mx-auto mt-3 max-w-md space-y-2">
-            {active.bullets.map((b) => (
+        <div className="text-center">
+          <h2 className="text-2xl font-black text-tt-ink">You see the growth. They just see play.</h2>
+          <ul className="mx-auto mt-4 max-w-md space-y-2.5">
+            {[
+              "AI missions built for your child's age and pet",
+              "One weekly insight — never a dashboard to obsess over",
+              "You approve everything. No ads, no chat, ever.",
+            ].map((b) => (
               <li key={b} className="flex items-center justify-center gap-2 text-sm font-bold text-tt-ink-soft">
                 <svg viewBox="0 0 20 20" className="size-4 shrink-0 text-tt-pine" fill="currentColor" aria-hidden="true">
                   <path fillRule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm3.7-9.3a1 1 0 0 0-1.4-1.4L9 10.6 7.7 9.3a1 1 0 0 0-1.4 1.4l2 2a1 1 0 0 0 1.4 0l4-4Z" clipRule="evenodd" />
@@ -222,11 +176,14 @@ export function VisualLanding({
             ))}
           </ul>
           <button
-            onClick={lane === "parents" ? onTryDemo : onSignup}
-            className="tt-btn-press mt-4 min-h-12 rounded-2xl bg-tt-pine px-6 py-3 text-sm font-extrabold text-white"
+            onClick={onTryDemo}
+            className="tt-btn-press mt-5 min-h-12 rounded-2xl bg-tt-pine px-6 py-3 text-sm font-extrabold text-white"
           >
-            {active.cta}
+            Try the first mission free
           </button>
+          <p className="mt-4 text-xs font-semibold text-tt-ink-faint">
+            Working with schools or shelters? <a href="/for-schools" className="underline">Schools</a> · <a href="/for-shelters" className="underline">Shelters</a> · <a href="/for-ptos" className="underline">PTOs</a>
+          </p>
         </div>
       </section>
 
