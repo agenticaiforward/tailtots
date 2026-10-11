@@ -153,8 +153,8 @@ export function VisualLanding({
       emoji: "💭",
       question: "Want a pet?",
       line: "Prove you're ready",
-      img: "/landing/kid-dog.jpg",
-      alt: "Kid dreaming of hugging a dog",
+      img: "/landing/kid-cat.jpg",
+      alt: "Kid dreaming of a cat",
     },
     {
       id: "cant" as const,
@@ -171,8 +171,8 @@ export function VisualLanding({
       {/* HERO — one image, 10 words, ONE CTA */}
       <section className="relative overflow-hidden rounded-3xl bg-tt-navy text-white">
         <img
-          src="/landing/hero-sheep.jpg"
-          alt="Kid petting a fluffy sheep at golden hour"
+          src="/landing/kid-dog.jpg"
+          alt="Kid hugging their dog"
           className="absolute inset-0 h-full w-full object-cover opacity-40"
           loading="eager"
         />
