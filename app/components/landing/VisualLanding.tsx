@@ -324,6 +324,9 @@ export function VisualLanding({
         >
           Join them — try free
         </button>
+        <p className="mt-6 text-center text-sm font-bold text-white/60">
+          Where animals raise good humans.
+        </p>
       </section>
     </div>
   );
