@@ -21,42 +21,62 @@ export function ApprovalsPanel(props: {
   const pendingMissions = props.missions.filter((mission) => mission.completedBy && mission.status === "pending");
   const pendingTransactions = props.transactions.filter((tx) => tx.status === "pending");
   return (
-    <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
-      <p className="text-xs font-black uppercase tracking-[0.18em] text-[#f47b20]">Parent dashboard</p>
-      <h2 className="mt-2 text-3xl font-black">Review before rewards count</h2>
-      <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-[#5f6a65]">
-        Parents stay in control. Completed missions and Kid Bank requests wait here until a grown-up approves them.
+    <section className="rounded-3xl border border-tt-line bg-white p-4 shadow-sm sm:p-5">
+      <div className="flex items-center gap-2">
+        <span className="text-2xl">✅</span>
+        <div>
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-pine">Parent review</p>
+          <h2 className="text-xl font-black text-tt-ink sm:text-2xl">High-fives waiting</h2>
+        </div>
+      </div>
+      <p className="mt-2 text-sm font-semibold leading-5 text-tt-ink/60">
+        Kids did the work — your approval makes the rewards count.
       </p>
-      <div className="mt-5 grid gap-3">
+      <div className="mt-4 grid gap-3">
         {!pendingMissions.length && !pendingTransactions.length && (
-          <div className="rounded-lg bg-[#f8f6ed] p-4 text-sm font-semibold text-[#5f6a65]">
-            Nothing needs review right now. When kids mark missions done or request Kid Bank moves, they will appear here.
+          <div className="rounded-3xl bg-tt-cream/60 p-6 text-center">
+            <div className="text-4xl">🎉</div>
+            <p className="mt-2 text-sm font-black text-tt-ink">All caught up!</p>
+            <p className="text-xs text-tt-ink/60">Completed missions will appear here for your high-five.</p>
           </div>
         )}
         {pendingMissions.map((mission) => (
-          <article key={mission.id} className="flex flex-col justify-between gap-3 rounded-lg bg-[#f8f6ed] p-4 sm:flex-row sm:items-center">
-            <div>
-              <p className="font-semibold">
-                <b>{props.childProfiles.find((child) => child.id === mission.completedBy)?.name}</b> completed {mission.title}. Note: {mission.note}. Approval adds {mission.coins} reward coins
-                {mission.allowanceDollars ? ` and $${mission.allowanceDollars} allowance.` : " and no allowance dollars."}
-              </p>
-              <div className="mt-2 flex flex-wrap gap-2">
-                <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-[#5b21b6]">{getLifeSkillLabel(getMissionLifeSkill(mission))}</span>
-                <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-[#165a4b]">Parent approval creates value evidence</span>
+          <article key={mission.id} className="rounded-3xl bg-gradient-to-br from-amber-50 to-orange-50 p-4 ring-1 ring-orange-200">
+            <div className="flex items-start gap-3">
+              <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-white text-xl shadow-sm">🎯</span>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-bold text-tt-ink">
+                  <span className="font-black">{props.childProfiles.find((child) => child.id === mission.completedBy)?.name}</span>
+                  {" "}finished <span className="font-black">"{mission.title}"</span>
+                </p>
+                {mission.note && (
+                  <p className="mt-1 rounded-2xl bg-white/70 p-2 text-xs italic text-tt-ink/70">"{mission.note}"</p>
+                )}
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  <span className="rounded-full bg-white px-2.5 py-0.5 text-[11px] font-black text-tt-ink shadow-sm">{getLifeSkillLabel(getMissionLifeSkill(mission))}</span>
+                  <span className="rounded-full bg-white px-2.5 py-0.5 text-[11px] font-black text-tt-ink shadow-sm">+{mission.coins} coins{mission.allowanceDollars ? ` + $${mission.allowanceDollars}` : ""}</span>
+                </div>
               </div>
             </div>
-            <div className="grid gap-2 sm:grid-cols-2">
-              <button onClick={() => props.approveMission(mission.id)} className="min-h-11 rounded-lg bg-[#165a4b] px-5 py-2 text-sm font-black text-white">Approve</button>
-              <button onClick={() => props.rejectMission(mission.id)} className="min-h-11 rounded-lg bg-white px-5 py-2 text-sm font-black text-[#7a2c2c]">Send back</button>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <button onClick={() => props.approveMission(mission.id)} className="tt-btn-press min-h-11 rounded-2xl bg-tt-pine px-5 py-2.5 text-sm font-black text-white shadow">Approve 🎉</button>
+              <button onClick={() => props.rejectMission(mission.id)} className="tt-btn-press min-h-11 rounded-2xl bg-white px-5 py-2.5 text-sm font-black text-tt-ink ring-1 ring-tt-line">Send back</button>
             </div>
           </article>
         ))}
         {pendingTransactions.map((tx) => (
-          <article key={tx.id} className="flex flex-col justify-between gap-3 rounded-lg bg-[#fff4d8] p-4 sm:flex-row sm:items-center">
-            <p className="font-semibold"><b>{props.childProfiles.find((child) => child.id === tx.childId)?.name}</b> requested {tx.category} ${tx.amount}: {tx.description}</p>
-            <div className="grid gap-2 sm:grid-cols-2">
-              <button onClick={() => props.approveTransaction(tx.id)} className="min-h-11 rounded-lg bg-[#165a4b] px-5 py-2 text-sm font-black text-white">Approve</button>
-              <button onClick={() => props.rejectTransaction(tx.id)} className="min-h-11 rounded-lg bg-white px-5 py-2 text-sm font-black text-[#7a2c2c]">Decline</button>
+          <article key={tx.id} className="rounded-3xl bg-gradient-to-br from-yellow-50 to-amber-50 p-4 ring-1 ring-yellow-200">
+            <div className="flex items-start gap-3">
+              <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-white text-xl shadow-sm">🪙</span>
+              <p className="flex-1 text-sm font-bold text-tt-ink">
+                <span className="font-black">{props.childProfiles.find((child) => child.id === tx.childId)?.name}</span>
+                {" "}wants <span className="font-black">${tx.amount}</span> for {tx.category}
+                {tx.description && <span className="block mt-1 text-xs font-semibold text-tt-ink/60">{tx.description}</span>}
+              </p>
+            </div>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <button onClick={() => props.approveTransaction(tx.id)} className="tt-btn-press min-h-11 rounded-2xl bg-tt-pine px-5 py-2.5 text-sm font-black text-white shadow">Approve</button>
+              <button onClick={() => props.rejectTransaction(tx.id)} className="tt-btn-press min-h-11 rounded-2xl bg-white px-5 py-2.5 text-sm font-black text-tt-ink ring-1 ring-tt-line">Decline</button>
             </div>
           </article>
         ))}
