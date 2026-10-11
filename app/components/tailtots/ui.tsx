@@ -240,8 +240,8 @@ export function PetSpotlightBanner({
         </span>
       ))}
       <div className="absolute inset-0 grid place-items-center px-4">
-        <div className="flex items-end justify-center gap-4 sm:gap-6">
-          {pets.slice(0, 2).map((pet, i) => (
+        <div className="flex flex-wrap items-end justify-center gap-3 sm:gap-4">
+          {pets.map((pet, i) => (
             <div
               key={pet.id}
               className="flex flex-col items-center tt-animate-pop-in"
@@ -266,11 +266,11 @@ export function PetSpotlightBanner({
                     <img
                       src={pet.photoUrl}
                       alt=""
-                      className="size-24 rounded-full object-cover shadow-2xl ring-4 ring-white/85 sm:size-32"
+                      className="size-16 rounded-full object-cover shadow-2xl ring-4 ring-white/85 sm:size-20"
                     />
                   ) : (
                     <span
-                      className="grid size-24 place-items-center rounded-full bg-white/95 text-5xl shadow-2xl ring-4 ring-white/85 sm:size-32"
+                      className="grid size-16 place-items-center rounded-full bg-white/95 text-3xl shadow-2xl ring-4 ring-white/85 sm:size-20"
                       aria-hidden="true"
                     >
                       🐾
@@ -279,7 +279,7 @@ export function PetSpotlightBanner({
                 </span>
               </button>
               <span
-                className="mt-2 rounded-full bg-white/95 px-3 py-1 text-xs font-black text-tt-ink shadow tt-animate-pop-in"
+                className="mt-1.5 rounded-full bg-white/95 px-2.5 py-0.5 text-[11px] font-black text-tt-ink shadow tt-animate-pop-in"
                 style={{ animationDelay: `${0.35 + i * 0.15}s` }}
               >
                 {pet.name}

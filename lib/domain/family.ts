@@ -26,7 +26,19 @@ export function normalizeNeighborhoodJob(job: NeighborhoodJob): NeighborhoodJob 
   };
 }
 
+/** Demo pet photos — restored if cached data lost them. */
+const DEMO_PET_PHOTOS: Record<string, string> = {
+  jack: "/demo-faces/pets/jack.jpg",
+  jamie: "/demo-faces/pets/jamie.jpg",
+  captain: "/demo-faces/pets/captain.jpg",
+  rb: "/demo-faces/pets/rb.jpg",
+};
+
 export function normalizePetProfile(pet: Pet): Pet {
+  // Restore demo photo if cached state lost it (e.g., from the old egg-blanking bug).
+  if (!pet.photoUrl && DEMO_PET_PHOTOS[pet.id]) {
+    return { ...pet, photoUrl: DEMO_PET_PHOTOS[pet.id] };
+  }
   return pet;
 }
 
