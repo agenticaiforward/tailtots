@@ -124,6 +124,51 @@ export function FamilyFaceParade({
   );
 }
 
+/**
+ * EmojiBubbles — floating emoji bubbles over a photo (usually the pet's).
+ * Pure decoration: pointer-events-none, aria-hidden, transform/opacity only,
+ * and disabled under prefers-reduced-motion via the tt-animate-* utilities.
+ */
+export function EmojiBubbles({
+  emojis = ["✨", "💛", "🐾", "⭐", "🎉"],
+  variant = "banner",
+  className = "",
+}: {
+  emojis?: string[];
+  variant?: "banner" | "medallion";
+  className?: string;
+}) {
+  const spots =
+    variant === "banner"
+      ? [
+          { top: "6%", left: "5%", anim: "tt-animate-float", delay: "0s", size: "text-xl" },
+          { top: "14%", left: "86%", anim: "tt-animate-float-slow", delay: "0.9s", size: "text-2xl" },
+          { top: "58%", left: "3%", anim: "tt-animate-sparkle", delay: "0.4s", size: "text-lg" },
+          { top: "66%", left: "89%", anim: "tt-animate-float", delay: "1.7s", size: "text-xl" },
+          { top: "38%", left: "11%", anim: "tt-animate-bounce-soft", delay: "2.2s", size: "text-base" },
+          { top: "30%", left: "82%", anim: "tt-animate-sparkle", delay: "1.3s", size: "text-base" },
+        ]
+      : [
+          { top: "-6%", left: "-10%", anim: "tt-animate-float", delay: "0s", size: "text-base" },
+          { top: "-10%", left: "72%", anim: "tt-animate-sparkle", delay: "0.7s", size: "text-lg" },
+          { top: "68%", left: "-12%", anim: "tt-animate-bounce-soft", delay: "1.4s", size: "text-sm" },
+          { top: "74%", left: "78%", anim: "tt-animate-float-slow", delay: "2s", size: "text-base" },
+        ];
+  return (
+    <div className={`pointer-events-none absolute inset-0 overflow-visible ${className}`} aria-hidden="true">
+      {spots.slice(0, emojis.length).map((s, i) => (
+        <span
+          key={i}
+          className={`absolute grid place-items-center rounded-full bg-white/90 shadow-md ${s.size} ${s.anim}`}
+          style={{ top: s.top, left: s.left, width: "2em", height: "2em", animationDelay: s.delay }}
+        >
+          {emojis[i]}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 export function ProfilePhoto({
   label,
   initial,

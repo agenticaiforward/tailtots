@@ -17,6 +17,7 @@ import AudienceLanes from "./AudienceLanes";
 import GuidedOnboarding from "./GuidedOnboarding";
 import type { PetTrack } from "../../lib/pet-tracks";
 import { PlaydateQuickCreate } from "./PlaydateQuickCreate";
+import { EmojiBubbles } from "./tailtots/ui";
 import LanternPhilosophy from "./LanternPhilosophy";
 import ExploreMode from "./ExploreMode";
 import { ChoiceAdventureSpot } from "./ChoiceAdventureSpot";
@@ -2542,11 +2543,36 @@ export function TailTotsApp() {
               </figure>
             ) : (
               <div className="relative min-h-[220px] max-w-full overflow-hidden rounded-md bg-[linear-gradient(135deg,#165a4b,#f47b20_58%,#2563eb)] sm:min-h-[280px] lg:min-h-[430px]">
-                <div className="absolute inset-0 grid place-items-center">
-                  <div className="absolute left-8 top-16 rounded-full bg-white/90 px-3 py-1 text-xs font-black text-tt-grape shadow-sm animate-[reward-pop_2.8s_ease-in-out_infinite]">+coins</div>
-                  <div className="absolute right-8 top-24 rounded-full bg-tt-sun px-3 py-1 text-xs font-black text-tt-ink shadow-sm animate-[reward-pop_3.2s_ease-in-out_infinite]">badge</div>
-                  <div className="absolute bottom-28 left-10 rounded-full bg-white/90 px-3 py-1 text-xs font-black text-tt-pine shadow-sm animate-[reward-pop_3.5s_ease-in-out_infinite]">done</div>
-                  <FamilyFaceParade parents={parents} childProfiles={children} pets={pets} animated />
+                <EmojiBubbles />
+                <div className="absolute inset-0 grid place-items-center px-4">
+                  <div className="flex items-end justify-center gap-4 sm:gap-6">
+                    {pets.slice(0, 2).map((pet) => (
+                      <div key={pet.id} className="flex flex-col items-center">
+                        <div className="tt-animate-float-slow">
+                          {pet.photoUrl ? (
+                            <img src={pet.photoUrl} alt={pet.name} className="size-24 rounded-full object-cover shadow-2xl ring-4 ring-white/85 sm:size-32" />
+                          ) : (
+                            <div className="grid size-24 place-items-center rounded-full bg-white/95 text-5xl shadow-2xl ring-4 ring-white/85 sm:size-32" aria-hidden="true">🐾</div>
+                          )}
+                        </div>
+                        <span className="mt-2 rounded-full bg-white/95 px-3 py-1 text-xs font-black text-tt-ink shadow">{pet.name}</span>
+                      </div>
+                    ))}
+                    {pets.length === 0 && (
+                      <div className="tt-animate-float-slow grid size-24 place-items-center rounded-full bg-white/95 text-5xl shadow-2xl ring-4 ring-white/85 sm:size-32" aria-hidden="true">🐾</div>
+                    )}
+                    <div className="flex -space-x-3">
+                      {[...parents, ...children].slice(0, 4).map((person) => (
+                        person.photoUrl ? (
+                          <img key={person.id} src={person.photoUrl} alt={person.name} className="size-12 rounded-full object-cover shadow-lg ring-2 ring-white/85 sm:size-14" />
+                        ) : (
+                          <span key={person.id} className="grid size-12 place-items-center rounded-full bg-white/95 text-sm font-black text-tt-pine shadow-lg ring-2 ring-white/85 sm:size-14" aria-hidden="true">
+                            {person.name.trim()[0]?.toUpperCase() ?? "•"}
+                          </span>
+                        )
+                      ))}
+                    </div>
+                  </div>
                 </div>
                 <div className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-white/90 px-3 py-1 text-[11px] font-black text-tt-pine shadow-sm">
                   {appMode === "real" ? "Your family" : "Demo family"}
@@ -2682,16 +2708,18 @@ export function TailTotsApp() {
                   <p className="mt-2 text-xs font-semibold text-tt-ink-soft">Short, sweet check-ins — about a minute each. 🌟</p>
                 </div>
               )}
-              <Hero
-                child={activeChild}
-                childProfiles={children}
-                setActiveChildId={role === "child" ? requestChildSwitch : setActiveChildId}
-                pendingCount={pendingApprovals.length}
-                taskProgress={taskProgress}
-                approvedMissionCount={activeApprovedMissionCount}
-                setActiveTab={setActiveTab}
-                role={role}
-              />
+              {role !== "child" && (
+                <Hero
+                  child={activeChild}
+                  childProfiles={children}
+                  setActiveChildId={setActiveChildId}
+                  pendingCount={pendingApprovals.length}
+                  taskProgress={taskProgress}
+                  approvedMissionCount={activeApprovedMissionCount}
+                  setActiveTab={setActiveTab}
+                  role={role}
+                />
+              )}
               <MissionsPanel
                 activeChild={activeChild}
                 missions={role === "parent" ? activeChildMissions : kidVisibleMissions}
@@ -5434,14 +5462,8 @@ function Hero({
       <div className="flex flex-col rounded-lg border border-tt-line bg-white p-4 shadow-sm">
         <div className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
           <div>
-            <div className="flex items-center gap-3">
-              <ProfilePhoto label={child?.name ?? "Kid"} initial={childLook.initial} colors={childLook.colors} variant="kid" hair={childLook.hair} photoUrl={child?.photoUrl} />
-              <div>
-                <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-tang">Selected child</p>
-                <h3 className="text-2xl font-black">{child?.name ?? "Add a child"}</h3>
-              </div>
-            </div>
-            <div className="mt-4 grid gap-2">
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-tang">Who&apos;s playing</p>
+            <div className="mt-2 grid gap-2">
               {childProfiles.map((item) => {
                 const look = getChildLook(item.id);
                 const isSelected = item.id === child?.id;
@@ -6010,13 +6032,16 @@ function MissionsPanel(props: {
       {isKidView && statusPet && statusPetStats && statusPetLook && (
         <div className="mt-4 overflow-hidden rounded-xl border border-tt-line bg-tt-cream">
           <div className="flex items-center gap-4 p-4">
-            <PetMedallion
-              label={statusPet.name}
-              petKind={statusPetLook.kind}
-              photoUrl={statusPet.photoUrl}
-              stage={statusPetStats.stage}
-              stageRing={statusPetStats.stageRing}
-            />
+            <span className="relative inline-block shrink-0">
+              <PetMedallion
+                label={statusPet.name}
+                petKind={statusPetLook.kind}
+                photoUrl={statusPet.photoUrl}
+                stage={statusPetStats.stage}
+                stageRing={statusPetStats.stageRing}
+              />
+              <EmojiBubbles variant="medallion" emojis={["✨", "🐾", "💛", "⭐"]} />
+            </span>
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
                 <p className="text-xl font-black">{statusPet.name}</p>
