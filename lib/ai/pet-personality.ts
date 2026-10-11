@@ -5,9 +5,9 @@
  * sticker; a pet with a personality that evolves is a relationship. This
  * module provides:
  *
- *  - petEvolutionStage: deterministic 5-stage evolution (egg → wise) from
- *    lifetime mission counts. No two pets evolve identically because
- *    evolution pace follows the child's own rhythm.
+ *  - petEvolutionStage: deterministic 5-stage bond progression (new → legends) from
+ *    lifetime mission counts. No two bonds grow identically because
+ *    the pace follows the child's own rhythm.
  *  - generatePetPersonality: deterministic species base + trait-influenced
  *    tendencies. Pure function — the "bones" of the personality.
  *  - buildPetPersonalityPrompt: prompt builder for the LLM to generate
@@ -19,30 +19,30 @@
  */
 
 export const PET_EVOLUTION_STAGES = [
-  "egg",
-  "baby",
-  "junior",
-  "adult",
-  "wise",
+  "new",
+  "growing",
+  "friends",
+  "partners",
+  "legends",
 ] as const;
 export type PetEvolutionStage = (typeof PET_EVOLUTION_STAGES)[number];
 
-/** Lifetime completed missions needed to reach each stage. */
+/** Lifetime completed missions needed to reach each bond stage. */
 export const EVOLUTION_THRESHOLDS: Record<PetEvolutionStage, number> = {
-  egg: 0,
-  baby: 5,
-  junior: 25,
-  adult: 75,
-  wise: 150,
+  new: 0,
+  growing: 5,
+  friends: 25,
+  partners: 75,
+  legends: 150,
 };
 
 export function petEvolutionStage(totalCompletedMissions: number): PetEvolutionStage {
   const n = Math.max(0, Math.floor(totalCompletedMissions));
-  if (n >= EVOLUTION_THRESHOLDS.wise) return "wise";
-  if (n >= EVOLUTION_THRESHOLDS.adult) return "adult";
-  if (n >= EVOLUTION_THRESHOLDS.junior) return "junior";
-  if (n >= EVOLUTION_THRESHOLDS.baby) return "baby";
-  return "egg";
+  if (n >= EVOLUTION_THRESHOLDS.legends) return "legends";
+  if (n >= EVOLUTION_THRESHOLDS.partners) return "partners";
+  if (n >= EVOLUTION_THRESHOLDS.friends) return "friends";
+  if (n >= EVOLUTION_THRESHOLDS.growing) return "growing";
+  return "new";
 }
 
 /** Missions remaining until the next evolution stage (null at max). */

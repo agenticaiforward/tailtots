@@ -56,14 +56,12 @@ export default function RealPetHero({
         <h2 className="tt-heading mt-2 text-2xl text-tt-navy">{pet.name}</h2>
         <p className="tt-body text-sm font-bold text-tt-ink-faint">
           {pet.species}
-          {stage.stage !== "egg" && (
-            <span
-              className="ml-2 inline-flex items-center gap-1 rounded-full bg-white/80 px-2.5 py-0.5 text-xs shadow-sm"
-              aria-label={`Evolution stage: ${stage.name}`}
-            >
-              <span aria-hidden="true">{stage.emoji}</span> {stage.name}
-            </span>
-          )}
+          <span
+            className="ml-2 inline-flex items-center gap-1 rounded-full bg-white/80 px-2.5 py-0.5 text-xs shadow-sm"
+            aria-label={`Bond stage: ${stage.name}`}
+          >
+            <span aria-hidden="true">{stage.emoji}</span> {stage.name}
+          </span>
         </p>
         {pet.careNotes && (
           <p className="tt-body mx-auto mt-2 max-w-xs text-xs text-tt-ink-faint">

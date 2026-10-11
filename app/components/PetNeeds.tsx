@@ -182,63 +182,10 @@ function StateOverlays({ signalKind }: { signalKind: NeedSignalKind }) {
   }
 }
 
-/** Illustrated egg that wobbles, glows, and invites interaction. */
-function LivingEgg({
-  needsGlow,
-  onTap,
-  tapWiggleKey,
-  signalKind,
-}: {
-  needsGlow: boolean;
-  onTap: () => void;
-  tapWiggleKey: number;
-  signalKind: NeedSignalKind;
-}) {
-  return (
-    <button
-      onClick={onTap}
-      aria-label="Tap the egg to say hi"
-      className="relative grid size-28 place-items-center sm:size-32"
-      style={{ animation: tapWiggleKey > 0 ? `pet-tap-wiggle 0.5s ease-out, pet-egg-wobble 3.2s ease-in-out 0.5s infinite` : `pet-egg-wobble 3.2s ease-in-out infinite` }}
-      key={tapWiggleKey}
-    >
-      <div
-        className="absolute -inset-3 rounded-full blur-xl transition-opacity duration-1000"
-        style={{ background: "#ffd166", opacity: needsGlow ? 0.45 : 0.12 }}
-        aria-hidden="true"
-      />
-      <svg viewBox="0 0 100 120" className="relative h-full w-full drop-shadow-lg" aria-hidden="true">
-        <path
-          d="M50 6 C74 6 90 44 90 74 C90 100 72 114 50 114 C28 114 10 100 10 74 C10 44 26 6 50 6 Z"
-          fill="#fff7e6"
-          stroke="#e8c76a"
-          strokeWidth="3"
-        />
-        <path d="M30 40 C36 28 44 20 50 18" stroke="#ffe9b8" strokeWidth="6" strokeLinecap="round" fill="none" opacity="0.9" />
-        <circle cx="38" cy="62" r="3.5" fill="#4f625b" />
-        <circle cx="62" cy="62" r="3.5" fill="#4f625b" />
-        <circle cx="39.5" cy="60.5" r="1.2" fill="#fff" />
-        <circle cx="63.5" cy="60.5" r="1.2" fill="#fff" />
-        <path d="M44 74 Q50 78 56 74" stroke="#4f625b" strokeWidth="2.5" fill="none" strokeLinecap="round" />
-        <ellipse cx="30" cy="70" rx="5" ry="3.5" fill="#ffb3a7" opacity="0.7" />
-        <ellipse cx="70" cy="70" rx="5" ry="3.5" fill="#ffb3a7" opacity="0.7" />
-      </svg>
-      <StateOverlays signalKind={signalKind} />
-      <span
-        className="absolute -top-1 right-2 rounded-full bg-white/95 px-2 py-0.5 text-[10px] font-black text-[#17231f] shadow-sm ring-1 ring-[#ded8c7]"
-        style={{ animation: "reward-pop 2.4s ease-in-out infinite" }}
-      >
-        tap me!
-      </span>
-    </button>
-  );
-}
-
 export function PetNeeds({
   petName,
   petKind,
   photoUrl,
-  isEgg,
   compact = false,
   onMissionCelebrated,
   evolutionEmoji,
@@ -250,8 +197,6 @@ export function PetNeeds({
   petName: string;
   petKind: PetKind;
   photoUrl?: string;
-  /** True when the pet hasn't hatched yet — shows the living egg. */
-  isEgg: boolean;
   compact?: boolean;
   /** Parent can pass a counter that increments on mission completion. */
   onMissionCelebrated?: number;
@@ -390,12 +335,9 @@ export function PetNeeds({
       )}
 
       <div className="flex items-center gap-4">
-        {/* The pet — tappable! */}
+        {/* The pet — tappable! Always the real animal. */}
         <div className="relative shrink-0">
-          {isEgg ? (
-            <LivingEgg needsGlow={needsGlow} onTap={handleTapPet} tapWiggleKey={tapWiggleKey} signalKind={signal.kind} />
-          ) : (
-            <button onClick={handleTapPet} aria-label={`Tap ${petName} to say hi`} className="relative block">
+          <button onClick={handleTapPet} aria-label={`Tap ${petName} to say hi`} className="relative block">
               <div className="size-28 sm:size-32" style={{ animation: `${animClass} 2.8s ease-in-out infinite` }}>
                 <PetBuddyFace kind={petKind} photoUrl={photoUrl} label={petName} size="lg" className="!size-full" />
               </div>
@@ -424,7 +366,6 @@ export function PetNeeds({
                 </span>
               )}
             </button>
-          )}
         </div>
 
         {/* Signal + action */}
