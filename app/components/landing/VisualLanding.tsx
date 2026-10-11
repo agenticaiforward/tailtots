@@ -295,26 +295,23 @@ export function VisualLanding({
         </div>
       </section>
 
-      {/* SOCIAL PROOF — photos, not text blocks */}
+      {/* FAMILIES — illustrative lifestyle photography */}
       <section className="overflow-hidden rounded-3xl bg-tt-night p-5 text-white sm:p-6">
-        <h2 className="text-center text-xl font-black">Families are growing</h2>
+        <h2 className="text-center text-xl font-black">Made for families like yours</h2>
+        <p className="mt-1 text-center text-xs font-semibold text-white/50">Illustrative photos</p>
         <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
           {[
-            { src: "/landing/household-african-american-dog.jpg", name: "The Johnsons", missions: "127 missions" },
-            { src: "/landing/household-south-asian-girl-cat-bedroom.jpg", name: "The Patels", missions: "89 missions" },
-            { src: "/landing/household-east-asian-siblings-rabbit-garden.jpg", name: "The Chens", missions: "203 missions" },
-            { src: "/landing/household-latina-girl-guineapig-livingroom.jpg", name: "The Garcias", missions: "64 missions" },
-            { src: "/landing/household-african-american-siblings-dog-park.jpg", name: "The Williams", missions: "156 missions" },
-            { src: "/landing/household-south-asian-cat.jpg", name: "The Sharmas", missions: "98 missions" },
-            { src: "/landing/household-east-asian-rabbit.jpg", name: "The Lius", missions: "174 missions" },
-            { src: "/landing/household-latino-guinea-pig.jpg", name: "The Fernandezes", missions: "71 missions" },
-          ].map((f, i) => (
-            <div key={f.src} className="relative overflow-hidden rounded-2xl">
-              <img src={f.src} alt={`Family ${i + 1} with their pet`} className="aspect-square w-full object-cover" loading="lazy" />
-              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-3 pt-8">
-                <p className="text-xs font-extrabold text-white">{f.name}</p>
-                <p className="text-[11px] font-semibold text-white/80">{f.missions}</p>
-              </div>
+            "/landing/household-african-american-dog.jpg",
+            "/landing/household-south-asian-girl-cat-bedroom.jpg",
+            "/landing/household-east-asian-siblings-rabbit-garden.jpg",
+            "/landing/household-latina-girl-guineapig-livingroom.jpg",
+            "/landing/household-african-american-siblings-dog-park.jpg",
+            "/landing/household-south-asian-cat.jpg",
+            "/landing/household-east-asian-rabbit.jpg",
+            "/landing/household-latino-guinea-pig.jpg",
+          ].map((src, i) => (
+            <div key={src} className="relative overflow-hidden rounded-2xl">
+              <img src={src} alt={`Family with pet — illustrative photo ${i + 1}`} className="aspect-square w-full object-cover" loading="lazy" />
             </div>
           ))}
         </div>
