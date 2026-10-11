@@ -171,6 +171,9 @@ export function VisualLanding({
           <h1 className="max-w-lg text-4xl font-black leading-[1.05] sm:text-5xl">
             Turn 10 minutes with your pet into character that lasts a lifetime.
           </h1>
+          <p className="mt-3 text-sm font-extrabold uppercase tracking-widest text-tt-sun">
+            Have a pet? Want one? Love animals? There's a track for you.
+          </p>
           <p className="mt-4 max-w-md text-base font-semibold leading-relaxed text-white/85">
             Kids complete daily missions with your real pet — practicing kindness, responsibility, and courage. You get a simple weekly report on the traits they're building.
           </p>
@@ -181,7 +184,7 @@ export function VisualLanding({
             Try the first mission free
           </button>
           <p className="mt-3 text-sm font-semibold text-white/70">
-            No account needed to start · Free forever plan
+            No account needed to start · Free for founding families
           </p>
         </div>
       </section>
