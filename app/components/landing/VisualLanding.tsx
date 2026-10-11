@@ -72,6 +72,16 @@ const TRAIT_METAPHORS = [
       <ellipse cx="50" cy="46" rx="8" ry="5" fill="#eef2ff" />
     </svg>
   )},
+  { trait: "Respect", visual: "bridge", caption: "Meet halfway", svg: (
+    <svg viewBox="0 0 64 64" className="size-16" aria-hidden="true">
+      <path d="M8 38 Q32 10 56 38" fill="none" stroke="#165a4b" strokeWidth="4" strokeLinecap="round" />
+      <line x1="8" y1="38" x2="56" y2="38" stroke="#165a4b" strokeWidth="4" strokeLinecap="round" />
+      <line x1="20" y1="30" x2="20" y2="38" stroke="#4ade80" strokeWidth="3" strokeLinecap="round" />
+      <line x1="32" y1="25" x2="32" y2="38" stroke="#4ade80" strokeWidth="3" strokeLinecap="round" />
+      <line x1="44" y1="30" x2="44" y2="38" stroke="#4ade80" strokeWidth="3" strokeLinecap="round" />
+      <path d="M6 50 q4 -3 8 0 t8 0 t8 0 t8 0 t8 0 t8 0" fill="none" stroke="#93c5fd" strokeWidth="2.5" strokeLinecap="round" />
+    </svg>
+  )},
 ];
 
 const HOW_IT_WORKS = [
@@ -134,7 +144,7 @@ export function VisualLanding({
       id: "have" as const,
       emoji: "🐶",
       question: "Have a pet?",
-      line: "Missions with your real pet",
+      line: "Missions with your pet",
       img: "/landing/kid-dog.jpg",
       alt: "Happy kid hugging their dog",
     },
@@ -172,19 +182,19 @@ export function VisualLanding({
             Turn 10 minutes with your pet into character that lasts a lifetime.
           </h1>
           <p className="mt-3 text-sm font-extrabold uppercase tracking-widest text-tt-sun">
-            Have a pet? Want one? Love animals? There's a track for you.
+            Have a pet? Want one? Can't have one? There's a track for you.
           </p>
           <p className="mt-4 max-w-md text-base font-semibold leading-relaxed text-white/85">
-            Kids complete daily missions with your real pet — practicing kindness, responsibility, and courage. You get a simple weekly report on the traits they're building.
+            Kids complete daily missions with your real pet — practicing kindness, responsibility, courage, and real-world life skills. You get a simple weekly report on the traits they're building.
           </p>
           <button
             onClick={onTryDemo}
             className="tt-btn tt-btn-sun tt-btn-lg tt-motion-pop mt-6"
           >
-            Try the first mission free
+            Try a mission free
           </button>
           <p className="mt-3 text-sm font-semibold text-white/70">
-            No account needed to start · Free for founding families
+            Try the demo — no account needed · Free for founding families
           </p>
         </div>
       </section>
@@ -235,7 +245,7 @@ export function VisualLanding({
             onClick={onTryDemo}
             className="tt-btn tt-btn-primary mt-5"
           >
-            Try the first mission free
+            Try a mission free
           </button>
           <p className="mt-4 text-xs font-semibold text-tt-ink-faint">
             Working with schools or shelters? <a href="/for-schools" className="underline">Schools</a> · <a href="/for-shelters" className="underline">Shelters</a> · <a href="/for-ptos" className="underline">PTOs</a>
@@ -283,7 +293,7 @@ export function VisualLanding({
       {/* TRAIT METAPHORS — pictures, not definitions */}
       <section className="rounded-3xl border border-tt-line bg-tt-paper p-5 sm:p-6">
         <h2 className="text-center text-xl font-black text-tt-ink">What kids grow here</h2>
-        <p className="mt-1 text-center text-sm font-semibold text-tt-ink-soft">Seven strengths. Zero lectures.</p>
+        <p className="mt-1 text-center text-sm font-semibold text-tt-ink-soft">Eight strengths. Zero lectures.</p>
         <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
           {TRAIT_METAPHORS.map((t) => (
             <div key={t.trait} className="flex flex-col items-center rounded-2xl bg-tt-cream p-4 text-center transition-transform hover:scale-105">
