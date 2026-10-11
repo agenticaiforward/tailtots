@@ -179,7 +179,7 @@ export function VisualLanding({
           </p>
           <button
             onClick={onTryDemo}
-            className="tt-btn-press mt-6 min-h-14 rounded-2xl bg-tt-sun px-8 py-4 text-base font-black text-tt-ink shadow-xl"
+            className="tt-btn tt-btn-sun tt-btn-lg tt-motion-pop mt-6"
           >
             Try the first mission free
           </button>
@@ -233,7 +233,7 @@ export function VisualLanding({
           </ul>
           <button
             onClick={onTryDemo}
-            className="tt-btn-press mt-5 min-h-12 rounded-2xl bg-tt-pine px-6 py-3 text-sm font-extrabold text-white"
+            className="tt-btn tt-btn-primary mt-5"
           >
             Try the first mission free
           </button>
@@ -319,7 +319,7 @@ export function VisualLanding({
         </div>
         <button
           onClick={onTryDemo}
-          className="tt-btn-press mx-auto mt-5 block min-h-12 rounded-2xl bg-tt-sun px-8 py-3 text-sm font-black text-tt-ink"
+          className="tt-btn tt-btn-sun mx-auto mt-5"
         >
           Join them — try free
         </button>

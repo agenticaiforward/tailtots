@@ -1,5 +1,7 @@
 "use client";
 
+import { TtIllustration } from "./TtIllustration";
+
 /**
  * GuidedOnboarding — the Duolingo lesson-one loop, rebuilt around REAL pets.
  *
@@ -128,7 +130,7 @@ export default function GuidedOnboarding({
           {/* STEP 2b: Virtual buddy picker (WANT / CANT tracks) */}
           {step === "pet" && track !== "have" && track !== null && (
             <div className="text-center">
-              <p className="text-5xl" aria-hidden="true">💛</p>
+              <div className="mx-auto w-fit tt-motion-pop"><TtIllustration kind="hands" className="size-20" /></div>
               <h2 className="tt-heading mt-3 text-tt-navy">Meet your buddy!</h2>
               <p className="tt-body mt-2 text-tt-ink-faint">
                 {track === "want"
@@ -222,17 +224,17 @@ export default function GuidedOnboarding({
               <h2 className="tt-heading mt-3 text-tt-navy">Amazing!</h2>
               <p className="tt-body mt-2 leading-6 text-tt-ink-faint">
                 {heroPet.name} is doing a happy dance! You just earned your first{" "}
-                <strong className="text-tt-pine">Kindness Stone</strong>. 🪨✨
+                <strong className="text-tt-pine">Kindness Stone</strong>.
               </p>
               <div className="mx-auto mt-5 flex max-w-xs items-center justify-center gap-3 rounded-2xl bg-tt-cream p-4">
-                <p className="text-4xl" aria-hidden="true">🪨</p>
+                <TtIllustration kind="celebrate" className="size-12" />
                 <div className="text-left">
                   <p className="tt-body text-sm font-black text-tt-navy">Kindness Stone</p>
                   <p className="tt-body text-xs text-tt-ink-faint">1 of many to collect</p>
                 </div>
               </div>
               <p className="tt-body mt-4 text-sm font-bold text-tt-pine">
-                That was TailTots — tiny missions, real growth. 💛
+                That was TailTots — tiny missions, real growth.
               </p>
               <button
                 onClick={() => setStep("signup")}
