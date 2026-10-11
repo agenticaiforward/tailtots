@@ -22,6 +22,8 @@ import { useState } from "react";
 import PetTrackSelector from "./PetTrackSelector";
 import RealPetProfile from "./RealPetProfile";
 import AlivePet from "./AlivePet";
+import { JourneyAnimalPicker, parseJourneySelection } from "./journey/GreatJourney";
+import { getJourneyAnimal, getShelterAnimal } from "../../lib/great-journey/animals";
 import { petKindFor } from "./KidExperience";
 import type { PetTrack } from "../../lib/pet-tracks";
 import type { Pet } from "../../lib/types";
@@ -62,17 +64,41 @@ export default function GuidedOnboarding({
   const [track, setTrack] = useState<PetTrack | null>(initialTrack ?? null);
   const [realPets, setRealPets] = useState<Pet[]>([]);
   const [buddy, setBuddy] = useState(VIRTUAL_BUDDIES[0]);
+  const [journeySelection, setJourneySelection] = useState<string | null>(null);
   const [missionDone, setMissionDone] = useState(false);
+
+  const journeyParsed = journeySelection ? parseJourneySelection(journeySelection) : null;
 
   const result = {
     track: track ?? "want",
     pets: realPets,
-    virtualBuddyId: track === "have" ? undefined : buddy.id,
+    virtualBuddyId:
+      track === "have" ? undefined : (journeySelection ?? `buddy:${buddy.id}`),
   };
 
-  /** The display pet: real pet photo first, else the virtual buddy. */
+  /** The display pet: real pet photo first, else the journey animal, else the virtual buddy. */
+  const journeyHero: Pet | null =
+    track !== "have" && journeyParsed
+      ? (() => {
+          const wild = journeyParsed.kind === "wild" ? getJourneyAnimal(journeyParsed.animalId) : null;
+          const shelter = journeyParsed.kind === "shelter" ? getShelterAnimal(journeyParsed.animalId) : null;
+          const name = wild?.name ?? shelter?.name ?? "Buddy";
+          const emoji = wild?.emoji ?? shelter?.emoji ?? "🐾";
+          return {
+            id: `journey-${journeyParsed.animalId}`,
+            name,
+            species: emoji,
+            favoriteFood: "",
+            careNotes: "",
+            vet: "",
+            medicine: "",
+          };
+        })()
+      : null;
+
   const heroPet: Pet | null =
     realPets[0] ??
+    journeyHero ??
     (track !== "have"
       ? { id: `virtual-${buddy.id}`, name: buddy.name, species: buddy.id, favoriteFood: "", careNotes: "", vet: "", medicine: "" }
       : null);
@@ -127,39 +153,44 @@ export default function GuidedOnboarding({
             />
           )}
 
-          {/* STEP 2b: Virtual buddy picker (WANT / CANT tracks) */}
+          {/* STEP 2b: The Great Journey picker (WANT / CANT tracks) */}
           {step === "pet" && track !== "have" && track !== null && (
             <div className="text-center">
-              <div className="mx-auto w-fit tt-motion-pop"><TtIllustration kind="hands" className="size-20" /></div>
-              <h2 className="tt-heading mt-3 text-tt-navy">Meet your buddy!</h2>
+              <h2 className="tt-heading mt-3 text-tt-navy">
+                {track === "want" ? "Choose your traveling companion" : "Meet your shelter friend"}
+              </h2>
               <p className="tt-body mt-2 text-tt-ink-faint">
                 {track === "want"
-                  ? "Care for your buddy every day to show you're ready for a real pet."
-                  : "Your buddy grows with every kindness mission you complete."}
+                  ? "A real animal on a real journey. Your missions move them forward — and show you're ready for a real pet."
+                  : "A real animal on the road home. Your kindness missions light the way."}
               </p>
-              <div className="mt-5 grid grid-cols-3 gap-3">
-                {VIRTUAL_BUDDIES.map((b) => (
-                  <button
-                    key={b.id}
-                    onClick={() => setBuddy(b)}
-                    aria-pressed={buddy.id === b.id}
-                    className={`rounded-2xl border-2 p-4 text-center transition-all ${
-                      buddy.id === b.id
-                        ? "border-tt-pine bg-tt-pine-tint shadow-md"
-                        : "border-tt-line bg-white hover:border-tt-pine/50"
-                    }`}
-                  >
-                    <p className="text-4xl" aria-hidden="true">{b.emoji}</p>
-                    <p className="tt-body mt-2 text-sm font-black text-tt-navy">{b.name}</p>
-                    <p className="tt-body text-xs text-tt-ink-faint">{b.trait}</p>
-                  </button>
-                ))}
+              <div className="mt-5 text-left">
+                <JourneyAnimalPicker
+                  track={track}
+                  selectedId={journeySelection}
+                  onSelect={setJourneySelection}
+                />
               </div>
               <button
-                onClick={() => setStep("mission")}
+                onClick={() => {
+                  const parsed = journeySelection ? parseJourneySelection(journeySelection) : null;
+                  if (parsed) {
+                    if (typeof window !== "undefined") {
+                      try {
+                        window.localStorage.setItem(
+                          "tt-onboarding-journey",
+                          JSON.stringify(parsed),
+                        );
+                      } catch {
+                        /* ignore */
+                      }
+                    }
+                  }
+                  setStep("mission");
+                }}
                 className="tt-heading mt-6 min-h-12 w-full rounded-xl bg-tt-pine px-6 py-3 text-sm text-white"
               >
-                Meet {buddy.name} →
+                Start the journey →
               </button>
               <button onClick={() => setStep("track")} className="tt-body mt-2 text-sm font-bold text-tt-ink-faint">
                 ← Back
