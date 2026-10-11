@@ -26,6 +26,10 @@ import type { ConsentGrant, EcoArtifact } from "../../lib/ecosystem/types";
 import { CuriosityMissions } from "./CuriosityMissions";
 import { SynthesisZone } from "./SynthesisMoments";
 import { TRAIT_META } from "../../lib/character-curriculum";
+import { normalizePetProfile } from "../../lib/domain/family";
+import { isMissionAgeAppropriate, getAgeFitCopy } from "../../lib/domain/missions";
+import { PhotoCropModal } from "./tailtots/panels/PhotoCropModal";
+import { cropProfileImage, resizeImageFile, loadImage, fileToDataUrl } from "./tailtots/image-utils";
 import { playClick } from "../../lib/sound";
 import { InviteFamily } from "./InviteFamily";
 import { PlaydateClaimView } from "./PlaydateClaimView";
@@ -5538,6 +5542,23 @@ function normalizeChildProfile(child: Child): Child {
     age: child.id === "sahasra" ? 6 : child.id === "aarush" ? 9 : child.age ?? 8,
     secretCode: "",
   };
+}
+
+/**
+ * Parent-to-parent thank-you text for a completed neighborhood job.
+ * Anonymized by design: the poster learns "a neighborhood family" completed
+ * the job — never a kid's name, photo, or age. This is the ONLY cross-family
+ * text the app generates for neighborhood jobs.
+ */
+export function buildPosterThankYou(job: Pick<NeighborhoodJob, "title" | "pet" | "time">): string {
+  return [
+    `Hi! A neighborhood family just completed your TailTots helper job: "${job.title}".`,
+    job.pet ? `Job: ${job.pet}.` : "",
+    job.time ? `When: ${job.time}.` : "",
+    "Thank you for trusting the neighborhood loop — a parent supervised every step, and your posting made a kid's day more capable and kind. — via TailTots (parent to parent)",
+  ]
+    .filter(Boolean)
+    .join("\n");
 }
 
 function normalizeNeighborhoodJob(job: NeighborhoodJob): NeighborhoodJob {
