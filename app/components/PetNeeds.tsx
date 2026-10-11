@@ -116,41 +116,65 @@ function stateAnimation(signalKind: NeedSignalKind, sleeping: boolean): string {
   }
 }
 
-/** State overlays: stink lines, thought bubbles, etc. */
+/**
+ * State emojis — big, expressive, right ON the pet's photo.
+ * A 5-year-old glances and KNOWS: 🍖 = hungry, 🫧 = bath time, 💤 = sleepy.
+ * After care (fed/cleaned/exercised/played) a matching burst celebrates.
+ */
 function StateOverlays({ signalKind }: { signalKind: NeedSignalKind }) {
+  const bubble =
+    "absolute grid place-items-center rounded-full bg-white/95 shadow-lg ring-1 ring-[#ded8c7]";
   switch (signalKind) {
     case "hungry":
       return (
-        <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-2xl bg-white/95 px-2 py-1 text-lg shadow-sm ring-1 ring-[#ded8c7]"
-          style={{ animation: "reward-pop 1.8s ease-in-out infinite" }} aria-hidden="true">
-          🍽️💭
+        <span
+          className={`${bubble} -top-4 left-1/2 -translate-x-1/2 px-2.5 py-1.5 text-3xl`}
+          style={{ animation: "reward-pop 1.8s ease-in-out infinite" }}
+          aria-hidden="true"
+        >
+          🍖
         </span>
       );
     case "dirty":
       return (
         <>
-          <span className="stink-line absolute left-2 top-4 text-lg" aria-hidden="true">〰️</span>
-          <span className="stink-line absolute right-3 top-8 text-base" style={{ animationDelay: "0.5s" }} aria-hidden="true">〰️</span>
-          <span className="stink-line absolute left-5 top-12 text-sm" style={{ animationDelay: "1s" }} aria-hidden="true">〰️</span>
+          <span className="absolute left-0 top-5 text-2xl tt-animate-float" aria-hidden="true">🫧</span>
+          <span className="absolute right-1 top-10 text-xl tt-animate-float-slow" style={{ animationDelay: "0.6s" }} aria-hidden="true">🧼</span>
+          <span className="absolute left-3 top-16 text-lg tt-animate-sparkle" style={{ animationDelay: "1.1s" }} aria-hidden="true">🫧</span>
         </>
       );
-    case "wantsPlay":
+    case "sleepy":
+    case "resting":
       return (
-        <span className="absolute -top-2 -right-1 text-xl" style={{ animation: "pet-excited 1.2s ease-in-out infinite" }} aria-hidden="true">
-          👋
+        <span className="absolute -top-2 right-0 z-10 text-3xl zzz-float" aria-hidden="true">💤</span>
+      );
+    case "wantsPlay":
+    case "needsLove":
+      return (
+        <span
+          className={`${bubble} -top-3 -right-2 px-2.5 py-1.5 text-3xl`}
+          style={{ animation: "pet-excited 1.2s ease-in-out infinite" }}
+          aria-hidden="true"
+        >
+          🧸
         </span>
       );
     case "needsExercise":
       return (
-        <span className="absolute -top-3 left-1/2 -translate-x-1/2 text-xl" style={{ animation: "pet-bouncy 0.8s ease-in-out infinite" }} aria-hidden="true">
-          🏃💨
+        <span
+          className={`${bubble} -top-4 left-1/2 -translate-x-1/2 px-2.5 py-1.5 text-3xl`}
+          style={{ animation: "pet-bouncy 0.8s ease-in-out infinite" }}
+          aria-hidden="true"
+        >
+          ⚽
         </span>
       );
     case "happy":
       return (
         <>
-          <span className="absolute -top-1 -left-1 text-base" style={{ animation: "reward-pop 2s ease-in-out infinite" }} aria-hidden="true">✨</span>
-          <span className="absolute -top-2 right-4 text-sm" style={{ animation: "reward-pop 2s ease-in-out 0.6s infinite" }} aria-hidden="true">💛</span>
+          <span className="absolute -top-2 -left-2 z-10 text-2xl" style={{ animation: "reward-pop 2s ease-in-out infinite" }} aria-hidden="true">🎉</span>
+          <span className="absolute -top-3 right-4 z-10 text-xl" style={{ animation: "reward-pop 2s ease-in-out 0.5s infinite" }} aria-hidden="true">✨</span>
+          <span className="absolute right-0 top-1/2 z-10 text-xl" style={{ animation: "reward-pop 2s ease-in-out 1s infinite" }} aria-hidden="true">💛</span>
         </>
       );
     default:
@@ -255,6 +279,7 @@ export function PetNeeds({
   const [justFed, setJustFed] = useState<string | null>(null);
   const [justCleaned, setJustCleaned] = useState(false);
   const [justExercised, setJustExercised] = useState(false);
+  const [justPlayed, setJustPlayed] = useState(false);
   const prevCelebrated = useRef(onMissionCelebrated);
 
   // Persist on change
@@ -307,6 +332,8 @@ export function PetNeeds({
   const handlePlay = useCallback(() => {
     update((s) => playWithPet(s));
     setTapWiggleKey((k) => k + 1);
+    setJustPlayed(true);
+    window.setTimeout(() => setJustPlayed(false), 1800);
   }, [update]);
 
   const handleClean = useCallback(() => {
@@ -389,6 +416,11 @@ export function PetNeeds({
               {justExercised && (
                 <span className="absolute inset-0 grid place-items-center text-4xl" style={{ animation: "reward-pop 1.8s ease-out forwards" }} aria-hidden="true">
                   🏃💨
+                </span>
+              )}
+              {justPlayed && (
+                <span className="absolute inset-0 grid place-items-center text-4xl" style={{ animation: "reward-pop 1.8s ease-out forwards" }} aria-hidden="true">
+                  💛🎉
                 </span>
               )}
             </button>

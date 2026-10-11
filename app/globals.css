@@ -388,6 +388,10 @@ button {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-6px); }
 }
+@keyframes tt-breathe {
+  0%, 100% { opacity: 0.45; transform: scale(1); }
+  50% { opacity: 0.85; transform: scale(1.15); }
+}
 
 .tt-animate-float { animation: tt-float 5s ease-in-out infinite; }
 .tt-animate-float-slow { animation: tt-float-slow 7s ease-in-out infinite; }
@@ -395,6 +399,7 @@ button {
 .tt-animate-wiggle-hover:hover { animation: tt-wiggle 0.5s ease-in-out; }
 .tt-animate-sparkle { animation: tt-sparkle 2.6s ease-in-out infinite; }
 .tt-animate-bounce-soft { animation: tt-bounce-soft 2.2s ease-in-out infinite; }
+.tt-animate-breathe { animation: tt-breathe 6s ease-in-out infinite; }
 .tt-confetti-piece { animation: tt-confetti-fall 1.6s ease-in forwards; }
 
 .tt-marquee-track {
@@ -436,8 +441,17 @@ button {
   .tt-animate-wiggle-hover:hover,
   .tt-animate-sparkle,
   .tt-animate-bounce-soft,
+  .tt-animate-breathe,
   .tt-confetti-piece,
   .tt-marquee-track {
+    animation: none !important;
+  }
+  /* Same utilities/ambient loops when applied via inline style (e.g. banner choreography) */
+  [style*="tt-float"],
+  [style*="tt-sparkle"],
+  [style*="tt-bounce-soft"],
+  [style*="tt-breathe"],
+  [style*="pet-tap-wiggle"] {
     animation: none !important;
   }
   .tt-card-lift:hover { transform: none; }

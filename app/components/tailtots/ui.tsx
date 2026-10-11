@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import type { Child, Pet } from "@/lib/types";
 import type { ParentProfile, PetKind } from "@/lib/domain/family-types";
@@ -165,6 +166,185 @@ export function EmojiBubbles({
           {emojis[i]}
         </span>
       ))}
+    </div>
+  );
+}
+
+/**
+ * PetSpotlightBanner — the family hero when no family photo is uploaded.
+ *
+ * Complete animation in three acts:
+ *   1. ENTRANCE (mount): pet springs in, name pill rises, family medallions
+ *      stagger in, emoji bubbles pop in one by one.
+ *   2. AMBIENT: pet floats slow, warm glow breathes, bubbles twinkle —
+ *      calm loops, never hyperactive.
+ *   3. INTERACTIVE: tapping the pet wiggles it and bursts a 💛.
+ *
+ * Premium, not childish: choreographed motion with a beginning, middle,
+ * and rest — versus the old endlessly-waving blob characters.
+ * Everything is transform/opacity and disabled under reduced motion.
+ */
+export function PetSpotlightBanner({
+  pets,
+  parents,
+  children,
+  label,
+}: {
+  pets: { id: string; name: string; photoUrl?: string }[];
+  parents: { id: string; name: string; photoUrl?: string }[];
+  children: { id: string; name: string; photoUrl?: string }[];
+  label: string;
+}) {
+  const [tapKey, setTapKey] = useState(0);
+  const [burstKey, setBurstKey] = useState(0);
+
+  function petTap() {
+    setTapKey((k) => k + 1);
+    setBurstKey((b) => b + 1);
+    window.setTimeout(() => setBurstKey(0), 1600);
+  }
+
+  const bubbles = ["✨", "💛", "🐾", "⭐", "🎉", "💫"];
+  const spots = [
+    { top: "6%", left: "5%", size: "1.25rem" },
+    { top: "14%", left: "86%", size: "1.5rem" },
+    { top: "58%", left: "3%", size: "1.1rem" },
+    { top: "66%", left: "89%", size: "1.25rem" },
+    { top: "38%", left: "11%", size: "1rem" },
+    { top: "30%", left: "82%", size: "1rem" },
+  ];
+
+  return (
+    <div className="relative min-h-[220px] max-w-full overflow-hidden rounded-md bg-[linear-gradient(135deg,#165a4b,#f47b20_58%,#2563eb)] sm:min-h-[280px] lg:min-h-[430px]">
+      {/* breathing warm glow behind the pet */}
+      <div
+        className="absolute left-1/2 top-1/2 size-72 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/15 blur-3xl tt-animate-breathe"
+        aria-hidden="true"
+      />
+      {/* emoji bubbles: pop-in entrance, then gentle float */}
+      {bubbles.map((e, i) => (
+        <span
+          key={i}
+          className="absolute grid place-items-center rounded-full bg-white/90 shadow-md"
+          style={{
+            top: spots[i].top,
+            left: spots[i].left,
+            width: "2.4em",
+            height: "2.4em",
+            fontSize: spots[i].size,
+            animation: `tt-pop-in 0.5s cubic-bezier(0.22,1.4,0.36,1) ${0.55 + i * 0.12}s both, tt-float-slow 7s ease-in-out ${1.1 + i * 0.12}s infinite`,
+          }}
+          aria-hidden="true"
+        >
+          {e}
+        </span>
+      ))}
+      <div className="absolute inset-0 grid place-items-center px-4">
+        <div className="flex items-end justify-center gap-4 sm:gap-6">
+          {pets.slice(0, 2).map((pet, i) => (
+            <div
+              key={pet.id}
+              className="flex flex-col items-center tt-animate-pop-in"
+              style={{ animationDelay: `${0.1 + i * 0.15}s` }}
+            >
+              <button
+                onClick={petTap}
+                aria-label={`Say hi to ${pet.name}`}
+                className="tt-btn-press rounded-full"
+              >
+                <span
+                  key={tapKey}
+                  className="block"
+                  style={{
+                    animation:
+                      tapKey > 0
+                        ? "pet-tap-wiggle 0.5s ease-out, tt-float-slow 7s ease-in-out 0.5s infinite"
+                        : "tt-float-slow 7s ease-in-out infinite",
+                  }}
+                >
+                  {pet.photoUrl ? (
+                    <img
+                      src={pet.photoUrl}
+                      alt=""
+                      className="size-24 rounded-full object-cover shadow-2xl ring-4 ring-white/85 sm:size-32"
+                    />
+                  ) : (
+                    <span
+                      className="grid size-24 place-items-center rounded-full bg-white/95 text-5xl shadow-2xl ring-4 ring-white/85 sm:size-32"
+                      aria-hidden="true"
+                    >
+                      🐾
+                    </span>
+                  )}
+                </span>
+              </button>
+              <span
+                className="mt-2 rounded-full bg-white/95 px-3 py-1 text-xs font-black text-tt-ink shadow tt-animate-pop-in"
+                style={{ animationDelay: `${0.35 + i * 0.15}s` }}
+              >
+                {pet.name}
+              </span>
+            </div>
+          ))}
+          {pets.length === 0 && (
+            <div className="flex flex-col items-center tt-animate-pop-in" style={{ animationDelay: "0.1s" }}>
+              <span className="block tt-animate-float-slow">
+                <span
+                  className="grid size-24 place-items-center rounded-full bg-white/95 text-5xl shadow-2xl ring-4 ring-white/85 sm:size-32"
+                  aria-hidden="true"
+                >
+                  🐾
+                </span>
+              </span>
+              <span
+                className="mt-2 rounded-full bg-white/95 px-3 py-1 text-xs font-black text-tt-ink shadow tt-animate-pop-in"
+                style={{ animationDelay: "0.35s" }}
+              >
+                Your pet
+              </span>
+            </div>
+          )}
+          {/* family: static photo medallions, staggered entrance — no waving arms */}
+          <div className="flex -space-x-3">
+            {[...parents, ...children].slice(0, 4).map((person, i) => (
+              <span
+                key={person.id}
+                className="tt-animate-pop-in"
+                style={{ animationDelay: `${0.55 + i * 0.1}s` }}
+              >
+                {person.photoUrl ? (
+                  <img
+                    src={person.photoUrl}
+                    alt={person.name}
+                    className="size-12 rounded-full object-cover shadow-lg ring-2 ring-white/85 sm:size-14"
+                  />
+                ) : (
+                  <span
+                    className="grid size-12 place-items-center rounded-full bg-white/95 text-sm font-black text-tt-pine shadow-lg ring-2 ring-white/85 sm:size-14"
+                    aria-hidden="true"
+                  >
+                    {person.name.trim()[0]?.toUpperCase() ?? "•"}
+                  </span>
+                )}
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+      {/* tap burst */}
+      {burstKey > 0 && (
+        <span
+          key={burstKey}
+          className="absolute left-1/2 top-[28%] -translate-x-1/2 text-5xl"
+          style={{ animation: "reward-pop 1.6s ease-out forwards" }}
+          aria-hidden="true"
+        >
+          💛
+        </span>
+      )}
+      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-white/90 px-3 py-1 text-[11px] font-black text-tt-pine shadow-sm">
+        {label}
+      </div>
     </div>
   );
 }
