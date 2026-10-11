@@ -171,8 +171,8 @@ export function VisualLanding({
       {/* HERO — one image, 10 words, ONE CTA */}
       <section className="relative overflow-hidden rounded-3xl bg-tt-navy text-white">
         <img
-          src="/landing/kid-dog.jpg"
-          alt="Kid hugging their dog"
+          src="/landing/hero-candid.jpg"
+          alt="Laughing kid with their golden retriever in the backyard"
           className="absolute inset-0 h-full w-full object-cover opacity-40"
           loading="eager"
         />
