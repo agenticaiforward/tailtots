@@ -21,6 +21,7 @@ import ReadinessMeter from "./ReadinessMeter";
 import ShelterBuddy from "./ShelterBuddy";
 import { BraveTryStreak, braveTriesFromMissions } from "./BraveTryStreak";
 import { MemoryStones } from "./MemoryStones";
+import GreatJourney from "./journey/GreatJourney";
 import type { PetKind } from "./pet-buddy";
 
 export function petKindFor(species: string): PetKind {
@@ -126,6 +127,12 @@ export function KidExperienceTop({ child, pets, missions }: { child: Child; pets
       )}
       {/* CANT track: shelter buddy connection */}
       {track === "cant" && <ShelterBuddy />}
+      {/* The Great Journey: real animals, real journeys — for kids without pets */}
+      {(track === "want" || track === "cant") && (
+        <div className="mt-4">
+          <GreatJourney childId={child.id} childName={child.name} track={track} />
+        </div>
+      )}
       <BraveTryStreak tries={braveTries} childName={child.name} />
     </div>
   );

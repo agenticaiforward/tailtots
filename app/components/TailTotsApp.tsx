@@ -168,6 +168,8 @@ import {
   type KidBankSettings,
   type KidJarKey,
 } from "@/lib/kid-bank";
+// Great Journey: mission completions advance the kid's animal journey.
+import { getJourneyState, recordJourneyMission, recordShelterMission } from "@/lib/great-journey/journey";
 
 const levelLabels: Record<LevelKey, string> = {
   easy: "Easy",
@@ -1909,6 +1911,15 @@ export function TailTotsApp() {
       ),
     );
     setMissionNote("");
+    // Great Journey: every completed mission moves the kid's animal forward.
+    // Additive and safe — no-ops when the child has no active journey.
+    try {
+      const js = getJourneyState(activeChild.id);
+      if (js?.kind === "wild") recordJourneyMission(activeChild.id);
+      else if (js?.kind === "shelter") recordShelterMission(activeChild.id);
+    } catch {
+      /* journey progress is nice-to-have, never fatal */
+    }
     // The streak rewards the kid's effort, not the parent's timing: completing
     // advances it once per day (applyDailyStreak's lastStreakDate guard keeps
     // multiple completions on the same day to a single bump). Parent approval
