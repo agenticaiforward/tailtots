@@ -204,14 +204,14 @@ export function PetSpotlightBanner({
     window.setTimeout(() => setBurstKey(0), 1600);
   }
 
-  const bubbles = ["✨", "💛", "🐾", "⭐", "🎉", "💫"];
+  const bubbles = ["✨", "💛", "🐾", "⭐", "🎉"];
+  // Parked at the edges with clear space — never over the pets or each other.
   const spots = [
-    { top: "6%", left: "5%", size: "1.25rem" },
-    { top: "14%", left: "86%", size: "1.5rem" },
-    { top: "58%", left: "3%", size: "1.1rem" },
-    { top: "66%", left: "89%", size: "1.25rem" },
-    { top: "38%", left: "11%", size: "1rem" },
-    { top: "30%", left: "82%", size: "1rem" },
+    { top: "5%", left: "5%", size: "1.15rem" },
+    { top: "9%", left: "87%", size: "1.35rem" },
+    { top: "44%", left: "2.5%", size: "1rem" },
+    { top: "40%", left: "90%", size: "1.1rem" },
+    { top: "74%", left: "8%", size: "1.25rem" },
   ];
 
   return (
@@ -225,12 +225,12 @@ export function PetSpotlightBanner({
       {bubbles.map((e, i) => (
         <span
           key={i}
-          className="absolute grid place-items-center rounded-full bg-white/90 shadow-md"
+          className="absolute grid place-items-center rounded-full bg-white/85 shadow-md"
           style={{
             top: spots[i].top,
             left: spots[i].left,
-            width: "2.4em",
-            height: "2.4em",
+            width: "2em",
+            height: "2em",
             fontSize: spots[i].size,
             animation: `tt-pop-in 0.5s cubic-bezier(0.22,1.4,0.36,1) ${0.55 + i * 0.12}s both, tt-float-slow 7s ease-in-out ${1.1 + i * 0.12}s infinite`,
           }}

@@ -179,7 +179,7 @@ export function VisualLanding({
         <div className="absolute inset-0 bg-gradient-to-t from-tt-navy via-tt-navy/60 to-transparent" aria-hidden="true" />
         <div className="relative p-6 pb-8 pt-16 sm:p-10 sm:pt-24">
           <h1 className="max-w-lg text-4xl font-black leading-[1.05] sm:text-5xl">
-            Turn 10 minutes with your pet into character that lasts a lifetime.
+            Character isn&apos;t taught. It&apos;s practiced.
           </h1>
           <p className="mt-3 text-sm font-extrabold uppercase tracking-widest text-tt-sun">
             Have a pet? Want one? Can't have one? There's a track for you.
