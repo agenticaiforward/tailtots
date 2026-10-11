@@ -215,7 +215,7 @@ export function PetSpotlightBanner({
   ];
 
   return (
-    <div className="relative min-h-[220px] max-w-full overflow-hidden rounded-md bg-[linear-gradient(135deg,#165a4b,#f47b20_58%,#2563eb)] sm:min-h-[280px] lg:min-h-[430px]">
+    <div className="relative min-h-[220px] max-w-full overflow-hidden rounded-md bg-[linear-gradient(135deg,#165a4b,#e8821e_58%,#f5b942)] sm:min-h-[280px] lg:min-h-[430px]">
       {/* breathing warm glow behind the pet */}
       <div
         className="absolute left-1/2 top-1/2 size-72 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/15 blur-3xl tt-animate-breathe"
