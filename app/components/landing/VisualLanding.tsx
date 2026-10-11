@@ -309,6 +309,8 @@ export function VisualLanding({
             "/landing/household-south-asian-cat.jpg",
             "/landing/household-east-asian-rabbit.jpg",
             "/landing/household-latino-guinea-pig.jpg",
+            "/landing/household-caucasian-girl-dog-backyard.jpg",
+            "/landing/household-caucasian-siblings-cat-livingroom.jpg",
           ].map((src, i) => (
             <div key={src} className="relative overflow-hidden rounded-2xl">
               <img src={src} alt={`Family with pet — illustrative photo ${i + 1}`} className="aspect-square w-full object-cover" loading="lazy" />
