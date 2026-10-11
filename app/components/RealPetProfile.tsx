@@ -142,7 +142,7 @@ function PetForm({
         <div>
           <p className="tt-body text-sm font-bold text-tt-navy">Add a photo</p>
           <p className="tt-body text-xs text-tt-ink-faint">
-            {name.trim() ? `${name.trim()}'s` : "Your pet's"} real face makes every mission special.
+            {name.trim() ? `${name.trim()}'s real face` : "Your pet's real face"} makes every mission special.
           </p>
           {photoError && (
             <p className="tt-body mt-1 text-xs text-red-600">Couldn&rsquo;t read that photo — try another.</p>

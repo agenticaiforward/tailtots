@@ -2732,6 +2732,8 @@ export function TailTotsApp() {
                 role={role}
                 nudgedMissionIds={nudgedMissionIds}
                 onNudgeMission={(missionId) => setNudgedMissionIds((ids) => (ids.includes(missionId) ? ids : [...ids, missionId]))}
+                realLifeEntries={realLifeEntries}
+                onAddRealLifeEntry={addRealLifeEntry}
               />
             </>
           )}
@@ -5671,6 +5673,8 @@ function MissionsPanel(props: {
   role: Role;
   nudgedMissionIds: string[];
   onNudgeMission: (missionId: string) => void;
+  realLifeEntries: RealLifeEntry[];
+  onAddRealLifeEntry: (kind: RealLifeEntry["kind"], title: string, detail?: string) => void;
 }) {
   const isKidView = props.role === "child";
   const [confirmingMissionId, setConfirmingMissionId] = useState<string | null>(null);
@@ -5748,8 +5752,8 @@ function MissionsPanel(props: {
         <div className="mt-4">
           <RealLifeLog
             childName={(props.activeChild ?? props.allChildren[0]).name}
-            entries={realLifeEntries.filter((e) => e.childId === (props.activeChild ?? props.allChildren[0]).id)}
-            onAdd={addRealLifeEntry}
+            entries={props.realLifeEntries.filter((e) => e.childId === (props.activeChild ?? props.allChildren[0]).id)}
+            onAdd={props.onAddRealLifeEntry}
           />
         </div>
       )}
