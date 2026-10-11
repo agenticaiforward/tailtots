@@ -10,13 +10,14 @@
  * or any child's cross-context data without parent consent.
  */
 import Link from "next/link";
+import { TtIllustration, type IllustrationKind } from "@/app/components/TtIllustration";
 
 export const metadata = {
   title: "TailTots for Teachers — Classroom kindness missions",
   description: "Assign age-banded character missions, approve class moments, and see aggregate growth trends.",
 };
 
-const HOW_IT_WORKS = [
+const HOW_IT_WORKS: { illustration: IllustrationKind; title: string; line: string }[] = [
   {
     illustration: "mission",
     title: "Pick a mission",
@@ -34,7 +35,7 @@ const HOW_IT_WORKS = [
   },
 ];
 
-const GUARANTEES = [
+const GUARANTEES: { illustration: IllustrationKind; line: string }[] = [
   { illustration: "shield", line: "Your classroom only. Nothing from home without parent consent." },
   { illustration: "shield", line: "No individual scores, ever. Trends — never labels." },
   { illustration: "book", line: "You approve every artifact. Nothing auto-publishes." },

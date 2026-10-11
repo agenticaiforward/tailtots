@@ -5,6 +5,7 @@
  */
 
 import Link from "next/link";
+import { TtIllustration, type IllustrationKind } from "@/app/components/TtIllustration";
 
 export const metadata = {
   title: "Our Promise — TailTots",
@@ -12,7 +13,7 @@ export const metadata = {
     "Plain-language commitments: parents own the data, kids never touch the AI, and built-in calm guardrails.",
 };
 
-const PROMISES: { icon: string; title: string; line: string; more?: string }[] = [
+const PROMISES: { illustration: IllustrationKind; title: string; line: string; more?: string }[] = [
   {
     illustration: "shield",
     title: "Your child's experience is sacred",
@@ -47,12 +48,12 @@ const PROMISES: { icon: string; title: string; line: string; more?: string }[] =
     line: "No leaderboards, no percentiles, no comparisons to other children.",
   },
   {
-    icon: "✅",
+    illustration: "shield",
     title: "You approve everything",
     line: "AI suggests; you decide. Nothing reaches your child without you.",
   },
   {
-    icon: "📞",
+    illustration: "chat",
     title: "A human is reachable",
     line: "Something feels wrong? Reach us at hello@tailtots.com.",
   },
