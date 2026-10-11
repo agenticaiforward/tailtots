@@ -299,21 +299,16 @@ export function VisualLanding({
       <section className="overflow-hidden rounded-3xl bg-tt-night p-5 text-white sm:p-6">
         <h2 className="text-center text-xl font-black">Made for families like yours</h2>
         <p className="mt-1 text-center text-xs font-semibold text-white/50">Illustrative photos</p>
-        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="mt-4 flex flex-wrap justify-center gap-3">
           {[
-            "/landing/household-african-american-dog.jpg",
-            "/landing/household-south-asian-girl-cat-bedroom.jpg",
-            "/landing/household-east-asian-siblings-rabbit-garden.jpg",
-            "/landing/household-latina-girl-guineapig-livingroom.jpg",
-            "/landing/household-african-american-siblings-dog-park.jpg",
-            "/landing/household-south-asian-cat.jpg",
-            "/landing/household-east-asian-rabbit.jpg",
-            "/landing/household-latino-guinea-pig.jpg",
-            "/landing/household-caucasian-girl-dog-backyard.jpg",
-            "/landing/household-caucasian-siblings-cat-livingroom.jpg",
-          ].map((src, i) => (
-            <div key={src} className="relative overflow-hidden rounded-2xl">
-              <img src={src} alt={`Family with pet — illustrative photo ${i + 1}`} className="aspect-square w-full object-cover" loading="lazy" />
+            ["African American family with their dog", "/landing/household-african-american-dog.jpg"],
+            ["South Asian girl with her cat", "/landing/household-south-asian-girl-cat-bedroom.jpg"],
+            ["East Asian siblings with their rabbit", "/landing/household-east-asian-siblings-rabbit-garden.jpg"],
+            ["Latina girl with her guinea pig", "/landing/household-latina-girl-guineapig-livingroom.jpg"],
+            ["Caucasian siblings with their cat", "/landing/household-caucasian-siblings-cat-livingroom.jpg"],
+          ].map(([alt, src]) => (
+            <div key={src} className="w-[calc(50%-6px)] overflow-hidden rounded-2xl sm:w-[calc(20%-10px)]">
+              <img src={src} alt={`Family with pet — illustrative photo: ${alt}`} className="aspect-square w-full object-cover" loading="lazy" />
             </div>
           ))}
         </div>

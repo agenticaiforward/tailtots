@@ -3090,13 +3090,6 @@ function VisionLandingPanel({
     ["🧹", "Chores & neighborhood", "Helper missions at home and around the block. The real world is the playground."],
     ["🎯", "Parent-set donation goals", "You set the goal and fund it — your kid picks the cause and works for it. Giving, earned."],
   ];
-  const kidsPetPhotos = [
-    ["African American family — kid + dog", "/landing/household-african-american-dog.jpg"],
-    ["South Asian family — kid + cat", "/landing/household-south-asian-cat.jpg"],
-    ["East Asian family — kid + rabbit", "/landing/household-east-asian-rabbit.jpg"],
-    ["Latino family — kid + guinea pig", "/landing/household-latino-guinea-pig.jpg"],
-  ];
-
   useEffect(() => {
     const updateBackToTop = () => setShowBackToTop(window.scrollY > 520);
     updateBackToTop();
