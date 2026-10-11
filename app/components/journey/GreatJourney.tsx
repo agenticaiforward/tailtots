@@ -17,7 +17,7 @@ import {
   getJourneyAnimal,
   getShelterAnimal,
   type JourneyAnimal,
-} from "../../lib/great-journey/animals";
+} from "../../../lib/great-journey/animals";
 import {
   currentLegIndex,
   currentShelterStageIndex,
@@ -27,7 +27,7 @@ import {
   markLegCelebrated,
   startJourney,
   type JourneyState,
-} from "../../lib/great-journey/journey";
+} from "../../../lib/great-journey/journey";
 import { ShelterStageStory, WildLegStory } from "./JourneyStory";
 import type { PetTrack } from "../../lib/pet-tracks";
 
