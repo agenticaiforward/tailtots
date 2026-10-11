@@ -10,18 +10,15 @@
  */
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import type { Child, Mission, Pet } from "../../lib/types";
 import { getAgeMode, KidModeHeader } from "./AgeMode";
 import { Graduation, useGraduation } from "./Graduation";
 import { evolutionStageFor, nextEvolutionStage } from "./PetEvolution";
 import { PetNeeds } from "./PetNeeds";
 import RealPetHero from "./RealPetHero";
-import ReadinessMeter from "./ReadinessMeter";
-import ShelterBuddy from "./ShelterBuddy";
 import { BraveTryStreak, braveTriesFromMissions } from "./BraveTryStreak";
 import { MemoryStones } from "./MemoryStones";
-import GreatJourney from "./journey/GreatJourney";
 import type { PetKind } from "./pet-buddy";
 
 export function petKindFor(species: string): PetKind {
@@ -37,32 +34,17 @@ export function petKindFor(species: string): PetKind {
   return "pet";
 }
 
-/** A pet counts as "real" when it has a user-uploaded photo (data URL) or the
- *  family chose the HAVE track. Demo/starter photos stay on the virtual path. */
-function isRealPet(pet: Pet | undefined, track: string | null): boolean {
+/** A pet counts as "real" when it has a photo — the have-pets case. */
+function isRealPet(pet: Pet | undefined): boolean {
   if (!pet) return false;
-  if (track === "have") return true;
-  if (track === "want" || track === "cant") return false;
-  // Fallback heuristic: data-URL photos are user uploads; demo paths are not.
-  return !!pet.photoUrl && pet.photoUrl.startsWith("data:");
-}
-
-function usePetTrack(): string | null {
-  const [track] = useState<string | null>(() => {
-    try {
-      return typeof window !== "undefined" ? localStorage.getItem("tt-pet-track") : null;
-    } catch {
-      return null; // private mode
-    }
-  });
-  return track;
+  return !!pet.photoUrl;
 }
 
 export function KidExperienceTop({ child, pets, missions }: { child: Child; pets: Pet[]; missions: Mission[] }) {
   const mode = getAgeMode(child.age);
   const pet = pets[0];
-  const track = usePetTrack();
-  const showRealHero = isRealPet(pet, track);
+  // Have-pets case only: the kid's page shows their real pet front and center.
+  const showRealHero = isRealPet(pet);
   const { pendingGraduation, dismissGraduation } = useGraduation(child.id, child.age);
 
   const myMissions = useMemo(() => missions.filter((m) => !m.assignedChildId || m.assignedChildId === child.id), [missions, child.id]);
@@ -101,7 +83,7 @@ export function KidExperienceTop({ child, pets, missions }: { child: Child; pets
           petKind={petKindFor(pet.species)}
           photoUrl={pet.photoUrl}
           species={petKindFor(pet.species)}
-          careContext={track === "cant" ? "shelter" : "virtual"}
+          careContext="real"
           evolutionEmoji={evolutionStageFor(approvedCount).emoji}
           evolutionName={evolutionStageFor(approvedCount).name}
           evolutionProgress={(() => {
@@ -113,25 +95,6 @@ export function KidExperienceTop({ child, pets, missions }: { child: Child; pets
           })()}
         />
       ) : null}
-      {/* WANT track: readiness journey toward a real pet */}
-      {track === "want" && (
-        <ReadinessMeter
-          input={{
-            careMissions: approvedCount,
-            streakDays: child.streakDays,
-            activeDays30d: Math.min(30, approvedCount),
-          }}
-          buddyName={pet?.name ?? "Buddy"}
-        />
-      )}
-      {/* CANT track: shelter buddy connection */}
-      {track === "cant" && <ShelterBuddy />}
-      {/* The Great Journey: real animals, real journeys — for kids without pets */}
-      {(track === "want" || track === "cant") && (
-        <div className="mt-4">
-          <GreatJourney childId={child.id} childName={child.name} track={track} />
-        </div>
-      )}
       <BraveTryStreak tries={braveTries} childName={child.name} />
     </div>
   );

@@ -7,6 +7,7 @@ import Cropper, { type Area } from "react-easy-crop";
 import { PetBuddyFace } from "./pet-buddy";
 import type { PetKind } from "./pet-buddy";
 import { KidExperienceTop, KidExperienceBottom, petKindFor as petKindForSpecies } from "./KidExperience";
+import RealLifeLog from "./RealLifeLog";
 import { VisualLanding } from "./landing/VisualLanding";
 import { KidMyDay, ParentToday } from "./schedule/ScheduleAdapters";
 import { TraitGarden, levelToStage } from "./traits/TraitGarden";
@@ -92,6 +93,7 @@ import type {
   MemoryMoment,
   Mission,
   Pet,
+  RealLifeEntry,
   Role,
   SavingsGoal,
 } from "@/lib/types";
@@ -563,6 +565,7 @@ type SavedFamilyState = {
   badges?: BadgeAward[];
   neighborhoodJobs?: NeighborhoodJob[];
   moments?: MemoryMoment[];
+  realLifeEntries?: RealLifeEntry[];
   studiedAnimals?: string[];
   socialPracticeDone?: Record<string, string[]>;
   certificates?: Certificate[];
@@ -969,6 +972,7 @@ export function TailTotsApp() {
   const [neighborhoodJobs, setNeighborhoodJobs] = useState(starterNeighborhoodJobs);
   const [scheduleItems] = useState(starterScheduleItems);
   const [moments, setMoments] = useState<MemoryMoment[]>(starterMoments);
+  const [realLifeEntries, setRealLifeEntries] = useState<RealLifeEntry[]>([]);
   const [studiedAnimals, setStudiedAnimals] = useState<string[]>([]);
   const [socialPracticeDone, setSocialPracticeDone] = useState<Record<string, string[]>>({});
   const [certificates, setCertificates] = useState<Certificate[]>([]);
@@ -1173,6 +1177,7 @@ export function TailTotsApp() {
         setBadges(savedState.badges ?? starterBadges);
         setNeighborhoodJobs(savedState.neighborhoodJobs ? savedState.neighborhoodJobs.map(normalizeNeighborhoodJob) : starterNeighborhoodJobs);
         setMoments(savedState.moments ?? starterMoments);
+        setRealLifeEntries(savedState.realLifeEntries ?? []);
         setStudiedAnimals(savedState.studiedAnimals ?? []);
         setSocialPracticeDone(savedState.socialPracticeDone ?? {});
         setCertificates(savedState.certificates ?? []);
@@ -1294,7 +1299,7 @@ export function TailTotsApp() {
 
   useEffect(() => {
     if (!hasLoadedSavedState) return;
-    saveFamilyState({ familyName, parentPasscode, parents, children, pets, missions, transactions, goals, badges, neighborhoodJobs, moments, studiedAnimals, socialPracticeDone, familyPhotoUrl, activeChildId, certificates, pointsPerDollar, dailyChecksEnabled, maxDailyChecks, familyZip, familyNeighborhood, aiBuddyCategories, aiBuddyDailyRotate, buddyParentQuestions, socialPracticeOverride });
+    saveFamilyState({ familyName, parentPasscode, parents, children, pets, missions, transactions, goals, badges, neighborhoodJobs, moments, realLifeEntries, studiedAnimals, socialPracticeDone, familyPhotoUrl, activeChildId, certificates, pointsPerDollar, dailyChecksEnabled, maxDailyChecks, familyZip, familyNeighborhood, aiBuddyCategories, aiBuddyDailyRotate, buddyParentQuestions, socialPracticeOverride });
     setLastSavedAt(new Date());
   }, [activeChildId, aiBuddyCategories, aiBuddyDailyRotate, badges, buddyParentQuestions, certificates, children, dailyChecksEnabled, familyName, familyPhotoUrl, familyZip, familyNeighborhood, goals, hasLoadedSavedState, maxDailyChecks, missions, moments, neighborhoodJobs, parentPasscode, parents, pets, pointsPerDollar, socialPracticeOverride, studiedAnimals, socialPracticeDone, transactions]);
 
@@ -2221,6 +2226,26 @@ export function TailTotsApp() {
       ...items,
     ]);
     setMomentDraft("");
+  }
+
+  /** Log a real-life entry (book read, chore done, kind act, skill practiced).
+   *  The AI mission engine references these when teaching traits — real life
+   *  becomes the curriculum. Works standalone when empty (pure AI generation). */
+  function addRealLifeEntry(kind: RealLifeEntry["kind"], title: string, detail?: string) {
+    if (!activeChild || !title.trim()) return;
+    const today = new Date();
+    const date = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+    setRealLifeEntries((items) => [
+      {
+        id: `rle-${Date.now()}`,
+        childId: activeChild.id,
+        kind,
+        title: title.trim(),
+        detail: detail?.trim() || undefined,
+        date,
+      },
+      ...items,
+    ]);
   }
 
   /** Feed a kid's AI Buddy interaction into the parent's Growth Log. */
@@ -5715,6 +5740,16 @@ function MissionsPanel(props: {
             child={props.activeChild ?? props.allChildren[0]}
             pets={props.pets}
             missions={props.missions}
+          />
+        </div>
+      )}
+      {/* Real-life log: picture-first logging of books/chores/kind acts — AI references these when teaching traits */}
+      {isKidView && (props.activeChild ?? props.allChildren[0]) && (
+        <div className="mt-4">
+          <RealLifeLog
+            childName={(props.activeChild ?? props.allChildren[0]).name}
+            entries={realLifeEntries.filter((e) => e.childId === (props.activeChild ?? props.allChildren[0]).id)}
+            onAdd={addRealLifeEntry}
           />
         </div>
       )}

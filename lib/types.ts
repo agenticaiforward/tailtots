@@ -43,6 +43,30 @@ export type Pet = {
   photoUrl?: string;
 };
 
+/**
+ * RealLifeEntry — a real-world thing the kid actually did, logged by the kid
+ * (picture-first) or parent: a book they read (with title), a chore they did,
+ * a kind act, a skill they practiced. The AI mission engine and insights
+ * reference these real experiences when teaching traits — "you finished
+ * 'Charlotte's Web', that's perseverance like Wilbur" — and ask reflective
+ * questions tied to them. Real life is the curriculum; AI connects the dots.
+ */
+export type RealLifeEntry = {
+  id: string;
+  childId: string;
+  kind: "book" | "chore" | "kind-act" | "skill";
+  /** Book title, chore name, or short label — the kid's own words. */
+  title: string;
+  /** Optional extra: author, what they did, who it helped. */
+  detail?: string;
+  /** Local YYYY-MM-DD when it happened. */
+  date: string;
+  /** Traits this experience evidences — suggested by AI, confirmed by parent. */
+  traits?: string[];
+  /** A reflective question the AI asked about this entry (kid answers verbally/with parent). */
+  wonderQuestion?: string;
+};
+
 export type Mission = {
   id: string;
   title: string;

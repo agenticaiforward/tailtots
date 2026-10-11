@@ -69,7 +69,7 @@ export function GrowthPanel(props: {
   onSignOff: (milestoneId: string, childId: string) => void;
 }) {
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
     {/* Demo: what the weekly AI insight looks like for parents */}
     {props.childProfiles[0] && (
       <WeeklyInsight
@@ -85,51 +85,66 @@ export function GrowthPanel(props: {
       signOffs={props.signOffs}
       onSignOff={props.onSignOff}
     />
-    <section className="rounded-lg border border-[#ded8c7] bg-white p-5">
-      <p className="text-xs font-black uppercase tracking-[0.18em] text-[#7c3aed]">Character growth</p>
-      <h2 className="mt-2 text-3xl font-black">Responsibility, empathy, kindness, leadership</h2>
-      <div className="mt-5 grid gap-4 lg:grid-cols-2">
+    <section className="rounded-3xl border border-tt-line bg-white p-4 shadow-sm sm:p-5">
+      <div className="flex items-center gap-2">
+        <span className="text-2xl">🌱</span>
+        <div>
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-pine">Character growth</p>
+          <h2 className="text-xl font-black text-tt-ink sm:text-2xl">Growing strong</h2>
+        </div>
+      </div>
+      <div className="mt-4 grid gap-3 lg:grid-cols-2">
         {props.childProfiles.map((child) => (
-          <div key={child.id} className="rounded-lg bg-[#f8f6ed] p-4">
+          <div key={child.id} className="rounded-3xl bg-gradient-to-br from-tt-cream to-white p-4 ring-1 ring-tt-line">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <ProfilePhoto label={child.name} initial={getChildLook(child.id).initial} colors={getChildLook(child.id).colors} variant="kid" hair={getChildLook(child.id).hair} photoUrl={child.photoUrl} />
-                <h3 className="text-xl font-black">{child.name}</h3>
+                <h3 className="text-lg font-black text-tt-ink">{child.name}</h3>
               </div>
-              <span className="rounded-full bg-white px-3 py-1 text-xs font-black">{levelLabels[child.level]}</span>
+              <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-tt-ink shadow-sm">{levelLabels[child.level]}</span>
             </div>
-            <div className="mt-4 grid gap-3">
+            <div className="mt-3 grid gap-2.5">
               <Meter label="Task progress" value={Math.min(100, Math.round((child.points / 220) * 100))} color="#f47b20" />
               <Meter label="Loving it" value={getChildLook(child.id).love} color="#7c3aed" />
               <Meter label="Happiness" value={getChildLook(child.id).joy} color="#0f766e" />
             </div>
-            <div className="mt-4 grid grid-cols-3 gap-2 text-center text-xs font-black">
-              <span className="rounded-lg bg-white p-3">{child.points}<br />points</span>
-              <span className="rounded-lg bg-white p-3">{child.streakDays}<br />streak</span>
-              <span className="rounded-lg bg-white p-3">{child.coins}<br />coins</span>
+            <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+              <div className="rounded-2xl bg-white p-2.5 shadow-sm">
+                <div className="text-lg font-black text-tt-ink">{child.points}</div>
+                <div className="text-[11px] font-bold text-tt-ink/60">points</div>
+              </div>
+              <div className="rounded-2xl bg-white p-2.5 shadow-sm">
+                <div className="text-lg font-black text-tt-ink">{child.streakDays}</div>
+                <div className="text-[11px] font-bold text-tt-ink/60">day streak</div>
+              </div>
+              <div className="rounded-2xl bg-white p-2.5 shadow-sm">
+                <div className="text-lg font-black text-tt-ink">{child.coins}</div>
+                <div className="text-[11px] font-bold text-tt-ink/60">coins</div>
+              </div>
             </div>
-            <div className="mt-4 grid gap-2">
+            <div className="mt-3 grid gap-2">
               {(["responsibility", "empathy", "teamwork", "leadership", "time"] as LifeSkillKey[]).map((skill) => {
                 const count = props.badges.filter((badge) => badge.childId === child.id && badge.skill === skill).length;
+                const emoji = { responsibility: "🎯", empathy: "💛", teamwork: "🤝", leadership: "🌟", time: "⏰" }[skill];
                 return (
-                  <div key={skill}>
-                    <div className="mb-1 flex justify-between text-xs font-black capitalize">
-                      <span>{skill === "time" ? "Time management" : skill}</span>
-                      <span>{count} badge{count === 1 ? "" : "s"}</span>
+                  <div key={skill} className="rounded-2xl bg-white p-2.5 shadow-sm">
+                    <div className="mb-1.5 flex justify-between text-xs font-black">
+                      <span>{emoji} {skill === "time" ? "Time management" : skill}</span>
+                      <span className="text-tt-ink/60">{count} badge{count === 1 ? "" : "s"}</span>
                     </div>
-                    <div className="h-2 rounded-full bg-white">
-                      <div className="h-2 rounded-full bg-[#7c3aed]" style={{ width: `${Math.min(100, count * 25)}%` }} />
+                    <div className="h-2.5 rounded-full bg-tt-cream">
+                      <div className="h-2.5 rounded-full bg-gradient-to-r from-violet-500 to-purple-600 transition-all" style={{ width: `${Math.min(100, count * 25)}%` }} />
                     </div>
                   </div>
                 );
               })}
             </div>
-            <div className="mt-4 grid gap-2">
+            <div className="mt-3 grid gap-2">
               {props.badges.filter((badge) => badge.childId === child.id).slice(0, 3).map((badge) => (
-                <p key={badge.id} className="rounded-lg bg-white p-3 text-xs font-bold text-[#5f6a65]">
-                  <b className="block text-sm text-[#17231f]">{badge.title}</b>
-                  {badge.note}
-                </p>
+                <div key={badge.id} className="rounded-2xl bg-white p-3 shadow-sm">
+                  <p className="text-sm font-black text-tt-ink">🏅 {badge.title}</p>
+                  <p className="mt-0.5 text-xs font-semibold text-tt-ink/60">{badge.note}</p>
+                </div>
               ))}
             </div>
           </div>
