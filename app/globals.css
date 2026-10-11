@@ -486,6 +486,62 @@ button {
   100% { transform: scale(1) rotate(0deg); }
 }
 
+/* --- Pet need-state idle loops: READABLE at a glance --- */
+
+/* Hungry: tummy rumble — belly jiggle */
+@keyframes pet-tummy-rumble {
+  0%, 100% { transform: scale(1, 1) rotate(0deg); }
+  20% { transform: scale(1.04, 0.96) rotate(-2deg); }
+  40% { transform: scale(0.97, 1.05) rotate(2deg); }
+  60% { transform: scale(1.05, 0.95) rotate(-2deg); }
+  80% { transform: scale(0.98, 1.03) rotate(1deg); }
+}
+
+/* Dirty: embarrassed — averts gaze, slight shrink */
+@keyframes pet-embarrassed {
+  0%, 100% { transform: translateX(0) scale(1); }
+  50% { transform: translateX(6px) scale(0.96); }
+}
+
+/* Stink lines: wavy rising */
+@keyframes stink-rise {
+  0% { opacity: 0; transform: translateY(4px) rotate(-8deg); }
+  30% { opacity: 0.8; }
+  100% { opacity: 0; transform: translateY(-18px) rotate(8deg); }
+}
+.stink-line { animation: stink-rise 2.2s ease-out infinite; display: inline-block; }
+
+/* Tired: droopy — heavy slow sag */
+@keyframes pet-droopy {
+  0%, 100% { transform: translateY(0) scale(1, 1); }
+  50% { transform: translateY(6px) scale(1.03, 0.92); }
+}
+
+/* Wants play: head tilt toward camera, eager wiggle */
+@keyframes pet-head-tilt {
+  0%, 100% { transform: rotate(-6deg) translateY(0); }
+  50% { transform: rotate(6deg) translateY(-4px); }
+}
+
+/* Needs exercise: bouncing in place */
+@keyframes pet-bouncy {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-14px) scale(0.98, 1.04); }
+}
+
+/* Happy: joyful bounce with sparkle energy */
+@keyframes pet-joyful {
+  0%, 100% { transform: translateY(0) rotate(0deg) scale(1); }
+  25% { transform: translateY(-10px) rotate(-4deg) scale(1.03); }
+  75% { transform: translateY(-6px) rotate(4deg) scale(1.02); }
+}
+
+/* Needs love: gentle sway — soft, inviting */
+@keyframes pet-gentle-sway {
+  0%, 100% { transform: rotate(-3deg); }
+  50% { transform: rotate(3deg); }
+}
+
 /* Pet egg wobble: gentle alive rocking (the egg is alive!) */
 @keyframes pet-egg-wobble {
   0%, 100% { transform: rotate(-4deg) translateY(0); }
@@ -549,7 +605,13 @@ button {
 @media (prefers-reduced-motion: reduce) {
   .celeb-star, .celeb-particle, .celeb-card, .celeb-count-tick,
   .pet-celebrate, .pet-excited, .pet-sleepy, .pet-encourage,
-  .zzz-float, .celeb-confetti {
+  .zzz-float, .celeb-confetti, .stink-line {
+    animation: none !important;
+  }
+  /* Need-state idle loops: static under reduced motion */
+  [style*="pet-tummy-rumble"], [style*="pet-embarrassed"], [style*="pet-droopy"],
+  [style*="pet-head-tilt"], [style*="pet-bouncy"], [style*="pet-joyful"],
+  [style*="pet-gentle-sway"], [style*="pet-egg-wobble"], [style*="pet-tap-wiggle"] {
     animation: none !important;
   }
 }

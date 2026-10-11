@@ -71,12 +71,15 @@ export default function RealPetHero({
           </p>
         )}
       </div>
-      {/* Jack's needs — the virtual companion alongside the real pet */}
+      {/* Real pet's needs — care for your actual animal through the app */}
       <div className="relative mt-4">
         <PetNeeds
-          petName="Jack"
+          petName={pet.name}
           petKind={petKindFor(pet.species)}
+          photoUrl={pet.photoUrl}
           isEgg={false}
+          species={petKindFor(pet.species)}
+          careContext="real"
           compact
         />
       </div>

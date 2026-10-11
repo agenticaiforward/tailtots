@@ -100,6 +100,8 @@ export function KidExperienceTop({ child, pets, missions }: { child: Child; pets
           petKind={petKindFor(pet.species)}
           photoUrl={pet.photoUrl}
           isEgg={evolutionStageFor(approvedCount).stage === "egg"}
+          species={petKindFor(pet.species)}
+          careContext={track === "cant" ? "shelter" : "virtual"}
           evolutionEmoji={evolutionStageFor(approvedCount).emoji}
           evolutionName={evolutionStageFor(approvedCount).name}
           evolutionProgress={(() => {
