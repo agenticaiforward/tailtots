@@ -18,6 +18,31 @@ import { playthroughsThisWeek, choiceEventsFor } from "../../ChoiceAdventureSpot
 import { curiosityCountsFor } from "../../CuriosityMissions";
 import { synthesisCountsFor } from "../../SynthesisMoments";
 import { questionCountFor } from "../../DecisionJournal";
+import WeeklyInsight from "../../WeeklyInsight";
+import type { RankedInsight } from "@/lib/ai/insight-ranking";
+
+/** Demo weekly insight — shows parents what the AI insight card looks like. */
+function demoWeeklyInsight(childName: string): RankedInsight {
+  return {
+    pattern: {
+      insightType: "weak_weekday",
+      severity: "info",
+      detail: {
+        weekdayName: "Thursday",
+        rate: 0.2,
+        baseline: 0.66,
+        assigned: 14,
+      },
+    },
+    score: 0.82,
+    confidence: "high",
+    sampleSize: 14,
+    actionability: 0.9,
+    novelty: 0.7,
+    isWeeklyPick: true,
+    rationale: "Highest actionability this week — a small schedule tweak, not a behavior concern.",
+  };
+}
 
 function weeklyInsightFor(childId: string): string | undefined {
   try {
@@ -45,6 +70,13 @@ export function GrowthPanel(props: {
 }) {
   return (
     <div className="space-y-5">
+    {/* Demo: what the weekly AI insight looks like for parents */}
+    {props.childProfiles[0] && (
+      <WeeklyInsight
+        insight={demoWeeklyInsight(props.childProfiles[0].name)}
+        childName={props.childProfiles[0].name}
+      />
+    )}
     <PetReadyJourneyPanel
       childProfiles={props.childProfiles}
       missions={props.missions}

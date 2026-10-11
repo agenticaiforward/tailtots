@@ -145,8 +145,8 @@ export function VisualLanding({
       emoji: "🐶",
       question: "Have a pet?",
       line: "Missions with your pet",
-      img: "/landing/kid-dog.jpg",
-      alt: "Happy kid hugging their dog",
+      img: "/landing/kid-guinea-pig.jpg",
+      alt: "Happy kid holding their guinea pig",
     },
     {
       id: "want" as const,
@@ -285,9 +285,6 @@ export function VisualLanding({
             </div>
           ))}
         </div>
-        <a href="/ai-insights" className="mx-auto mt-4 block text-center text-sm font-extrabold text-tt-pine underline">
-          See the AI in action →
-        </a>
       </section>
 
       {/* TRAIT METAPHORS — pictures, not definitions */}

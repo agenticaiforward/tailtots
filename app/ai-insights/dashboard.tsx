@@ -471,7 +471,7 @@ export function AiInsightsDashboard() {
       {/* 1. Trait development */}
       <Section kicker="DEVELOPMENTAL MISSION ENGINE" title="Trait development — what the AI sees">
         <p style={{ fontSize: 13, color: "#5a6b63", margin: "0 0 16px", lineHeight: 1.55 }}>
-          Seven traits, scored 0–1 from <strong>behavioral signals only</strong> (never surveys, never labels):
+          Eight traits, scored 0–1 from <strong>behavioral signals only</strong> (never surveys, never labels):
           difficulty choices → confidence · kindness &amp; pet-care share → empathy · streak + skip rate →
           self-control · parent approval rate → integrity · category breadth → curiosity · completion + hard-mission
           rate → perseverance · comeback speed → optimism.

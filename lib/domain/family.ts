@@ -27,7 +27,7 @@ export function normalizeNeighborhoodJob(job: NeighborhoodJob): NeighborhoodJob 
 }
 
 export function normalizePetProfile(pet: Pet): Pet {
-  return pet.id === "jack" ? { ...pet, photoUrl: undefined } : pet;
+  return pet;
 }
 
 /**
