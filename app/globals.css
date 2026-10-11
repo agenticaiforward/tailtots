@@ -478,6 +478,21 @@ button {
   75% { transform: translateY(-12px) rotate(-4deg) scale(1.04); }
 }
 
+/* Pet tap wiggle: quick happy jiggle when tapped */
+@keyframes pet-tap-wiggle {
+  0% { transform: scale(1) rotate(0deg); }
+  30% { transform: scale(1.12) rotate(-6deg); }
+  60% { transform: scale(1.06) rotate(5deg); }
+  100% { transform: scale(1) rotate(0deg); }
+}
+
+/* Pet egg wobble: gentle alive rocking (the egg is alive!) */
+@keyframes pet-egg-wobble {
+  0%, 100% { transform: rotate(-4deg) translateY(0); }
+  30% { transform: rotate(4deg) translateY(-3px); }
+  60% { transform: rotate(-2deg) translateY(0); }
+}
+
 /* Pet excited: fast happy wiggle (welcome back) */
 @keyframes pet-excited {
   0%, 100% { transform: rotate(-7deg) translateY(0); }
@@ -668,6 +683,189 @@ button {
   .animate-pet-spin-happy, .animate-pet-sway-sleepy, .animate-pet-bounce-gentle,
   .animate-pet-head-tilt, .animate-ken-burns-frame, .animate-frame-bob,
   .animate-photo-sleep-dim, .animate-zzz-float, .animate-celeb-burst {
+    animation: none !important;
+  }
+}
+/* ============================================================
+   TAILTOTS UNIFIED VISUAL SYSTEM (v1.0)
+   One illustration language, one motion language, one card system.
+   
+   COLOR DISCIPLINE:
+   - tt-pine (#165a4b) ...... PRIMARY actions, growth, trust. Buttons that move forward.
+   - tt-navy (#111b4f) ....... HERO backgrounds, premium moments, nighttime calm.
+   - tt-sun (#ffd166) ........ CELEBRATION, rewards, warmth. The "joy" accent.
+   - tt-cream (#faf8f0) ...... PAGE backgrounds. Warm, never stark white.
+   - tt-paper (#ffffff) ....... CARD surfaces. Content sits on paper.
+   - tt-ink (#17231f) ......... HEADLINES. Never pure black.
+   - tt-ink-soft (#4f625b) .... Body text. Softer than headlines.
+   - tt-ink-faint (#69736f) ... Captions, hints. Recedes.
+   - tt-tang (#f47b20) ........ ATTENTION — warnings, streaks, "look here" (use sparingly).
+   - tt-grape (#6d3ed1) ....... WONDER — curiosity, magic, discovery moments.
+   - tt-line (#ded8c7) ........ Borders. Subtle separation, never harsh.
+   RULE: Max 3 hues per screen. Pine + sun + one accent.
+   
+   MOTION PRIMITIVES (the only 4):
+   - tt-motion-pop ....... Elements appearing (cards, modals, steps)
+   - tt-motion-bounce .... Celebrations, pet joy, rewards
+   - tt-motion-rise ...... Cards sliding up, onboarding steps, sheets
+   - tt-motion-breathe ... Idle states, pet breathing, loading
+   All share --tt-ease: cubic-bezier(0.22, 1.2, 0.36, 1)
+   
+   SPACING RHYTHM:
+   - Section gap: space-y-6 (24px) on mobile, space-y-8 (32px) desktop
+   - Card padding: p-5 (20px) mobile, sm:p-6 (24px) desktop
+   - Card radius: rounded-3xl (24px) for sections, rounded-2xl (16px) for inner cards
+   - Grid gaps: gap-3 (12px) mobile, sm:gap-4 (16px) desktop
+   
+   ILLUSTRATION LANGUAGE:
+   Soft rounded SVG in TailTots palette. Photos for real families/pets.
+   Emoji NEVER as primary design element — use <TtIllustration>.
+   ============================================================ */
+
+:root {
+  --tt-ease: cubic-bezier(0.22, 1.2, 0.36, 1);
+  --tt-ease-soft: cubic-bezier(0.25, 0.8, 0.35, 1);
+}
+
+/* ---- 4 MOTION PRIMITIVES (canonical — use these, not the legacy ones) ---- */
+@keyframes tt-motion-pop-kf {
+  from { opacity: 0; transform: scale(0.94) translateY(10px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+@keyframes tt-motion-bounce-kf {
+  0%, 100% { transform: translateY(0) scale(1); }
+  30% { transform: translateY(-14px) scale(1.04); }
+  55% { transform: translateY(0) scale(0.98); }
+  75% { transform: translateY(-7px) scale(1.02); }
+}
+@keyframes tt-motion-rise-kf {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes tt-motion-breathe-kf {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.03); }
+}
+
+.tt-motion-pop { animation: tt-motion-pop-kf 0.45s var(--tt-ease) both; }
+.tt-motion-bounce { animation: tt-motion-bounce-kf 0.9s var(--tt-ease) 2; }
+.tt-motion-rise { animation: tt-motion-rise-kf 0.5s var(--tt-ease-soft) both; }
+.tt-motion-breathe { animation: tt-motion-breathe-kf 3.5s ease-in-out infinite; }
+
+/* Stagger helper: apply with inline style={{ animationDelay: '80ms' }} */
+.tt-motion-pop-delayed { animation: tt-motion-pop-kf 0.45s var(--tt-ease) both; }
+
+/* ---- UNIFIED CARD SYSTEM ---- */
+.tt-card {
+  background: var(--tt-paper);
+  border: 1px solid var(--tt-line);
+  border-radius: 1.5rem; /* 24px */
+  padding: 1.25rem; /* 20px */
+}
+@media (min-width: 640px) {
+  .tt-card { padding: 1.5rem; } /* 24px */
+}
+.tt-card-inner {
+  background: var(--tt-paper);
+  border-radius: 1rem; /* 16px */
+  padding: 1rem;
+  box-shadow: 0 2px 8px -2px rgba(23, 35, 31, 0.08);
+}
+.tt-card-tint-pine { background: var(--tt-pine-tint); border-color: transparent; }
+.tt-card-tint-sun { background: var(--tt-sun-soft); border-color: transparent; }
+.tt-card-tint-grape { background: var(--tt-grape-soft); border-color: transparent; }
+.tt-card-dark {
+  background: var(--tt-navy);
+  border-color: transparent;
+  color: #fff;
+}
+
+/* ---- UNIFIED BUTTON SYSTEM ---- */
+.tt-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 3rem; /* 48px touch target */
+  padding: 0.75rem 1.5rem;
+  border-radius: 1rem; /* 16px */
+  font-weight: 800;
+  font-size: 0.9375rem;
+  transition: transform 0.12s ease, filter 0.15s ease, box-shadow 0.2s ease;
+  cursor: pointer;
+}
+.tt-btn:active { transform: scale(0.97); }
+.tt-btn-primary {
+  background: var(--tt-pine);
+  color: #fff;
+  box-shadow: 0 4px 14px -4px rgba(22, 90, 75, 0.4);
+}
+.tt-btn-primary:hover { filter: brightness(1.08); }
+.tt-btn-sun {
+  background: var(--tt-sun);
+  color: var(--tt-ink);
+  box-shadow: 0 4px 14px -4px rgba(244, 180, 0, 0.45);
+}
+.tt-btn-sun:hover { filter: brightness(1.04); }
+.tt-btn-secondary {
+  background: var(--tt-paper);
+  color: var(--tt-ink);
+  border: 1.5px solid var(--tt-line);
+}
+.tt-btn-secondary:hover { border-color: var(--tt-pine); }
+.tt-btn-ghost {
+  background: transparent;
+  color: var(--tt-pine);
+  min-height: 2.75rem;
+  padding: 0.5rem 1rem;
+}
+.tt-btn-ghost:hover { background: var(--tt-pine-tint); }
+.tt-btn-lg {
+  min-height: 3.5rem;
+  padding: 1rem 2rem;
+  font-size: 1rem;
+  border-radius: 1.25rem;
+}
+
+/* ---- SECTION RHYTHM ---- */
+.tt-section { margin-bottom: 1.5rem; }
+@media (min-width: 640px) {
+  .tt-section { margin-bottom: 2rem; }
+}
+.tt-section-title {
+  font-weight: 800;
+  font-size: 1.25rem;
+  letter-spacing: -0.01em;
+  color: var(--tt-ink);
+  text-align: center;
+}
+.tt-section-sub {
+  margin-top: 0.25rem;
+  text-align: center;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--tt-ink-soft);
+}
+
+/* ---- ICON BADGE (replaces emoji headers) ---- */
+.tt-icon-badge {
+  display: grid;
+  place-items: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 1.125rem;
+  flex-shrink: 0;
+}
+.tt-icon-badge-pine { background: var(--tt-pine-tint); color: var(--tt-pine); }
+.tt-icon-badge-sun { background: var(--tt-sun-soft); color: var(--tt-cocoa); }
+.tt-icon-badge-grape { background: var(--tt-grape-soft); color: var(--tt-grape); }
+.tt-icon-badge-navy { background: var(--tt-navy); color: #fff; }
+.tt-icon-badge-tang { background: var(--tt-tang-soft); color: var(--tt-tang); }
+
+/* ---- Reduced motion: all unified primitives ---- */
+@media (prefers-reduced-motion: reduce) {
+  .tt-motion-pop, .tt-motion-bounce, .tt-motion-rise,
+  .tt-motion-breathe, .tt-motion-pop-delayed {
     animation: none !important;
   }
 }

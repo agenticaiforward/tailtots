@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { TtIllustration } from "../components/TtIllustration";
 
 export const metadata = {
   title: "TailTots for Shelters — Turn visits into character missions",
@@ -6,15 +7,15 @@ export const metadata = {
 };
 
 const STEPS = [
-  { icon: "📝", title: "List your needs", line: "Dog walking, cat socializing, reading buddies — what do you need?" },
-  { icon: "🐾", title: "We make missions", line: "Your needs become kid-safe missions, matched by age." },
-  { icon: "💛", title: "Kids show up", line: "Families book visits. Kids earn badges; animals get love." },
+  { illustration: "book", title: "List your needs", line: "Dog walking, cat socializing, reading buddies — what do you need?" },
+  { illustration: "paw-house", title: "We make missions", line: "Your needs become kid-safe missions, matched by age." },
+  { illustration: "hands", title: "Kids show up", line: "Families book visits. Kids earn badges; animals get love." },
 ];
 
 const BENEFITS = [
-  { icon: "🙋", stat: "Young volunteers", line: "Structured, age-matched kid volunteers" },
-  { icon: "📣", stat: "Family advocates", line: "Every family amplifies your animals" },
-  { icon: "💰", stat: "Donation goals", line: "Kids fundraise for food, medicine, beds" },
+  { illustration: "family", stat: "Young volunteers", line: "Structured, age-matched kid volunteers" },
+  { illustration: "chat", stat: "Family advocates", line: "Every family amplifies your animals" },
+  { illustration: "celebrate", stat: "Donation goals", line: "Kids fundraise for food, medicine, beds" },
 ];
 
 export default function ForShelters() {
@@ -34,7 +35,7 @@ export default function ForShelters() {
           <p className="mx-auto mt-4 max-w-2xl text-lg font-semibold leading-7 text-tt-ink-soft">
             Real volunteering, structured for kids. You get helping hands — we handle the rest.
           </p>
-          <a href="#partner" className="tt-btn-press mt-6 inline-flex min-h-12 items-center rounded-xl bg-tt-pine px-8 py-3 text-sm font-black text-white shadow-lg">
+          <a href="#partner" className="tt-btn tt-btn-primary tt-btn-lg tt-motion-pop mt-6">
             Partner with us →
           </a>
         </div>
@@ -44,7 +45,7 @@ export default function ForShelters() {
           {STEPS.map((s, i) => (
             <div key={s.title} className="rounded-3xl border border-tt-line bg-white p-6 text-center">
               <p className="text-xs font-black text-tt-ink-faint">STEP {i + 1}</p>
-              <p className="mt-2 text-4xl" aria-hidden="true">{s.icon}</p>
+              <div className="mx-auto mt-2 w-fit"><TtIllustration kind={s.illustration} className="size-14" /></div>
               <p className="mt-3 text-base font-black text-tt-navy">{s.title}</p>
               <p className="mt-1.5 text-sm font-semibold leading-5 text-tt-ink-soft">{s.line}</p>
             </div>
@@ -55,7 +56,7 @@ export default function ForShelters() {
         <div className="mt-6 grid gap-4 sm:grid-cols-3">
           {BENEFITS.map((b) => (
             <div key={b.stat} className="rounded-3xl bg-tt-pine-tint p-6 text-center">
-              <p className="text-4xl" aria-hidden="true">{b.icon}</p>
+              <div className="mx-auto w-fit"><TtIllustration kind={b.illustration} className="size-14" /></div>
               <p className="mt-3 text-base font-black text-tt-pine">{b.stat}</p>
               <p className="mt-1.5 text-sm font-semibold leading-5 text-tt-ink-soft">{b.line}</p>
             </div>

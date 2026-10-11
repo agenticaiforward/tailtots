@@ -12,6 +12,7 @@
 "use client";
 
 import AlivePet from "./AlivePet";
+import { PetNeeds } from "./PetNeeds";
 import { petKindFor } from "./KidExperience";
 import { evolutionStageFor } from "./PetEvolution";
 import type { Pet } from "../../lib/types";
@@ -69,6 +70,15 @@ export default function RealPetHero({
             💛 {pet.careNotes.split(",").slice(0, 3).join(" · ")}
           </p>
         )}
+      </div>
+      {/* Jack's needs — the virtual companion alongside the real pet */}
+      <div className="relative mt-4">
+        <PetNeeds
+          petName="Jack"
+          petKind={petKindFor(pet.species)}
+          isEgg={false}
+          compact
+        />
       </div>
     </section>
   );

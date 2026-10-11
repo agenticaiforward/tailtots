@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { TtIllustration } from "../components/TtIllustration";
 
 export const metadata = {
   title: "TailTots for Schools — Character development without the testing",
@@ -6,15 +7,15 @@ export const metadata = {
 };
 
 const PRINCIPLES = [
-  { icon: "🚫", title: "No student scoring", line: "Never scored, ranked, or profiled. No admin dashboards of child psychology." },
-  { icon: "🏠", title: "Home is where it happens", line: "Schools see participation rates — never trait data." },
-  { icon: "🔒", title: "Parents own everything", line: "Families control all data. Schools can't access or keep it." },
+  { illustration: "shield", title: "No student scoring", line: "Never scored, ranked, or profiled. No admin dashboards of child psychology." },
+  { illustration: "family", title: "Home is where it happens", line: "Schools see participation rates — never trait data." },
+  { illustration: "shield", title: "Parents own everything", line: "Families control all data. Schools can't access or keep it." },
 ];
 
 const PILOT = [
-  { icon: "1️⃣", title: "Pick a classroom", line: "One class, one month. Zero IT lift." },
-  { icon: "2️⃣", title: "Families opt in", line: "Parents choose. No mandates." },
-  { icon: "3️⃣", title: "See participation", line: "Aggregate engagement only. Nothing more." },
+  { illustration: "book", title: "Pick a classroom", line: "One class, one month. Zero IT lift." },
+  { illustration: "family", title: "Families opt in", line: "Parents choose. No mandates." },
+  { illustration: "growth", title: "See participation", line: "Aggregate engagement only. Nothing more." },
 ];
 
 export default function ForSchools() {
@@ -34,7 +35,7 @@ export default function ForSchools() {
           <p className="mx-auto mt-4 max-w-2xl text-lg font-semibold leading-7 text-tt-ink-soft">
             Character education without surveillance. Families own the data.
           </p>
-          <a href="#pilot" className="tt-btn-press mt-6 inline-flex min-h-12 items-center rounded-xl bg-tt-pine px-8 py-3 text-sm font-black text-white shadow-lg">
+          <a href="#pilot" className="tt-btn tt-btn-primary tt-btn-lg tt-motion-pop mt-6">
             Start a pilot →
           </a>
         </div>

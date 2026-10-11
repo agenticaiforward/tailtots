@@ -18,27 +18,27 @@ export const metadata = {
 
 const HOW_IT_WORKS = [
   {
-    icon: "📋",
+    illustration: "mission",
     title: "Pick a mission",
     line: "Age-banded, 10–30 min. No prep.",
   },
   {
-    icon: "✅",
+    illustration: "shield",
     title: "Approve the moment",
     line: "You approve photos before families see them.",
   },
   {
-    icon: "📊",
+    illustration: "growth",
     title: "See the class bloom",
     line: "Aggregate trends only. Never individual data.",
   },
 ];
 
 const GUARANTEES = [
-  { icon: "🔒", line: "Your classroom only. Nothing from home without parent consent." },
-  { icon: "🚫", line: "No individual scores, ever. Trends — never labels." },
-  { icon: "👩‍🏫", line: "You approve every artifact. Nothing auto-publishes." },
-  { icon: "💛", line: "Strength-based language only. No deficit labels possible." },
+  { illustration: "shield", line: "Your classroom only. Nothing from home without parent consent." },
+  { illustration: "shield", line: "No individual scores, ever. Trends — never labels." },
+  { illustration: "book", line: "You approve every artifact. Nothing auto-publishes." },
+  { illustration: "hands", line: "Strength-based language only. No deficit labels possible." },
 ];
 
 export default function TeacherPage() {
@@ -70,7 +70,7 @@ export default function TeacherPage() {
         <div className="mt-12 grid gap-4 sm:grid-cols-3">
           {HOW_IT_WORKS.map((s) => (
             <div key={s.title} className="rounded-3xl border border-tt-line bg-tt-paper p-5">
-              <p className="text-3xl" aria-hidden="true">{s.icon}</p>
+              <div className="mx-auto w-fit"><TtIllustration kind={s.illustration} className="size-12" /></div>
               <p className="mt-2 text-sm font-black text-tt-ink">{s.title}</p>
               <p className="mt-1 text-xs font-semibold leading-5 text-tt-ink-soft">{s.line}</p>
             </div>
@@ -82,7 +82,7 @@ export default function TeacherPage() {
           <ul className="mt-4 space-y-3">
             {GUARANTEES.map((g, i) => (
               <li key={i} className="flex gap-3">
-                <span className="text-xl" aria-hidden="true">{g.icon}</span>
+                <TtIllustration kind={g.illustration} className="size-8" />
                 <p className="text-sm font-semibold leading-6 text-white/90">{g.line}</p>
               </li>
             ))}

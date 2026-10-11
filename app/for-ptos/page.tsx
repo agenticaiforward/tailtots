@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { TtIllustration } from "../components/TtIllustration";
 
 export const metadata = {
   title: "TailTots for PTOs — Fundraise through family challenges",
@@ -6,16 +7,16 @@ export const metadata = {
 };
 
 const IDEAS = [
-  { icon: "📚", title: "Read-a-thon", line: "Kids log reading; sponsors pledge per book." },
-  { icon: "💛", title: "Kindness week", line: "Kindness missions, sponsored per act." },
-  { icon: "👟", title: "Step challenge", line: "Family steps over a weekend. Pledges per 1,000." },
-  { icon: "🌱", title: "Garden grow-out", line: "Kids grow seedlings. Spring sale funds the PTO." },
+  { illustration: "book", title: "Read-a-thon", line: "Kids log reading; sponsors pledge per book." },
+  { illustration: "hands", title: "Kindness week", line: "Kindness missions, sponsored per act." },
+  { illustration: "journey", title: "Step challenge", line: "Family steps over a weekend. Pledges per 1,000." },
+  { illustration: "growth", title: "Garden grow-out", line: "Kids grow seedlings. Spring sale funds the PTO." },
 ];
 
 const HOW = [
-  { icon: "🎯", title: "Pick a challenge", line: "Templates or your own. Set dates and goal." },
-  { icon: "📣", title: "Invite families", line: "One link. Free, works on any phone." },
-  { icon: "💰", title: "Watch it grow", line: "Missions complete, pledges trigger. No envelopes." },
+  { illustration: "mission", title: "Pick a challenge", line: "Templates or your own. Set dates and goal." },
+  { illustration: "chat", title: "Invite families", line: "One link. Free, works on any phone." },
+  { illustration: "celebrate", title: "Watch it grow", line: "Missions complete, pledges trigger. No envelopes." },
 ];
 
 export default function ForPTOs() {
@@ -35,7 +36,7 @@ export default function ForPTOs() {
           <p className="mx-auto mt-4 max-w-2xl text-lg font-semibold leading-7 text-tt-ink-soft">
             Fundraisers families enjoy — with pledges that track themselves.
           </p>
-          <a href="#start" className="tt-btn-press mt-6 inline-flex min-h-12 items-center rounded-xl bg-tt-pine px-8 py-3 text-sm font-black text-white shadow-lg">
+          <a href="#start" className="tt-btn tt-btn-primary tt-btn-lg tt-motion-pop mt-6">
             Start a campaign →
           </a>
         </div>

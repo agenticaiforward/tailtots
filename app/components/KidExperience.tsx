@@ -14,7 +14,8 @@ import { useMemo, useState } from "react";
 import type { Child, Mission, Pet } from "../../lib/types";
 import { getAgeMode, KidModeHeader } from "./AgeMode";
 import { Graduation, useGraduation } from "./Graduation";
-import { PetEvolution } from "./PetEvolution";
+import { evolutionStageFor, nextEvolutionStage } from "./PetEvolution";
+import { PetNeeds } from "./PetNeeds";
 import RealPetHero from "./RealPetHero";
 import ReadinessMeter from "./ReadinessMeter";
 import ShelterBuddy from "./ShelterBuddy";
@@ -94,11 +95,20 @@ export function KidExperienceTop({ child, pets, missions }: { child: Child; pets
       {pet && showRealHero ? (
         <RealPetHero pet={pet} approvedCount={approvedCount} />
       ) : pet ? (
-        <PetEvolution
-          approvedCount={approvedCount}
+        <PetNeeds
+          petName={pet.name}
           petKind={petKindFor(pet.species)}
           photoUrl={pet.photoUrl}
-          petName={pet.name}
+          isEgg={evolutionStageFor(approvedCount).stage === "egg"}
+          evolutionEmoji={evolutionStageFor(approvedCount).emoji}
+          evolutionName={evolutionStageFor(approvedCount).name}
+          evolutionProgress={(() => {
+            const stage = evolutionStageFor(approvedCount);
+            const next = nextEvolutionStage(approvedCount);
+            if (!next) return 1;
+            const span = next.minMissions - stage.minMissions;
+            return Math.min(1, Math.max(0, (approvedCount - stage.minMissions) / span));
+          })()}
         />
       ) : null}
       {/* WANT track: readiness journey toward a real pet */}
