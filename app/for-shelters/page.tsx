@@ -6,15 +6,15 @@ export const metadata = {
 };
 
 const STEPS = [
-  { icon: "📝", title: "List your needs", line: "Dog walking, socializing shy cats, reading to rabbits — what do you need help with?" },
-  { icon: "🐾", title: "We make missions", line: "Your needs become kid-safe volunteer missions, matched by age and ability." },
-  { icon: "💛", title: "Kids show up", line: "Families book visits through the app. Kids earn badges; animals get love." },
+  { icon: "📝", title: "List your needs", line: "Dog walking, cat socializing, reading buddies — what do you need?" },
+  { icon: "🐾", title: "We make missions", line: "Your needs become kid-safe missions, matched by age." },
+  { icon: "💛", title: "Kids show up", line: "Families book visits. Kids earn badges; animals get love." },
 ];
 
 const BENEFITS = [
-  { icon: "🙋", stat: "Young volunteers", line: "A pipeline of eager, structured kid volunteers" },
-  { icon: "📣", stat: "Family advocates", line: "Every family becomes a voice for your animals" },
-  { icon: "💰", stat: "Donation goals", line: "Kids fundraise toward real goals — food, medicine, beds" },
+  { icon: "🙋", stat: "Young volunteers", line: "Structured, age-matched kid volunteers" },
+  { icon: "📣", stat: "Family advocates", line: "Every family amplifies your animals" },
+  { icon: "💰", stat: "Donation goals", line: "Kids fundraise for food, medicine, beds" },
 ];
 
 export default function ForShelters() {
@@ -32,8 +32,7 @@ export default function ForShelters() {
             Turn shelter visits into character missions
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-lg font-semibold leading-7 text-tt-ink-soft">
-            Kids earn kindness badges through real volunteering at your shelter.
-            You get helping hands and young advocates. Everybody wins — especially the animals.
+            Real volunteering, structured for kids. You get helping hands — we handle the rest.
           </p>
           <a href="#partner" className="tt-btn-press mt-6 inline-flex min-h-12 items-center rounded-xl bg-tt-pine px-8 py-3 text-sm font-black text-white shadow-lg">
             Partner with us →
@@ -66,7 +65,6 @@ export default function ForShelters() {
         <div id="partner" className="mt-14 rounded-3xl bg-tt-night p-8 text-center sm:p-10">
           <h2 className="text-2xl font-black text-white">Ready to partner?</h2>
           <p className="mx-auto mt-3 max-w-lg text-[15px] font-semibold leading-6 text-white/75">
-            Tell us about your shelter and we&rsquo;ll set up your mission board.
             Free for shelters, always.
           </p>
           <a href="mailto:hello@tailtots.com?subject=Shelter%20Partnership" className="tt-btn-press mt-6 inline-flex min-h-12 items-center rounded-xl bg-tt-sun px-8 py-3 text-sm font-black text-tt-ink">

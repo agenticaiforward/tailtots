@@ -6,15 +6,15 @@ export const metadata = {
 };
 
 const PRINCIPLES = [
-  { icon: "🚫", title: "No student scoring", line: "We never score, rank, or profile individual students. No dashboards of child psychology for administrators." },
-  { icon: "🏠", title: "Home is where it happens", line: "Character practice happens in families. Schools see participation rates — never trait data." },
-  { icon: "🔒", title: "Parents own everything", line: "All data belongs to the family. Schools can't access it, sell it, or keep it." },
+  { icon: "🚫", title: "No student scoring", line: "Never scored, ranked, or profiled. No admin dashboards of child psychology." },
+  { icon: "🏠", title: "Home is where it happens", line: "Schools see participation rates — never trait data." },
+  { icon: "🔒", title: "Parents own everything", line: "Families control all data. Schools can't access or keep it." },
 ];
 
 const PILOT = [
-  { icon: "1️⃣", title: "Pick a classroom", line: "One class, one month. We handle setup — zero IT lift." },
-  { icon: "2️⃣", title: "Families opt in", line: "Parents choose to join. No mandates, no all-school rollouts." },
-  { icon: "3️⃣", title: "See participation", line: "You get aggregate engagement — how many families, how often. Nothing more." },
+  { icon: "1️⃣", title: "Pick a classroom", line: "One class, one month. Zero IT lift." },
+  { icon: "2️⃣", title: "Families opt in", line: "Parents choose. No mandates." },
+  { icon: "3️⃣", title: "See participation", line: "Aggregate engagement only. Nothing more." },
 ];
 
 export default function ForSchools() {
@@ -32,8 +32,7 @@ export default function ForSchools() {
             Character development without the testing
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-lg font-semibold leading-7 text-tt-ink-soft">
-            The alternative to SEL surveillance. Growth kids choose, data parents own,
-            zero student scoring. Character education that respects everyone in the building.
+            Character education without surveillance. Families own the data.
           </p>
           <a href="#pilot" className="tt-btn-press mt-6 inline-flex min-h-12 items-center rounded-xl bg-tt-pine px-8 py-3 text-sm font-black text-white shadow-lg">
             Start a pilot →

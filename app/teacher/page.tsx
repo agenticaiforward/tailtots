@@ -20,25 +20,25 @@ const HOW_IT_WORKS = [
   {
     icon: "📋",
     title: "Pick a mission",
-    line: "Choose from the Kindness Crew ladder — age-banded, teacher-supervised, 10–30 minutes. No prep needed.",
+    line: "Age-banded, 10–30 min. No prep.",
   },
   {
     icon: "✅",
     title: "Approve the moment",
-    line: "When a mission creates a photo or reflection, you approve it before it reaches families. You're the gatekeeper.",
+    line: "You approve photos before families see them.",
   },
   {
     icon: "📊",
     title: "See the class bloom",
-    line: "Aggregate trends only: which strengths the class is practicing most. Never individual scores — kids aren't data points.",
+    line: "Aggregate trends only. Never individual data.",
   },
 ];
 
 const GUARANTEES = [
-  { icon: "🔒", line: "You see your classroom only. Nothing from home or community without the parent's explicit yes." },
-  { icon: "🚫", line: "No individual trait scores, ever. Aggregate trends — never labels on a child." },
-  { icon: "👩‍🏫", line: "You approve every artifact before families see it. Nothing auto-publishes." },
-  { icon: "💛", line: "Strength-based language only. The platform cannot produce deficit labels — it has no vocabulary for them." },
+  { icon: "🔒", line: "Your classroom only. Nothing from home without parent consent." },
+  { icon: "🚫", line: "No individual scores, ever. Trends — never labels." },
+  { icon: "👩‍🏫", line: "You approve every artifact. Nothing auto-publishes." },
+  { icon: "💛", line: "Strength-based language only. No deficit labels possible." },
 ];
 
 export default function TeacherPage() {
@@ -60,8 +60,7 @@ export default function TeacherPage() {
             Character missions for your classroom
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-lg font-semibold leading-7 text-tt-ink-soft">
-            The same AI that personalizes missions at home, tuned for your classroom.
-            You assign, you approve, you see the class bloom — never a single child&apos;s data.
+            Weekly missions, zero prep. You assign, you approve — never a child&apos;s data.
           </p>
           <a href="#start" className="tt-btn-press mt-6 inline-flex min-h-12 items-center rounded-xl bg-tt-pine px-8 py-3 text-sm font-black text-white shadow-lg">
             Bring it to my classroom →
@@ -93,8 +92,7 @@ export default function TeacherPage() {
         <div id="start" className="mt-10 rounded-3xl border border-tt-line bg-tt-paper p-6 text-center sm:p-8">
           <h2 className="text-2xl font-black text-tt-ink">Start with one mission</h2>
           <p className="mx-auto mt-2 max-w-lg text-sm font-semibold leading-6 text-tt-ink-soft">
-            No signup, no roster upload, no IT ticket. Pick one Kindness Crew mission,
-            try it this week, and see how your class responds.
+            No signup, no roster, no IT ticket. Try one mission this week.
           </p>
           <div className="mt-4 rounded-2xl bg-tt-cream p-4 text-left">
             <p className="text-xs font-black uppercase tracking-widest text-tt-pine">This week&apos;s starter</p>

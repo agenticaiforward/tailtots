@@ -122,10 +122,39 @@ const HOW_IT_WORKS = [
 export function VisualLanding({
   onTryDemo,
   onSignup,
+  onTrackSelect,
 }: {
   onTryDemo: () => void;
   onSignup: () => void;
+  onTrackSelect?: (track: "have" | "want" | "cant") => void;
 }) {
+
+  const TRACKS = [
+    {
+      id: "have" as const,
+      emoji: "🐶",
+      question: "Have a pet?",
+      line: "Missions with your real pet",
+      img: "/landing/kid-dog.jpg",
+      alt: "Happy kid hugging their dog",
+    },
+    {
+      id: "want" as const,
+      emoji: "💭",
+      question: "Want a pet?",
+      line: "Prove you're ready",
+      img: "/landing/kid-guinea-pig.jpg",
+      alt: "Kid dreaming with a puppy",
+    },
+    {
+      id: "cant" as const,
+      emoji: "🐾",
+      question: "Can't have pets?",
+      line: "Sponsor a shelter buddy",
+      img: "/landing/audience-shelter-hero.jpg",
+      alt: "Kid with a shelter animal",
+    },
+  ];
 
   return (
     <div className="space-y-6">
@@ -152,8 +181,32 @@ export function VisualLanding({
             Try the first mission free
           </button>
           <p className="mt-3 text-sm font-semibold text-white/70">
-            No account needed to start · No ads, ever
+            No account needed to start · Free forever plan
           </p>
+        </div>
+      </section>
+
+      {/* 3-TRACK SELECTOR — every family sees their door */}
+      <section className="rounded-3xl border border-tt-line bg-tt-paper p-5 sm:p-6">
+        <h2 className="text-center text-xl font-black text-tt-ink">Which sounds like your family?</h2>
+        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+          {TRACKS.map((t) => (
+            <button
+              key={t.id}
+              onClick={() => onTrackSelect ? onTrackSelect(t.id) : onTryDemo()}
+              className="tt-btn-press group overflow-hidden rounded-2xl border border-tt-line bg-white text-left shadow-sm transition-transform hover:scale-[1.02]"
+            >
+              <div className="relative h-32 overflow-hidden sm:h-36">
+                <img src={t.img} alt={t.alt} className="h-full w-full object-cover" loading="lazy" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" aria-hidden="true" />
+                <p className="absolute bottom-2 left-3 text-2xl" aria-hidden="true">{t.emoji}</p>
+              </div>
+              <div className="p-4">
+                <p className="text-base font-black text-tt-ink">{t.question}</p>
+                <p className="mt-0.5 text-sm font-bold text-tt-pine">{t.line} →</p>
+              </div>
+            </button>
+          ))}
         </div>
       </section>
 
@@ -165,7 +218,7 @@ export function VisualLanding({
             {[
               "AI missions built for your child's age and pet",
               "One weekly insight — never a dashboard to obsess over",
-              "You approve everything. No ads, no chat, ever.",
+              "You approve everything. Your child only sees what you allow.",
             ].map((b) => (
               <li key={b} className="flex items-center justify-center gap-2 text-sm font-bold text-tt-ink-soft">
                 <svg viewBox="0 0 20 20" className="size-4 shrink-0 text-tt-pine" fill="currentColor" aria-hidden="true">
@@ -200,6 +253,28 @@ export function VisualLanding({
             </div>
           ))}
         </div>
+      </section>
+
+      {/* HOW THE AI WORKS — 3 icons, links to /ai-insights deep dive */}
+      <section className="rounded-3xl border border-tt-line bg-tt-paper p-5 sm:p-6">
+        <h2 className="text-center text-xl font-black text-tt-ink">How the AI works</h2>
+        <p className="mt-1 text-center text-sm font-semibold text-tt-ink-soft">Personalized missions. No black box.</p>
+        <div className="mt-4 grid grid-cols-3 gap-3">
+          {[
+            { icon: "🎯", title: "Personalizes", line: "Missions matched to age, pet & traits" },
+            { icon: "🌱", title: "Notices", line: "Spots growing strengths from behavior" },
+            { icon: "💛", title: "Guides", line: "One weekly insight for parents" },
+          ].map((s) => (
+            <div key={s.title} className="flex flex-col items-center rounded-2xl bg-tt-cream p-4 text-center">
+              <p className="text-3xl" aria-hidden="true">{s.icon}</p>
+              <p className="mt-2 text-sm font-extrabold text-tt-ink">{s.title}</p>
+              <p className="text-xs font-semibold text-tt-ink-soft">{s.line}</p>
+            </div>
+          ))}
+        </div>
+        <a href="/ai-insights" className="mx-auto mt-4 block text-center text-sm font-extrabold text-tt-pine underline">
+          See the AI in action →
+        </a>
       </section>
 
       {/* TRAIT METAPHORS — pictures, not definitions */}

@@ -6,16 +6,16 @@ export const metadata = {
 };
 
 const IDEAS = [
-  { icon: "📚", title: "Read-a-thon", line: "Kids log reading missions; sponsors pledge per book. Leaderboard optional — participation is the point." },
-  { icon: "💛", title: "Kindness week", line: "A week of kindness missions. Local businesses sponsor each completed act." },
-  { icon: "👟", title: "Step challenge", line: "Family step missions over a weekend. Pledges per 1,000 steps." },
-  { icon: "🌱", title: "Garden grow-out", line: "Kids grow seedlings as missions. Spring plant sale funds the PTO." },
+  { icon: "📚", title: "Read-a-thon", line: "Kids log reading; sponsors pledge per book." },
+  { icon: "💛", title: "Kindness week", line: "Kindness missions, sponsored per act." },
+  { icon: "👟", title: "Step challenge", line: "Family steps over a weekend. Pledges per 1,000." },
+  { icon: "🌱", title: "Garden grow-out", line: "Kids grow seedlings. Spring sale funds the PTO." },
 ];
 
 const HOW = [
-  { icon: "🎯", title: "Pick a challenge", line: "Choose from templates or design your own. Set the dates and the goal." },
-  { icon: "📣", title: "Invite families", line: "Share one link. Families join free — works on any phone." },
-  { icon: "💰", title: "Watch it grow", line: "Missions complete, pledges trigger, funds track automatically. No envelopes." },
+  { icon: "🎯", title: "Pick a challenge", line: "Templates or your own. Set dates and goal." },
+  { icon: "📣", title: "Invite families", line: "One link. Free, works on any phone." },
+  { icon: "💰", title: "Watch it grow", line: "Missions complete, pledges trigger. No envelopes." },
 ];
 
 export default function ForPTOs() {
@@ -33,8 +33,7 @@ export default function ForPTOs() {
             Fundraise through family challenges
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-lg font-semibold leading-7 text-tt-ink-soft">
-            Turn your next fundraiser into missions families actually enjoy —
-            with pledges and funds that track themselves. No wrapping paper. No envelopes.
+            Fundraisers families enjoy — with pledges that track themselves.
           </p>
           <a href="#start" className="tt-btn-press mt-6 inline-flex min-h-12 items-center rounded-xl bg-tt-pine px-8 py-3 text-sm font-black text-white shadow-lg">
             Start a campaign →

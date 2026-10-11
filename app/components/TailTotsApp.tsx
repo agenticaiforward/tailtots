@@ -15,6 +15,8 @@ import { WelcomeBack } from "./WelcomeBack";
 import { SoundToggle } from "./SoundToggle";
 import AudienceLanes from "./AudienceLanes";
 import GuidedOnboarding from "./GuidedOnboarding";
+import type { PetTrack } from "../../lib/pet-tracks";
+import { PlaydateQuickCreate } from "./PlaydateQuickCreate";
 import LanternPhilosophy from "./LanternPhilosophy";
 import ExploreMode from "./ExploreMode";
 import { ChoiceAdventureSpot } from "./ChoiceAdventureSpot";
@@ -855,6 +857,7 @@ export function TailTotsApp() {
   const [isParentUnlocked, setIsParentUnlocked] = useState(true);
   // Guided onboarding overlay (Duolingo lesson-one loop): value before signup.
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [onboardingTrack, setOnboardingTrack] = useState<PetTrack | null>(null);
   const [parentGateOpen, setParentGateOpen] = useState(false);
   const [gateInput, setGateInput] = useState("");
   const [gateError, setGateError] = useState(false);
@@ -1495,6 +1498,12 @@ export function TailTotsApp() {
     setIsParentUnlocked(true);
     setActiveTab("approvals");
     requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "smooth" }));
+  }
+
+  /** Start guided onboarding pre-selected to a pet track (from landing 3-track cards). */
+  function startOnboardingWithTrack(track: PetTrack) {
+    setOnboardingTrack(track);
+    setShowOnboarding(true);
   }
 
   function openKidDemo() {
@@ -2586,10 +2595,12 @@ export function TailTotsApp() {
             <VisualLanding
               onTryDemo={openKidDemo}
               onSignup={() => setAuthPage("signup")}
+              onTrackSelect={startOnboardingWithTrack}
             />
           )}
           {showOnboarding && (
             <GuidedOnboarding
+              initialTrack={onboardingTrack ?? undefined}
               onComplete={(result) => {
                 // Persist the chosen pet track + any real pets from onboarding.
                 try {
@@ -2602,6 +2613,7 @@ export function TailTotsApp() {
                   });
                 }
                 setShowOnboarding(false);
+                setOnboardingTrack(null);
               }}
               onSignup={(result) => {
                 try {
@@ -2614,6 +2626,7 @@ export function TailTotsApp() {
                   });
                 }
                 setShowOnboarding(false);
+                setOnboardingTrack(null);
                 setAuthPage("signup");
               }}
             />
@@ -4494,6 +4507,13 @@ function SchedulePanel({
           about it.
         </p>
       </div>
+
+      <PlaydateQuickCreate
+        children={childProfiles}
+        familyName={familyName}
+        hostName={hostName}
+        onCreated={async () => setInvites(await playdateStore.listInvites())}
+      />
 
       {claimToast && (
         <div role="status" className="flex items-start justify-between gap-3 rounded-lg border-2 border-tt-pine bg-tt-pine-tint p-4 shadow-sm">

@@ -50,12 +50,14 @@ const STEP_ORDER: Step[] = ["track", "pet", "mission", "celebrate", "signup"];
 export default function GuidedOnboarding({
   onComplete,
   onSignup,
+  initialTrack,
 }: {
   onComplete: (result: { track: PetTrack; pets: Pet[]; virtualBuddyId?: string }) => void;
   onSignup: (result: { track: PetTrack; pets: Pet[]; virtualBuddyId?: string }) => void;
+  initialTrack?: PetTrack;
 }) {
-  const [step, setStep] = useState<Step>("track");
-  const [track, setTrack] = useState<PetTrack | null>(null);
+  const [step, setStep] = useState<Step>(initialTrack ? "pet" : "track");
+  const [track, setTrack] = useState<PetTrack | null>(initialTrack ?? null);
   const [realPets, setRealPets] = useState<Pet[]>([]);
   const [buddy, setBuddy] = useState(VIRTUAL_BUDDIES[0]);
   const [missionDone, setMissionDone] = useState(false);
