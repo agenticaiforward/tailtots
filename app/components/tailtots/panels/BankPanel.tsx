@@ -83,8 +83,7 @@ export function BankPanel(props: {
               photoUrl={props.child?.photoUrl}
             />
             <div>
-              <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2563eb]">Kid Bank</p>
-              <h2 className="mt-1 text-3xl font-black">{props.child?.name ?? "Kid"}&apos;s money choices</h2>
+              <h2 className="mt-1 text-3xl font-black">Kid Bank</h2>
               <p className="mt-1 text-sm font-semibold text-[#5f6a65]">Coins = rewards · Dollars = allowance</p>
             </div>
           </div>
@@ -136,7 +135,7 @@ export function BankPanel(props: {
           </div>
 
           <div className="mt-4 rounded-lg bg-[#fff4d8] p-4">
-            <h4 className="text-lg font-black">Start a new goal</h4>
+            <h4 className="text-lg font-black">New Goal</h4>
             <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_120px_auto]">
               <input
                 className="rounded-lg border border-[#d7caa9] px-4 py-3 font-semibold"
@@ -158,8 +157,7 @@ export function BankPanel(props: {
 
         <div className="space-y-4">
           <div className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
-            <p className="text-sm font-black uppercase tracking-[0.18em] text-[#f47b20]">Use available dollars</p>
-            <h3 className="mt-2 text-3xl font-black">Choose a money jar</h3>
+            <h3 className="mt-2 text-3xl font-black">Pick a Jar</h3>
             <p className="mt-2 text-lg font-semibold leading-7 text-[#5f6a65]">Earned from parent tasks.</p>
             <div className="mt-5 grid grid-cols-2 gap-3">
               {(["save", "give"] as KidMoneyCategory[]).map((category) => (
@@ -237,7 +235,7 @@ export function BankPanel(props: {
           </div>
 
           <div className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
-            <h3 className="font-black">Allowance approved for activities</h3>
+            <h3 className="font-black">Earned</h3>
             {earnedActivityTransactions.map((tx) => (
               <p key={tx.id} className="mt-3 rounded-lg bg-[#e7f4ef] p-3 text-sm font-semibold">
                 <b>+${tx.amount}</b>
@@ -248,7 +246,7 @@ export function BankPanel(props: {
           </div>
 
           <div className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
-          <h3 className="font-black">Waiting and history</h3>
+          <h3 className="font-black">History</h3>
           {childTransactions.map((tx) => (
             <p key={tx.id} className="mt-3 rounded-lg bg-[#f8f6ed] p-3 text-sm font-semibold">
               <b className="capitalize">{tx.category}</b> ${tx.amount}

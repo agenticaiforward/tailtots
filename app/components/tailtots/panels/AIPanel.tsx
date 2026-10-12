@@ -86,13 +86,13 @@ export function AIPanel({ childProfiles, missions }: { childProfiles: Child[]; m
     <section className="space-y-4">
       <div className="rounded-lg border border-[#ded8c7] bg-[#17231f] p-5 text-white shadow-sm">
         <p className="text-xs font-black uppercase tracking-[0.18em] text-[#ffd166]">AI roadmap</p>
-        <h2 className="mt-2 text-3xl font-black">AI should help quietly, safely, and parent-first.</h2>
+        <h2 className="mt-2 text-3xl font-black">Quiet AI</h2>
               </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
         <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
           <p className="text-xs font-black uppercase tracking-[0.18em] text-[#165a4b]">AI now</p>
-          <h3 className="mt-2 text-2xl font-black">What exists today</h3>
+          <h3 className="mt-2 text-2xl font-black">Available Now</h3>
           <div className="mt-4 grid gap-3">
             {currentUses.map(([title, body]) => (
               <article key={title} className="rounded-lg bg-[#f8f6ed] p-4">
@@ -105,7 +105,7 @@ export function AIPanel({ childProfiles, missions }: { childProfiles: Child[]; m
 
         <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
           <p className="text-xs font-black uppercase tracking-[0.18em] text-[#f47b20]">Guardrails</p>
-          <h3 className="mt-2 text-2xl font-black">Rules for kid-safe AI</h3>
+          <h3 className="mt-2 text-2xl font-black">Safety Rules</h3>
           <ul className="mt-4 grid gap-3 text-sm font-semibold leading-5 text-[#5f6a65]">
             <li className="rounded-lg bg-[#fff4d8] p-3">Parents control AI setup, publishing, and social sharing.</li>
             <li className="rounded-lg bg-[#fff4d8] p-3">Kids get simple prompts and choices, not an unrestricted AI chat.</li>
@@ -117,7 +117,7 @@ export function AIPanel({ childProfiles, missions }: { childProfiles: Child[]; m
 
       <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
         <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2563eb]">AI tools</p>
-        <h3 className="mt-2 text-2xl font-black">Parent-side helpers you can use now</h3>
+        <h3 className="mt-2 text-2xl font-black">AI Helpers</h3>
         
         <div className="mt-5 grid gap-4 lg:grid-cols-2">
           <section className="rounded-lg bg-[#eef2ff] p-4">
@@ -213,7 +213,7 @@ export function AIPanel({ childProfiles, missions }: { childProfiles: Child[]; m
 
       <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
         <p className="text-xs font-black uppercase tracking-[0.18em] text-[#7c3aed]">Pet social extension</p>
-        <h3 className="mt-2 text-2xl font-black">Future social media for pets</h3>
+        <h3 className="mt-2 text-2xl font-black">Pet Profiles</h3>
         <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-[#5f6a65]">
           Pet profiles, parent-controlled.
         </p>

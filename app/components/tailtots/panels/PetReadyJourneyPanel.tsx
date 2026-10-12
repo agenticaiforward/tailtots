@@ -23,8 +23,7 @@ export function PetReadyJourneyPanel({
 }) {
   return (
     <section aria-label="Pet Ready Family journey" className="rounded-lg border border-[#165a4b] bg-[#f7fffb] p-5">
-      <p className="text-xs font-black uppercase tracking-[0.18em] text-[#165a4b]">Pet Ready Family journey</p>
-      <h2 className="mt-2 text-3xl font-black">Proving readiness, one week at a time</h2>
+      <h2 className="mt-2 text-3xl font-black">Pet Readiness</h2>
       <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-[#3d4a45]">
         Show steady care for 8–12 weeks.
       </p>

@@ -89,8 +89,7 @@ export function GrowthPanel(props: {
       <div className="flex items-center gap-2">
         <span className="text-2xl">🌱</span>
         <div>
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-pine">Character growth</p>
-          <h2 className="text-xl font-black text-tt-ink sm:text-2xl">Growing strong</h2>
+          <h2 className="text-xl font-black text-tt-ink sm:text-2xl">Growth</h2>
         </div>
       </div>
       <div className="mt-4 grid gap-3 lg:grid-cols-2">
@@ -207,7 +206,7 @@ export function GrowthPanel(props: {
         })}
       </div>
       <div className="mt-5 rounded-lg bg-[#f0edff] p-4">
-        <h3 className="font-black">Memory moments</h3>        <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+        <h3 className="font-black">Memories</h3>        <div className="mt-3 flex flex-col gap-2 sm:flex-row">
           <input className="min-w-0 flex-1 rounded-lg border border-[#ded8c7] px-3 py-3 font-semibold" value={props.momentDraft} onChange={(event) => props.setMomentDraft(event.target.value)} />
           <button onClick={props.addMoment} className="rounded-lg bg-[#7c3aed] px-5 py-3 text-sm font-black text-white">Save moment</button>
         </div>

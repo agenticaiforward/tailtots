@@ -25,8 +25,7 @@ export function ApprovalsPanel(props: {
       <div className="flex items-center gap-2">
         <span className="text-2xl">✅</span>
         <div>
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-pine">Parent review</p>
-          <h2 className="text-xl font-black text-tt-ink sm:text-2xl">High-fives waiting</h2>
+          <h2 className="text-xl font-black text-tt-ink sm:text-2xl">Approvals</h2>
         </div>
       </div>
       <p className="mt-2 text-sm font-semibold leading-5 text-tt-ink/60">
@@ -106,8 +105,7 @@ export function MissionAssignmentPanel(props: {
 
   return (
     <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
-      <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2563eb]">Fair mission assignment</p>
-      <h2 className="mt-2 text-2xl font-black sm:text-3xl">One owner per task, balanced points</h2>
+      <h2 className="mt-2 text-2xl font-black sm:text-3xl">Task Balance</h2>
             <div className="mt-4 flex flex-wrap gap-3">
         <button onClick={props.autoBalanceMissions} className="min-h-11 rounded-lg bg-[#2563eb] px-5 py-2 text-sm font-black text-white">
           Auto balance tasks
@@ -115,15 +113,15 @@ export function MissionAssignmentPanel(props: {
               </div>
       <div className="mt-4 grid gap-3 lg:grid-cols-3">
         <div className="rounded-lg bg-[#e7f4ef] p-4">
-          <p className="text-xs font-black uppercase tracking-[0.14em] text-[#165a4b]">Fairness engine</p>
+          <p className="text-xs font-black uppercase tracking-[0.14em] text-[#165a4b]">Fairness</p>
           <p className="mt-2 text-lg font-black">Fairness, not first-click competition</p>
                   </div>
         <div className="rounded-lg bg-[#f0edff] p-4">
-          <p className="text-xs font-black uppercase tracking-[0.14em] text-[#5b21b6]">Values tracked</p>
+          <p className="text-xs font-black uppercase tracking-[0.14em] text-[#5b21b6]">Values</p>
           <p className="mt-2 text-lg font-black">{familySkillSummary.topLabel}</p>
                   </div>
         <div className="rounded-lg bg-[#fff4d8] p-4">
-          <p className="text-xs font-black uppercase tracking-[0.14em] text-[#7a4b12]">Current spread</p>
+          <p className="text-xs font-black uppercase tracking-[0.14em] text-[#7a4b12]">Balance</p>
           <p className="mt-2 text-lg font-black">{spread} planned points</p>
                   </div>
       </div>

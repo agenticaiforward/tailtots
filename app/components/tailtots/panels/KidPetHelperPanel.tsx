@@ -25,8 +25,7 @@ export function KidPetHelperPanel({ activeChild, pets, moments }: { activeChild?
   return (
     <section className="space-y-4">
       <div className="rounded-lg border border-[#ded8c7] bg-[#e7f4ef] p-5 shadow-sm">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#165a4b]">Kid-safe AI helper</p>
-        <h2 className="mt-2 text-3xl font-black">Ask the pet helper</h2>
+        <h2 className="mt-2 text-3xl font-black">Pet Helper</h2>
         <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-[#4f625b]">Safe questions, kind answers.</p>
       </div>
       <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">

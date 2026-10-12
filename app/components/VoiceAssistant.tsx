@@ -510,7 +510,7 @@ export default function VoiceAssistant({
           )}
           {!listening && !transcript && (
             <p className="mt-2 text-xs text-tt-ink/50">
-              Try: "go to missions" · "I read [book]" · "read this page"
+              Just talk — I see this page and can tap things for you.
             </p>
           )}
         </div>

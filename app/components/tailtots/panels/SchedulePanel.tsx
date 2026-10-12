@@ -86,7 +86,7 @@ export function SchedulePanel({
 
       {isParent && (
         <section className="rounded-3xl border border-tt-line bg-white p-4 shadow-sm">
-          <VisualSectionHeader icon="🤝" title="Playdate availability" subtitle="Share safe times, no personal details" />
+          <VisualSectionHeader icon="🤝" title="Playdates" />
           <div className="mt-3 grid gap-2.5 lg:grid-cols-[1fr_0.8fr]">
             <div className="rounded-2xl bg-blue-50 p-3 ring-1 ring-blue-200">
               <p className="break-all rounded-xl bg-white p-2.5 text-xs font-black text-tt-ink shadow-sm">🔗 {familyAvailabilityLink}</p>

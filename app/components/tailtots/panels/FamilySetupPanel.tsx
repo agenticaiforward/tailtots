@@ -56,7 +56,7 @@ export function FamilySetupPanel(props: {
       {/* Visual setup progress */}
       <div className="rounded-3xl border border-tt-line bg-white p-4 shadow-sm">
         <div className="flex items-center justify-between">
-          <VisualSectionHeader icon="🚀" title="Family setup" subtitle="Add the pieces — grow into the rest later" />
+          <VisualSectionHeader icon="🚀" title="Setup" />
           <div className="shrink-0 rounded-2xl bg-tt-pine px-3 py-2 text-center shadow">
             <div className="text-lg font-black text-white">{completedSteps}/{setupSteps.length}</div>
             <div className="text-[10px] font-bold text-white/80">ready</div>
@@ -75,7 +75,7 @@ export function FamilySetupPanel(props: {
 
       <div className="rounded-3xl border border-tt-line bg-white p-4 shadow-sm">
         <div className="flex items-center justify-between gap-3">
-          <VisualSectionHeader icon="🔐" title="Parent account" subtitle="Keeps everything together" />
+          <VisualSectionHeader icon="🔐" title="Parent Account" />
           <div className={`shrink-0 rounded-2xl px-3 py-2 text-xs font-black ${props.cloudAccountEmail ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}`}>
             {props.cloudAccountEmail ? `✓ ${props.cloudAccountEmail}` : isSupabaseConfigured ? "Ready" : "Setup"}
           </div>
@@ -134,7 +134,7 @@ export function FamilySetupPanel(props: {
       </div>
 
       <div className="rounded-3xl border border-tt-line bg-white p-4 shadow-sm">
-        <VisualSectionHeader icon="🏠" title="Household" subtitle="Your family's home base" />
+        <VisualSectionHeader icon="🏠" title="Household" />
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
           <label className="block text-sm font-black text-tt-ink">
             Household name
@@ -186,7 +186,7 @@ export function FamilySetupPanel(props: {
 
       <section className="grid gap-4 2xl:grid-cols-[0.8fr_1.2fr]">
         <div className="rounded-3xl border border-tt-line bg-white p-4 shadow-sm">
-          <VisualSectionHeader icon="👤" title="Parents" subtitle="Grown-up profiles" />
+          <VisualSectionHeader icon="👤" title="Parents" />
           <div className="mt-3 grid gap-2.5">
             {props.parents.map((parent) => (
               <article key={parent.id} className="rounded-2xl bg-tt-cream/40 p-3 ring-1 ring-tt-line">
@@ -209,7 +209,7 @@ export function FamilySetupPanel(props: {
         </div>
 
         <div className="rounded-3xl border border-tt-line bg-white p-4 shadow-sm">
-          <VisualSectionHeader icon="🧒" title="Kids" subtitle="Kid profiles" />
+          <VisualSectionHeader icon="🧒" title="Kids" />
           <div className="mt-3 grid gap-2.5 lg:grid-cols-2">
             {props.childProfiles.map((child) => {
               const look = getChildLook(child.id);
@@ -260,7 +260,7 @@ export function FamilySetupPanel(props: {
       </section>
 
       <div className="rounded-3xl border border-tt-line bg-white p-4 shadow-sm">
-        <VisualSectionHeader icon="🐾" title="Pet passports" subtitle="Every pet's profile" />
+        <VisualSectionHeader icon="🐾" title="Pets" />
         <div className="mt-3 grid gap-2.5 lg:grid-cols-2">
           {props.pets.map((pet) => {
             const look = getPetLook(pet.id);

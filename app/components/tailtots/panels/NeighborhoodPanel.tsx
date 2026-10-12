@@ -56,7 +56,7 @@ export function NeighborhoodPanel({
     <section className="space-y-4">
       <div className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
         <p className="text-xs font-black uppercase tracking-[0.18em] text-[#0f766e]">Neighborhood</p>
-        <h2 className="mt-2 text-3xl font-black">Parent-led pet jobs and safe playdates</h2>
+        <h2 className="mt-2 text-3xl font-black">Neighborhood Jobs</h2>
         <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-[#5f6a65]">
           
         </p>
@@ -79,7 +79,7 @@ export function NeighborhoodPanel({
       {role === "parent" && (
         <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
           <p className="text-xs font-black uppercase tracking-[0.18em] text-[#f47b20]">Post a job</p>
-          <h3 className="mt-2 text-2xl font-black">Create a parent-screened helper mission</h3>
+          <h3 className="mt-2 text-2xl font-black">New Helper Job</h3>
           <p className="mt-2 text-sm font-semibold text-[#5f6a65]"></p>
           <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             <input className="rounded-lg border border-[#ded8c7] px-3 py-3 text-sm font-semibold" value={jobDraft.title} onChange={(event) => setJobDraft({ ...jobDraft, title: event.target.value })} placeholder="Job title" />
@@ -97,7 +97,7 @@ export function NeighborhoodPanel({
       {role === "parent" && (
         <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
           <p className="text-xs font-black uppercase tracking-[0.18em] text-[#7c3aed]">Skill job builder</p>
-          <h3 className="mt-2 text-2xl font-black">Post a job around the life skill you want to teach</h3>
+          <h3 className="mt-2 text-2xl font-black">New Skill Job</h3>
           <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-[#5f6a65]">
             Start from the value, not just the task.
           </p>
@@ -197,7 +197,7 @@ export function NeighborhoodPanel({
 
       <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
         <p className="text-xs font-black uppercase tracking-[0.18em] text-[#f47b20]">Shelters and adoption</p>
-        <h3 className="mt-2 text-2xl font-black">Partner with shelters for adoption learning and volunteer badges</h3>
+        <h3 className="mt-2 text-2xl font-black">Shelter Partners</h3>
         <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-[#5f6a65]">
           
         </p>
@@ -287,7 +287,7 @@ export function LegacyNeighborhoodPanel({ goals, childProfiles }: { goals: Savin
     <section className="space-y-4">
       <div className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
         <p className="text-xs font-black uppercase tracking-[0.18em] text-[#0f766e]">Neighborhood</p>
-        <h2 className="mt-2 text-3xl font-black">Parent-led pet friends and helper requests</h2>
+        <h2 className="mt-2 text-3xl font-black">Neighborhood</h2>
         <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-[#5f6a65]">
           Kids do not browse or message other kids. Parents discover nearby pet families, compare pets and schedules, then decide whether a playdate, shared care task, or pet-sitting request is safe to show.
         </p>

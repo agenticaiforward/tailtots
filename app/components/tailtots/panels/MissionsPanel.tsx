@@ -46,8 +46,7 @@ export function MissionsPanel(props: {
       <div className="flex items-center gap-2">
         <span className="text-2xl">🎯</span>
         <div>
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-pine">Today</p>
-          <h2 className="text-xl font-black text-tt-ink sm:text-2xl">Pick a mission!</h2>
+          <h2 className="text-xl font-black text-tt-ink sm:text-2xl">Today&apos;s Missions</h2>
         </div>
       </div>
 
