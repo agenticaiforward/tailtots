@@ -102,7 +102,7 @@ export interface QuizFeedback {
   score: { correct: number; total: number };
 }
 
-function questionCount(age?: number): number {
+export function questionCount(age?: number): number {
   // Shorter for younger kids (attention span). ADHD-friendly: never long.
   if (age !== undefined && age <= 6) return 3;
   return 5;

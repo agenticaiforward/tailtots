@@ -3124,6 +3124,7 @@ export function TailTotsApp() {
         role={role === "parent" ? "parent" : "child"}
         tab={visibleActiveTab}
         tabLabel={tabItems.find((t) => t.id === visibleActiveTab)?.label ?? visibleActiveTab}
+        kidAge={role === "child" ? activeChild?.age : undefined}
       />
     </main>
   );

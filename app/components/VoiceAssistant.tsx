@@ -214,6 +214,7 @@ export default function VoiceAssistant({
   role,
   tab,
   tabLabel,
+  kidAge,
 }: {
   /** Fired when the AI decides on an action. */
   onAction: (action: VoiceAction) => void;
@@ -225,6 +226,8 @@ export default function VoiceAssistant({
   tab: string;
   /** Human-readable tab label — sent to the AI as page context. */
   tabLabel: string;
+  /** Active child's age — quiz questions adapt to it. Only a number reaches the AI. */
+  kidAge?: number;
 }) {
   const [listening, setListening] = useState(false);
   const [transcript, setTranscript] = useState("");
@@ -281,11 +284,106 @@ export default function VoiceAssistant({
   }, []);
 
   /**
+   * Quiz mode: start a new quiz on a topic.
+   * Predictable ("Question 1 of 5"), no time pressure, kid can stop anytime.
+   */
+  const startQuiz = useCallback(async (topic: string, easy = false) => {
+    setThinking(true);
+    try {
+      const res = await fetch("/api/voice/quiz", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ action: "start", topic, age: kidAge, easyMode: easy }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error ?? "quiz unavailable");
+      const q = data.question as { question: string; choices?: string[]; spoken: string };
+      setQuiz({
+        topic,
+        age: kidAge,
+        easyMode: easy,
+        history: [],
+        current: { ...q, total: typeof data.total === "number" ? data.total : 5 },
+        lastFeedback: null,
+      });
+      setThinking(false);
+      setResponse(q.spoken);
+      speak(q.spoken);
+    } catch {
+      setThinking(false);
+      const msg = "I couldn't start the quiz right now. Let's try again in a bit.";
+      setResponse(msg);
+      speak(msg);
+    }
+  }, [kidAge, speak]);
+
+  /**
+   * Quiz mode: evaluate the kid's spoken (or tapped) answer.
+   * The AI handles stop / easier / repeat — gentle, never shaming.
+   */
+  const answerQuiz = useCallback(async (text: string) => {
+    const q = quizRef.current;
+    if (!q || !q.current) return;
+    setTranscript(text);
+    setThinking(true);
+    try {
+      const res = await fetch("/api/voice/quiz", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          action: "answer",
+          topic: q.topic,
+          age: q.age,
+          easyMode: q.easyMode,
+          history: q.history,
+          answer: text,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error ?? "quiz unavailable");
+      setThinking(false);
+      const turn: QuizTurn = { question: q.current.question, userAnswer: text, correct: data.correct === true };
+      const history = [...q.history, turn];
+      if (data.stopRequested === true || data.done === true) {
+        const score = data.score ?? { correct: history.filter((h) => h.correct).length, total: history.length };
+        const summary = data.stopRequested === true
+          ? `Okay, quiz paused. You got ${score.correct} out of ${score.total}. Nice thinking!`
+          : `${data.feedback ?? ""} Quiz done! You got ${score.correct} out of ${score.total}. Awesome work!`;
+        setQuiz(null);
+        setResponse(summary);
+        speak(summary);
+      } else {
+        const next = data.next as { question: string; choices?: string[]; spoken: string };
+        const easyMode = data.easyRequested === true ? true : q.easyMode;
+        setQuiz({
+          ...q,
+          easyMode,
+          history,
+          current: { ...next, total: q.current.total },
+          lastFeedback: typeof data.feedback === "string" ? data.feedback : null,
+        });
+        const spoken = `${data.feedback ?? ""} ${next.spoken}`.trim();
+        setResponse(spoken);
+        speak(spoken);
+      }
+    } catch {
+      setThinking(false);
+      const msg = "Hmm, I missed that. Say your answer again?";
+      setResponse(msg);
+      speak(msg);
+    }
+  }, [speak]);
+
+  /**
    * Execute one planned action against the real page.
    * Every target is validated against visible elements — the AI can never
    * invent buttons. Returns true when the step ran.
    */
   const executeAction = useCallback((action: VoicePlannedAction): boolean => {
+    if (action.do === "quiz") {
+      void startQuiz(action.target || "animals");
+      return true;
+    }
     if (action.do === "navigate") {
       onAction({ type: "navigate", tab: action.target });
       return true;
@@ -312,10 +410,16 @@ export default function VoiceAssistant({
     }
     // click — fuzzy match against the visible label
     return clickElementByLabel(action.target) !== null;
-  }, [onAction]);
+  }, [onAction, startQuiz]);
 
   /** Local keyword fallback when the AI endpoint is unreachable. */
   const handleLocalFallback = useCallback((text: string) => {
+    // Offline quiz: "quiz me" works even without the AI planner.
+    if (/\b(quiz|test)\s+me\b|\bask\s+me\s+(some\s+)?questions\b/i.test(text)) {
+      const topicMatch = text.match(/\b(?:on|about)\s+([a-zA-Z ]{2,40})/i);
+      void startQuiz(topicMatch ? topicMatch[1].trim() : "animals");
+      return;
+    }
     const action = parseVoiceIntent(text);
     onAction(action);
     let reply = "";
@@ -351,13 +455,19 @@ export default function VoiceAssistant({
     }
     setResponse(reply);
     speak(reply);
-  }, [onAction, pageSummary, speak]);
+  }, [onAction, pageSummary, speak, startQuiz]);
 
   /**
    * AI-native intent handling: snapshot the page, ask Workers AI for a plan,
    * then execute it step by step. Falls back to local parsing when offline.
    */
   const handleResult = useCallback(async (text: string) => {
+    // Quiz mode: every utterance is an answer. The AI handles
+    // "stop", "easier", and "repeat" gently — no special casing here.
+    if (quizRef.current?.current) {
+      await answerQuiz(text);
+      return;
+    }
     setTranscript(text);
     setThinking(true);
 
@@ -415,7 +525,7 @@ export default function VoiceAssistant({
       setThinking(false);
       handleLocalFallback(text);
     }
-  }, [role, tab, tabLabel, pageSummary, speak, executeAction, handleLocalFallback]);
+  }, [role, tab, tabLabel, pageSummary, speak, executeAction, handleLocalFallback, answerQuiz]);
 
   const toggleListening = useCallback(() => {
     if (listening) {
@@ -478,14 +588,14 @@ export default function VoiceAssistant({
       </button>
 
       {/* Voice panel */}
-      {(listening || transcript || response) && (
+      {(listening || transcript || response || quiz?.current) && (
         <div data-voice-assistant className="tt-animate-pop-in fixed bottom-36 right-4 z-50 w-72 rounded-3xl bg-white p-4 shadow-2xl ring-2 ring-tt-line sm:bottom-24 sm:right-6">
           <div className="flex items-center justify-between">
             <p className="text-xs font-black uppercase tracking-wider text-tt-ink/50">
               {listening ? "🎤 Listening…" : "✨ Voice"}
             </p>
             <button
-              onClick={() => { setTranscript(""); setResponse(""); try { window.speechSynthesis.cancel(); } catch {} setSpeaking(false); }}
+              onClick={() => { setTranscript(""); setResponse(""); setQuiz(null); try { window.speechSynthesis.cancel(); } catch {} setSpeaking(false); }}
               className="rounded-full bg-tt-cream px-2 py-0.5 text-xs font-bold text-tt-ink/60"
             >
               ✕
@@ -518,6 +628,56 @@ export default function VoiceAssistant({
             <p className="mt-2 rounded-2xl bg-violet-50 p-2.5 text-sm font-semibold text-violet-900 ring-1 ring-violet-200">
               {response}
             </p>
+          )}
+          {/* Quiz card — same question spoken aloud, shown visually with big tappable choices */}
+          {quiz?.current && (
+            <div className="mt-2 rounded-2xl bg-gradient-to-br from-violet-50 to-fuchsia-50 p-3 ring-1 ring-violet-200">
+              <p className="text-[11px] font-black uppercase tracking-wider text-violet-700">
+                🧠 Quiz · {quiz.topic} · Question {quiz.history.length + 1} of {quiz.current.total}
+              </p>
+              {quiz.lastFeedback && (
+                <p className="mt-1 text-sm font-semibold text-violet-900">{quiz.lastFeedback}</p>
+              )}
+              <p className="mt-1 text-base font-black text-tt-ink">{quiz.current.question}</p>
+              {quiz.current.choices && quiz.current.choices.length > 0 && (
+                <div className="mt-2 grid gap-1.5">
+                  {quiz.current.choices.map((c, i) => (
+                    <button
+                      key={i}
+                      onClick={() => void answerQuiz(c)}
+                      className="tt-btn-press rounded-xl bg-white px-3 py-2.5 text-left text-sm font-bold text-tt-ink ring-1 ring-violet-200"
+                    >
+                      {String.fromCharCode(65 + i)}. {c}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <div className="mt-2 flex gap-1.5">
+                <button
+                  onClick={() => void answerQuiz("repeat")}
+                  className="flex-1 rounded-full bg-white px-2 py-1.5 text-xs font-black text-violet-900 ring-1 ring-violet-200"
+                >
+                  🔁 Repeat
+                </button>
+                <button
+                  onClick={() => void answerQuiz("easier")}
+                  className="flex-1 rounded-full bg-white px-2 py-1.5 text-xs font-black text-violet-900 ring-1 ring-violet-200"
+                >
+                  😌 Easier
+                </button>
+                <button
+                  onClick={() => void answerQuiz("stop")}
+                  className="flex-1 rounded-full bg-white px-2 py-1.5 text-xs font-black text-violet-900 ring-1 ring-violet-200"
+                >
+                  ⏹ Stop
+                </button>
+              </div>
+              {(!quiz.current.choices || quiz.current.choices.length === 0) && (
+                <p className="mt-2 text-xs font-semibold text-tt-ink/50">
+                  Say your answer out loud, or tap the mic 🎤
+                </p>
+              )}
+            </div>
           )}
           {!listening && !transcript && (
             <p className="mt-2 text-xs text-tt-ink/50">

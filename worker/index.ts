@@ -20,6 +20,7 @@ import {
   buildQuizStartMessages,
   parseQuizAnswer,
   parseQuizStart,
+  questionCount,
   validateQuizInput,
 } from "../lib/voice/quiz";
 import {
@@ -277,7 +278,7 @@ async function handleVoiceQuiz(request: Request, env: Env): Promise<Response> {
       });
       const q = parseQuizStart(output?.response ?? "");
       if (!q) throw new Error("AI returned no usable question");
-      return jsonResponse({ total: input.history.length + 1, question: q }, 200);
+      return jsonResponse({ total: questionCount(input.age), question: q }, 200);
     }
     const output = await env.AI.run(VOICE_QUIZ_MODEL_ID, {
       messages: buildQuizAnswerMessages(
@@ -292,7 +293,9 @@ async function handleVoiceQuiz(request: Request, env: Env): Promise<Response> {
     });
     const parsed = parseQuizAnswer(output?.response ?? "");
     if (!parsed) throw new Error("AI returned no usable evaluation");
-    return jsonResponse(parsed, 200);
+    const history = input.history ?? [];
+    const correctCount = history.filter((h) => h.correct).length + (parsed.correct ? 1 : 0);
+    return jsonResponse({ ...parsed, score: { correct: correctCount, total: history.length + 1 } }, 200);
   } catch (error) {
     log.error("Workers AI voice-quiz request failed", { error });
     return jsonResponse({ error: "The quiz helper is unavailable right now." }, 502);
