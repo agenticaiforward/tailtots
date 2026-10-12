@@ -119,6 +119,7 @@ function quizSystemPrompt(age?: number, easyMode?: boolean): string {
     (easyMode
       ? "- ALWAYS give 3 multiple-choice options. The child picks one.\n"
       : "- Give 3 multiple-choice options UNLESS the question is very simple.\n") +
+    "- Choices must be real words or phrases, never just \"A\", \"B\", \"C\".\n" +
     "- Never shame a wrong answer. Say \"Good try!\" then give the correct answer as a fact.\n" +
     "- Never use the word \"wrong\". Never count down or rush.\n" +
     "- Keep it fun and factual. One short fun fact is welcome after the answer.\n\n" +
