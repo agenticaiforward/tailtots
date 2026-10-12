@@ -5781,11 +5781,7 @@ function MissionsPanel(props: {
       <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-pine">Today</p>
-            <h2 className="mt-2 text-2xl font-black sm:text-3xl">Today&apos;s care and helper missions</h2>
-            <p className="mt-2 max-w-xl text-sm font-semibold leading-6 text-tt-ink-soft">
-              Pick a mission, do it in the real world, then send it for a parent high-five.
-            </p>
+            <h2 className="mt-2 text-2xl font-black sm:text-3xl">Today&apos;s Missions</h2>
           </div>
           {isKidView && <SoundToggle />}
         </div>
@@ -7197,8 +7193,7 @@ function BankPanel(props: {
             photoUrl={props.child?.photoUrl}
           />
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-blue">Kid Bank</p>
-            <h2 className="mt-1 text-3xl font-black text-tt-ink">{props.child?.name ?? "Kid"}&apos;s money jars</h2>
+            <h2 className="mt-1 text-3xl font-black text-tt-ink">Kid Bank</h2>
             <p className="mt-1 text-base font-bold text-tt-ink-soft">Money you earned → <span className="text-tt-blue">you decide where it goes!</span> 🫙</p>
           </div>
         </div>
@@ -7231,7 +7226,7 @@ function BankPanel(props: {
       )}
 
       <div className="rounded-lg border border-tt-line bg-white p-5 shadow-sm">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-blue">The three jars</p>
+        <h3 className="text-2xl font-black text-tt-ink">Jars</h3>
         <div className="mt-4 grid grid-cols-3 gap-2 sm:gap-4">
           {JAR_VISUALS.map((visual) => (
             <JarMeter
@@ -7265,8 +7260,7 @@ function BankPanel(props: {
 
       <div className="grid gap-4 2xl:grid-cols-2">
         <div className="rounded-lg border border-tt-line bg-white p-5 shadow-sm">
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-pine">My goals</p>
-          <h3 className="mt-2 text-2xl font-black text-tt-ink">What are you saving for?</h3>
+          <h3 className="mt-2 text-2xl font-black text-tt-ink">Goals</h3>
           <div className="mt-4 grid gap-3">
             {!kidSaveGoals.length && (
               <div className="rounded-lg border-2 border-dashed border-tt-pine bg-tt-pine-tint p-4 text-center">
@@ -7279,8 +7273,7 @@ function BankPanel(props: {
         </div>
 
         <div id="kid-bank-drives" className="rounded-lg border border-tt-line bg-white p-5 shadow-sm">
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-gold">Kindness drives</p>
-          <h3 className="mt-2 text-2xl font-black text-tt-ink">Helping, together 💛</h3>
+          <h3 className="mt-2 text-2xl font-black text-tt-ink">Giving 💛</h3>
           <div className="mt-4 grid gap-3">
             {!drives.length && (
               <div className="rounded-lg border-2 border-dashed border-tt-gold bg-[#fff8ef] p-4 text-center">
@@ -7319,7 +7312,7 @@ function BankPanel(props: {
       )}
 
       <div className="rounded-lg border border-tt-line bg-white p-5 shadow-sm">
-        <h3 className="text-lg font-black text-tt-ink">Your money story 📖</h3>
+        <h3 className="text-lg font-black text-tt-ink">History</h3>
         {pendingTransactions.length > 0 && (
           <div className="mt-3">
             <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-gold">⏳ Waiting for a grown-up</p>
@@ -7715,8 +7708,7 @@ function ApprovalsPanel(props: {
       <div className="rounded-lg border border-tt-line bg-white p-5 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-tang">Missions</p>
-            <h2 className="mt-1 text-2xl font-black">Kid missions waiting on you</h2>
+            <h2 className="mt-1 text-2xl font-black">Approvals</h2>
           </div>
           {pendingMissions.length > 0 && (
             <button
@@ -8628,12 +8620,7 @@ function FamilySetupPanel(props: {
       <div className="rounded-lg border border-tt-line bg-[#ffffff] p-5 shadow-sm">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-tang">Real family setup</p>
-            <h2 className="mt-2 text-2xl font-black sm:text-3xl">Start simple. Add the family pieces first.</h2>
-            <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-tt-ink-soft">
-              Set up the parent account, household, kids, and pets. TailTots can grow into goals, rewards, and Kid Bank after the first mission.
-              Read our <a className="font-black text-tt-pine underline" href="https://tailtots.com/privacy" target="_blank" rel="noreferrer">Privacy Policy</a>.
-            </p>
+            <h2 className="mt-2 text-2xl font-black sm:text-3xl">Setup</h2>
           </div>
           <div className="rounded-lg bg-tt-pine px-4 py-3 text-sm font-black text-white">
             {completedSteps} of {setupSteps.length} ready
@@ -9886,8 +9873,7 @@ function GrowthPanel(props: {
   }));
   return (
     <section className="rounded-lg border border-tt-line bg-white p-5">
-      <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-grape">Character growth</p>
-      <h2 className="mt-2 text-3xl font-black">Responsibility, empathy, kindness, leadership</h2>
+      <h2 className="mt-2 text-3xl font-black">Growth</h2>
       {/* Phase 3 — PERMA Growth Log: weekly flourishing bloom (parent view). */}
       <div className="mt-5">
         <FlourishingPanel snapshot={flourishingSnapshot} childName={flourishingChild?.name ?? "your child"} />
