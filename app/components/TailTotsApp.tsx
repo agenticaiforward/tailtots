@@ -23,6 +23,8 @@ import LanternPhilosophy from "./LanternPhilosophy";
 import ExploreMode from "./ExploreMode";
 import { ChoiceAdventureSpot } from "./ChoiceAdventureSpot";
 import VillageTab from "./ecosystem/VillageTab";
+import { PlanPanel } from "./tailtots/panels/PlanPanel";
+import VoiceAssistant, { type VoiceAction } from "./VoiceAssistant";
 import type { ConsentGrant, EcoArtifact } from "../../lib/ecosystem/types";
 import { CuriosityMissions } from "./CuriosityMissions";
 import { SynthesisZone } from "./SynthesisMoments";
@@ -542,10 +544,11 @@ const tabItems = [
   { id: "neighborhood", label: "Hood", icon: "M3 11l9-8 9 8M5 10v10h14V10M10 20v-6h4v6" },
   { id: "growth", label: "Growth", icon: "M12 22v-8M12 14c0-4 3-8 8-10-1 5-4 8-8 10Zm0 0c0-3-2.5-6-6-7.5.8 3.8 3 6 6 7.5Z" },
   { id: "village", label: "Village", icon: "M3 11l9-8 9 8M5 10v10h14V10M10 20v-6h4v6M2 21h20" },
+  { id: "plan", label: "Plan", icon: "M8 2v4M16 2v4M3 8h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2ZM8 14l2.5 2.5L16 11" },
 ];
 
 const kidTabIds = ["missions", "home", "schedule", "pets", "pet-helper", "bank", "neighborhood"];
-const parentTabIds = ["vision", "approvals", "setup", "schedule", "pets", "neighborhood", "growth", "village"];
+const parentTabIds = ["vision", "approvals", "setup", "schedule", "pets", "neighborhood", "growth", "village", "plan"];
 const defaultParentPasscode = "4321";
 
 const savedFamilyStateKey = "tailtots-family-state-v1";
@@ -861,7 +864,8 @@ export function TailTotsApp() {
       setGivingRouteId(parseGivingHash(window.location.hash));
     };
     window.addEventListener("hashchange", onHashChange);
-    return () => window.removeEventListener("hashchange", onHashChange);
+
+  return () => window.removeEventListener("hashchange", onHashChange);
   }, []);
   const [activeTab, setActiveTab] = useState("vision");
   const [isParentUnlocked, setIsParentUnlocked] = useState(true);
@@ -2452,6 +2456,43 @@ export function TailTotsApp() {
     );
   }
 
+  /** Voice AI action handler — the mic button's brain. */
+  function handleVoiceAction(action: VoiceAction) {
+    switch (action.type) {
+      case "navigate": {
+        const tabIds = role === "parent" ? parentTabIds : kidTabIds;
+        if (tabIds.includes(action.tab)) {
+          setActiveTab(action.tab);
+        }
+        break;
+      }
+      case "log-book":
+        addRealLifeEntry("book", action.title);
+        break;
+      case "log-chore":
+        addRealLifeEntry("chore", action.title);
+        break;
+      case "log-kind":
+        addRealLifeEntry("kind-act", action.title);
+        break;
+      case "log-skill":
+        addRealLifeEntry("skill", action.title);
+        break;
+      case "complete-mission": {
+        const q = action.query.toLowerCase();
+        const match = missions.find((m) =>
+          !m.completedBy && m.status !== "approved" &&
+          (m.title.toLowerCase().includes(q) || q.includes(m.title.toLowerCase().slice(0, 20)))
+        ) ?? missions.find((m) => !m.completedBy && m.status !== "approved");
+        if (match) completeMission(match.id);
+        break;
+      }
+      case "read-page":
+        // Handled inside VoiceAssistant via TTS
+        break;
+    }
+  }
+
   return (
     <main className="tailtots-app min-h-screen bg-tt-cream text-tt-ink">
       <header className="sticky top-0 z-20 border-b border-tt-line bg-white/95 backdrop-blur">
@@ -2957,6 +2998,9 @@ export function TailTotsApp() {
               onGrantChange={persistEcoGrants}
             />
           )}
+          {visibleActiveTab === "plan" && role === "parent" && (
+            <PlanPanel />
+          )}
           {visibleActiveTab === "neighborhood" && (
             <NeighborhoodPanel
               goals={goals}
@@ -3071,6 +3115,11 @@ export function TailTotsApp() {
           </div>
         );
       })()}
+      {/* Voice AI — listen + speak + do things on any page */}
+      <VoiceAssistant
+        onAction={handleVoiceAction}
+        pageSummary={`${role === "parent" ? "Parent" : "Kid"} view, ${visibleActiveTab} tab. ${missions.filter((m) => !m.completedBy).length} open missions.`}
+      />
     </main>
   );
 }
