@@ -15,6 +15,14 @@ import {
   validateVoiceIntentInput,
 } from "../lib/voice/intent-planning";
 import {
+  VOICE_QUIZ_MODEL_ID,
+  buildQuizAnswerMessages,
+  buildQuizStartMessages,
+  parseQuizAnswer,
+  parseQuizStart,
+  validateQuizInput,
+} from "../lib/voice/quiz";
+import {
   CONVERSATION_MODEL_ID,
   buildConversationPromptMessages,
   parseConversationPromptResponse,
@@ -161,6 +169,9 @@ const flowRateLimiter = new InMemoryRateLimiter(20, 60 * 60 * 1000);
 // auth required (kids use voice too) — input is strictly validated, PII-free
 // by construction, and the model can only return a constrained action plan.
 const voiceIntentRateLimiter = new InMemoryRateLimiter(30, 60 * 1000);
+// Voice quiz: same kid-safe posture as voice intent — no parent auth,
+// strict validation, PII-free, rate limited. Short sessions by design.
+const voiceQuizRateLimiter = new InMemoryRateLimiter(20, 60 * 1000);
 
 function jsonResponse(data: unknown, status: number): Response {
   return new Response(JSON.stringify(data), {
@@ -225,6 +236,66 @@ async function handleVoiceIntent(request: Request, env: Env): Promise<Response> 
   } catch (error) {
     log.error("Workers AI voice-intent request failed", { error });
     return jsonResponse({ error: "The voice helper is unavailable right now." }, 502);
+  }
+}
+
+/**
+ * POST /api/voice/quiz — AI quiz host for kids (ADHD/autism-friendly).
+ *
+ * Two actions: "start" (new quiz on a topic) and "answer" (evaluate the
+ * kid's spoken answer, return feedback + next question or completion).
+ * Questions are short, literal, multiple-choice by default; feedback is
+ * never shaming. No parent auth (kids use it); strict validation +
+ * rate limiting instead. The model never sees PII — only topic, age,
+ * and the quiz history.
+ */
+async function handleVoiceQuiz(request: Request, env: Env): Promise<Response> {
+  if (voiceQuizRateLimiter.isLimited(`voice-quiz:${clientIp(request)}`)) {
+    return jsonResponse({ error: "Too many requests. Please try again later." }, 429);
+  }
+  if (!env.AI) {
+    log.warn("AI binding missing for /api/voice/quiz");
+    return jsonResponse({ error: "The quiz helper is not configured yet." }, 503);
+  }
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonResponse({ error: "Request body must be valid JSON." }, 400);
+  }
+  const validated = validateQuizInput(body);
+  if (!validated.ok) {
+    return jsonResponse({ error: validated.error }, 400);
+  }
+  const input = validated.value;
+  try {
+    if (input.action === "start") {
+      const output = await env.AI.run(VOICE_QUIZ_MODEL_ID, {
+        messages: buildQuizStartMessages(input.topic ?? "animals", input.age, input.easyMode === true),
+        max_tokens: 400,
+        temperature: 0.7,
+      });
+      const q = parseQuizStart(output?.response ?? "");
+      if (!q) throw new Error("AI returned no usable question");
+      return jsonResponse({ total: input.history.length + 1, question: q }, 200);
+    }
+    const output = await env.AI.run(VOICE_QUIZ_MODEL_ID, {
+      messages: buildQuizAnswerMessages(
+        input.topic ?? "animals",
+        input.age,
+        input.easyMode === true,
+        input.history ?? [],
+        input.answer ?? "",
+      ),
+      max_tokens: 500,
+      temperature: 0.4,
+    });
+    const parsed = parseQuizAnswer(output?.response ?? "");
+    if (!parsed) throw new Error("AI returned no usable evaluation");
+    return jsonResponse(parsed, 200);
+  } catch (error) {
+    log.error("Workers AI voice-quiz request failed", { error });
+    return jsonResponse({ error: "The quiz helper is unavailable right now." }, 502);
   }
 }
 
@@ -1590,6 +1661,13 @@ const worker = {
         return new Response("Method Not Allowed", { status: 405 });
       }
       return handleVoiceIntent(request, env);
+    }
+
+    if (url.pathname === "/api/voice/quiz") {
+      if (request.method !== "POST") {
+        return new Response("Method Not Allowed", { status: 405 });
+      }
+      return handleVoiceQuiz(request, env);
     }
 
     if (url.pathname === "/api/ai/ideas") {

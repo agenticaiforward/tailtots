@@ -3,20 +3,20 @@
  *
  * Floating mic button, always available:
  * - TAP: starts listening (speech-to-text). Speak naturally — "go to missions",
- *   "I read Charlotte's Web", "mark my mission done", "read this page to me".
- * - AI interprets the intent and DOES it: navigates, logs real-life entries,
- *   completes missions, or reads content aloud (text-to-speech).
- * - Kids get a friendly voice; parents get quick hands-free control.
+ *   "put $2 in the save jar", "quiz me on dinosaurs", "read this page to me".
+ * - AI sees the page, interprets intent, and DOES it: multi-step actions,
+ *   quiz mode, navigation, or reading aloud (text-to-speech).
  *
- * Uses the browser Web Speech API (no server round-trip for STT/TTS).
- * Intent parsing is local-first (fast, private); complex asks fall back to
- * a clarifying prompt.
+ * Quiz mode is designed for ADHD and autistic kids: predictable structure
+ * ("Question 2 of 5"), short sessions, no time pressure, gentle feedback,
+ * visual questions with tappable choices, stop anytime.
  */
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { snapshotPageContext } from "@/lib/voice/page-context";
 import type { VoiceIntentPlan, VoicePlannedAction } from "@/lib/voice/intent-planning";
+import type { QuizTurn } from "@/lib/voice/quiz";
 
 type SpeechRecognitionLike = {
   lang: string;
@@ -235,6 +235,17 @@ export default function VoiceAssistant({
   const recRef = useRef<SpeechRecognitionLike | null>(null);
   /** Recent turns so follow-ups like "yes, the save one" resolve. */
   const historyRef = useRef<string[]>([]);
+  /** Quiz mode state — null when not quizzing. */
+  const [quiz, setQuiz] = useState<{
+    topic: string;
+    age?: number;
+    easyMode: boolean;
+    history: QuizTurn[];
+    current: { question: string; choices?: string[]; spoken: string; total: number } | null;
+    lastFeedback: string | null;
+  } | null>(null);
+  const quizRef = useRef<typeof quiz>(null);
+  quizRef.current = quiz;
 
   useEffect(() => {
     const w = window as any;

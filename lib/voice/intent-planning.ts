@@ -38,8 +38,8 @@ export interface VoicePageContext {
 
 /** One step the client should perform. */
 export interface VoicePlannedAction {
-  do: "click" | "type" | "navigate";
-  /** Exact element label from the context (click/type) or tab id (navigate). */
+  do: "click" | "type" | "navigate" | "quiz";
+  /** Exact element label from the context (click/type), tab id (navigate), or quiz topic (quiz). */
   target: string;
   /** For "type": the text to enter. */
   value?: string;
@@ -158,6 +158,9 @@ export function buildVoiceIntentMessages(
         "- Break the request into ordered steps using those exact labels.\n" +
         "- \"click\" presses a button/option/tab. \"type\" fills an input (provide \"value\"). " +
         "\"navigate\" switches tabs (target is the tab id).\n" +
+        "- \"quiz\" starts a spoken quiz (target is the topic, e.g. \"dinosaurs\"). Use it when the user " +
+        "says \"quiz me\", \"test me\", \"ask me questions\" — with or without a topic. " +
+        "If no topic is given, target \"animals\".\n" +
         "- If the intent is ambiguous between 2+ visible options, set \"clarify\" to a short spoken " +
         "question and leave \"actions\" empty. Never guess between money jars, children, or pets.\n" +
         "- If the user confirms a previous clarification (\"yes\", \"the save one\"), use the conversation " +
@@ -203,7 +206,7 @@ export function parseVoiceIntentResponse(raw: string): VoiceIntentPlan | null {
     for (const rawAction of p.actions.slice(0, 8)) {
       if (rawAction === null || typeof rawAction !== "object" || Array.isArray(rawAction)) continue;
       const a = rawAction as Record<string, unknown>;
-      if (a.do !== "click" && a.do !== "type" && a.do !== "navigate") continue;
+      if (a.do !== "click" && a.do !== "type" && a.do !== "navigate" && a.do !== "quiz") continue;
       if (typeof a.target !== "string" || !a.target.trim()) continue;
       const action: VoicePlannedAction = { do: a.do, target: a.target.trim().slice(0, VOICE_MAX_LABEL_CHARS) };
       if (a.do === "type" && typeof a.value === "string") {

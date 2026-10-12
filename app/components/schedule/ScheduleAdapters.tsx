@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { MyDayStrip, type DayItem } from "./MyDayStrip";
+import { KidWeekView } from "./KidWeekView";
 import { ParentTodayTimeline, type TimelineBlock, type TimelineChild } from "./ParentTodayTimeline";
 import type { Mission } from "../../../lib/types";
 
@@ -63,6 +64,7 @@ export function KidMyDay({
   onStartMission: (id: string) => void;
   onCompleteMission: (id: string) => void;
 }) {
+  const [view, setView] = useState<"today" | "week">("today");
   // Sort: pending first (by creation), then done
   const pending = missions.filter((m) => m.status !== "approved" && !m.completedBy);
   const done = missions.filter((m) => m.status === "approved" || m.completedBy);
@@ -80,13 +82,42 @@ export function KidMyDay({
   }
 
   return (
-    <MyDayStrip
-      items={items}
-      childName={childName}
-      childAge={childAge}
-      onStartItem={onStartMission}
-      onCompleteItem={onCompleteMission}
-    />
+    <div className="space-y-4">
+      {/* Today / Week toggle */}
+      <div className="flex justify-center" role="tablist" aria-label="Schedule view">
+        <div className="inline-flex rounded-full border border-tt-line bg-white p-1 shadow-sm">
+          {(["today", "week"] as const).map((v) => (
+            <button
+              key={v}
+              role="tab"
+              aria-selected={view === v}
+              onClick={() => setView(v)}
+              className={`rounded-full px-5 py-2 text-sm font-black transition-all ${
+                view === v ? "bg-tt-ink text-white shadow" : "text-tt-ink-soft"
+              }`}
+            >
+              {v === "today" ? "☀️ Today" : "🗓️ Week"}
+            </button>
+          ))}
+        </div>
+      </div>
+      {view === "today" ? (
+        <MyDayStrip
+          items={items}
+          childName={childName}
+          childAge={childAge}
+          onStartItem={onStartMission}
+          onCompleteItem={onCompleteMission}
+        />
+      ) : (
+        <KidWeekView
+          items={items}
+          childName={childName}
+          onStartItem={onStartMission}
+          onCompleteItem={onCompleteMission}
+        />
+      )}
+    </div>
   );
 }
 
