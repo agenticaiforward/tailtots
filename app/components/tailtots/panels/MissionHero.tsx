@@ -33,10 +33,7 @@ export function Hero({
             <h2 className="mt-2 max-w-2xl text-2xl font-black leading-tight md:text-3xl">
               Kids care for real pets. Parents stay confident.
             </h2>
-            <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-[#d8f5e8]">
-              Pick the child, complete today&apos;s care and helper missions, then parent approval handles rewards.
-            </p>
-            <div className="mt-4 flex flex-wrap gap-3">
+                        <div className="mt-4 flex flex-wrap gap-3">
               <button onClick={() => setActiveTab("missions")} className="min-h-11 rounded-lg bg-[#f47b20] px-4 py-3 text-sm font-black text-white sm:min-h-12 sm:px-5">
                 Start today&apos;s missions
               </button>

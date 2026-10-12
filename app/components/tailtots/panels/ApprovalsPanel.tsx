@@ -37,7 +37,7 @@ export function ApprovalsPanel(props: {
           <div className="rounded-3xl bg-tt-cream/60 p-6 text-center">
             <div className="text-4xl">🎉</div>
             <p className="mt-2 text-sm font-black text-tt-ink">All caught up!</p>
-            <p className="text-xs text-tt-ink/60">Completed missions will appear here for your high-five.</p>
+            <p className="text-xs text-tt-ink/60">Done missions appear here.</p>
           </div>
         )}
         {pendingMissions.map((mission) => (
@@ -108,33 +108,24 @@ export function MissionAssignmentPanel(props: {
     <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
       <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2563eb]">Fair mission assignment</p>
       <h2 className="mt-2 text-2xl font-black sm:text-3xl">One owner per task, balanced points</h2>
-      <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-[#5f6a65]">
-        Kids only see missions assigned to their profile. Harder work is worth more, and auto-balance prefers age-fit tasks before evening out points.
-      </p>
-      <div className="mt-4 flex flex-wrap gap-3">
+            <div className="mt-4 flex flex-wrap gap-3">
         <button onClick={props.autoBalanceMissions} className="min-h-11 rounded-lg bg-[#2563eb] px-5 py-2 text-sm font-black text-white">
           Auto balance tasks
         </button>
-        <span className="inline-flex min-h-11 items-center rounded-lg bg-[#eef2ff] px-4 py-2 text-sm font-black text-[#1d4ed8]">
-          Harder tasks automatically carry more points
-        </span>
-      </div>
+              </div>
       <div className="mt-4 grid gap-3 lg:grid-cols-3">
         <div className="rounded-lg bg-[#e7f4ef] p-4">
           <p className="text-xs font-black uppercase tracking-[0.14em] text-[#165a4b]">Fairness engine</p>
           <p className="mt-2 text-lg font-black">Fairness, not first-click competition</p>
-          <p className="mt-1 text-sm font-bold text-[#4f625b]">Every task has one owner, age guidance, and point balancing across kids.</p>
-        </div>
+                  </div>
         <div className="rounded-lg bg-[#f0edff] p-4">
           <p className="text-xs font-black uppercase tracking-[0.14em] text-[#5b21b6]">Values tracked</p>
           <p className="mt-2 text-lg font-black">{familySkillSummary.topLabel}</p>
-          <p className="mt-1 text-sm font-bold text-[#5f4b8b]">Badges become parent-visible proof of growth, not just stickers.</p>
-        </div>
+                  </div>
         <div className="rounded-lg bg-[#fff4d8] p-4">
           <p className="text-xs font-black uppercase tracking-[0.14em] text-[#7a4b12]">Current spread</p>
           <p className="mt-2 text-lg font-black">{spread} planned points</p>
-          <p className="mt-1 text-sm font-bold text-[#6f5c31]">Keep kids near the same total while harder work still earns more.</p>
-        </div>
+                  </div>
       </div>
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         {plannedPoints.map(({ child, points }) => (
@@ -146,8 +137,8 @@ export function MissionAssignmentPanel(props: {
       </div>
       <p className={`mt-3 rounded-lg p-3 text-sm font-black ${spread <= 8 ? "bg-[#e7f4ef] text-[#165a4b]" : "bg-[#fff4d8] text-[#7a4b12]"}`}>
         {spread <= 8
-          ? "Looks balanced. Kids should finish with similar points if they complete their assignments."
-          : `${highest?.child.name ?? "One kid"} has ${spread} more planned points than ${lowest?.child.name ?? "another kid"}. Move one mission to rebalance.`}
+          ? "Balanced ✓"
+          : `${highest?.child.name ?? "One kid"} is up ${spread} pts — move one mission.`}
       </p>
       <div className="mt-4 grid gap-3">
         {props.missions.map((mission) => (

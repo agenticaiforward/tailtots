@@ -58,7 +58,7 @@ export function NeighborhoodPanel({
         <p className="text-xs font-black uppercase tracking-[0.18em] text-[#0f766e]">Neighborhood</p>
         <h2 className="mt-2 text-3xl font-black">Parent-led pet jobs and safe playdates</h2>
         <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-[#5f6a65]">
-          Parents post and approve every detail before kids can see anything. Kids only see parent-approved helper jobs, simple checklists, and rewards that teach responsibility, empathy, teamwork, leadership, and time management.
+          
         </p>
       </div>
 
@@ -80,7 +80,7 @@ export function NeighborhoodPanel({
         <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
           <p className="text-xs font-black uppercase tracking-[0.18em] text-[#f47b20]">Post a job</p>
           <h3 className="mt-2 text-2xl font-black">Create a parent-screened helper mission</h3>
-          <p className="mt-2 text-sm font-semibold text-[#5f6a65]">New jobs stay hidden from kids until a parent explicitly approves them for kid view below.</p>
+          <p className="mt-2 text-sm font-semibold text-[#5f6a65]"></p>
           <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             <input className="rounded-lg border border-[#ded8c7] px-3 py-3 text-sm font-semibold" value={jobDraft.title} onChange={(event) => setJobDraft({ ...jobDraft, title: event.target.value })} placeholder="Job title" />
             <input className="rounded-lg border border-[#ded8c7] px-3 py-3 text-sm font-semibold" value={jobDraft.family} onChange={(event) => setJobDraft({ ...jobDraft, family: event.target.value })} placeholder="Family" />
@@ -99,7 +99,7 @@ export function NeighborhoodPanel({
           <p className="text-xs font-black uppercase tracking-[0.18em] text-[#7c3aed]">Skill job builder</p>
           <h3 className="mt-2 text-2xl font-black">Post a job around the life skill you want to teach</h3>
           <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-[#5f6a65]">
-            Parents can start from a value, not just a task. TailTots can suggest checklist, points, money, and badge language before anything is visible to kids or neighbors.
+            Start from the value, not just the task.
           </p>
           <div className="mt-4 grid gap-3 lg:grid-cols-4">
             {skillJobTemplates.map(([skill, title, detail]) => (
@@ -199,7 +199,7 @@ export function NeighborhoodPanel({
         <p className="text-xs font-black uppercase tracking-[0.18em] text-[#f47b20]">Shelters and adoption</p>
         <h3 className="mt-2 text-2xl font-black">Partner with shelters for adoption learning and volunteer badges</h3>
         <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-[#5f6a65]">
-          TailTots can let animal shelters post parent-approved learning missions, adoption-readiness visits, donation drives, and supervised volunteer opportunities for families in the network.
+          
         </p>
         <div className="mt-4 grid gap-3 lg:grid-cols-4">
           {shelterPrograms.map(([title, detail, badge]) => (

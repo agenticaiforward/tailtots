@@ -82,7 +82,7 @@ export function FamilySetupPanel(props: {
         </div>
         <div className="mt-3">
           <Explainer>
-            A signed-in parent account keeps profiles, photos, kids, pets, goals, points, coins, Kid Bank, badges, and settings together.
+            One account holds your whole family.
           </Explainer>
         </div>
 
@@ -162,7 +162,7 @@ export function FamilySetupPanel(props: {
         <VisualSectionHeader icon="📸" title="Family photo" subtitle="One photo → crop everyone" />
         <div className="mt-3">
           <Explainer>
-            Upload one family picture and TailTots will walk you through cropping the parent and kids from that same photo. Pets use their own photos below.
+            Crop everyone from one photo.
           </Explainer>
         </div>
         <div className="mt-3 flex flex-wrap gap-2">

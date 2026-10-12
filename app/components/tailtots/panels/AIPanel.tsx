@@ -14,8 +14,8 @@ import {
 } from "../ai-content";
 export function AIPanel({ childProfiles, missions }: { childProfiles: Child[]; missions: Mission[] }) {
   const currentUses = [
-    ["Local parent tools", "TailTots now has template-powered helpers for missions, care checklists, memories, summaries, journals, and insights."],
-    ["AI ideas are live for parents", "The Life Skill Chore Planner can generate activity ideas with Cloudflare Workers AI. Parents review every suggestion before it becomes a mission."],
+    ["Local parent tools", "Missions, checklists, memories, journals — built in."],
+    ["AI ideas are live for parents", "Parents review every AI suggestion."],
   ];
   const [aiDraft, setAiDraft] = useState({
     petType: "Guinea pig",
@@ -87,10 +87,7 @@ export function AIPanel({ childProfiles, missions }: { childProfiles: Child[]; m
       <div className="rounded-lg border border-[#ded8c7] bg-[#17231f] p-5 text-white shadow-sm">
         <p className="text-xs font-black uppercase tracking-[0.18em] text-[#ffd166]">AI roadmap</p>
         <h2 className="mt-2 text-3xl font-black">AI should help quietly, safely, and parent-first.</h2>
-        <p className="mt-3 max-w-3xl text-sm font-semibold leading-6 text-[#dce7e2]">
-          TailTots should not become an open-ended chatbot for kids. AI works best here as a behind-the-scenes helper for missions, memories, care summaries, insights, and parent-approved pet social features.
-        </p>
-      </div>
+              </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
         <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
@@ -121,11 +118,7 @@ export function AIPanel({ childProfiles, missions }: { childProfiles: Child[]; m
       <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
         <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2563eb]">AI tools</p>
         <h3 className="mt-2 text-2xl font-black">Parent-side helpers you can use now</h3>
-        <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-[#5f6a65]">
-          The planner below can generate ideas with AI, or keep using the built-in templates. Nothing is
-          saved until a parent chooses it.
-        </p>
-
+        
         <div className="mt-5 grid gap-4 lg:grid-cols-2">
           <section className="rounded-lg bg-[#eef2ff] p-4">
             <h4 className="text-lg font-black">Life Skill Chore Planner</h4>
@@ -169,7 +162,7 @@ export function AIPanel({ childProfiles, missions }: { childProfiles: Child[]; m
 
           <section className="rounded-lg bg-[#e7f4ef] p-4">
             <h4 className="text-lg font-black">Fair Chore Distributor</h4>
-            <p className="mt-2 text-sm font-semibold leading-5 text-[#4f625b]">Harder work earns more points, but the weekly plan aims for similar totals if everyone completes their assigned chores.</p>
+            <p className="mt-2 text-sm font-semibold leading-5 text-[#4f625b]">Harder work earns more · totals stay fair.</p>
             <div className="mt-3 grid gap-2">
               {fairnessPlan.map((line) => <p key={line} className="rounded-lg bg-white p-3 text-sm font-semibold leading-5">{line}</p>)}
             </div>
@@ -222,7 +215,7 @@ export function AIPanel({ childProfiles, missions }: { childProfiles: Child[]; m
         <p className="text-xs font-black uppercase tracking-[0.18em] text-[#7c3aed]">Pet social extension</p>
         <h3 className="mt-2 text-2xl font-black">Future social media for pets</h3>
         <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-[#5f6a65]">
-          A future TailTots social layer could let each pet have a parent-controlled profile, with kids contributing moments and AI helping turn care wins into safe posts, captions, badges, and weekly stories.
+          Pet profiles, parent-controlled.
         </p>
         <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {socialIdeas.map((idea) => (

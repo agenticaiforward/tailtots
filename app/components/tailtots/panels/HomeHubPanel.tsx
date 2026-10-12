@@ -76,8 +76,8 @@ export function HomeHubPanel({
               </h2>
               <p className="mt-4 max-w-2xl text-base font-semibold leading-7 text-white/82 sm:text-lg">
                 {isParentView
-                  ? "Track approvals, assignment fairness, kid progress, pet care, and parent-gated neighborhood jobs from one place."
-                  : "A family display view for tablets, Echo Show-style screens, Google Nest-style screens, and the kitchen counter."}
+                  ? "Approvals · fairness · progress · pets · jobs."
+                  : "Big-screen family view."}
               </p>
               <div className="mt-6 grid gap-3 sm:grid-cols-3">
                 {[
@@ -225,9 +225,9 @@ export function HomeHubPanel({
         <h3 className="mt-2 text-3xl font-black">Parent-approved community moments</h3>
         <div className="mt-4 grid gap-3 lg:grid-cols-3">
           {[
-            "Parents post pet care jobs. Kids can apply only after grown-up approval.",
-            "Trusted families can plan safe pet playdates without child-to-child messaging.",
-            "Kind goals can be shared as causes, including donations to animal shelters.",
+            "Kids apply after parent approval.",
+            "Safe playdates, no kid-to-kid chat.",
+            "Share goals as causes.",
           ].map((item) => (
             <p key={item} className="rounded-lg bg-[#f8f6ed] p-4 text-base font-black leading-6">{item}</p>
           ))}

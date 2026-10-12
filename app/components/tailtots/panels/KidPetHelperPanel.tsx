@@ -26,14 +26,11 @@ export function KidPetHelperPanel({ activeChild, pets, moments }: { activeChild?
     <section className="space-y-4">
       <div className="rounded-lg border border-[#ded8c7] bg-[#e7f4ef] p-5 shadow-sm">
         <p className="text-xs font-black uppercase tracking-[0.18em] text-[#165a4b]">Kid-safe AI helper</p>
-        <h2 className="mt-2 text-3xl font-black">{activeChild?.name ?? "Kid"}, ask about pets without grown-up screens</h2>
-        <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-[#4f625b]">
-          These are guided prompts, not open chat. They help kids learn pet care, curiosity, and kindness without judging them.
-        </p>
+        <h2 className="mt-2 text-3xl font-black">Ask the pet helper</h2>
+        <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-[#4f625b]">Safe questions, kind answers.</p>
       </div>
       <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#f47b20]">Ask with a button</p>
-        <h3 className="mt-2 text-2xl font-black">Pick a safe question</h3>
+        <h3 className="mt-2 text-2xl font-black">Pick a question</h3>
         <div className="mt-4 grid gap-2 sm:grid-cols-2">
           {kidQuestions.map(([id, question]) => (
             <button
@@ -63,7 +60,7 @@ export function KidPetHelperPanel({ activeChild, pets, moments }: { activeChild?
       </div>
       <section className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
         <p className="text-xs font-black uppercase tracking-[0.18em] text-[#7c3aed]">Your care memory</p>
-        <p className="mt-3 text-lg font-black">{recentMoment?.note ?? "Complete a care mission and your kind pet moment can show here."}</p>
+        <p className="mt-3 text-lg font-black">{recentMoment?.note ?? "Care moments appear here."}</p>
       </section>
     </section>
   );

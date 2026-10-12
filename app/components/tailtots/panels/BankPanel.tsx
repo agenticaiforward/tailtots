@@ -85,7 +85,7 @@ export function BankPanel(props: {
             <div>
               <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2563eb]">Kid Bank</p>
               <h2 className="mt-1 text-3xl font-black">{props.child?.name ?? "Kid"}&apos;s money choices</h2>
-              <p className="mt-1 text-sm font-semibold text-[#5f6a65]">Coins are app rewards. Dollars are parent-approved allowance money.</p>
+              <p className="mt-1 text-sm font-semibold text-[#5f6a65]">Coins = rewards · Dollars = allowance</p>
             </div>
           </div>
           <div className="grid grid-cols-3 gap-2 text-center">
@@ -111,7 +111,7 @@ export function BankPanel(props: {
           <h3 className="mt-2 text-2xl font-black">What are you saving for?</h3>
           <div className="mt-4 grid gap-3">
             {!childGoals.length && (
-              <div className="rounded-lg bg-[#f8f6ed] p-4 text-sm font-semibold text-[#5f6a65]">Add one goal first, then move allowance dollars toward it.</div>
+              <div className="rounded-lg bg-[#f8f6ed] p-4 text-sm font-semibold text-[#5f6a65]">Add a goal first.</div>
             )}
             {childGoals.map((goal) => {
               const percent = goalProgress(goal);
@@ -130,9 +130,6 @@ export function BankPanel(props: {
                   <div className="mt-3 h-4 rounded-full bg-white">
                     <div className="h-4 rounded-full bg-[#0f766e]" style={{ width: `${percent}%` }} />
                   </div>
-                  <p className="mt-3 rounded-lg bg-white p-3 text-xs font-bold text-[#5f6a65]">
-                    Use the choices panel to move available dollars into this goal.
-                  </p>
                 </article>
               );
             })}
@@ -163,7 +160,7 @@ export function BankPanel(props: {
           <div className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
             <p className="text-sm font-black uppercase tracking-[0.18em] text-[#f47b20]">Use available dollars</p>
             <h3 className="mt-2 text-3xl font-black">Choose a money jar</h3>
-            <p className="mt-2 text-lg font-semibold leading-7 text-[#5f6a65]">Dollars come from parent-assigned tasks. Kids can save for a goal or give to a parent-approved cause.</p>
+            <p className="mt-2 text-lg font-semibold leading-7 text-[#5f6a65]">Earned from parent tasks.</p>
             <div className="mt-5 grid grid-cols-2 gap-3">
               {(["save", "give"] as KidMoneyCategory[]).map((category) => (
                 <button
@@ -235,7 +232,7 @@ export function BankPanel(props: {
               <p className="mt-3 text-sm font-bold text-[#7a4b12]">That is more than the available dollars.</p>
             )}
             <div className="mt-4 rounded-lg bg-[#f8f6ed] p-4 text-base font-bold leading-6 text-[#5f6a65]">
-              To earn dollars, finish parent-assigned tasks. This panel only moves approved dollars into savings or giving.
+              Earn dollars from parent tasks.
             </div>
           </div>
 
@@ -247,7 +244,7 @@ export function BankPanel(props: {
                 <span className="mt-1 block">{tx.description}</span>
               </p>
             ))}
-            {!earnedActivityTransactions.length && <p className="mt-3 rounded-lg bg-[#f8f6ed] p-3 text-sm font-semibold text-[#5f6a65]">Approved allowance tied to activities will show here.</p>}
+            {!earnedActivityTransactions.length && <p className="mt-3 rounded-lg bg-[#f8f6ed] p-3 text-sm font-semibold text-[#5f6a65]">Approved allowance shows here.</p>}
           </div>
 
           <div className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">

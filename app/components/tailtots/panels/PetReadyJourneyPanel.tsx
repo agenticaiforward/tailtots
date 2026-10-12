@@ -26,8 +26,7 @@ export function PetReadyJourneyPanel({
       <p className="text-xs font-black uppercase tracking-[0.18em] text-[#165a4b]">Pet Ready Family journey</p>
       <h2 className="mt-2 text-3xl font-black">Proving readiness, one week at a time</h2>
       <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-[#3d4a45]">
-        Over 8–12 weeks, kids show they can care consistently — and parents sign off each step.
-        This journey proves responsibility; it never promises a pet. The final decision always belongs to the parent.
+        Show steady care for 8–12 weeks.
       </p>
 
       <div className="mt-5 grid gap-4 lg:grid-cols-2">
@@ -93,7 +92,7 @@ export function PetReadyJourneyPanel({
                       ) : isComplete ? (
                         <p className="text-xs font-bold text-[#5f6a65]">Reached — waiting for a parent to sign off.</p>
                       ) : (
-                        <p className="text-xs font-bold text-[#5f6a65]">Keep going — progress is saved automatically.</p>
+                        <p className="text-xs font-bold text-[#5f6a65]">Keep going!</p>
                       )}
                     </div>
                   </li>
@@ -104,8 +103,7 @@ export function PetReadyJourneyPanel({
                 <h4 className="text-sm font-black text-[#17231f]">Family decision talk</h4>
                 {talkSignOff ? (
                   <p className="mt-1 text-xs font-semibold leading-5 text-[#3d4a45]">
-                    Your family has walked the journey together and is ready to talk about a pet.
-                    The decision is still the parent&rsquo;s — readiness is proven, never promised.
+                    Ready for the pet talk.
                   </p>
                 ) : readyForTalk && canSignOff ? (
                   <>
@@ -123,11 +121,11 @@ export function PetReadyJourneyPanel({
                   </>
                 ) : readyForTalk ? (
                   <p className="mt-1 text-xs font-semibold leading-5 text-[#3d4a45]">
-                    All milestones are reached. Ask a parent to sign off when your family is ready to talk about a pet together.
+                    All milestones reached — ask a parent to sign off.
                   </p>
                 ) : (
                   <p className="mt-1 text-xs font-semibold leading-5 text-[#5f6a65]">
-                    Unlocks when all five milestones are reached. This is a conversation, not a prize.
+                    Unlocks at 5 milestones.
                   </p>
                 )}
               </div>
@@ -137,8 +135,7 @@ export function PetReadyJourneyPanel({
       </div>
 
       <p className="mt-4 text-xs font-bold leading-5 text-[#5f6a65]">
-        A note for parents: the Pet Ready Family journey documents consistency over time. It supports — but never
-        replaces — a shelter&rsquo;s own screening, and it never guarantees an adoption.
+        Documents consistency over time. Doesn’t replace shelter screening.
       </p>
     </section>
   );
