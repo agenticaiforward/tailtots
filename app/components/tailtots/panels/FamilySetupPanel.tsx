@@ -6,6 +6,7 @@ import type { ParentProfile } from "@/lib/domain/family-types";
 import { levelLabels } from "@/lib/domain/starter-data";
 import { getChildLook, getPetLook } from "../avatar-looks";
 import { ProfilePhoto } from "../ui";
+import { VisualSectionHeader, Explainer } from "./VisualSectionHeader";
 export function FamilySetupPanel(props: {
   cloudAccountEmail: string;
   accountDraft: { email: string; password: string };
@@ -42,51 +43,47 @@ export function FamilySetupPanel(props: {
   setParentPasscode: (value: string) => void;
 }) {
   const setupSteps = [
-    ["Parent account", Boolean(props.cloudAccountEmail), props.cloudAccountEmail ? "Signed in" : "Create or sign in"],
-    ["Household", Boolean(props.familyName.trim()), props.familyName.trim() || "Name your family"],
-    ["Kids", props.childProfiles.length > 0, `${props.childProfiles.length} added`],
-    ["Pets", props.pets.length > 0, `${props.pets.length} added`],
-    ["First goals", true, "Use Today and Kid Bank next"],
+    ["Parent account", "👤", Boolean(props.cloudAccountEmail), props.cloudAccountEmail ? "Signed in" : "Create or sign in"],
+    ["Household", "🏠", Boolean(props.familyName.trim()), props.familyName.trim() || "Name your family"],
+    ["Kids", "🧒", props.childProfiles.length > 0, `${props.childProfiles.length} added`],
+    ["Pets", "🐾", props.pets.length > 0, `${props.pets.length} added`],
+    ["First goals", "🎯", true, "Use Today and Kid Bank next"],
   ] as const;
-  const completedSteps = setupSteps.filter(([, done]) => done).length;
+  const completedSteps = setupSteps.filter(([, , done]) => done).length;
 
   return (
     <section className="space-y-4">
-      <div className="rounded-lg border border-[#ded8c7] bg-[#fffdf7] p-5 shadow-sm">
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div>
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-[#f47b20]">Real family setup</p>
-            <h2 className="mt-2 text-2xl font-black sm:text-3xl">Start simple. Add the family pieces first.</h2>
-            <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-[#5f6a65]">
-              Set up the parent account, household, kids, and pets. TailTots can grow into goals, rewards, and Kid Bank after the first mission.
-            </p>
-          </div>
-          <div className="rounded-lg bg-[#165a4b] px-4 py-3 text-sm font-black text-white">
-            {completedSteps} of {setupSteps.length} ready
+      {/* Visual setup progress */}
+      <div className="rounded-3xl border border-tt-line bg-white p-4 shadow-sm">
+        <div className="flex items-center justify-between">
+          <VisualSectionHeader icon="🚀" title="Family setup" subtitle="Add the pieces — grow into the rest later" />
+          <div className="shrink-0 rounded-2xl bg-tt-pine px-3 py-2 text-center shadow">
+            <div className="text-lg font-black text-white">{completedSteps}/{setupSteps.length}</div>
+            <div className="text-[10px] font-bold text-white/80">ready</div>
           </div>
         </div>
-        <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
-          {setupSteps.map(([label, done, detail]) => (
-            <div key={label} className={`rounded-lg border p-3 ${done ? "border-[#b8cfc6] bg-[#e7f4ef]" : "border-[#ded8c7] bg-white"}`}>
-              <p className="text-sm font-black text-[#17231f]">{label}</p>
-              <p className={`mt-1 text-xs font-bold ${done ? "text-[#165a4b]" : "text-[#7a4b12]"}`}>{detail}</p>
+        <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-5">
+          {setupSteps.map(([label, icon, done, detail]) => (
+            <div key={label} className={`rounded-2xl p-3 text-center ring-1 transition-transform hover:scale-105 ${done ? "bg-emerald-50 ring-emerald-200" : "bg-tt-cream/50 ring-tt-line"}`}>
+              <div className="text-2xl">{done ? "✅" : icon}</div>
+              <p className="mt-1 text-xs font-black text-tt-ink">{label}</p>
+              <p className={`text-[11px] font-bold ${done ? "text-emerald-700" : "text-tt-ink/50"}`}>{detail}</p>
             </div>
           ))}
         </div>
       </div>
 
-      <div className="rounded-lg border border-[#c9d8f8] bg-white p-5 shadow-sm">
-        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-          <div>
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-[#165a4b]">Parent account</p>
-            <h2 className="mt-2 text-3xl font-black">Save this family setup</h2>
-            <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-[#5f6a65]">
-              A signed-in parent account can keep this family&apos;s profiles, family photos, kids, pets, goals, points, coins, Kid Bank, badges, and parent settings together.
-            </p>
+      <div className="rounded-3xl border border-tt-line bg-white p-4 shadow-sm">
+        <div className="flex items-center justify-between gap-3">
+          <VisualSectionHeader icon="🔐" title="Parent account" subtitle="Keeps everything together" />
+          <div className={`shrink-0 rounded-2xl px-3 py-2 text-xs font-black ${props.cloudAccountEmail ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}`}>
+            {props.cloudAccountEmail ? `✓ ${props.cloudAccountEmail}` : isSupabaseConfigured ? "Ready" : "Setup"}
           </div>
-          <div className={`rounded-lg px-4 py-3 text-sm font-black ${props.cloudAccountEmail ? "bg-[#e7f4ef] text-[#165a4b]" : "bg-[#fff4d8] text-[#7a4b12]"}`}>
-            {props.cloudAccountEmail ? `Signed in: ${props.cloudAccountEmail}` : isSupabaseConfigured ? "Ready for account sign in" : "Account setup"}
-          </div>
+        </div>
+        <div className="mt-3">
+          <Explainer>
+            A signed-in parent account keeps profiles, photos, kids, pets, goals, points, coins, Kid Bank, badges, and settings together.
+          </Explainer>
         </div>
 
         {!props.cloudAccountEmail && (
@@ -136,78 +133,74 @@ export function FamilySetupPanel(props: {
         )}
       </div>
 
-      <div className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#f47b20]">Family setup</p>
-        <h2 className="mt-2 text-3xl font-black">Household, kids, and pets</h2>
-        <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-[#5f6a65]">
-          This is the control room for who uses TailTots. Keep parent info simple, make each kid easy to recognize, and make every pet passport easy to scan.
-        </p>
-        <label className="mt-5 block text-sm font-black text-[#25352f]">
-          Household name
-          <input
-            className="mt-2 w-full rounded-lg border border-[#ded8c7] px-4 py-3 text-base font-semibold"
-            value={props.familyName}
-            onChange={(event) => props.setFamilyName(event.target.value)}
-            placeholder="The Smith Crew"
-          />
-        </label>
-        <label className="mt-4 block max-w-xs text-sm font-black text-[#25352f]">
-          Parent passcode
-          <input
-            className="mt-2 w-full rounded-lg border border-[#ded8c7] px-4 py-3 text-base font-semibold"
-            value={props.parentPasscode}
-            onChange={(event) => props.setParentPasscode(event.target.value)}
-            inputMode="numeric"
-            placeholder="4321"
-          />
-        </label>
+      <div className="rounded-3xl border border-tt-line bg-white p-4 shadow-sm">
+        <VisualSectionHeader icon="🏠" title="Household" subtitle="Your family's home base" />
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <label className="block text-sm font-black text-tt-ink">
+            Household name
+            <input
+              className="mt-1.5 w-full rounded-2xl border border-tt-line bg-tt-cream/30 px-4 py-3 text-base font-semibold focus:border-tt-pine focus:outline-none"
+              value={props.familyName}
+              onChange={(event) => props.setFamilyName(event.target.value)}
+              placeholder="The Smith Crew"
+            />
+          </label>
+          <label className="block text-sm font-black text-tt-ink">
+            Parent passcode
+            <input
+              className="mt-1.5 w-full rounded-2xl border border-tt-line bg-tt-cream/30 px-4 py-3 text-base font-semibold focus:border-tt-pine focus:outline-none"
+              value={props.parentPasscode}
+              onChange={(event) => props.setParentPasscode(event.target.value)}
+              inputMode="numeric"
+              placeholder="4321"
+            />
+          </label>
+        </div>
       </div>
 
-      <div className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#7c3aed]">Photo setup</p>
-        <h3 className="mt-2 text-2xl font-black">Pick each profile photo correctly</h3>
-        <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-[#5f6a65]">
-          Upload one family picture and TailTots will walk you through cropping the parent and kids from that same photo. Pets can still use their own passport photos below.
-        </p>
-        <div className="mt-4 flex flex-wrap gap-3">
-          <label className="inline-flex min-h-12 cursor-pointer items-center rounded-lg bg-[#17231f] px-5 py-3 text-sm font-black text-white">
-            Upload family photo and pick profiles
+      <div className="rounded-3xl border border-tt-line bg-white p-4 shadow-sm">
+        <VisualSectionHeader icon="📸" title="Family photo" subtitle="One photo → crop everyone" />
+        <div className="mt-3">
+          <Explainer>
+            Upload one family picture and TailTots will walk you through cropping the parent and kids from that same photo. Pets use their own photos below.
+          </Explainer>
+        </div>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <label className="tt-btn-press inline-flex min-h-12 cursor-pointer items-center rounded-2xl bg-tt-ink px-5 py-3 text-sm font-black text-white shadow">
+            📤 Upload & pick profiles
             <input className="sr-only" type="file" accept="image/*" onChange={(event) => props.updateFamilyPhotoAndPickProfiles(event.target.files?.[0])} />
           </label>
-          <label className="inline-flex min-h-12 cursor-pointer items-center rounded-lg border border-[#ded8c7] bg-white px-5 py-3 text-sm font-black text-[#17231f]">
-            Set family picture only
+          <label className="tt-btn-press inline-flex min-h-12 cursor-pointer items-center rounded-2xl bg-white px-5 py-3 text-sm font-black text-tt-ink ring-1 ring-tt-line">
+            🖼️ Set picture only
             <input className="sr-only" type="file" accept="image/*" onChange={(event) => props.updateFamilyPhoto(event.target.files?.[0])} />
           </label>
           <button
             onClick={props.pickProfilesFromSavedFamilyPhoto}
             disabled={!props.hasFamilyPhoto}
-            className="min-h-12 rounded-lg bg-[#165a4b] px-5 py-3 text-sm font-black text-white disabled:cursor-not-allowed disabled:bg-[#b8c4bf]"
+            className="tt-btn-press min-h-12 rounded-2xl bg-tt-pine px-5 py-3 text-sm font-black text-white shadow disabled:opacity-40"
           >
-            Pick profiles from current family photo
+            ✂️ Pick from current photo
           </button>
         </div>
       </div>
 
       <section className="grid gap-4 2xl:grid-cols-[0.8fr_1.2fr]">
-        <div className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-[#165a4b]">Parents</p>
-          <h3 className="mt-2 text-2xl font-black">Grown-up profiles</h3>
-          <div className="mt-4 grid gap-3">
+        <div className="rounded-3xl border border-tt-line bg-white p-4 shadow-sm">
+          <VisualSectionHeader icon="👤" title="Parents" subtitle="Grown-up profiles" />
+          <div className="mt-3 grid gap-2.5">
             {props.parents.map((parent) => (
-              <article key={parent.id} className="rounded-lg bg-[#f8f6ed] p-4">
+              <article key={parent.id} className="rounded-2xl bg-tt-cream/40 p-3 ring-1 ring-tt-line">
                 <div className="flex items-center gap-3">
                   <ProfilePhoto label={parent.name} initial={parent.name.trim()[0]?.toUpperCase() ?? "P"} colors="from-[#ffd166] via-[#f47b20] to-[#7c3aed]" variant="kid" hair="#4a2718" photoUrl={parent.photoUrl} />
-                  <label className="min-w-0 flex-1 text-sm font-black">
-                    Parent name
-                    <input
-                      className="mt-2 w-full rounded-lg border border-[#ded8c7] bg-white px-4 py-3 text-base font-semibold"
-                      value={parent.name}
-                      onChange={(event) => props.updateParent(parent.id, { name: event.target.value })}
-                    />
-                  </label>
+                  <input
+                    className="min-w-0 flex-1 rounded-2xl border border-tt-line bg-white px-4 py-2.5 text-base font-bold focus:border-tt-pine focus:outline-none"
+                    value={parent.name}
+                    onChange={(event) => props.updateParent(parent.id, { name: event.target.value })}
+                    placeholder="Parent name"
+                  />
                 </div>
-                <label className="mt-3 inline-flex min-h-11 cursor-pointer items-center rounded-lg bg-white px-4 py-2 text-xs font-black text-[#17231f]">
-                  Upload parent face
+                <label className="tt-btn-press mt-2 inline-flex cursor-pointer items-center gap-1.5 rounded-2xl bg-white px-3.5 py-2 text-xs font-black text-tt-ink ring-1 ring-tt-line">
+                  📷 Upload face
                   <input className="sr-only" type="file" accept="image/*" capture="user" onChange={(event) => props.updateParentPhoto(parent.id, event.target.files?.[0])} />
                 </label>
               </article>
@@ -215,114 +208,124 @@ export function FamilySetupPanel(props: {
           </div>
         </div>
 
-        <div className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-[#f47b20]">Kids</p>
-          <h3 className="mt-2 text-2xl font-black">Kid profiles</h3>
-          <div className="mt-4 grid gap-3 lg:grid-cols-2">
+        <div className="rounded-3xl border border-tt-line bg-white p-4 shadow-sm">
+          <VisualSectionHeader icon="🧒" title="Kids" subtitle="Kid profiles" />
+          <div className="mt-3 grid gap-2.5 lg:grid-cols-2">
             {props.childProfiles.map((child) => {
               const look = getChildLook(child.id);
               return (
-                <article key={child.id} className="rounded-lg border border-[#e8e1cf] bg-[#fbfaf4] p-4">
-                  <div className="flex items-center gap-3">
+                <article key={child.id} className="rounded-2xl bg-gradient-to-br from-violet-50 to-purple-50 p-3 ring-1 ring-violet-200">
+                  <div className="flex items-center gap-2.5">
                     <ProfilePhoto label={child.name} initial={look.initial} colors={look.colors} variant="kid" hair={look.hair} photoUrl={child.photoUrl} />
-                    <div className="min-w-0">
-                      <p className="truncate text-xl font-black">{child.name || "Kid profile"}</p>
-                      <p className="text-xs font-bold text-[#69736f]">Age {child.age} • {levelLabels[child.level]} helper</p>
+                    <div className="min-w-0 flex-1">
+                      <input
+                        className="w-full rounded-xl border border-tt-line bg-white px-3 py-2 text-base font-black focus:border-tt-pine focus:outline-none"
+                        value={child.name}
+                        onChange={(event) => props.updateChild(child.id, { name: event.target.value })}
+                        placeholder="Kid name"
+                      />
+                      <div className="mt-1.5 flex items-center gap-2">
+                        <label className="flex items-center gap-1.5 text-xs font-black text-tt-ink/70">
+                          Age
+                          <input
+                            className="w-14 rounded-xl border border-tt-line bg-white px-2 py-1.5 text-sm font-bold focus:border-tt-pine focus:outline-none"
+                            value={child.age}
+                            onChange={(event) => props.updateChild(child.id, { age: Math.max(3, Math.min(18, Number(event.target.value) || child.age || 8)) })}
+                            inputMode="numeric"
+                            type="number"
+                            min={3}
+                            max={18}
+                          />
+                        </label>
+                        <span className="rounded-full bg-white px-2 py-1 text-[11px] font-black text-tt-ink/60">{levelLabels[child.level]}</span>
+                        <label className="tt-btn-press cursor-pointer rounded-full bg-white px-2.5 py-1 text-[11px] font-black text-tt-ink ring-1 ring-tt-line">
+                          📷 Face
+                          <input className="sr-only" type="file" accept="image/*" capture="user" onChange={(event) => props.updateChildPhoto(child.id, event.target.files?.[0])} />
+                        </label>
+                      </div>
                     </div>
                   </div>
-                  <label className="mt-4 block text-sm font-black">
-                    Kid name
-                    <input className="mt-2 w-full rounded-lg border border-[#ded8c7] bg-white px-4 py-3 text-base font-semibold" value={child.name} onChange={(event) => props.updateChild(child.id, { name: event.target.value })} />
-                  </label>
-                  <label className="mt-3 block text-sm font-black">
-                    Age
-                    <input
-                      className="mt-2 w-full rounded-lg border border-[#ded8c7] bg-white px-4 py-3 text-base font-semibold"
-                      value={child.age}
-                      onChange={(event) => props.updateChild(child.id, { age: Math.max(3, Math.min(18, Number(event.target.value) || child.age || 8)) })}
-                      inputMode="numeric"
-                      type="number"
-                      min={3}
-                      max={18}
-                    />
-                  </label>
-                  <label className="mt-3 inline-flex min-h-11 cursor-pointer items-center rounded-lg bg-white px-4 py-2 text-xs font-black text-[#17231f]">
-                    Capture kid face
-                    <input className="sr-only" type="file" accept="image/*" capture="user" onChange={(event) => props.updateChildPhoto(child.id, event.target.files?.[0])} />
-                  </label>
                 </article>
               );
             })}
           </div>
-          <div className="mt-4 rounded-lg bg-[#fff4d8] p-4">
-            <h4 className="text-lg font-black">Add another kid</h4>
-            <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_120px_auto]">
-              <input className="rounded-lg border border-[#d7caa9] px-4 py-3 font-semibold" placeholder="Child name" value={props.newChild.name} onChange={(event) => props.setNewChild({ ...props.newChild, name: event.target.value })} />
-              <input className="rounded-lg border border-[#d7caa9] px-4 py-3 font-semibold" placeholder="Age" value={props.newChild.age} onChange={(event) => props.setNewChild({ ...props.newChild, age: event.target.value })} inputMode="numeric" type="number" min={3} max={18} />
-              <button onClick={props.addChild} className="min-h-12 rounded-lg bg-[#f47b20] px-5 py-3 text-sm font-black text-white">Add kid</button>
+          <div className="mt-3 rounded-2xl bg-amber-50 p-3 ring-1 ring-amber-200">
+            <div className="grid gap-2 sm:grid-cols-[1fr_80px_auto]">
+              <input className="rounded-2xl border border-tt-line bg-white px-4 py-2.5 font-semibold focus:border-tt-pine focus:outline-none" placeholder="Child name" value={props.newChild.name} onChange={(event) => props.setNewChild({ ...props.newChild, name: event.target.value })} />
+              <input className="rounded-2xl border border-tt-line bg-white px-4 py-2.5 font-semibold focus:border-tt-pine focus:outline-none" placeholder="Age" value={props.newChild.age} onChange={(event) => props.setNewChild({ ...props.newChild, age: event.target.value })} inputMode="numeric" type="number" min={3} max={18} />
+              <button onClick={props.addChild} className="tt-btn-press rounded-2xl bg-orange-500 px-5 py-2.5 text-sm font-black text-white shadow">➕ Add kid</button>
             </div>
           </div>
         </div>
       </section>
 
-      <div className="rounded-lg border border-[#ded8c7] bg-white p-5 shadow-sm">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#0f766e]">Pets</p>
-        <h3 className="mt-2 text-2xl font-black">Pet passports</h3>
-        <div className="mt-4 grid gap-3 lg:grid-cols-2">
+      <div className="rounded-3xl border border-tt-line bg-white p-4 shadow-sm">
+        <VisualSectionHeader icon="🐾" title="Pet passports" subtitle="Every pet's profile" />
+        <div className="mt-3 grid gap-2.5 lg:grid-cols-2">
           {props.pets.map((pet) => {
             const look = getPetLook(pet.id);
             return (
-              <article key={pet.id} className="rounded-lg border border-[#e8e1cf] bg-[#fbfaf4] p-4">
-                <div className="flex items-center gap-3">
+              <article key={pet.id} className="rounded-2xl bg-gradient-to-br from-orange-50 to-amber-50 p-3 ring-1 ring-orange-200">
+                <div className="flex items-center gap-2.5">
                   <ProfilePhoto label={pet.name} initial={look.face} colors={look.colors} variant="pet" petKind={look.kind} photoUrl={pet.photoUrl} />
-                  <div className="min-w-0">
-                    <p className="truncate text-xl font-black">{pet.name || "Pet profile"}</p>
-                    <p className="text-xs font-bold text-[#69736f]">{pet.species || "Species"}</p>
+                  <div className="grid min-w-0 flex-1 grid-cols-2 gap-1.5">
+                    <input
+                      className="rounded-xl border border-tt-line bg-white px-3 py-2 text-sm font-black focus:border-tt-pine focus:outline-none"
+                      value={pet.name}
+                      onChange={(event) => props.updatePet(pet.id, { name: event.target.value })}
+                      placeholder="Pet name"
+                    />
+                    <input
+                      className="rounded-xl border border-tt-line bg-white px-3 py-2 text-sm font-bold focus:border-tt-pine focus:outline-none"
+                      value={pet.species}
+                      onChange={(event) => props.updatePet(pet.id, { species: event.target.value })}
+                      placeholder="Species"
+                    />
                   </div>
-                </div>
-                <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                  <label className="text-sm font-black">
-                    Pet name
-                    <input className="mt-2 w-full rounded-lg border border-[#ded8c7] bg-white px-4 py-3 text-base font-semibold" value={pet.name} onChange={(event) => props.updatePet(pet.id, { name: event.target.value })} />
-                  </label>
-                  <label className="text-sm font-black">
-                    Species
-                    <input className="mt-2 w-full rounded-lg border border-[#ded8c7] bg-white px-4 py-3 text-base font-semibold" value={pet.species} onChange={(event) => props.updatePet(pet.id, { species: event.target.value })} />
+                  <label className="tt-btn-press shrink-0 cursor-pointer rounded-2xl bg-tt-pine px-3 py-2 text-xs font-black text-white shadow">
+                    📷
+                    <input className="sr-only" type="file" accept="image/*" capture="environment" onChange={(event) => props.updatePetPhoto(pet.id, event.target.files?.[0])} />
                   </label>
                 </div>
-                <label className="mt-3 block text-sm font-black">
-                  Favorite food
-                  <input className="mt-2 w-full rounded-lg border border-[#ded8c7] bg-white px-4 py-3 text-base font-semibold" value={pet.favoriteFood} onChange={(event) => props.updatePet(pet.id, { favoriteFood: event.target.value })} />
-                </label>
-                <label className="mt-3 block text-sm font-black">
-                  Care notes
-                  <textarea className="mt-2 min-h-24 w-full rounded-lg border border-[#ded8c7] bg-white px-4 py-3 text-base font-semibold" value={pet.careNotes} onChange={(event) => props.updatePet(pet.id, { careNotes: event.target.value })} />
-                </label>
-                <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                  <label className="text-sm font-black">
-                    Vet
-                    <input className="mt-2 w-full rounded-lg border border-[#ded8c7] bg-white px-4 py-3 text-base font-semibold" value={pet.vet} onChange={(event) => props.updatePet(pet.id, { vet: event.target.value })} />
-                  </label>
-                  <label className="text-sm font-black">
-                    Medicine
-                    <input className="mt-2 w-full rounded-lg border border-[#ded8c7] bg-white px-4 py-3 text-base font-semibold" value={pet.medicine} onChange={(event) => props.updatePet(pet.id, { medicine: event.target.value })} />
-                  </label>
-                </div>
-                <label className="mt-3 inline-flex min-h-11 cursor-pointer items-center rounded-lg bg-[#165a4b] px-4 py-2 text-xs font-black text-white">
-                  Capture pet face
-                  <input className="sr-only" type="file" accept="image/*" capture="environment" onChange={(event) => props.updatePetPhoto(pet.id, event.target.files?.[0])} />
-                </label>
+                <details className="mt-2">
+                  <summary className="cursor-pointer text-xs font-black text-tt-ink/60">Care details ▾</summary>
+                  <div className="grid gap-1.5 pt-2 sm:grid-cols-2">
+                    <input
+                      className="rounded-xl border border-tt-line bg-white px-3 py-2 text-sm font-semibold focus:border-tt-pine focus:outline-none"
+                      value={pet.favoriteFood}
+                      onChange={(event) => props.updatePet(pet.id, { favoriteFood: event.target.value })}
+                      placeholder="🍎 Favorite food"
+                    />
+                    <input
+                      className="rounded-xl border border-tt-line bg-white px-3 py-2 text-sm font-semibold focus:border-tt-pine focus:outline-none"
+                      value={pet.vet}
+                      onChange={(event) => props.updatePet(pet.id, { vet: event.target.value })}
+                      placeholder="🏥 Vet"
+                    />
+                    <input
+                      className="rounded-xl border border-tt-line bg-white px-3 py-2 text-sm font-semibold focus:border-tt-pine focus:outline-none"
+                      value={pet.medicine}
+                      onChange={(event) => props.updatePet(pet.id, { medicine: event.target.value })}
+                      placeholder="💊 Medicine"
+                    />
+                    <input
+                      className="rounded-xl border border-tt-line bg-white px-3 py-2 text-sm font-semibold focus:border-tt-pine focus:outline-none"
+                      value={pet.careNotes}
+                      onChange={(event) => props.updatePet(pet.id, { careNotes: event.target.value })}
+                      placeholder="📝 Care notes"
+                    />
+                  </div>
+                </details>
               </article>
             );
           })}
         </div>
-        <div className="mt-4 rounded-lg bg-[#e7f4ef] p-4">
-          <h4 className="text-lg font-black">Add another pet</h4>
-          <div className="mt-3 grid gap-3 xl:grid-cols-[1fr_1fr_1fr_auto]">
-            <input className="rounded-lg border border-[#b7d9cc] px-4 py-3 font-semibold" placeholder="Pet name" value={props.newPet.name} onChange={(event) => props.setNewPet({ ...props.newPet, name: event.target.value })} />
-            <input className="rounded-lg border border-[#b7d9cc] px-4 py-3 font-semibold" placeholder="Species" value={props.newPet.species} onChange={(event) => props.setNewPet({ ...props.newPet, species: event.target.value })} />
-            <input className="rounded-lg border border-[#b7d9cc] px-4 py-3 font-semibold" placeholder="Favorite food" value={props.newPet.food} onChange={(event) => props.setNewPet({ ...props.newPet, food: event.target.value })} />
-            <button onClick={props.addPet} className="min-h-12 rounded-lg bg-[#165a4b] px-5 py-3 text-sm font-black text-white">Add pet</button>
+        <div className="mt-3 rounded-2xl bg-emerald-50 p-3 ring-1 ring-emerald-200">
+          <div className="grid gap-2 xl:grid-cols-[1fr_1fr_1fr_auto]">
+            <input className="rounded-2xl border border-tt-line bg-white px-4 py-2.5 text-sm font-semibold focus:border-tt-pine focus:outline-none" placeholder="🐾 Pet name" value={props.newPet.name} onChange={(event) => props.setNewPet({ ...props.newPet, name: event.target.value })} />
+            <input className="rounded-2xl border border-tt-line bg-white px-4 py-2.5 text-sm font-semibold focus:border-tt-pine focus:outline-none" placeholder="Species" value={props.newPet.species} onChange={(event) => props.setNewPet({ ...props.newPet, species: event.target.value })} />
+            <input className="rounded-2xl border border-tt-line bg-white px-4 py-2.5 text-sm font-semibold focus:border-tt-pine focus:outline-none" placeholder="🍎 Favorite food" value={props.newPet.food} onChange={(event) => props.setNewPet({ ...props.newPet, food: event.target.value })} />
+            <button onClick={props.addPet} className="tt-btn-press rounded-2xl bg-tt-pine px-5 py-2.5 text-sm font-black text-white shadow">➕ Add pet</button>
           </div>
         </div>
       </div>

@@ -13,5 +13,11 @@
   },
   "images": {
     "binding": "IMAGES"
-  }
+  },
+  "routes": [
+    {
+      "pattern": "ai-native.tailtots.com/*",
+      "zone_name": "tailtots.com"
+    }
+  ]
 }
