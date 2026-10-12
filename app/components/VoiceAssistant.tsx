@@ -15,6 +15,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { snapshotPageContext } from "@/lib/voice/page-context";
+import type { VoiceIntentPlan, VoicePlannedAction } from "@/lib/voice/intent-planning";
 
 type SpeechRecognitionLike = {
   lang: string;
@@ -209,18 +211,30 @@ function pickFeminineVoice(): SpeechSynthesisVoice | null {
 export default function VoiceAssistant({
   onAction,
   pageSummary,
+  role,
+  tab,
+  tabLabel,
 }: {
   /** Fired when the AI decides on an action. */
   onAction: (action: VoiceAction) => void;
   /** Short text describing the current page, for "read this page" TTS. */
   pageSummary?: string;
+  /** Current user role — sent to the AI as page context. */
+  role: "parent" | "child";
+  /** Current tab id — sent to the AI as page context. */
+  tab: string;
+  /** Human-readable tab label — sent to the AI as page context. */
+  tabLabel: string;
 }) {
   const [listening, setListening] = useState(false);
   const [transcript, setTranscript] = useState("");
   const [response, setResponse] = useState("");
   const [speaking, setSpeaking] = useState(false);
+  const [thinking, setThinking] = useState(false);
   const [supported, setSupported] = useState(true);
   const recRef = useRef<SpeechRecognitionLike | null>(null);
+  /** Recent turns so follow-ups like "yes, the save one" resolve. */
+  const historyRef = useRef<string[]>([]);
 
   useEffect(() => {
     const w = window as any;
@@ -255,12 +269,44 @@ export default function VoiceAssistant({
     } catch {}
   }, []);
 
-  const handleResult = useCallback((text: string) => {
-    setTranscript(text);
+  /**
+   * Execute one planned action against the real page.
+   * Every target is validated against visible elements — the AI can never
+   * invent buttons. Returns true when the step ran.
+   */
+  const executeAction = useCallback((action: VoicePlannedAction): boolean => {
+    if (action.do === "navigate") {
+      onAction({ type: "navigate", tab: action.target });
+      return true;
+    }
+    if (action.do === "type") {
+      // Find the input and set its value the way React expects
+      const inputs = Array.from(document.querySelectorAll<HTMLInputElement>("input, textarea"));
+      const match = inputs.find((el) => {
+        const r = el.getBoundingClientRect();
+        return r.width > 0 && r.height > 0 && !el.disabled && !el.closest("[data-voice-assistant]");
+      });
+      if (match && action.value !== undefined) {
+        match.focus();
+        const setter = Object.getOwnPropertyDescriptor(
+          action.target === match.type ? HTMLInputElement.prototype : Object.getPrototypeOf(match),
+          "value"
+        )?.set ?? Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
+        setter?.call(match, action.value);
+        match.dispatchEvent(new Event("input", { bubbles: true }));
+        match.dispatchEvent(new Event("change", { bubbles: true }));
+        return true;
+      }
+      return false;
+    }
+    // click — fuzzy match against the visible label
+    return clickElementByLabel(action.target) !== null;
+  }, [onAction]);
+
+  /** Local keyword fallback when the AI endpoint is unreachable. */
+  const handleLocalFallback = useCallback((text: string) => {
     const action = parseVoiceIntent(text);
     onAction(action);
-
-    // Friendly spoken + visual confirmation
     let reply = "";
     switch (action.type) {
       case "navigate":
@@ -295,6 +341,70 @@ export default function VoiceAssistant({
     setResponse(reply);
     speak(reply);
   }, [onAction, pageSummary, speak]);
+
+  /**
+   * AI-native intent handling: snapshot the page, ask Workers AI for a plan,
+   * then execute it step by step. Falls back to local parsing when offline.
+   */
+  const handleResult = useCallback(async (text: string) => {
+    setTranscript(text);
+    setThinking(true);
+
+    const pushHistory = (entry: string) => {
+      historyRef.current = [...historyRef.current, entry].slice(-4);
+    };
+
+    try {
+      // Eyes: what's on screen right now?
+      const context = snapshotPageContext({
+        role: role === "parent" ? "parent" : "child",
+        tab,
+        tabLabel,
+        summary: pageSummary ?? `${tabLabel} view`,
+      });
+
+      const res = await fetch("/api/voice/intent", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          transcript: text,
+          context,
+          history: historyRef.current,
+        }),
+      });
+      if (!res.ok) throw new Error(`voice intent ${res.status}`);
+      const plan = (await res.json()) as VoiceIntentPlan;
+      setThinking(false);
+
+      pushHistory(`User: ${text}`);
+
+      // The AI isn't sure — ask back instead of guessing.
+      if (plan.clarify) {
+        pushHistory(`Assistant asked: ${plan.clarify}`);
+        setResponse(plan.clarify);
+        speak(plan.clarify);
+        return;
+      }
+
+      // Hands: run each step with a beat between them so the user can follow.
+      let ran = 0;
+      for (const action of plan.actions) {
+        if (executeAction(action)) ran++;
+        await new Promise((r) => setTimeout(r, 550));
+      }
+      pushHistory(`Assistant: ${plan.reply}`);
+
+      const reply = ran === plan.actions.length || plan.actions.length === 0
+        ? plan.reply
+        : `${plan.reply} (I couldn't do ${plan.actions.length - ran} step${plan.actions.length - ran === 1 ? "" : "s"}.)`;
+      setResponse(reply);
+      speak(reply);
+    } catch {
+      // Offline or AI unavailable — local keyword brain takes over.
+      setThinking(false);
+      handleLocalFallback(text);
+    }
+  }, [role, tab, tabLabel, pageSummary, speak, executeAction, handleLocalFallback]);
 
   const toggleListening = useCallback(() => {
     if (listening) {
@@ -342,6 +452,7 @@ export default function VoiceAssistant({
     <>
       {/* Floating mic button */}
       <button
+        data-voice-assistant
         onClick={toggleListening}
         aria-label={listening ? "Stop listening" : "Voice assistant"}
         className={`tt-btn-press fixed bottom-20 right-4 z-50 grid size-14 place-items-center rounded-full shadow-2xl ring-4 transition-all sm:bottom-6 sm:right-6 ${
@@ -357,7 +468,7 @@ export default function VoiceAssistant({
 
       {/* Voice panel */}
       {(listening || transcript || response) && (
-        <div className="tt-animate-pop-in fixed bottom-36 right-4 z-50 w-72 rounded-3xl bg-white p-4 shadow-2xl ring-2 ring-tt-line sm:bottom-24 sm:right-6">
+        <div data-voice-assistant className="tt-animate-pop-in fixed bottom-36 right-4 z-50 w-72 rounded-3xl bg-white p-4 shadow-2xl ring-2 ring-tt-line sm:bottom-24 sm:right-6">
           <div className="flex items-center justify-between">
             <p className="text-xs font-black uppercase tracking-wider text-tt-ink/50">
               {listening ? "🎤 Listening…" : "✨ Voice"}
@@ -384,6 +495,12 @@ export default function VoiceAssistant({
           {transcript && (
             <p className="mt-2 rounded-2xl bg-tt-cream/60 p-2.5 text-sm font-bold text-tt-ink">
               "{transcript}"
+            </p>
+          )}
+          {thinking && (
+            <p className="mt-2 flex items-center gap-2 rounded-2xl bg-violet-50 p-2.5 text-sm font-semibold text-violet-900 ring-1 ring-violet-200">
+              <span className="inline-block size-3 animate-spin rounded-full border-2 border-violet-300 border-t-violet-700" />
+              Thinking…
             </p>
           )}
           {response && (

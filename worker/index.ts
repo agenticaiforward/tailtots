@@ -9,6 +9,12 @@ import {
   validateIdeasInput,
 } from "../lib/ai/ideas";
 import {
+  VOICE_INTENT_MODEL_ID,
+  buildVoiceIntentMessages,
+  parseVoiceIntentResponse,
+  validateVoiceIntentInput,
+} from "../lib/voice/intent-planning";
+import {
   CONVERSATION_MODEL_ID,
   buildConversationPromptMessages,
   parseConversationPromptResponse,
@@ -151,6 +157,10 @@ const missionSetRateLimiter = new InMemoryRateLimiter(20, 60 * 60 * 1000);
 const copilotRateLimiter = new InMemoryRateLimiter(20, 60 * 60 * 1000);
 const flourishRateLimiter = new InMemoryRateLimiter(20, 60 * 60 * 1000);
 const flowRateLimiter = new InMemoryRateLimiter(20, 60 * 60 * 1000);
+// Voice intent planning: interactive use, so a per-minute allowance. No parent
+// auth required (kids use voice too) — input is strictly validated, PII-free
+// by construction, and the model can only return a constrained action plan.
+const voiceIntentRateLimiter = new InMemoryRateLimiter(30, 60 * 1000);
 
 function jsonResponse(data: unknown, status: number): Response {
   return new Response(JSON.stringify(data), {
@@ -165,6 +175,57 @@ function clientIp(request: Request): string {
     request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
     "unknown"
   );
+}
+
+/**
+ * POST /api/voice/intent — AI-native voice control planner.
+ *
+ * The client sends a speech transcript + a PII-free snapshot of what's on
+ * screen. Workers AI returns a constrained action plan (click/type/navigate
+ * steps, or a clarifying question). The client validates every planned
+ * action against real page elements before executing — the model can never
+ * invent buttons or run anything directly.
+ *
+ * No parent auth: kids use voice too. Protected by strict input validation
+ * (transcript + UI labels only, no PII) and per-IP rate limiting instead.
+ */
+async function handleVoiceIntent(request: Request, env: Env): Promise<Response> {
+  if (voiceIntentRateLimiter.isLimited(`voice-intent:${clientIp(request)}`)) {
+    return jsonResponse({ error: "Too many requests. Please try again later." }, 429);
+  }
+  if (!env.AI) {
+    log.warn("AI binding missing for /api/voice/intent");
+    return jsonResponse({ error: "The voice helper is not configured yet." }, 503);
+  }
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonResponse({ error: "Request body must be valid JSON." }, 400);
+  }
+  const validated = validateVoiceIntentInput(body);
+  if (!validated.ok) {
+    return jsonResponse({ error: validated.error }, 400);
+  }
+  try {
+    const output = await env.AI.run(VOICE_INTENT_MODEL_ID, {
+      messages: buildVoiceIntentMessages(
+        validated.value.transcript,
+        validated.value.context,
+        validated.value.history,
+      ),
+      max_tokens: 500,
+      temperature: 0.3,
+    });
+    const plan = parseVoiceIntentResponse(output?.response ?? "");
+    if (!plan) {
+      throw new Error("AI returned no usable plan");
+    }
+    return jsonResponse(plan, 200);
+  } catch (error) {
+    log.error("Workers AI voice-intent request failed", { error });
+    return jsonResponse({ error: "The voice helper is unavailable right now." }, 502);
+  }
 }
 
 /**
@@ -1523,6 +1584,13 @@ async function handleAiBlueprint(request: Request, env: Env): Promise<Response> 
 const worker = {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
+
+    if (url.pathname === "/api/voice/intent") {
+      if (request.method !== "POST") {
+        return new Response("Method Not Allowed", { status: 405 });
+      }
+      return handleVoiceIntent(request, env);
+    }
 
     if (url.pathname === "/api/ai/ideas") {
       if (request.method !== "POST") {

@@ -547,7 +547,7 @@ const tabItems = [
   { id: "plan", label: "Plan", icon: "M8 2v4M16 2v4M3 8h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2ZM8 14l2.5 2.5L16 11" },
 ];
 
-const kidTabIds = ["missions", "home", "schedule", "pets", "pet-helper", "bank", "neighborhood"];
+const kidTabIds = ["missions", "schedule", "pets", "pet-helper", "bank", "neighborhood"];
 const parentTabIds = ["vision", "approvals", "setup", "schedule", "pets", "neighborhood", "growth", "village", "plan"];
 const defaultParentPasscode = "4321";
 
@@ -3119,6 +3119,9 @@ export function TailTotsApp() {
       <VoiceAssistant
         onAction={handleVoiceAction}
         pageSummary={`${role === "parent" ? "Parent" : "Kid"} view, ${visibleActiveTab} tab. ${missions.filter((m) => !m.completedBy).length} open missions.`}
+        role={role === "parent" ? "parent" : "child"}
+        tab={visibleActiveTab}
+        tabLabel={tabItems.find((t) => t.id === visibleActiveTab)?.label ?? visibleActiveTab}
       />
     </main>
   );
