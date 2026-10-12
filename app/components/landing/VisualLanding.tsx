@@ -185,7 +185,7 @@ export function VisualLanding({
             Have a pet? Want one? Can't have one? There's a track for you.
           </p>
           <p className="mt-4 max-w-md text-base font-semibold leading-relaxed text-white/85">
-            Kids complete daily missions with your real pet — practicing kindness, responsibility, courage, and real-world life skills. You get a simple weekly report on the traits they're building.
+            Daily pet missions build real-world skills. One weekly report for you.
           </p>
           <button
             onClick={onTryDemo}
