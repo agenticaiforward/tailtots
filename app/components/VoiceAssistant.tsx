@@ -36,11 +36,28 @@ export type VoiceAction =
   | { type: "log-skill"; title: string }
   | { type: "read-page" }
   | { type: "complete-mission"; query: string }
+  | { type: "click"; label: string }
   | { type: "unknown"; text: string };
 
 /** Local intent parser — fast, private, no model call for common asks. */
 export function parseVoiceIntent(text: string): VoiceAction {
   const t = text.toLowerCase().trim();
+
+  // Click / tap / press / select a button or element by its visible label
+  const clickMatch = t.match(/^(?:click|tap|press|hit|select|choose|pick)\s+(?:the\s+)?(.+)$/);
+  if (clickMatch) {
+    const label = clickMatch[1]
+      .replace(/^(button|link|tab|option)\s+/, "")
+      .replace(/\s+(button|link|tab|option)$/, "")
+      .trim();
+    // Don't steal navigation/logging intents that also use these verbs loosely
+    if (label && !/^(to|on)\s/.test(label)) {
+      // Check it's not a nav target handled below (e.g. "go to missions")
+      const isNav = /^(missions|growth|approvals|setup|schedule|pets|bank|neighborhood|village|home|plan)\b/.test(label)
+        && /(go|open|show)/.test(t);
+      if (!isNav) return { type: "click", label };
+    }
+  }
 
   // Navigation
   const tabs: Record<string, string[]> = {
@@ -99,6 +116,96 @@ function capitalize(s: string) {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
+/**
+ * Find a clickable element by its visible label and click it.
+ * Searches buttons, links, tabs, and elements with click handlers —
+ * best text match wins. Returns what it clicked, or null.
+ */
+export function clickElementByLabel(label: string): string | null {
+  const needle = label.toLowerCase().trim();
+  if (!needle) return null;
+
+  const candidates: { el: HTMLElement; text: string; score: number }[] = [];
+  const selector = 'button, a, [role="button"], [role="tab"], input[type="submit"], summary';
+  document.querySelectorAll<HTMLElement>(selector).forEach((el) => {
+    // Skip hidden or disabled
+    const rect = el.getBoundingClientRect();
+    if (rect.width === 0 && rect.height === 0) return;
+    if ((el as HTMLButtonElement).disabled) return;
+    const text = (el.innerText || el.getAttribute("aria-label") || el.getAttribute("title") || "")
+      .toLowerCase().replace(/\s+/g, " ").trim();
+    if (!text) return;
+    let score = 0;
+    if (text === needle) score = 100;
+    else if (text.startsWith(needle)) score = 80;
+    else if (text.includes(needle)) score = 60;
+    else {
+      // Word-overlap fallback ("approve" matches "Approve 🎉")
+      const words = needle.split(/\s+/).filter((w) => w.length > 2);
+      const hits = words.filter((w) => text.includes(w)).length;
+      if (hits > 0) score = 20 + hits * 10;
+    }
+    if (score > 0) candidates.push({ el, text, score });
+  });
+
+  // Ordinal support: "click the first/second/third button"
+  const ordinals: Record<string, number> = {
+    first: 0, second: 1, third: 2, fourth: 3, fifth: 4,
+    "1st": 0, "2nd": 1, "3rd": 2, "4th": 3, "5th": 4,
+  };
+  for (const [word, idx] of Object.entries(ordinals)) {
+    if (needle.includes(word)) {
+      const visible = Array.from(document.querySelectorAll<HTMLElement>(selector))
+        .filter((el) => {
+          const r = el.getBoundingClientRect();
+          return (r.width > 0 || r.height > 0) && !(el as HTMLButtonElement).disabled;
+        });
+      const target = visible[idx];
+      if (target) {
+        target.click();
+        target.scrollIntoView({ behavior: "smooth", block: "center" });
+        return target.innerText?.slice(0, 40) || "button";
+      }
+    }
+  }
+
+  candidates.sort((a, b) => b.score - a.score);
+  const best = candidates[0];
+  if (best) {
+    best.el.scrollIntoView({ behavior: "smooth", block: "center" });
+    best.el.click();
+    // Brief highlight so the user sees what was clicked
+    const orig = best.el.style.boxShadow;
+    best.el.style.boxShadow = "0 0 0 4px #a78bfa";
+    setTimeout(() => { best.el.style.boxShadow = orig; }, 1200);
+    return best.text.slice(0, 40);
+  }
+  return null;
+}
+
+/** Pick a feminine TTS voice when available. */
+function pickFeminineVoice(): SpeechSynthesisVoice | null {
+  try {
+    const voices = window.speechSynthesis.getVoices();
+    if (!voices.length) return null;
+    const feminineHints = [
+      "samantha", "victoria", "karen", "moira", "tessa", "fiona", "zira",
+      "google uk english female", "google us english female",
+      "microsoft zira", "microsoft jenny", "microsoft aria",
+      "female",
+    ];
+    for (const hint of feminineHints) {
+      const v = voices.find((x) => x.name.toLowerCase().includes(hint) && x.lang.startsWith("en"));
+      if (v) return v;
+    }
+    // Fallback: any English voice with a traditionally feminine name pattern
+    const v = voices.find((x) => x.lang.startsWith("en") && /[aeiou]a$/.test(x.name.split(" ")[0]));
+    return v ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export default function VoiceAssistant({
   onAction,
   pageSummary,
@@ -131,10 +238,19 @@ export default function VoiceAssistant({
       window.speechSynthesis.cancel();
       const u = new SpeechSynthesisUtterance(text);
       u.rate = 1.0;
-      u.pitch = 1.1;
+      u.pitch = 1.15;
+      const voice = pickFeminineVoice();
+      if (voice) u.voice = voice;
       u.onstart = () => setSpeaking(true);
       u.onend = () => setSpeaking(false);
       u.onerror = () => setSpeaking(false);
+      // Voices load async on some browsers — retry once if none yet
+      if (!voice && window.speechSynthesis.getVoices().length === 0) {
+        window.speechSynthesis.onvoiceschanged = () => {
+          const v = pickFeminineVoice();
+          if (v) u.voice = v;
+        };
+      }
       window.speechSynthesis.speak(u);
     } catch {}
   }, []);
@@ -168,8 +284,13 @@ export default function VoiceAssistant({
       case "complete-mission":
         reply = `Looking for that mission to mark done.`;
         break;
+      case "click": {
+        const clicked = clickElementByLabel(action.label);
+        reply = clicked ? `Clicked "${clicked}".` : `I couldn't find a button for "${action.label}". Try the exact label you see.`;
+        break;
+      }
       default:
-        reply = `I heard "${text}". Try "go to missions", "I read a book", or "read this page".`;
+        reply = `I heard "${text}". Try "go to missions", "click approve", "I read a book", or "read this page".`;
     }
     setResponse(reply);
     speak(reply);
