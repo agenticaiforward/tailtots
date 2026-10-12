@@ -108,6 +108,7 @@ export type BankTransaction = {
   activityId?: string;
   goalId?: string;
   status: ApprovalStatus;
+  createdAt?: string;
 };
 
 export type SavingsGoal = {

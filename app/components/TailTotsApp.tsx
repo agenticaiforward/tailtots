@@ -1985,6 +1985,7 @@ export function TailTotsApp() {
           description: `Earned from approved task: ${mission.title}`,
           activityId: mission.id,
           status: "approved",
+          createdAt: new Date().toISOString(),
         },
         ...items,
       ]);
@@ -2102,6 +2103,7 @@ export function TailTotsApp() {
         description: description ?? `${category.toUpperCase()} request from ${activeChild.name}`,
         goalId,
         status: "pending",
+        createdAt: new Date().toISOString(),
       },
       ...items,
     ]);
@@ -7174,7 +7176,13 @@ function BankPanel(props: {
   const points = props.child?.points ?? 0;
   const { dollars: pointDollars, pointsUsed } = pointsToDollars(points, props.pointsPerDollar);
   const pendingTransactions = childTransactions.filter((tx) => tx.status === "pending");
-  const moneyStory = childTransactions.filter((tx) => tx.status !== "pending").slice(0, 6);
+  const approvedTx = childTransactions.filter((tx) => tx.status !== "pending");
+  const todayKey = new Date().toISOString().slice(0, 10);
+  const isToday = (tx: BankTransaction) => (tx.createdAt ?? "").slice(0, 10) === todayKey;
+  // Kids see today only. Parents get today + full history behind a link.
+  const todayStory = approvedTx.filter(isToday).slice(0, 6);
+  const fullStory = approvedTx.slice(0, 30);
+  const [showFullHistory, setShowFullHistory] = useState(false);
 
   const txIcon = (tx: BankTransaction) =>
     tx.amount < 0 ? "↩️" : tx.category === "earn" ? "🪙" : tx.category === "save" ? "🏦" : tx.category === "spend" ? "🛍️" : "💛";
@@ -7312,7 +7320,7 @@ function BankPanel(props: {
       )}
 
       <div className="rounded-lg border border-tt-line bg-white p-5 shadow-sm">
-        <h3 className="text-lg font-black text-tt-ink">History</h3>
+        <h3 className="text-lg font-black text-tt-ink">Today</h3>
         {pendingTransactions.length > 0 && (
           <div className="mt-3">
             <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-gold">⏳ Waiting for a grown-up</p>
@@ -7327,18 +7335,38 @@ function BankPanel(props: {
           </div>
         )}
         <div className="mt-3 grid gap-2">
-          {moneyStory.map((tx) => (
+          {todayStory.map((tx) => (
             <p key={tx.id} className="rounded-lg bg-tt-cream p-3 text-sm font-semibold text-tt-ink-soft">
               {txIcon(tx)} <b className="capitalize">{tx.category}</b> {tx.amount < 0 ? `−$${Math.abs(tx.amount)}` : `$${tx.amount}`}
               <span className="mt-1 block">{tx.description}</span>
             </p>
           ))}
-          {!moneyStory.length && !pendingTransactions.length && (
+          {!todayStory.length && !pendingTransactions.length && (
             <p className="rounded-lg bg-tt-cream p-3 text-sm font-semibold text-tt-ink-soft">
-              No money moves yet — earn your first dollars by finishing a mission!
+              No money moves yet today — earn dollars by finishing a mission!
             </p>
           )}
         </div>
+        {props.isParentView && fullStory.length > 0 && (
+          <div className="mt-3">
+            <button
+              onClick={() => setShowFullHistory((v) => !v)}
+              className="text-sm font-black text-tt-blue underline"
+            >
+              {showFullHistory ? "Hide full history" : "See full history"}
+            </button>
+            {showFullHistory && (
+              <div className="mt-2 grid gap-2">
+                {fullStory.map((tx) => (
+                  <p key={tx.id} className="rounded-lg bg-tt-cream p-3 text-sm font-semibold text-tt-ink-soft">
+                    {txIcon(tx)} <b className="capitalize">{tx.category}</b> {tx.amount < 0 ? `−$${Math.abs(tx.amount)}` : `$${tx.amount}`}
+                    <span className="mt-1 block">{tx.description}</span>
+                  </p>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </section>
   );

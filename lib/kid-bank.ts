@@ -128,6 +128,7 @@ export function buildJarMoveTx(childId: string, request: JarMoveRequest, childNa
     goalId: request.goalId,
     description: jarMoveDescription({ ...request, amount: Math.floor(request.amount) }, childName),
     status: "approved",
+    createdAt: new Date().toISOString(),
   };
 }
 
@@ -145,6 +146,7 @@ export function reverseJarMove(tx: BankTransaction, undoTxId: string): BankTrans
     goalId: tx.goalId,
     description: `Undone: $${tx.amount} back to the bank`,
     status: "approved",
+    createdAt: new Date().toISOString(),
   };
 }
 
