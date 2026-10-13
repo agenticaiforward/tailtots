@@ -2498,7 +2498,7 @@ export function TailTotsApp() {
   return (
     <main className="tailtots-app min-h-screen bg-tt-cream text-tt-ink">
       <header className="sticky top-0 z-20 border-b border-tt-line bg-white/95 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl flex-col gap-3 px-3 py-2 sm:flex-row sm:items-center sm:justify-between sm:px-5 sm:py-3">
+        <div className="mx-auto flex max-w-7xl flex-col gap-3 px-3 py-2 sm:flex-row sm:items-center sm:justify-between sm:px-5 sm:py-3 xl:max-w-[100rem]">
           <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto sm:gap-3">
             <img src="/tailtots-logo.png" alt="TailTots logo" className="h-12 w-auto shrink-0 rounded-lg object-contain sm:h-14" />
             <div className="min-w-0">
@@ -2549,7 +2549,7 @@ export function TailTotsApp() {
 
       {!isRouteChooser && (
         <div className="border-b border-tt-line bg-[#ffffff]">
-          <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-2 px-3 py-2 sm:px-5">
+          <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-2 px-3 py-2 sm:px-5 xl:max-w-[100rem]">
             <button onClick={openRouteChooser} className="min-h-10 rounded-lg border border-tt-line bg-white px-3 py-2 text-xs font-black text-tt-ink">
               Start page
             </button>
@@ -2594,7 +2594,7 @@ export function TailTotsApp() {
         </div>
       )}
 
-      <section className={`mx-auto grid max-w-7xl gap-4 px-3 py-4 sm:px-5 md:gap-5 ${
+      <section className={`mx-auto grid max-w-7xl gap-4 px-3 py-4 sm:px-5 md:gap-5 xl:max-w-[100rem] ${
         isRouteChooser ? "grid-cols-1" : "lg:grid-cols-[280px_1fr] xl:grid-cols-[300px_1fr]"
       }`}>
         <aside className={`min-w-0 space-y-3 lg:space-y-4 ${isRouteChooser ? "hidden" : ""}`}>
