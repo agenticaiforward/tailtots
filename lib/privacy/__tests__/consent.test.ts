@@ -3,6 +3,7 @@ import {
   grantConsent,
   hasConsent,
   revokeConsent,
+  upgradeConsentsToCardVerified,
   detectTranscriptionPath,
   transcriptionPathLabel,
   CONSENT_POLICY_VERSION,
@@ -58,5 +59,30 @@ describe("transcription path", () => {
   });
   it("detects a path without crashing (SSR-safe)", () => {
     expect(["on-device", "google"]).toContain(detectTranscriptionPath());
+  });
+});
+
+describe("card-verification upgrade", () => {
+  it("re-stamps granted consents with the card-verified proof", () => {
+    const before = grantConsent(
+      grantConsent({}, "voice", { method: "parent-passcode", transcriptionDisclosureShown: true }),
+      "data-collection",
+      { method: "parent-passcode" },
+    );
+    const after = upgradeConsentsToCardVerified(before, "pi_1234567890");
+    expect(after.voice?.method).toBe("card-verified");
+    expect(after.voice?.verificationId).toBe("pi_1234567890");
+    expect(after["data-collection"]?.method).toBe("card-verified");
+    // Original grant timestamps are preserved.
+    expect(after.voice?.at).toBe(before.voice?.at);
+    // Marketing stays off unless the parent opted in.
+    expect(after.marketing).toBeUndefined();
+  });
+
+  it("leaves revoked consents alone", () => {
+    const before = revokeConsent(grantConsent({}, "voice", { method: "parent-passcode" }), "voice");
+    const after = upgradeConsentsToCardVerified(before, "pi_1234567890");
+    expect(after.voice?.granted).toBe(false);
+    expect(after.voice?.method).toBe("parent-passcode");
   });
 });

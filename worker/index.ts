@@ -134,6 +134,12 @@ interface Env {
    */
   SUPABASE_URL?: string;
   SUPABASE_ANON_KEY?: string;
+  /**
+   * Stripe secret key for parent card verification (COPPA verifiable
+   * parental consent). Set as a Worker secret in the Cloudflare dashboard.
+   * Never expose to the client — only the publishable key is public.
+   */
+  STRIPE_SECRET_KEY?: string;
   IMAGES: {
     input(stream: ReadableStream): {
       transform(options: Record<string, unknown>): {
@@ -1656,6 +1662,240 @@ async function handleAiBlueprint(request: Request, env: Env): Promise<Response> 
   return jsonResponse({ blueprint: created?.[0] ?? blueprint, cached: false }, 200);
 }
 
+// ---------------------------------------------------------------------------
+// Parent identity verification — COPPA verifiable parental consent (§312.5).
+//
+// FTC-approved card check without a third-party vendor: the parent's card is
+// tokenized by Stripe.js in the browser (raw PAN never touches TailTots), the
+// worker creates a $1 PaymentIntent and immediately refunds it. Only a
+// successful authorization counts as verification. We store the PROOF
+// (payment-intent id, brand, last4, timestamp) — never card numbers.
+// ---------------------------------------------------------------------------
+
+const VERIFY_CARD_AMOUNT_CENTS = 100; // $1 temporary authorization
+const verifyCardRateLimiter = new InMemoryRateLimiter(5, 60 * 60 * 1000);
+
+interface StripePaymentIntent {
+  id: string;
+  status: string;
+  client_secret?: string;
+  payment_method_details?: { card?: { brand?: string; last4?: string } };
+}
+
+async function stripeApi(
+  secretKey: string,
+  method: "POST" | "GET",
+  path: string,
+  params: Record<string, string>,
+): Promise<{ ok: boolean; status: number; json: any }> {
+  const body = new URLSearchParams(params).toString();
+  const response = await fetch(`https://api.stripe.com/v1${path}`, {
+    method,
+    headers: {
+      Authorization: `Bearer ${secretKey}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: method === "POST" ? body : undefined,
+    signal: AbortSignal.timeout(20_000),
+  });
+  let json: any = null;
+  try {
+    json = await response.json();
+  } catch {
+    // leave null
+  }
+  return { ok: response.ok, status: response.status, json };
+}
+
+/**
+ * POST /api/parent/verify-card — verify the parent via a $1 card
+ * authorization that is immediately refunded.
+ *
+ * Parent JWT required. Body: { paymentMethodId: "pm_..." }.
+ * Raw card numbers never reach this endpoint — Stripe.js tokenizes in the
+ * browser and only the PaymentMethod id is sent.
+ */
+async function handleParentVerifyCard(request: Request, env: Env): Promise<Response> {
+  if (verifyCardRateLimiter.isLimited(`verify-card:${clientIp(request)}`)) {
+    return jsonResponse({ error: "Too many attempts. Please try again later." }, 429);
+  }
+  if (!env.STRIPE_SECRET_KEY) {
+    log.warn("STRIPE_SECRET_KEY missing for /api/parent/verify-card");
+    return jsonResponse({ error: "Card verification is not configured yet." }, 503);
+  }
+  if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) {
+    return jsonResponse({ error: "Parent sign-in is not configured yet." }, 503);
+  }
+  const parent = await authenticateParentRequest({
+    supabaseUrl: env.SUPABASE_URL,
+    anonKey: env.SUPABASE_ANON_KEY,
+    authorizationHeader: request.headers.get("Authorization"),
+  });
+  if (!parent) {
+    return jsonResponse({ error: "Parent sign-in required." }, 401);
+  }
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonResponse({ error: "Request body must be valid JSON." }, 400);
+  }
+  const { paymentMethodId } = body as Record<string, unknown>;
+  if (typeof paymentMethodId !== "string" || !/^pm_[a-zA-Z0-9]{10,}$/.test(paymentMethodId)) {
+    return jsonResponse({ error: "A valid card is required." }, 400);
+  }
+
+  // $1 authorization. Confirm immediately; refund immediately after success.
+  const pi = await stripeApi(env.STRIPE_SECRET_KEY, "POST", "/payment_intents", {
+    amount: String(VERIFY_CARD_AMOUNT_CENTS),
+    currency: "usd",
+    payment_method: paymentMethodId,
+    confirmation_method: "automatic",
+    confirm: "true",
+    "description": "TailTots parent identity verification (refunded immediately)",
+    "metadata[purpose]": "coppa-parent-verification",
+  });
+  if (!pi.ok) {
+    const message =
+      typeof pi.json?.error?.message === "string" ? pi.json.error.message : "Card verification failed.";
+    return jsonResponse({ error: message }, 402);
+  }
+  const intent = pi.json as StripePaymentIntent;
+
+  // 3-D Secure or other action required — hand the client secret back so the
+  // browser can complete it, then the client retries confirmation.
+  if (intent.status === "requires_action" && intent.client_secret) {
+    return jsonResponse(
+      { needsAction: true, clientSecret: intent.client_secret, paymentIntentId: intent.id },
+      200,
+    );
+  }
+  if (intent.status !== "succeeded") {
+    return jsonResponse({ error: "Card verification could not be completed." }, 402);
+  }
+
+  // Immediately refund the $1 — the card is for identity proof, never a charge.
+  const refund = await stripeApi(env.STRIPE_SECRET_KEY, "POST", "/refunds", {
+    payment_intent: intent.id,
+    reason: "requested_by_customer",
+  });
+  if (!refund.ok) {
+    log.error("Stripe refund failed after verification", { error: refund.json });
+    // The verification itself succeeded; surface the refund problem honestly
+    // rather than failing silently.
+    return jsonResponse(
+      { error: "Verification succeeded but the $1 refund needs attention — contact hello@tailtots.com." },
+      502,
+    );
+  }
+
+  const card = intent.payment_method_details?.card;
+  log.info("Parent card verification succeeded", { userId: parent.userId });
+  return jsonResponse(
+    {
+      verified: true,
+      verificationId: intent.id,
+      brand: card?.brand ?? "card",
+      last4: card?.last4 ?? "••••",
+      at: new Date().toISOString(),
+    },
+    200,
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Cloud deletion — COPPA parental right to delete (§312.10).
+//
+// DELETE /api/family/data — parent JWT required. Deletes the family's child
+// data from Supabase: child profiles (cascades to child-linked rows),
+// family-scoped snapshots, and the account snapshot blob. Returns a
+// per-table report. Tables without a DELETE RLS policy report honestly as
+// "denied" — apply supabase/migrations/20261013_delete_policies.sql.
+// ---------------------------------------------------------------------------
+
+const deleteDataRateLimiter = new InMemoryRateLimiter(5, 60 * 60 * 1000);
+
+async function restDeleteOk(client: SupabaseRestClient, path: string): Promise<boolean> {
+  try {
+    const response = await fetch(`${client.supabaseUrl.replace(/\/+$/, "")}/rest/v1/${path}`, {
+      method: "DELETE",
+      headers: restHeaders(client),
+      signal: AbortSignal.timeout(15_000),
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
+async function handleDeleteFamilyData(request: Request, env: Env): Promise<Response> {
+  if (deleteDataRateLimiter.isLimited(`delete-data:${clientIp(request)}`)) {
+    return jsonResponse({ error: "Too many attempts. Please try again later." }, 429);
+  }
+  if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) {
+    return jsonResponse({ error: "Parent sign-in is not configured yet." }, 503);
+  }
+  const parent = await authenticateParentRequest({
+    supabaseUrl: env.SUPABASE_URL,
+    anonKey: env.SUPABASE_ANON_KEY,
+    authorizationHeader: request.headers.get("Authorization"),
+  });
+  if (!parent) {
+    return jsonResponse({ error: "Parent sign-in required." }, 401);
+  }
+  const token = extractBearerToken(request.headers.get("Authorization"));
+  const rest: SupabaseRestClient = {
+    supabaseUrl: env.SUPABASE_URL,
+    anonKey: env.SUPABASE_ANON_KEY,
+    token: token ?? "",
+  };
+
+  // Resolve the parent's family.
+  const parents = await restGet<{ family_id: string }[]>(
+    rest,
+    `parents?auth_user_id=eq.${parent.userId}&select=family_id&limit=1`,
+  );
+  const familyId = parents?.[0]?.family_id;
+  if (!familyId) {
+    return jsonResponse({ error: "No family found for this parent." }, 404);
+  }
+
+  const report: Record<string, string> = {};
+  // Delete child profiles first — child-linked rows cascade (on delete
+  // cascade) where the schema defines it.
+  const childTables: [string, string][] = [
+    ["children", `children?family_id=eq.${familyId}`],
+    ["family_account_snapshots", `family_account_snapshots?family_id=eq.${familyId}`],
+    ["pets", `pets?family_id=eq.${familyId}`],
+    ["pet_passports", `pet_passports?family_id=eq.${familyId}`],
+    ["flourishing_snapshots", `flourishing_snapshots?family_id=eq.${familyId}`],
+    ["blueprint_snapshots", `blueprint_snapshots?family_id=eq.${familyId}`],
+    ["mission_generations", `mission_generations?family_id=eq.${familyId}`],
+    ["mission_events", `mission_events?family_id=eq.${familyId}`],
+    ["pattern_insights", `pattern_insights?family_id=eq.${familyId}`],
+    ["difficulty_calibration", `difficulty_calibration?family_id=eq.${familyId}`],
+    ["readiness_ratings", `readiness_ratings?family_id=eq.${familyId}`],
+  ];
+  for (const [name, path] of childTables) {
+    const ok = await restDeleteOk(rest, path);
+    report[name] = ok ? "deleted" : "denied-or-missing";
+  }
+
+  log.info("Parent invoked cloud deletion", { userId: parent.userId, report });
+  const failed = Object.entries(report).filter(([, v]) => v !== "deleted");
+  return jsonResponse(
+    {
+      ok: failed.length === 0,
+      report,
+      note:
+        failed.length === 0
+          ? "All family child data deleted from the cloud database."
+          : "Some tables could not be deleted (likely missing DELETE RLS policy — apply supabase/migrations/20261013_delete_policies.sql).",
+    },
+    200,
+  );
+}
+
 const worker = {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
@@ -1728,6 +1968,20 @@ const worker = {
         return new Response("Method Not Allowed", { status: 405 });
       }
       return handleAiBlueprint(request, env);
+    }
+
+    if (url.pathname === "/api/parent/verify-card") {
+      if (request.method !== "POST") {
+        return new Response("Method Not Allowed", { status: 405 });
+      }
+      return handleParentVerifyCard(request, env);
+    }
+
+    if (url.pathname === "/api/family/data") {
+      if (request.method !== "DELETE") {
+        return new Response("Method Not Allowed", { status: 405 });
+      }
+      return handleDeleteFamilyData(request, env);
     }
 
     if (url.pathname === "/_vinext/image") {

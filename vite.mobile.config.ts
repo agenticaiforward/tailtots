@@ -11,6 +11,7 @@ export default defineConfig(({ mode }) => {
   // Values are baked into the JS bundle at build time — never commit real keys.
   const supabaseUrl = env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
   const supabaseAnonKey = env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
+  const stripeKey = env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? "";
 
   return {
     root: "mobile",
@@ -21,6 +22,8 @@ export default defineConfig(({ mode }) => {
       "import.meta.env.NEXT_PUBLIC_SUPABASE_ANON_KEY": JSON.stringify(supabaseAnonKey),
       "process.env.NEXT_PUBLIC_SUPABASE_URL": JSON.stringify(supabaseUrl),
       "process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY": JSON.stringify(supabaseAnonKey),
+      "import.meta.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY": JSON.stringify(stripeKey),
+      "process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY": JSON.stringify(stripeKey),
     },
     resolve: {
       alias: {

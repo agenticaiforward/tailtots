@@ -40,9 +40,13 @@ export interface ConsentRecord {
   at: string;
   /**
    * How the parent verified: "parent-passcode" (in-app gate, demo),
-   * "parent-account" (signed-in parent), or a VPC vendor id later.
+   * "parent-account" (signed-in parent), "card-verified" (FTC-approved
+   * card check via Stripe — verifiable parental consent for real families),
+   * or a VPC vendor id later.
    */
-  method: "parent-passcode" | "parent-account" | string;
+  method: "parent-passcode" | "parent-account" | "card-verified" | string;
+  /** For "card-verified": the Stripe payment-intent id proving verification. */
+  verificationId?: string;
   policyVersion: number;
   /** Voice consent only: was the Chrome→Google transcription path disclosed? */
   transcriptionDisclosureShown?: boolean;
@@ -84,6 +88,26 @@ export function revokeConsent(consents: FamilyConsents | undefined, type: Consen
       policyVersion: existing?.policyVersion ?? CONSENT_POLICY_VERSION,
     },
   };
+}
+
+/**
+ * Re-stamp already-granted consents with the stronger card-verification
+ * proof after the parent completes the card check. Grants that were made
+ * under the passcode gate keep their original timestamp; only the proof
+ * of *who* verified is upgraded.
+ */
+export function upgradeConsentsToCardVerified(
+  consents: FamilyConsents | undefined,
+  verificationId: string,
+): FamilyConsents {
+  const next: FamilyConsents = { ...(consents ?? {}) };
+  for (const type of Object.keys(next) as ConsentType[]) {
+    const record = next[type];
+    if (record?.granted) {
+      next[type] = { ...record, method: "card-verified", verificationId };
+    }
+  }
+  return next;
 }
 
 /**

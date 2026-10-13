@@ -30,8 +30,11 @@ import {
   grantConsent,
   hasConsent,
   revokeConsent,
+  upgradeConsentsToCardVerified,
   type FamilyConsents,
 } from "../../lib/privacy/consent";
+import type { ParentIdentityVerification } from "../../lib/privacy/verification";
+import { ParentCardVerificationSheet } from "./tailtots/ParentCardVerificationSheet";
 import type { ConsentGrant, EcoArtifact } from "../../lib/ecosystem/types";
 import { CuriosityMissions } from "./CuriosityMissions";
 import { SynthesisZone } from "./SynthesisMoments";
@@ -596,10 +599,15 @@ type SavedFamilyState = {
   /**
    * Parental consent records (COPPA-oriented): data-collection, voice, and
    * marketing are three SEPARATE consents — never bundled. See
-   * lib/privacy/consent.ts. Production must replace the in-app passcode gate
-   * with a verifiable-parental-consent vendor before real-family launch.
+   * lib/privacy/consent.ts.
    */
   consents?: FamilyConsents;
+  /**
+   * Parent identity verification (COPPA verifiable parental consent, §312.5):
+   * the FTC-approved card check. Stored proof only (brand, last4, Stripe
+   * payment-intent id, timestamp) — never card numbers.
+   */
+  parentIdentityVerification?: ParentIdentityVerification;
 };
 
 /**
@@ -890,6 +898,12 @@ export function TailTotsApp() {
   const [gateInput, setGateInput] = useState("");
   /** Parental consent records (COPPA): data-collection, voice, marketing — separate, never bundled. */
   const [consents, setConsents] = useState<FamilyConsents>({});
+  /** COPPA verifiable parental consent: card-check proof (brand/last4/id/date only). */
+  const [parentIdentityVerification, setParentIdentityVerification] =
+    useState<ParentIdentityVerification | null>(null);
+  const [cardVerifyOpen, setCardVerifyOpen] = useState(false);
+  /** Result note from the last cloud-deletion attempt (shown in Privacy card). */
+  const [cloudDeleteNote, setCloudDeleteNote] = useState<string | null>(null);
   /** Voice consent sheet visibility. */
   const [voiceConsentOpen, setVoiceConsentOpen] = useState(false);  const [gateError, setGateError] = useState(false);
   const [gateNext, setGateNext] = useState<"approvals" | "contact">("approvals");
@@ -1320,9 +1334,9 @@ export function TailTotsApp() {
 
   useEffect(() => {
     if (!hasLoadedSavedState) return;
-    saveFamilyState({ familyName, parentPasscode, parents, children, pets, missions, transactions, goals, badges, neighborhoodJobs, moments, realLifeEntries, studiedAnimals, socialPracticeDone, familyPhotoUrl, activeChildId, certificates, pointsPerDollar, dailyChecksEnabled, maxDailyChecks, familyZip, familyNeighborhood, aiBuddyCategories, aiBuddyDailyRotate, buddyParentQuestions, socialPracticeOverride, consents });
+    saveFamilyState({ familyName, parentPasscode, parents, children, pets, missions, transactions, goals, badges, neighborhoodJobs, moments, realLifeEntries, studiedAnimals, socialPracticeDone, familyPhotoUrl, activeChildId, certificates, pointsPerDollar, dailyChecksEnabled, maxDailyChecks, familyZip, familyNeighborhood, aiBuddyCategories, aiBuddyDailyRotate, buddyParentQuestions, socialPracticeOverride, consents, parentIdentityVerification: parentIdentityVerification ?? undefined });
     setLastSavedAt(new Date());
-  }, [activeChildId, aiBuddyCategories, aiBuddyDailyRotate, badges, buddyParentQuestions, certificates, children, consents, dailyChecksEnabled, familyName, familyPhotoUrl, familyZip, familyNeighborhood, goals, hasLoadedSavedState, maxDailyChecks, missions, moments, neighborhoodJobs, parentPasscode, parents, pets, pointsPerDollar, socialPracticeOverride, studiedAnimals, socialPracticeDone, transactions]);
+  }, [activeChildId, aiBuddyCategories, aiBuddyDailyRotate, badges, buddyParentQuestions, certificates, children, consents, dailyChecksEnabled, familyName, familyPhotoUrl, familyZip, familyNeighborhood, goals, hasLoadedSavedState, maxDailyChecks, missions, moments, neighborhoodJobs, parentIdentityVerification, parentPasscode, parents, pets, pointsPerDollar, socialPracticeOverride, studiedAnimals, socialPracticeDone, transactions]);
 
   // Debounced relational cloud push: mirrors family state into the Supabase
   // tables a couple of seconds after any change, while cloud sync is on.
@@ -1472,6 +1486,7 @@ export function TailTotsApp() {
     setBuddyParentQuestions(snapshot.buddyParentQuestions ?? []);
     setSocialPracticeOverride(snapshot.socialPracticeOverride ?? null);
     setConsents(snapshot.consents ?? {});
+    setParentIdentityVerification(snapshot.parentIdentityVerification ?? null);
   }
 
   function openRouteChooser() {
@@ -3012,10 +3027,8 @@ export function TailTotsApp() {
               }}
               onDeleteChildData={() => {
                 // Parent-invoked deletion: wipe children's local data and
-                // consent records from this device. NOTE: this does NOT delete
-                // Supabase cloud rows — no cloud-deletion endpoint exists yet.
-                // Signed-in parents must request cloud deletion via
-                // hello@tailtots.com until the endpoint is built.
+                // consent records from this device, then purge the cloud
+                // database too when the parent is signed in (COPPA §312.10).
                 try {
                   window.localStorage.removeItem(savedFamilyStateKey);
                 } catch {}
@@ -3028,7 +3041,29 @@ export function TailTotsApp() {
                 setMoments([]);
                 setRealLifeEntries([]);
                 setActiveTab("setup");
+                // Cloud purge (signed-in parents): the worker deletes the
+                // family's child rows from Supabase and reports per table.
+                void (async () => {
+                  const token = await getParentAccessToken();
+                  if (!token) {
+                    setCloudDeleteNote("Signed out — only this device was cleared. Sign in to also clear cloud data, or email hello@tailtots.com.");
+                    return;
+                  }
+                  try {
+                    const res = await fetch("/api/family/data", {
+                      method: "DELETE",
+                      headers: { Authorization: `Bearer ${token}` },
+                    });
+                    const data = (await res.json()) as { ok?: boolean; note?: string };
+                    setCloudDeleteNote(data.note ?? (data.ok ? "Cloud data deleted." : "Cloud deletion incomplete — see note above."));
+                  } catch {
+                    setCloudDeleteNote("Cloud deletion failed to reach the server. Email hello@tailtots.com and we'll complete it manually.");
+                  }
+                })();
               }}
+              parentIdentityVerification={parentIdentityVerification}
+              onVerifyCard={() => setCardVerifyOpen(true)}
+              cloudDeleteNote={cloudDeleteNote}
             />
           )}
           {visibleActiveTab === "growth" && role === "parent" && (
@@ -3205,6 +3240,18 @@ export function TailTotsApp() {
           setVoiceConsentOpen(false);
         }}
         onClose={() => setVoiceConsentOpen(false)}
+      />
+      <ParentCardVerificationSheet
+        open={cardVerifyOpen}
+        getAccessToken={getParentAccessToken}
+        onVerified={(proof) => {
+          // Card check complete: store the proof and re-stamp already-granted
+          // consents with the legally recognized verification method.
+          setParentIdentityVerification(proof);
+          setConsents((c) => upgradeConsentsToCardVerified(c, proof.verificationId));
+          setCardVerifyOpen(false);
+        }}
+        onClose={() => setCardVerifyOpen(false)}
       />
     </main>
   );
@@ -8720,6 +8767,12 @@ function FamilySetupPanel(props: {
   onRevokeVoice: () => void;
   /** Parent deletes the children's data (profiles, activity, transcripts). */
   onDeleteChildData: () => void;
+  /** COPPA verifiable parental consent: card-check proof (or null). */
+  parentIdentityVerification: ParentIdentityVerification | null;
+  /** Open the card verification sheet. */
+  onVerifyCard: () => void;
+  /** Result note from the last cloud-deletion attempt (or null). */
+  cloudDeleteNote: string | null;
 }) {
   // Stream R2: every step is a real, checkable setup task — no placeholder
   // steps, no duplicated tracking.
@@ -8853,6 +8906,25 @@ function FamilySetupPanel(props: {
         <div className="mt-4 space-y-3">
           <div className="flex flex-col gap-2 rounded-lg border border-tt-line bg-tt-cream/50 p-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
+              <p className="text-sm font-black text-tt-ink">🛡️ Parent identity verification</p>
+              <p className="mt-1 text-xs font-semibold leading-5 text-tt-ink-soft">
+                {props.parentIdentityVerification
+                  ? `Verified ${new Date(props.parentIdentityVerification.at).toLocaleDateString()} — ${props.parentIdentityVerification.brand} •••• ${props.parentIdentityVerification.last4}. This is the legally recognized proof (COPPA verifiable parental consent) behind your permissions above.`
+                  : "Not verified yet. A quick card check ($1 authorization, immediately refunded — never charged) proves an adult approved data collection, as children's-privacy law requires."}
+              </p>
+            </div>
+            {!props.parentIdentityVerification && (
+              <button
+                onClick={props.onVerifyCard}
+                className="min-h-11 shrink-0 rounded-lg bg-tt-pine px-4 py-2 text-sm font-black text-white"
+              >
+                Verify with card
+              </button>
+            )}
+          </div>
+
+          <div className="flex flex-col gap-2 rounded-lg border border-tt-line bg-tt-cream/50 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
               <p className="text-sm font-black text-tt-ink">🎤 Voice</p>
               <p className="mt-1 text-xs font-semibold leading-5 text-tt-ink-soft">
                 {props.consents.voice?.granted
@@ -8895,8 +8967,9 @@ function FamilySetupPanel(props: {
             <div>
               <p className="text-sm font-black text-tt-ink">🗑️ Delete children&apos;s data</p>
               <p className="mt-1 text-xs font-semibold leading-5 text-tt-ink-soft">
-                Removes kid profiles, missions, Kid Bank, photos, transcripts, and permissions from this
-                device. This can&apos;t be undone.
+                Removes kid profiles, missions, Kid Bank, photos, and permissions from this
+                device{props.cloudAccountEmail ? " and from our cloud database" : ""}. This can&apos;t be undone.
+                {props.cloudDeleteNote ? <span className="mt-1 block font-black text-tt-pine">{props.cloudDeleteNote}</span> : null}
               </p>
             </div>
             <button

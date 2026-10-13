@@ -40,6 +40,8 @@ export default defineConfig(({ mode }) => {
       "import.meta.env.NEXT_PUBLIC_SUPABASE_ANON_KEY": JSON.stringify(env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? ""),
       "process.env.NEXT_PUBLIC_SUPABASE_URL": JSON.stringify(env.NEXT_PUBLIC_SUPABASE_URL ?? ""),
       "process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY": JSON.stringify(env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? ""),
+      "import.meta.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY": JSON.stringify(env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? ""),
+      "process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY": JSON.stringify(env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? ""),
     },
     server: {
       host: "0.0.0.0",

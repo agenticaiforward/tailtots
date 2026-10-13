@@ -119,10 +119,18 @@ export function PrivacyPolicyContent() {
           without a parent&apos;s involvement, and we never sell children&apos;s data.
         </p>
         <p className="mt-2">
+          <strong>Verifying the parent.</strong> US children&apos;s-privacy law (COPPA) requires us to verify
+          that an adult approved the collection of a child&apos;s information. Parents can complete a card
+          check in Family Setup → Privacy &amp; permissions: a temporary $1 authorization is placed on the
+          card and immediately refunded — the card is never charged. Card details are handled by our payment
+          processor (Stripe); TailTots never sees or stores full card numbers. We keep only the proof of
+          verification (card brand, last 4 digits, and date) with the consent record.
+        </p>
+        <p className="mt-2">
           Parents may review their children&apos;s information in the app at any time, and may delete it by
           removing the relevant profiles or clearing the app&apos;s data on the device. For a signed-in
-          parent account, parents may also request deletion of the family&apos;s account data stored in
-          Supabase. To request help with access, correction, or deletion, contact us at hello@tailtots.com.
+          parent account, the Privacy &amp; permissions card also deletes the family&apos;s data from our
+          cloud database. To request help with access, correction, or deletion, contact us at hello@tailtots.com.
         </p>
       </section>
 
@@ -177,6 +185,22 @@ export function PrivacyPolicyContent() {
           family&apos;s account data at any time by contacting hello@tailtots.com. The
           Alexa skill in demo mode retains nothing about you or your family. Voice transcripts are never stored by TailTots, so there is nothing to retain; turning voice off in Family Setup removes the voice permission immediately.
         </p>
+      </section>
+
+      <section>
+        <h2 className="text-lg font-black text-[#17231f]">Data retention schedule</h2>
+        <p className="mt-2">
+          We keep children&apos;s information only as long as reasonably necessary for the purpose it was
+          collected — never indefinitely:
+        </p>
+        <ul className="mt-2 list-disc space-y-1 pl-5">
+          <li><strong>Voice transcripts and audio:</strong> never stored by TailTots. Audio is discarded immediately after transcription; transcripts are processed transiently and discarded.</li>
+          <li><strong>Child profiles, missions, Kid Bank, badges, moments:</strong> kept while your family uses TailTots. Deleted from your device when you remove the profile or use “Delete children&apos;s data”; deleted from our cloud database when a signed-in parent uses the same control, or within 30 days of a deletion request to hello@tailtots.com.</li>
+          <li><strong>Photos:</strong> kept with the profile they belong to; deleted with the profile.</li>
+          <li><strong>Consent records:</strong> kept while the family account is active (they are the proof of permission); deleted with the account on request.</li>
+          <li><strong>Parent account data:</strong> kept while the account is active; deleted on request.</li>
+          <li><strong>Card-verification proof:</strong> card brand, last 4 digits, and verification date are kept with the consent record; full card numbers are never seen or stored by TailTots.</li>
+        </ul>
       </section>
 
       <section>
