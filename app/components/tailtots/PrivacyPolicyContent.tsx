@@ -74,8 +74,7 @@ export function PrivacyPolicyContent() {
         <p className="mt-2">
           Where this information is stored depends on which side of the app you are using. The
           <strong>kids&apos; side of the app always stores everything only on your device</strong> (in the
-          app&apos;s local storage) &mdash; it has no account, no sign-in, and no cloud sync, and it never
-          sends family data anywhere on its own. Parents can also create an <strong>optional parent
+          app&apos;s local storage) &mdash; it has no account, no sign-in, and no cloud sync. Parents can also create an <strong>optional parent
           account</strong>: sign-in is by email magic link only, and we never store a password for you.
           When a parent is signed in, the family&apos;s account data &mdash; the family profile, missions,
           Kid Bank ledger entries, badges, growth-log moments, approvals, and photos a parent adds &mdash;
@@ -85,8 +84,8 @@ export function PrivacyPolicyContent() {
         </p>
         <p className="mt-2">
           The parent-gated AI section of the web app includes an activity-idea helper for parents, powered
-          by Cloudflare Workers AI. When a parent asks for ideas, the only information sent with the
-          request is the <strong>child&apos;s first name, age band, and the requested life skill</strong>
+          by Cloudflare Workers AI. When a parent asks for ideas, the only information that reaches
+          the AI model is the <strong>requested life skill and the child&apos;s age band</strong>
           (for example, &ldquo;kindness&rdquo;). Suggestions are disclosed as AI-generated when they are
           offered, and a parent reviews every suggestion before anything is saved as a mission. The helper
           does not engage in open-ended chat, gives no medical, mental-health, financial, or other
@@ -161,9 +160,9 @@ export function PrivacyPolicyContent() {
         <ul className="mt-2 list-disc space-y-1 pl-5">
           <li><strong>We never store audio recordings.</strong> Speech is transcribed, the text is used only to understand the request or score a quiz answer, and the audio is discarded immediately.</li>
           <li><strong>Where transcription happens depends on the browser:</strong> on Safari it happens on the device itself (audio never leaves the device); on Chrome, the browser sends audio to Google&apos;s servers for transcription. The permission sheet tells you which applies before you approve.</li>
-          <li>Transcripts are sent to our AI backend (Cloudflare Workers AI) only to understand the request. They are not used for advertising, not sold, and never used to train models. Transcripts are deleted within 30 days.</li>
+          <li>Transcripts are sent to our AI backend (Cloudflare Workers AI) only to understand the request or score a quiz answer. They are processed transiently and never stored by TailTots — there is no transcript database, so there is nothing to retain. TailTots never uses transcripts for advertising, never sells them, and never uses them to train models.</li>
           <li>Voice is never used for advertising and is never shared with sponsors.</li>
-          <li>You can turn voice off anytime in Family Setup — turning it off deletes stored transcripts and the voice permission.</li>
+          <li>You can turn voice off anytime in Family Setup — turning it off removes the voice permission immediately.</li>
         </ul>
       </section>
 
@@ -176,8 +175,7 @@ export function PrivacyPolicyContent() {
           families are isolated from one another, and is protected in transit with encryption. We keep
           parent-account information only while the account is active; a parent may ask us to delete the
           family&apos;s account data at any time by contacting hello@tailtots.com. The
-          Alexa skill in demo mode retains nothing about you or your family. Voice transcripts are
-          deleted within 30 days; turning voice off in Family Setup deletes them immediately.
+          Alexa skill in demo mode retains nothing about you or your family. Voice transcripts are never stored by TailTots, so there is nothing to retain; turning voice off in Family Setup removes the voice permission immediately.
         </p>
       </section>
 

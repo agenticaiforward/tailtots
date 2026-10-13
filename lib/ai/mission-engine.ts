@@ -670,8 +670,9 @@ export interface RedactedSnapshot {
   /** Lifetime achievement history — all-time counts, no PII. */
   lifetime: { totalBadges: number; badgesBySkill: Record<string, number>; totalCompletions: number };
   /**
-   * Real-life entries (book titles, chore names — no PII). When non-empty,
-   * missions should reference these real experiences when teaching traits.
+   * Real-life entries — kind + title only (detail is stripped in
+   * redactSnapshotForModel). Titles reference the child's real experiences
+   * when teaching traits; no free-text notes reach the model.
    */
   realLifeEntries: { kind: string; title: string; detail?: string }[];
 }
@@ -692,8 +693,9 @@ export function redactSnapshotForModel(snapshot: ChildSnapshot): RedactedSnapsho
     lifetime: snapshot.lifetime,
     realLifeEntries: (snapshot.realLifeEntries ?? []).map((e) => ({
       kind: e.kind,
+      // Titles only — kid-authored free-text `detail` is stripped here so a
+      // future caller can never leak it to the model by accident.
       title: e.title,
-      detail: e.detail,
     })),
   };
 }
@@ -1104,7 +1106,7 @@ function realLifeLine(redacted: RedactedSnapshot): string {
   }
   const formatted = entries
     .slice(0, 8)
-    .map((e) => `${e.kind}: "${e.title}"${e.detail ? ` (${e.detail})` : ""}`)
+    .map((e) => `${e.kind}: "${e.title}"`)
     .join("; ");
   return `Real-life log (the child's actual experiences — REFERENCE these by title when teaching traits, and ASK a reflective wonder question about one): ${formatted}.`;
 }

@@ -1710,6 +1710,15 @@ export function TailTotsApp() {
     setChildren((items) => [...items, child]);
     setActiveChildId(child.id);
     setNewChild({ name: "", age: "8" });
+    // COPPA: creating a child profile collects the child's personal
+    // information (name, age). This runs in Family Setup behind the parent
+    // passcode gate, so record the parent's data-collection consent now.
+    // (Production: replace "parent-passcode" with the VPC vendor's proof.)
+    setConsents((c) =>
+      grantConsent(c, "data-collection", {
+        method: cloudAccountEmail ? "parent-account" : "parent-passcode",
+      }),
+    );
   }
 
   /**
@@ -3002,8 +3011,11 @@ export function TailTotsApp() {
                 try { window.speechSynthesis?.cancel(); } catch {}
               }}
               onDeleteChildData={() => {
-                // Parent-invoked deletion: wipe children's local data, transcripts,
-                // and consent records. (Cloud rows delete via the account flow.)
+                // Parent-invoked deletion: wipe children's local data and
+                // consent records from this device. NOTE: this does NOT delete
+                // Supabase cloud rows — no cloud-deletion endpoint exists yet.
+                // Signed-in parents must request cloud deletion via
+                // hello@tailtots.com until the endpoint is built.
                 try {
                   window.localStorage.removeItem(savedFamilyStateKey);
                 } catch {}
@@ -8844,7 +8856,7 @@ function FamilySetupPanel(props: {
               <p className="text-sm font-black text-tt-ink">🎤 Voice</p>
               <p className="mt-1 text-xs font-semibold leading-5 text-tt-ink-soft">
                 {props.consents.voice?.granted
-                  ? `On — approved ${props.consents.voice.at ? new Date(props.consents.voice.at).toLocaleDateString() : ""}. Audio is never stored; transcripts delete within 30 days.`
+                  ? `On — approved ${props.consents.voice.at ? new Date(props.consents.voice.at).toLocaleDateString() : ""}. Audio is never stored; transcripts are never stored by TailTots.`
                   : "Off — the mic asks a parent for permission before it ever turns on."}
               </p>
             </div>

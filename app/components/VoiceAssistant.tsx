@@ -185,11 +185,17 @@ export function clickElementByLabel(label: string): string | null {
   return null;
 }
 
-/** Pick a feminine TTS voice when available. */
+/** Pick a feminine TTS voice when available — prefer on-device (local) voices
+ *  so spoken text never leaves the device for synthesis (COPPA minimization).
+ *  Network voices (e.g. Google's on Chrome) send the spoken text to a server;
+ *  they are a last resort and are disclosed in the voice permission sheet. */
 function pickFeminineVoice(): SpeechSynthesisVoice | null {
   try {
     const voices = window.speechSynthesis.getVoices();
     if (!voices.length) return null;
+    // Local voices first — no data leaves the device.
+    const local = voices.filter((x) => (x as any).localService !== false);
+    const pool = local.length ? local : voices;
     const feminineHints = [
       "samantha", "victoria", "karen", "moira", "tessa", "fiona", "zira",
       "google uk english female", "google us english female",
@@ -197,11 +203,11 @@ function pickFeminineVoice(): SpeechSynthesisVoice | null {
       "female",
     ];
     for (const hint of feminineHints) {
-      const v = voices.find((x) => x.name.toLowerCase().includes(hint) && x.lang.startsWith("en"));
+      const v = pool.find((x) => x.name.toLowerCase().includes(hint) && x.lang.startsWith("en"));
       if (v) return v;
     }
     // Fallback: any English voice with a traditionally feminine name pattern
-    const v = voices.find((x) => x.lang.startsWith("en") && /[aeiou]a$/.test(x.name.split(" ")[0]));
+    const v = pool.find((x) => x.lang.startsWith("en") && /[aeiou]a$/.test(x.name.split(" ")[0]));
     return v ?? null;
   } catch {
     return null;

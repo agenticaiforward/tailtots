@@ -13,8 +13,11 @@
  *   processed and deleted per the retention schedule.
  * - "marketing": OPTIONAL, OFF BY DEFAULT. Parent opts in to receiving
  *   promotions/recommendations (shelters, schools, products) informed by the
- *   child's interests. Shown ONLY to the verified parent, never to the child.
- *   Revocable at any time; revocation deletes the marketing profile.
+ *   child's interests. Parent-directed: the opt-in checkbox lives in the
+ *   parent permission sheet (labeled "for parents", completion requires the
+ *   parent passcode); promotions render ONLY to the verified parent, never
+ *   to the child. Revocable at any time; revocation deletes the marketing
+ *   profile.
  *
  * PRODUCTION NOTE: true COPPA "verifiable parental consent" requires an
  * approved method (credit/debit card check, knowledge-based authentication,

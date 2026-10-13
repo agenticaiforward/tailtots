@@ -71,9 +71,10 @@ export function VoiceConsentSheet({
           <p className="font-black text-tt-ink">What happens to your child&apos;s voice</p>
           <ul className="mt-2 list-disc space-y-1.5 pl-5">
             <li>{transcriptionPathLabel(path)}</li>
-            <li>Transcripts are used only to understand the request or score a quiz answer — then deleted on our regular schedule. We never keep audio recordings.</li>
+            <li>Spoken replies are read aloud by your device&apos;s speech system. On some browsers (like Chrome) the text being spoken may be sent to Google for voice synthesis.</li>
+            <li>Transcripts are used only to understand the request or score a quiz answer, then discarded. We never store transcripts or audio recordings — there is nothing of TailTots&apos; to delete later.</li>
             <li>Voice is never used for advertising, and never shared with sponsors.</li>
-            <li>You can turn voice off anytime in Family Setup — past transcripts are deleted when you do.</li>
+            <li>You can turn voice off anytime in Family Setup — this removes the voice permission immediately.</li>
           </ul>
         </div>
 

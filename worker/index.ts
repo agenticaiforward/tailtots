@@ -305,7 +305,8 @@ async function handleVoiceQuiz(request: Request, env: Env): Promise<Response> {
 /**
  * POST /api/ai/ideas — parent-facing activity-idea helper.
  * Only reachable from the parent-gated AI panel; the body is strictly
- * validated and only first name + age band + life skill ever reach the model.
+ * validated and only life skill + age band ever reach the model
+ * (childFirstName, if sent by older clients, is stripped during validation).
  */
 async function handleAiIdeas(request: Request, env: Env): Promise<Response> {
   if (ideasRateLimiter.isLimited(`ai-ideas:${clientIp(request)}`)) {

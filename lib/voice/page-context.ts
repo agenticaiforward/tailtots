@@ -6,7 +6,8 @@
  * knows what the user can see and do right now.
  *
  * PII-free by construction: only UI labels and control state are captured.
- * Kid names, photo URLs, and personal data are never included.
+ * Kid names, photo URLs, personal data, and input contents are never included
+ * (filled inputs are reported as a presence flag, never their value).
  */
 import type { VoicePageContext, VoicePageElement } from "./intent-planning";
 import { VOICE_MAX_ELEMENTS, VOICE_MAX_LABEL_CHARS } from "./intent-planning";
@@ -51,7 +52,10 @@ function elementState(el: HTMLElement): string | undefined {
     }
   }
   if (el instanceof HTMLInputElement && el.value) {
-    states.push(`value: ${el.value.slice(0, 40)}`);
+    // COPPA minimization: input contents can hold a child's typed words
+    // (e.g. a name). The planner only needs to know a field exists and is
+    // filled — never what it contains. Send a presence flag, not the value.
+    states.push(el.type === "password" ? "filled" : "has text");
   }
   return states.length ? states.join(", ") : undefined;
 }
