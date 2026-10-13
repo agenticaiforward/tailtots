@@ -215,6 +215,8 @@ export default function VoiceAssistant({
   tab,
   tabLabel,
   kidAge,
+  voiceConsented,
+  onRequestVoiceConsent,
 }: {
   /** Fired when the AI decides on an action. */
   onAction: (action: VoiceAction) => void;
@@ -228,6 +230,13 @@ export default function VoiceAssistant({
   tabLabel: string;
   /** Active child's age — quiz questions adapt to it. Only a number reaches the AI. */
   kidAge?: number;
+  /**
+   * COPPA: has the parent consented to voice collection? When false, tapping
+   * the mic opens the parental consent sheet instead of listening.
+   */
+  voiceConsented: boolean;
+  /** Opens the voice consent sheet (parental gate + consent). */
+  onRequestVoiceConsent: () => void;
 }) {
   const [listening, setListening] = useState(false);
   const [transcript, setTranscript] = useState("");
@@ -533,6 +542,12 @@ export default function VoiceAssistant({
       setListening(false);
       return;
     }
+    // COPPA: no voice collection without parental consent. A child's voice
+    // is personal information — the mic must never hot-start for a child.
+    if (!voiceConsented) {
+      onRequestVoiceConsent();
+      return;
+    }
     const w = window as any;
     const Rec = w.SpeechRecognition ?? w.webkitSpeechRecognition;
     if (!Rec) {
@@ -565,7 +580,7 @@ export default function VoiceAssistant({
     } catch {
       setListening(false);
     }
-  }, [listening, handleResult]);
+  }, [listening, handleResult, voiceConsented, onRequestVoiceConsent]);
 
   if (!supported) return null;
 

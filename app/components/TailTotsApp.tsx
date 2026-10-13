@@ -25,6 +25,13 @@ import { ChoiceAdventureSpot } from "./ChoiceAdventureSpot";
 import VillageTab from "./ecosystem/VillageTab";
 import { PlanPanel } from "./tailtots/panels/PlanPanel";
 import VoiceAssistant, { type VoiceAction } from "./VoiceAssistant";
+import { VoiceConsentSheet } from "./tailtots/VoiceConsentSheet";
+import {
+  grantConsent,
+  hasConsent,
+  revokeConsent,
+  type FamilyConsents,
+} from "../../lib/privacy/consent";
 import type { ConsentGrant, EcoArtifact } from "../../lib/ecosystem/types";
 import { CuriosityMissions } from "./CuriosityMissions";
 import { SynthesisZone } from "./SynthesisMoments";
@@ -586,6 +593,13 @@ type SavedFamilyState = {
   buddyParentQuestions?: BuddyParentQuestion[];
   /** Feedback R2 — AI buddy stream: parent override of the safe-social heading + content (null = default). */
   socialPracticeOverride?: SocialPracticeOverride | null;
+  /**
+   * Parental consent records (COPPA-oriented): data-collection, voice, and
+   * marketing are three SEPARATE consents — never bundled. See
+   * lib/privacy/consent.ts. Production must replace the in-app passcode gate
+   * with a verifiable-parental-consent vendor before real-family launch.
+   */
+  consents?: FamilyConsents;
 };
 
 /**
@@ -874,7 +888,10 @@ export function TailTotsApp() {
   const [onboardingTrack, setOnboardingTrack] = useState<PetTrack | null>(null);
   const [parentGateOpen, setParentGateOpen] = useState(false);
   const [gateInput, setGateInput] = useState("");
-  const [gateError, setGateError] = useState(false);
+  /** Parental consent records (COPPA): data-collection, voice, marketing — separate, never bundled. */
+  const [consents, setConsents] = useState<FamilyConsents>({});
+  /** Voice consent sheet visibility. */
+  const [voiceConsentOpen, setVoiceConsentOpen] = useState(false);  const [gateError, setGateError] = useState(false);
   const [gateNext, setGateNext] = useState<"approvals" | "contact">("approvals");
   const [hasLoadedSavedState, setHasLoadedSavedState] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
@@ -1303,9 +1320,9 @@ export function TailTotsApp() {
 
   useEffect(() => {
     if (!hasLoadedSavedState) return;
-    saveFamilyState({ familyName, parentPasscode, parents, children, pets, missions, transactions, goals, badges, neighborhoodJobs, moments, realLifeEntries, studiedAnimals, socialPracticeDone, familyPhotoUrl, activeChildId, certificates, pointsPerDollar, dailyChecksEnabled, maxDailyChecks, familyZip, familyNeighborhood, aiBuddyCategories, aiBuddyDailyRotate, buddyParentQuestions, socialPracticeOverride });
+    saveFamilyState({ familyName, parentPasscode, parents, children, pets, missions, transactions, goals, badges, neighborhoodJobs, moments, realLifeEntries, studiedAnimals, socialPracticeDone, familyPhotoUrl, activeChildId, certificates, pointsPerDollar, dailyChecksEnabled, maxDailyChecks, familyZip, familyNeighborhood, aiBuddyCategories, aiBuddyDailyRotate, buddyParentQuestions, socialPracticeOverride, consents });
     setLastSavedAt(new Date());
-  }, [activeChildId, aiBuddyCategories, aiBuddyDailyRotate, badges, buddyParentQuestions, certificates, children, dailyChecksEnabled, familyName, familyPhotoUrl, familyZip, familyNeighborhood, goals, hasLoadedSavedState, maxDailyChecks, missions, moments, neighborhoodJobs, parentPasscode, parents, pets, pointsPerDollar, socialPracticeOverride, studiedAnimals, socialPracticeDone, transactions]);
+  }, [activeChildId, aiBuddyCategories, aiBuddyDailyRotate, badges, buddyParentQuestions, certificates, children, consents, dailyChecksEnabled, familyName, familyPhotoUrl, familyZip, familyNeighborhood, goals, hasLoadedSavedState, maxDailyChecks, missions, moments, neighborhoodJobs, parentPasscode, parents, pets, pointsPerDollar, socialPracticeOverride, studiedAnimals, socialPracticeDone, transactions]);
 
   // Debounced relational cloud push: mirrors family state into the Supabase
   // tables a couple of seconds after any change, while cloud sync is on.
@@ -1454,6 +1471,7 @@ export function TailTotsApp() {
     setAiBuddyDailyRotate(snapshot.aiBuddyDailyRotate ?? true);
     setBuddyParentQuestions(snapshot.buddyParentQuestions ?? []);
     setSocialPracticeOverride(snapshot.socialPracticeOverride ?? null);
+    setConsents(snapshot.consents ?? {});
   }
 
   function openRouteChooser() {
@@ -2971,6 +2989,34 @@ export function TailTotsApp() {
                 loadDemoFamily();
                 setActiveTab("setup");
               }}
+              consents={consents}
+              onToggleMarketing={(granted) =>
+                setConsents((c) =>
+                  granted
+                    ? grantConsent(c, "marketing", { method: cloudAccountEmail ? "parent-account" : "parent-passcode" })
+                    : revokeConsent(c, "marketing"),
+                )
+              }
+              onRevokeVoice={() => {
+                setConsents((c) => revokeConsent(c, "voice"));
+                try { window.speechSynthesis?.cancel(); } catch {}
+              }}
+              onDeleteChildData={() => {
+                // Parent-invoked deletion: wipe children's local data, transcripts,
+                // and consent records. (Cloud rows delete via the account flow.)
+                try {
+                  window.localStorage.removeItem(savedFamilyStateKey);
+                } catch {}
+                setConsents({});
+                setChildren([]);
+                setMissions([]);
+                setTransactions([]);
+                setGoals([]);
+                setBadges([]);
+                setMoments([]);
+                setRealLifeEntries([]);
+                setActiveTab("setup");
+              }}
             />
           )}
           {visibleActiveTab === "growth" && role === "parent" && (
@@ -3117,7 +3163,9 @@ export function TailTotsApp() {
           </div>
         );
       })()}
-      {/* Voice AI — listen + speak + do things on any page */}
+      {/* Voice AI — listen + speak + do things on any page.
+          COPPA: the mic never hot-starts for a child; first tap opens the
+          parental consent sheet (voice = child's personal information). */}
       <VoiceAssistant
         onAction={handleVoiceAction}
         pageSummary={`${role === "parent" ? "Parent" : "Kid"} view, ${visibleActiveTab} tab. ${missions.filter((m) => !m.completedBy).length} open missions.`}
@@ -3125,6 +3173,26 @@ export function TailTotsApp() {
         tab={visibleActiveTab}
         tabLabel={tabItems.find((t) => t.id === visibleActiveTab)?.label ?? visibleActiveTab}
         kidAge={role === "child" ? activeChild?.age : undefined}
+        voiceConsented={hasConsent(consents, "voice")}
+        onRequestVoiceConsent={() => setVoiceConsentOpen(true)}
+      />
+      <VoiceConsentSheet
+        open={voiceConsentOpen}
+        childName={activeChild?.name ?? "your child"}
+        expectedPasscode={parentPasscode ?? ""}
+        onGrant={(voiceGranted, marketingGranted) => {
+          let next = grantConsent(consents, "voice", {
+            method: cloudAccountEmail ? "parent-account" : "parent-passcode",
+            transcriptionDisclosureShown: true,
+          });
+          // Marketing consent is SEPARATE and opt-in only — never bundled.
+          next = marketingGranted
+            ? grantConsent(next, "marketing", { method: cloudAccountEmail ? "parent-account" : "parent-passcode" })
+            : revokeConsent(next, "marketing");
+          setConsents(next);
+          setVoiceConsentOpen(false);
+        }}
+        onClose={() => setVoiceConsentOpen(false)}
       />
     </main>
   );
@@ -8632,6 +8700,14 @@ function FamilySetupPanel(props: {
   setAiBuddyDailyRotate: (value: boolean) => void;
   appMode: "demo" | "real";
   onResetDemo: () => void;
+  /** Parental consent records (COPPA) — managed by the parent only. */
+  consents: FamilyConsents;
+  /** Parent toggles the SEPARATE marketing opt-in (default off, revocable). */
+  onToggleMarketing: (granted: boolean) => void;
+  /** Parent turns voice off — revokes voice consent + deletes transcripts. */
+  onRevokeVoice: () => void;
+  /** Parent deletes the children's data (profiles, activity, transcripts). */
+  onDeleteChildData: () => void;
 }) {
   // Stream R2: every step is a real, checkable setup task — no placeholder
   // steps, no duplicated tracking.
@@ -8754,6 +8830,75 @@ function FamilySetupPanel(props: {
             )}
           </div>
         )}
+      </div>
+
+      {/* Privacy & permissions — parent-only. Three separate consents (COPPA):
+          voice, marketing opt-in, and data deletion. Never bundled. */}
+      <div className="rounded-lg border border-tt-line bg-white p-5 shadow-sm">
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-pine">Privacy & permissions</p>
+        <h2 className="mt-2 text-2xl font-black">Your family&apos;s data</h2>
+
+        <div className="mt-4 space-y-3">
+          <div className="flex flex-col gap-2 rounded-lg border border-tt-line bg-tt-cream/50 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-black text-tt-ink">🎤 Voice</p>
+              <p className="mt-1 text-xs font-semibold leading-5 text-tt-ink-soft">
+                {props.consents.voice?.granted
+                  ? `On — approved ${props.consents.voice.at ? new Date(props.consents.voice.at).toLocaleDateString() : ""}. Audio is never stored; transcripts delete within 30 days.`
+                  : "Off — the mic asks a parent for permission before it ever turns on."}
+              </p>
+            </div>
+            {props.consents.voice?.granted && (
+              <button
+                onClick={props.onRevokeVoice}
+                className="min-h-11 shrink-0 rounded-lg border border-tt-line bg-white px-4 py-2 text-sm font-black text-tt-cocoa"
+              >
+                Turn voice off
+              </button>
+            )}
+          </div>
+
+          <div className="flex flex-col gap-2 rounded-lg border border-dashed border-tt-line p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-black text-tt-ink">💌 Recommendations for parents</p>
+              <p className="mt-1 text-xs font-semibold leading-5 text-tt-ink-soft">
+                Optional and separate. When on, <strong>you (never your child)</strong> may get occasional
+                recommendations — shelters, schools, kid products — matched to your family&apos;s interests.
+                Nothing about this affects your child&apos;s app. Turn off anytime.
+              </p>
+            </div>
+            <button
+              role="switch"
+              aria-checked={Boolean(props.consents.marketing?.granted)}
+              onClick={() => props.onToggleMarketing(!props.consents.marketing?.granted)}
+              className={`min-h-11 shrink-0 rounded-full px-5 py-2 text-sm font-black transition-colors ${
+                props.consents.marketing?.granted ? "bg-tt-pine text-white" : "border border-tt-line bg-white text-tt-ink-soft"
+              }`}
+            >
+              {props.consents.marketing?.granted ? "On" : "Off"}
+            </button>
+          </div>
+
+          <div className="flex flex-col gap-2 rounded-lg border border-[#e8b4a0] bg-[#fdf1ec] p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-black text-tt-ink">🗑️ Delete children&apos;s data</p>
+              <p className="mt-1 text-xs font-semibold leading-5 text-tt-ink-soft">
+                Removes kid profiles, missions, Kid Bank, photos, transcripts, and permissions from this
+                device. This can&apos;t be undone.
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                if (window.confirm("Delete all children's data on this device? This can't be undone.")) {
+                  props.onDeleteChildData();
+                }
+              }}
+              className="min-h-11 shrink-0 rounded-lg bg-[#b3261e] px-4 py-2 text-sm font-black text-white"
+            >
+              Delete data
+            </button>
+          </div>
+        </div>
       </div>
 
       <div className="rounded-lg border border-tt-line bg-white p-5 shadow-sm">

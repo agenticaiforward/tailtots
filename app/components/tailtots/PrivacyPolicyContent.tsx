@@ -114,7 +114,8 @@ export function PrivacyPolicyContent() {
         <p className="mt-2">
           TailTots is designed for children to use <strong>with a parent or guardian&apos;s permission and
           involvement</strong>. Parent-only areas of the app &mdash; family setup, approvals, and account
-          features &mdash; sit behind a parent passcode gate. The Alexa skill is parent-facing and is not
+          features &mdash; sit behind a parent passcode gate, and the microphone requires a separate,
+          explicit parent permission before it can be used by a child (see Voice above). The Alexa skill is parent-facing and is not
           directed at children. We do not knowingly collect personal information directly from children
           without a parent&apos;s involvement, and we never sell children&apos;s data.
         </p>
@@ -150,6 +151,23 @@ export function PrivacyPolicyContent() {
       </section>
 
       <section>
+        <h2 className="text-lg font-black text-[#17231f]">Voice</h2>
+        <p className="mt-2">
+          The mic button lets a child (or parent) speak commands and play voice quizzes. <strong>A parent
+          must approve before the mic turns on for a child</strong> — the first tap opens a permission sheet
+          for the parent, and the permission is recorded with its date. Under COPPA, a child&apos;s voice
+          counts as personal information.
+        </p>
+        <ul className="mt-2 list-disc space-y-1 pl-5">
+          <li><strong>We never store audio recordings.</strong> Speech is transcribed, the text is used only to understand the request or score a quiz answer, and the audio is discarded immediately.</li>
+          <li><strong>Where transcription happens depends on the browser:</strong> on Safari it happens on the device itself (audio never leaves the device); on Chrome, the browser sends audio to Google&apos;s servers for transcription. The permission sheet tells you which applies before you approve.</li>
+          <li>Transcripts are sent to our AI backend (Cloudflare Workers AI) only to understand the request. They are not used for advertising, not sold, and never used to train models. Transcripts are deleted within 30 days.</li>
+          <li>Voice is never used for advertising and is never shared with sponsors.</li>
+          <li>You can turn voice off anytime in Family Setup — turning it off deletes stored transcripts and the voice permission.</li>
+        </ul>
+      </section>
+
+      <section>
         <h2 className="text-lg font-black text-[#17231f]">Data security and retention</h2>
         <p className="mt-2">
           Data on the kids&apos; side of the apps stays on the device, so keeping it safe means keeping
@@ -158,7 +176,8 @@ export function PrivacyPolicyContent() {
           families are isolated from one another, and is protected in transit with encryption. We keep
           parent-account information only while the account is active; a parent may ask us to delete the
           family&apos;s account data at any time by contacting hello@tailtots.com. The
-          Alexa skill in demo mode retains nothing about you or your family.
+          Alexa skill in demo mode retains nothing about you or your family. Voice transcripts are
+          deleted within 30 days; turning voice off in Family Setup deletes them immediately.
         </p>
       </section>
 
