@@ -187,6 +187,9 @@ export function VisualLanding({
           <p className="mt-4 max-w-md text-base font-semibold leading-relaxed text-white/85">
             Daily pet missions build real-world skills. One weekly report for you.
           </p>
+          <p className="mt-2 text-sm font-extrabold text-tt-sun">
+            Ages 4–12 · ~10 minutes a day · mostly off-screen
+          </p>
           <button
             onClick={onTryDemo}
             className="tt-btn tt-btn-sun tt-btn-lg tt-motion-pop mt-6"
@@ -221,6 +224,29 @@ export function VisualLanding({
             </button>
           ))}
         </div>
+      </section>
+
+      {/* SAFETY — moved up (Oct 14): the first question every parent asks gets answered first */}
+      <section className="rounded-3xl border border-tt-line bg-tt-cream p-5 sm:p-6">
+        <p className="text-center text-xs font-black uppercase tracking-[0.18em] text-tt-pine">Safety, by design</p>
+        <h2 className="mt-1 text-center text-xl font-black text-tt-ink">Your child will never talk to a stranger on TailTots. Period.</h2>
+        <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+          {[
+            ["🚫", "No strangers"],
+            ["💬", "No open chats"],
+            ["✅", "You approve everything"],
+            ["🔒", "Closed family circle"],
+          ].map(([emoji, title]) => (
+            <div key={title} className="rounded-2xl border border-tt-line bg-white p-4 text-center">
+              <p className="text-3xl" aria-hidden="true">{emoji}</p>
+              <p className="mt-2 text-sm font-black text-tt-ink">{title}</p>
+            </div>
+          ))}
+        </div>
+        <p className="mx-auto mt-4 max-w-xl text-center text-sm font-bold leading-relaxed text-tt-ink-soft">
+          No people. Ever. The only voice is our AI guide — and it only asks the mission
+          and quiz questions you approved. Off until you turn it on.
+        </p>
       </section>
 
       {/* PARENT PROMISE — why parents trust this */}
@@ -326,6 +352,10 @@ export function VisualLanding({
             ))}
           </div>
         </div>
+        <p className="mt-4 text-center text-xs font-semibold text-tt-ink-faint">
+          Traits drawn from published resilience research ·{" "}
+          <a href="/science" className="font-bold text-tt-pine underline decoration-tt-sun decoration-2 underline-offset-2">Our Science</a>
+        </p>
       </section>
 
       {/* FAMILIES — illustrative lifestyle photography */}
