@@ -36,6 +36,23 @@ function elementGroup(el: HTMLElement): string | undefined {
   return text ? text.slice(0, 60) : undefined;
 }
 
+/** Find the nearest card/article heading that names what an element belongs
+ *  to — e.g. three mission cards each have a "Mark done" button; the card's
+ *  own title ("Feed the dog") is what tells the AI (and the kid) which one
+ *  a click would hit. */
+function elementCardHeading(el: HTMLElement): string | undefined {
+  let node: HTMLElement | null = el.parentElement;
+  for (let depth = 0; depth < 6 && node; depth++) {
+    const heading = node.querySelector("h1, h2, h3, h4");
+    if (heading && heading !== el && !el.contains(heading)) {
+      const text = (heading.textContent || "").replace(/\s+/g, " ").trim();
+      if (text && text.length > 2) return text.slice(0, 40);
+    }
+    node = node.parentElement;
+  }
+  return undefined;
+}
+
 /** Describe the element's current state for the AI. */
 function elementState(el: HTMLElement): string | undefined {
   const states: string[] = [];
@@ -98,11 +115,24 @@ export function snapshotPageContext(opts: {
     // Skip icon-only mystery buttons the AI can't describe
     if (label.length <= 2 && !/[$€£\d]/.test(label)) return;
 
-    const key = `${elementKind(el)}:${label}`;
-    if (seen.has(key)) return;
-    seen.add(key);
+    const kind = elementKind(el);
+    const key = `${kind}:${label}`;
+    let finalLabel = label;
+    if (seen.has(key)) {
+      // Duplicate labels are the #1 cause of wrong clicks ("Mark done" on
+      // every mission card). Qualify with the owning card's title so each
+      // button stays individually targetable; drop only true duplicates.
+      const card = elementCardHeading(el);
+      if (!card) return;
+      finalLabel = `${label} — ${card}`;
+      const qualifiedKey = `${kind}:${finalLabel}`;
+      if (seen.has(qualifiedKey)) return;
+      seen.add(qualifiedKey);
+    } else {
+      seen.add(key);
+    }
 
-    const entry: VoicePageElement = { label, kind: elementKind(el) };
+    const entry: VoicePageElement = { label: finalLabel, kind };
     const state = elementState(el);
     if (state) entry.state = state;
     const group = elementGroup(el);

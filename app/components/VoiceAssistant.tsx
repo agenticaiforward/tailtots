@@ -7,6 +7,14 @@
  * - AI sees the page, interprets intent, and DOES it: multi-step actions,
  *   quiz mode, navigation, or reading aloud (text-to-speech).
  *
+ * The core kid loop is handled locally and deterministically (same behavior
+ * online and offline): hear today's missions, hear your points, say "I did
+ * it" to finish a mission (named back + confirmed, never a silent guess),
+ * move points into jars with confirmation, and hear points news after a
+ * grown-up approves. Quiz and confirm flows are hands-free: after the guide
+ * speaks a question it listens again, so a child who relies on voice never
+ * has to tap between turns.
+ *
  * Quiz mode is designed for ADHD and autistic kids: predictable structure
  * ("Question 2 of 5"), short sessions, no time pressure, gentle feedback,
  * visual questions with tappable choices, stop anytime.
@@ -17,6 +25,14 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { snapshotPageContext } from "@/lib/voice/page-context";
 import type { VoiceIntentPlan, VoicePlannedAction } from "@/lib/voice/intent-planning";
 import type { QuizTurn } from "@/lib/voice/quiz";
+import {
+  parseVoiceIntent,
+  LOCAL_FIRST_TYPES,
+  type VoiceAction,
+} from "@/lib/voice/intent-local";
+
+export { parseVoiceIntent };
+export type { VoiceAction };
 
 type SpeechRecognitionLike = {
   lang: string;
@@ -30,93 +46,18 @@ type SpeechRecognitionLike = {
   abort: () => void;
 };
 
-export type VoiceAction =
-  | { type: "navigate"; tab: string }
-  | { type: "log-book"; title: string }
-  | { type: "log-chore"; title: string }
-  | { type: "log-kind"; title: string }
-  | { type: "log-skill"; title: string }
-  | { type: "read-page" }
-  | { type: "complete-mission"; query: string }
-  | { type: "click"; label: string }
-  | { type: "unknown"; text: string };
+/** A mission the voice layer needs to know by name (resolution + readback). */
+export type VoiceMissionRef = { id: string; title: string; points: number };
 
-/** Local intent parser — fast, private, no model call for common asks. */
-export function parseVoiceIntent(text: string): VoiceAction {
-  const t = text.toLowerCase().trim();
+/** A pending yes/no the guide asked about — resolved on the next utterance. */
+type PendingConfirm =
+  | { kind: "complete"; id: string; title: string; points: number }
+  | { kind: "allocate"; jar: "save" | "spend" | "give"; amount: number }
+  | { kind: "approve"; id: string; title: string; points: number }
+  | { kind: "choose-mission"; options: VoiceMissionRef[] };
 
-  // Click / tap / press / select a button or element by its visible label
-  const clickMatch = t.match(/^(?:click|tap|press|hit|select|choose|pick)\s+(?:the\s+)?(.+)$/);
-  if (clickMatch) {
-    const label = clickMatch[1]
-      .replace(/^(button|link|tab|option)\s+/, "")
-      .replace(/\s+(button|link|tab|option)$/, "")
-      .trim();
-    // Don't steal navigation/logging intents that also use these verbs loosely
-    if (label && !/^(to|on)\s/.test(label)) {
-      // Check it's not a nav target handled below (e.g. "go to missions")
-      const isNav = /^(missions|growth|approvals|setup|schedule|pets|bank|neighborhood|village|home|plan)\b/.test(label)
-        && /(go|open|show)/.test(t);
-      if (!isNav) return { type: "click", label };
-    }
-  }
-
-  // Navigation
-  const tabs: Record<string, string[]> = {
-    missions: ["mission", "today", "tasks"],
-    growth: ["growth", "progress", "character"],
-    approvals: ["approval", "review", "high-five", "high five"],
-    setup: ["setup", "settings", "family setup"],
-    schedule: ["schedule", "calendar", "my day"],
-    pets: ["pet", "pets"],
-    bank: ["bank", "money", "coins"],
-    neighborhood: ["neighborhood", "hood", "community"],
-    village: ["village"],
-    vision: ["home", "household", "dashboard"],
-    plan: ["plan", "planner", "events", "week", "month"],
-  };
-  for (const [tab, keywords] of Object.entries(tabs)) {
-    if (keywords.some((k) => t.includes(k)) && /(go|open|show|take|switch)/.test(t)) {
-      return { type: "navigate", tab };
-    }
-  }
-
-  // Real-life logging
-  const bookMatch = t.match(/(?:i read|read|finished reading|book)\s+(.+)/);
-  if (bookMatch && /(read|book|finished)/.test(t)) {
-    const title = bookMatch[1].replace(/^(called|titled)\s+/i, "").trim();
-    if (title) return { type: "log-book", title: capitalize(title) };
-  }
-  const choreMatch = t.match(/(?:i did|did|finished|completed?)\s+(?:a\s+)?(?:chore\s+)?(.+?)(?:\s+chore)?$/);
-  if (/(chore|did|cleaned|folded|washed|helped)/.test(t) && choreMatch) {
-    const title = choreMatch[1].trim();
-    if (title && title.length > 2) return { type: "log-chore", title: capitalize(title) };
-  }
-  if (/(kind|helped|shared|nice)/.test(t) && /(i was|i helped|i shared)/.test(t)) {
-    return { type: "log-kind", title: capitalize(t.replace(/^i\s+/, "")) };
-  }
-  if (/(practic)/.test(t)) {
-    const m = t.match(/practic(?:e|ed|ing)\s+(.+)/);
-    if (m) return { type: "log-skill", title: capitalize(m[1].trim()) };
-  }
-
-  // Read aloud
-  if (/(read|tell me|say).*(page|this|aloud)/.test(t)) {
-    return { type: "read-page" };
-  }
-
-  // Complete mission
-  if (/(done|complete|finished|mark).*(mission|it)/.test(t)) {
-    const m = t.match(/(?:mission\s+)?(?:called\s+)?["']?(.+?)["']?\s*$/);
-    return { type: "complete-mission", query: m?.[1]?.trim() ?? "" };
-  }
-
-  return { type: "unknown", text };
-}
-
-function capitalize(s: string) {
-  return s.charAt(0).toUpperCase() + s.slice(1);
-}
+const YES_RE = /^(yes|yeah|yep|yup|ok|okay|sure|do it|yes please)[.!]?$/i;
+const NO_RE = /^(no|nope|not yet|cancel|stop|never mind|nevermind)[.!]?$/i;
 
 /**
  * Find a clickable element by its visible label and click it.
@@ -130,7 +71,6 @@ export function clickElementByLabel(label: string): string | null {
   const candidates: { el: HTMLElement; text: string; score: number }[] = [];
   const selector = 'button, a, [role="button"], [role="tab"], input[type="submit"], summary';
   document.querySelectorAll<HTMLElement>(selector).forEach((el) => {
-    // Skip hidden or disabled
     const rect = el.getBoundingClientRect();
     if (rect.width === 0 && rect.height === 0) return;
     if ((el as HTMLButtonElement).disabled) return;
@@ -142,7 +82,6 @@ export function clickElementByLabel(label: string): string | null {
     else if (text.startsWith(needle)) score = 80;
     else if (text.includes(needle)) score = 60;
     else {
-      // Word-overlap fallback ("approve" matches "Approve 🎉")
       const words = needle.split(/\s+/).filter((w) => w.length > 2);
       const hits = words.filter((w) => text.includes(w)).length;
       if (hits > 0) score = 20 + hits * 10;
@@ -150,7 +89,6 @@ export function clickElementByLabel(label: string): string | null {
     if (score > 0) candidates.push({ el, text, score });
   });
 
-  // Ordinal support: "click the first/second/third button"
   const ordinals: Record<string, number> = {
     first: 0, second: 1, third: 2, fourth: 3, fifth: 4,
     "1st": 0, "2nd": 1, "3rd": 2, "4th": 3, "5th": 4,
@@ -176,7 +114,6 @@ export function clickElementByLabel(label: string): string | null {
   if (best) {
     best.el.scrollIntoView({ behavior: "smooth", block: "center" });
     best.el.click();
-    // Brief highlight so the user sees what was clicked
     const orig = best.el.style.boxShadow;
     best.el.style.boxShadow = "0 0 0 4px #a78bfa";
     setTimeout(() => { best.el.style.boxShadow = orig; }, 1200);
@@ -193,7 +130,6 @@ function pickFeminineVoice(): SpeechSynthesisVoice | null {
   try {
     const voices = window.speechSynthesis.getVoices();
     if (!voices.length) return null;
-    // Local voices first — no data leaves the device.
     const local = voices.filter((x) => (x as any).localService !== false);
     const pool = local.length ? local : voices;
     const feminineHints = [
@@ -206,7 +142,6 @@ function pickFeminineVoice(): SpeechSynthesisVoice | null {
       const v = pool.find((x) => x.name.toLowerCase().includes(hint) && x.lang.startsWith("en"));
       if (v) return v;
     }
-    // Fallback: any English voice with a traditionally feminine name pattern
     const v = pool.find((x) => x.lang.startsWith("en") && /[aeiou]a$/.test(x.name.split(" ")[0]));
     return v ?? null;
   } catch {
@@ -223,9 +158,16 @@ export default function VoiceAssistant({
   kidAge,
   voiceConsented,
   onRequestVoiceConsent,
+  todayMissions,
+  pendingApprovals,
+  pointsBalance,
+  announcements,
+  onAnnouncementsRead,
+  onQuizComplete,
 }: {
-  /** Fired when the AI decides on an action. */
-  onAction: (action: VoiceAction) => void;
+  /** Fired when the voice layer decides on an action. May return a short
+   *  spoken feedback string the guide should say instead of its default. */
+  onAction: (action: VoiceAction) => string | void;
   /** Short text describing the current page, for "read this page" TTS. */
   pageSummary?: string;
   /** Current user role — sent to the AI as page context. */
@@ -243,6 +185,18 @@ export default function VoiceAssistant({
   voiceConsented: boolean;
   /** Opens the voice consent sheet (parental gate + consent). */
   onRequestVoiceConsent: () => void;
+  /** Open missions for the active child — read aloud + named resolution. */
+  todayMissions?: VoiceMissionRef[];
+  /** Missions waiting for this parent's approval — named resolution. */
+  pendingApprovals?: VoiceMissionRef[];
+  /** Active child's points balance — "how many points do I have?" */
+  pointsBalance?: number;
+  /** Unheard news for the child (e.g. "You earned 10 points…"). */
+  announcements?: string[];
+  /** Called after announcements have been spoken. */
+  onAnnouncementsRead?: () => void;
+  /** Fired once when a quiz ends with at least one answered question. */
+  onQuizComplete?: (result: { topic: string; correct: number; total: number }) => void;
 }) {
   const [listening, setListening] = useState(false);
   const [transcript, setTranscript] = useState("");
@@ -250,6 +204,7 @@ export default function VoiceAssistant({
   const [speaking, setSpeaking] = useState(false);
   const [thinking, setThinking] = useState(false);
   const [supported, setSupported] = useState(true);
+  const [pendingConfirm, setPendingConfirm] = useState<PendingConfirm | null>(null);
   const recRef = useRef<SpeechRecognitionLike | null>(null);
   /** Recent turns so follow-ups like "yes, the save one" resolve. */
   const historyRef = useRef<string[]>([]);
@@ -264,6 +219,12 @@ export default function VoiceAssistant({
   } | null>(null);
   const quizRef = useRef<typeof quiz>(null);
   quizRef.current = quiz;
+  const pendingConfirmRef = useRef<PendingConfirm | null>(null);
+  pendingConfirmRef.current = pendingConfirm;
+  /** Guards onQuizComplete to once per quiz session. */
+  const quizReportedRef = useRef(false);
+  const propsRef = useRef({ todayMissions, pendingApprovals, pointsBalance, announcements });
+  propsRef.current = { todayMissions, pendingApprovals, pointsBalance, announcements };
 
   useEffect(() => {
     const w = window as any;
@@ -276,18 +237,73 @@ export default function VoiceAssistant({
     };
   }, []);
 
-  const speak = useCallback((text: string) => {
+  /* ---------- listening (extracted so TTS can hand the mic back) ---------- */
+
+  const handleResultRef = useRef<(text: string) => void>(() => {});
+  const beginListeningRef = useRef<() => void>(() => {});
+
+  const beginListening = useCallback(() => {
+    if (!voiceConsented) {
+      onRequestVoiceConsent();
+      return;
+    }
+    const w = window as any;
+    const Rec = w.SpeechRecognition ?? w.webkitSpeechRecognition;
+    if (!Rec) {
+      setResponse("Voice isn't supported in this browser. Try Chrome or Safari.");
+      return;
+    }
+    if (recRef.current) {
+      try { recRef.current.abort(); } catch {}
+    }
+    const rec: SpeechRecognitionLike = new Rec();
+    rec.lang = "en-US";
+    rec.interimResults = true;
+    rec.maxAlternatives = 1;
+    rec.onresult = (e: any) => {
+      const result = e.results[e.results.length - 1];
+      const text = result[0].transcript;
+      setTranscript(text);
+      if (result.isFinal) {
+        setListening(false);
+        handleResultRef.current(text);
+      }
+    };
+    rec.onerror = () => {
+      setResponse("I didn't catch that — tap the mic and try again.");
+      setListening(false);
+    };
+    rec.onend = () => setListening(false);
+    recRef.current = rec;
+    try {
+      rec.start();
+      setListening(true);
+    } catch {
+      setListening(false);
+    }
+  }, [voiceConsented, onRequestVoiceConsent]);
+  beginListeningRef.current = beginListening;
+
+  /* ---------- speaking ---------- */
+
+  const speak = useCallback((text: string, opts?: { resume?: boolean; rate?: number }) => {
     try {
       window.speechSynthesis.cancel();
       const u = new SpeechSynthesisUtterance(text);
-      u.rate = 1.0;
+      u.rate = opts?.rate ?? 1.0;
       u.pitch = 1.15;
       const voice = pickFeminineVoice();
       if (voice) u.voice = voice;
       u.onstart = () => setSpeaking(true);
-      u.onend = () => setSpeaking(false);
+      u.onend = () => {
+        setSpeaking(false);
+        // Hands-free turn: the guide asked a question (quiz / confirm /
+        // clarify) — hand the mic straight back so the child only talks.
+        if (opts?.resume) {
+          window.setTimeout(() => beginListeningRef.current(), 250);
+        }
+      };
       u.onerror = () => setSpeaking(false);
-      // Voices load async on some browsers — retry once if none yet
       if (!voice && window.speechSynthesis.getVoices().length === 0) {
         window.speechSynthesis.onvoiceschanged = () => {
           const v = pickFeminineVoice();
@@ -298,12 +314,144 @@ export default function VoiceAssistant({
     } catch {}
   }, []);
 
+  const say = useCallback((text: string, opts?: { resume?: boolean; rate?: number }) => {
+    setResponse(text);
+    speak(text, opts);
+  }, [speak]);
+
+  /* ---------- dispatch: run an action against the app, with feedback ------ */
+
+  const dispatch = useCallback((action: VoiceAction): string | null => {
+    const feedback = onAction(action);
+    return typeof feedback === "string" && feedback ? feedback : null;
+  }, [onAction]);
+
+  /** Read today's missions aloud — numbered, one at a time in one breath. */
+  const readMissionsAloud = useCallback(() => {
+    const list = propsRef.current.todayMissions ?? [];
+    if (!list.length) {
+      say("You have no missions waiting. All done — nice work!");
+      return;
+    }
+    const items = list.map((m, i) => `${i + 1}. ${m.title}`).join(". ");
+    say(`You have ${list.length} mission${list.length === 1 ? "" : "s"} today: ${items}. Say "I did it" when you finish one.`);
+  }, [say]);
+
   /**
-   * Quiz mode: start a new quiz on a topic.
-   * Predictable ("Question 1 of 5"), no time pressure, kid can stop anytime.
+   * Resolve a complete-mission ask against the open list BY NAME.
+   * Never silently picks the first mission: one open mission (or a clear
+   * name match) goes to a spoken confirmation; several open missions get
+   * read out so the child can pick; no match says so.
    */
+  const startCompleteMission = useCallback((query: string) => {
+    const list = propsRef.current.todayMissions ?? [];
+    const generic = !query || ["it", "mission", "the mission", "that"].includes(query);
+    const match = generic
+      ? undefined
+      : list.find((m) => m.title.toLowerCase().includes(query)) ??
+        list.find((m) => query.includes(m.title.toLowerCase().slice(0, 16)));
+    const target = match ?? (generic && list.length === 1 ? list[0] : undefined);
+    if (target) {
+      setPendingConfirm({ kind: "complete", id: target.id, title: target.title, points: target.points });
+      say(`Mark "${target.title}" done? Say yes or no.`, { resume: true });
+      return;
+    }
+    if (!list.length) {
+      say("You have no missions waiting right now.");
+      return;
+    }
+    if (generic) {
+      setPendingConfirm({ kind: "choose-mission", options: list });
+      const items = list.map((m, i) => `${i + 1}. ${m.title}`).join(". ");
+      say(`Which one did you finish? ${items}. Say the name or the number.`, { resume: true });
+      return;
+    }
+    say(`I couldn't find a mission called "${query}". Say "my missions" to hear them.`);
+  }, [say]);
+
+  const startAllocate = useCallback((jar: "save" | "spend" | "give", amount: number) => {
+    setPendingConfirm({ kind: "allocate", jar, amount });
+    say(`Put $${amount} in your ${jar} jar? Say yes or no.`, { resume: true });
+  }, [say]);
+
+  const startApprove = useCallback((query: string) => {
+    const list = propsRef.current.pendingApprovals ?? [];
+    const match = query
+      ? list.find((m) => m.title.toLowerCase().includes(query)) ??
+        list.find((m) => query.includes(m.title.toLowerCase().slice(0, 16)))
+      : list.length === 1
+        ? list[0]
+        : undefined;
+    if (match) {
+      setPendingConfirm({ kind: "approve", id: match.id, title: match.title, points: match.points });
+      say(`Approve "${match.title}"? That gives ${match.points} points. Say yes or no.`, { resume: true });
+      return;
+    }
+    if (!list.length) {
+      say("Nothing is waiting for approval right now.");
+      return;
+    }
+    const items = list.map((m, i) => `${i + 1}. ${m.title}`).join(". ");
+    say(`Which one? Waiting for approval: ${items}. Say the name to approve it.`);
+  }, [say]);
+
+  /** Resolve a pending yes/no (or a mission pick) on the next utterance. */
+  const resolveConfirm = useCallback((text: string): boolean => {
+    const pending = pendingConfirmRef.current;
+    if (!pending) return false;
+    const t = text.toLowerCase().trim();
+
+    if (pending.kind === "choose-mission") {
+      const numWords: Record<string, number> = { one: 1, first: 1, two: 2, second: 2, three: 3, third: 3, four: 4, fourth: 4, five: 5, fifth: 5 };
+      let idx = Number(t.match(/\d+/)?.[0] ?? NaN) - 1;
+      if (Number.isNaN(idx)) {
+        for (const [word, n] of Object.entries(numWords)) {
+          if (t.includes(word)) { idx = n - 1; break; }
+        }
+      }
+      const picked =
+        pending.options[idx] ??
+        pending.options.find((m) => m.title.toLowerCase().includes(t)) ??
+        pending.options.find((m) => t.includes(m.title.toLowerCase().slice(0, 16)));
+      setPendingConfirm(null);
+      if (picked) {
+        const feedback = dispatch({ type: "complete-mission-id", id: picked.id });
+        say(feedback ?? `Done! "${picked.title}" is saved for your grown-up.`);
+      } else if (NO_RE.test(t)) {
+        say("Okay, no problem.");
+      } else {
+        say("I didn't catch which one. Tap the mic and say the name or the number.");
+      }
+      return true;
+    }
+
+    if (YES_RE.test(t)) {
+      setPendingConfirm(null);
+      if (pending.kind === "complete") {
+        const feedback = dispatch({ type: "complete-mission-id", id: pending.id });
+        say(feedback ?? `Done! "${pending.title}" is saved for your grown-up.`);
+      } else if (pending.kind === "allocate") {
+        const feedback = dispatch({ type: "allocate-jar", jar: pending.jar, amount: pending.amount });
+        say(feedback ?? `Done — $${pending.amount} is in your ${pending.jar} jar.`);
+      } else if (pending.kind === "approve") {
+        const feedback = dispatch({ type: "approve-mission-id", id: pending.id });
+        say(feedback ?? `Approved "${pending.title}". Points are on their way!`);
+      }
+      return true;
+    }
+    if (NO_RE.test(t)) {
+      setPendingConfirm(null);
+      say("Okay, no problem. Nothing changed.");
+      return true;
+    }
+    return false;
+  }, [dispatch, say]);
+
+  /* ---------- quiz ---------- */
+
   const startQuiz = useCallback(async (topic: string, easy = false) => {
     setThinking(true);
+    quizReportedRef.current = false;
     try {
       const res = await fetch("/api/voice/quiz", {
         method: "POST",
@@ -322,20 +470,14 @@ export default function VoiceAssistant({
         lastFeedback: null,
       });
       setThinking(false);
-      setResponse(q.spoken);
-      speak(q.spoken);
+      // Hands-free: after the question is spoken, the mic opens by itself.
+      say(q.spoken, { resume: true, rate: 0.95 });
     } catch {
       setThinking(false);
-      const msg = "I couldn't start the quiz right now. Let's try again in a bit.";
-      setResponse(msg);
-      speak(msg);
+      say("I couldn't start the quiz right now. Let's try again in a bit.");
     }
-  }, [kidAge, speak]);
+  }, [kidAge, say]);
 
-  /**
-   * Quiz mode: evaluate the kid's spoken (or tapped) answer.
-   * The AI handles stop / easier / repeat — gentle, never shaming.
-   */
   const answerQuiz = useCallback(async (text: string) => {
     const q = quizRef.current;
     if (!q || !q.current) return;
@@ -361,12 +503,21 @@ export default function VoiceAssistant({
       const history = [...q.history, turn];
       if (data.stopRequested === true || data.done === true) {
         const score = data.score ?? { correct: history.filter((h) => h.correct).length, total: history.length };
+        // Quiz points path: the finished quiz becomes a pending approval so
+        // a grown-up can credit points for correct answers (Oct 6 rule:
+        // points land on approval). Report once per quiz.
+        if (!quizReportedRef.current && history.length > 0 && onQuizComplete) {
+          quizReportedRef.current = true;
+          onQuizComplete({ topic: q.topic, correct: score.correct, total: score.total });
+        }
+        const pointsLine = score.correct > 0
+          ? " Your grown-up can approve your quiz points."
+          : "";
         const summary = data.stopRequested === true
-          ? `Okay, quiz paused. You got ${score.correct} out of ${score.total}. Nice thinking!`
-          : `${data.feedback ?? ""} Quiz done! You got ${score.correct} out of ${score.total}. Awesome work!`;
+          ? `Okay, quiz paused. You got ${score.correct} out of ${score.total}. Nice thinking!${pointsLine}`
+          : `${data.feedback ?? ""} Quiz done! You got ${score.correct} out of ${score.total}. Awesome work!${pointsLine}`;
         setQuiz(null);
-        setResponse(summary);
-        speak(summary);
+        say(summary);
       } else {
         const next = data.next as { question: string; choices?: string[]; spoken: string };
         const easyMode = data.easyRequested === true ? true : q.easyMode;
@@ -378,22 +529,16 @@ export default function VoiceAssistant({
           lastFeedback: typeof data.feedback === "string" ? data.feedback : null,
         });
         const spoken = `${data.feedback ?? ""} ${next.spoken}`.trim();
-        setResponse(spoken);
-        speak(spoken);
+        say(spoken, { resume: true, rate: 0.95 });
       }
     } catch {
       setThinking(false);
-      const msg = "Hmm, I missed that. Say your answer again?";
-      setResponse(msg);
-      speak(msg);
+      say("Hmm, I missed that. Say your answer again?", { resume: true });
     }
-  }, [speak]);
+  }, [say, onQuizComplete]);
 
-  /**
-   * Execute one planned action against the real page.
-   * Every target is validated against visible elements — the AI can never
-   * invent buttons. Returns true when the step ran.
-   */
+  /* ---------- planned (AI) actions ---------- */
+
   const executeAction = useCallback((action: VoicePlannedAction): boolean => {
     if (action.do === "quiz") {
       void startQuiz(action.target || "animals");
@@ -404,7 +549,6 @@ export default function VoiceAssistant({
       return true;
     }
     if (action.do === "type") {
-      // Find the input and set its value the way React expects
       const inputs = Array.from(document.querySelectorAll<HTMLInputElement>("input, textarea"));
       const match = inputs.find((el) => {
         const r = el.getBoundingClientRect();
@@ -423,75 +567,120 @@ export default function VoiceAssistant({
       }
       return false;
     }
-    // click — fuzzy match against the visible label
     return clickElementByLabel(action.target) !== null;
   }, [onAction, startQuiz]);
 
-  /** Local keyword fallback when the AI endpoint is unreachable. */
+  /* ---------- local dispatch (shared by offline + local-first routing) ---- */
+
+  const handleLocalAction = useCallback((action: VoiceAction, rawText: string) => {
+    switch (action.type) {
+      case "read-missions":
+        readMissionsAloud();
+        return;
+      case "read-balance": {
+        const pts = propsRef.current.pointsBalance;
+        say(pts === undefined
+          ? "I can't see your points right now."
+          : `You have ${pts} point${pts === 1 ? "" : "s"}. Great work!`);
+        return;
+      }
+      case "read-news": {
+        const news = propsRef.current.announcements ?? [];
+        if (news.length) {
+          say(news.join(" "));
+          onAnnouncementsRead?.();
+        } else {
+          say("No news right now. Finish a mission and your points news will come here.");
+        }
+        return;
+      }
+      case "complete-mission":
+        startCompleteMission(action.query);
+        return;
+      case "allocate-jar":
+        startAllocate(action.jar, action.amount);
+        return;
+      case "approve-mission":
+        startApprove(action.query);
+        return;
+      case "navigate":
+        dispatch(action);
+        say(`Taking you to ${action.tab}.`);
+        return;
+      case "log-book":
+        dispatch(action);
+        say(`Logged "${action.title}" as a book you read. Nice!`);
+        return;
+      case "log-chore":
+        dispatch(action);
+        say(`Logged "${action.title}" as a chore. Great work!`);
+        return;
+      case "log-kind":
+        dispatch(action);
+        say("Logged your kind act. That matters!");
+        return;
+      case "log-skill":
+        dispatch(action);
+        say(`Logged "${action.title}" as practice. Keep going!`);
+        return;
+      case "read-page":
+        say(pageSummary ?? "Here's what's on this page.");
+        return;
+      case "click": {
+        const clicked = clickElementByLabel(action.label);
+        say(clicked ? `Clicked "${clicked}".` : `I couldn't find a button for "${action.label}". Try the exact label you see.`);
+        return;
+      }
+      default:
+        say(`I heard "${rawText}". Try "my missions", "I did it", "quiz me on dinosaurs", or "read this page".`);
+    }
+  }, [dispatch, say, pageSummary, readMissionsAloud, startCompleteMission, startAllocate, startApprove, onAnnouncementsRead]);
+
   const handleLocalFallback = useCallback((text: string) => {
-    // Offline quiz: "quiz me" works even without the AI planner.
     if (/\b(quiz|test)\s+me\b|\bask\s+me\s+(some\s+)?questions\b/i.test(text)) {
       const topicMatch = text.match(/\b(?:on|about)\s+([a-zA-Z ]{2,40})/i);
       void startQuiz(topicMatch ? topicMatch[1].trim() : "animals");
       return;
     }
-    const action = parseVoiceIntent(text);
-    onAction(action);
-    let reply = "";
-    switch (action.type) {
-      case "navigate":
-        reply = `Taking you to ${action.tab}.`;
-        break;
-      case "log-book":
-        reply = `Logged "${action.title}" as a book you read. Nice!`;
-        break;
-      case "log-chore":
-        reply = `Logged "${action.title}" as a chore. Great work!`;
-        break;
-      case "log-kind":
-        reply = `Logged your kind act. That matters!`;
-        break;
-      case "log-skill":
-        reply = `Logged "${action.title}" as practice. Keep going!`;
-        break;
-      case "read-page":
-        reply = pageSummary ?? "Here's what's on this page.";
-        break;
-      case "complete-mission":
-        reply = `Looking for that mission to mark done.`;
-        break;
-      case "click": {
-        const clicked = clickElementByLabel(action.label);
-        reply = clicked ? `Clicked "${clicked}".` : `I couldn't find a button for "${action.label}". Try the exact label you see.`;
-        break;
-      }
-      default:
-        reply = `I heard "${text}". Try "go to missions", "click approve", "I read a book", or "read this page".`;
-    }
-    setResponse(reply);
-    speak(reply);
-  }, [onAction, pageSummary, speak, startQuiz]);
+    handleLocalAction(parseVoiceIntent(text), text);
+  }, [handleLocalAction, startQuiz]);
 
-  /**
-   * AI-native intent handling: snapshot the page, ask Workers AI for a plan,
-   * then execute it step by step. Falls back to local parsing when offline.
-   */
+  /* ---------- main result handling ---------- */
+
   const handleResult = useCallback(async (text: string) => {
-    // Quiz mode: every utterance is an answer. The AI handles
-    // "stop", "easier", and "repeat" gently — no special casing here.
+    // Quiz mode: every utterance is an answer.
     if (quizRef.current?.current) {
       await answerQuiz(text);
       return;
     }
+    // A spoken confirmation is pending — resolve it before anything else.
+    if (pendingConfirmRef.current && resolveConfirm(text)) {
+      return;
+    }
     setTranscript(text);
-    setThinking(true);
 
+    // Deterministic kid-loop intents run locally even when online — same
+    // confirmations, same wording, no model round-trip, no guessing.
+    const local = parseVoiceIntent(text);
+    if (LOCAL_FIRST_TYPES.has(local.type)) {
+      // A fresh command supersedes a stale pending confirmation (the new
+      // command sets its own, or none).
+      if (pendingConfirmRef.current) setPendingConfirm(null);
+      handleLocalAction(local, text);
+      return;
+    }
+    // Offline quiz start stays local too.
+    if (/\b(quiz|test)\s+me\b|\bask\s+me\s+(some\s+)?questions\b/i.test(text)) {
+      handleLocalFallback(text);
+      return;
+    }
+
+    setThinking(true);
     const pushHistory = (entry: string) => {
       historyRef.current = [...historyRef.current, entry].slice(-4);
     };
 
     try {
-      // Eyes: what's on screen right now?
       const context = snapshotPageContext({
         role: role === "parent" ? "parent" : "child",
         tab,
@@ -514,15 +703,13 @@ export default function VoiceAssistant({
 
       pushHistory(`User: ${text}`);
 
-      // The AI isn't sure — ask back instead of guessing.
+      // The AI isn't sure — ask back instead of guessing, then listen again.
       if (plan.clarify) {
         pushHistory(`Assistant asked: ${plan.clarify}`);
-        setResponse(plan.clarify);
-        speak(plan.clarify);
+        say(plan.clarify, { resume: true });
         return;
       }
 
-      // Hands: run each step with a beat between them so the user can follow.
       let ran = 0;
       for (const action of plan.actions) {
         if (executeAction(action)) ran++;
@@ -533,14 +720,15 @@ export default function VoiceAssistant({
       const reply = ran === plan.actions.length || plan.actions.length === 0
         ? plan.reply
         : `${plan.reply} (I couldn't do ${plan.actions.length - ran} step${plan.actions.length - ran === 1 ? "" : "s"}.)`;
-      setResponse(reply);
-      speak(reply);
+      say(reply);
     } catch {
-      // Offline or AI unavailable — local keyword brain takes over.
       setThinking(false);
       handleLocalFallback(text);
     }
-  }, [role, tab, tabLabel, pageSummary, speak, executeAction, handleLocalFallback, answerQuiz]);
+  }, [role, tab, tabLabel, pageSummary, say, executeAction, handleLocalFallback, handleLocalAction, answerQuiz, resolveConfirm]);
+  handleResultRef.current = handleResult;
+
+  /* ---------- mic button ---------- */
 
   const toggleListening = useCallback(() => {
     if (listening) {
@@ -548,47 +736,28 @@ export default function VoiceAssistant({
       setListening(false);
       return;
     }
-    // COPPA: no voice collection without parental consent. A child's voice
-    // is personal information — the mic must never hot-start for a child.
+    // COPPA: no voice collection without parental consent.
     if (!voiceConsented) {
       onRequestVoiceConsent();
       return;
     }
-    const w = window as any;
-    const Rec = w.SpeechRecognition ?? w.webkitSpeechRecognition;
-    if (!Rec) {
-      setResponse("Voice isn't supported in this browser. Try Chrome or Safari.");
+    // Unheard points news speaks first — the child hears what they earned
+    // before doing anything else. Next tap listens as usual.
+    const news = announcements ?? [];
+    if (role === "child" && news.length > 0) {
+      setTranscript("");
+      say(news.join(" "));
+      onAnnouncementsRead?.();
       return;
     }
     setTranscript("");
     setResponse("");
-    const rec: SpeechRecognitionLike = new Rec();
-    rec.lang = "en-US";
-    rec.interimResults = true;
-    rec.maxAlternatives = 1;
-    rec.onresult = (e: any) => {
-      const text = e.results[e.results.length - 1][0].transcript;
-      setTranscript(text);
-      if (e.results[e.results.length - 1].isFinal) {
-        handleResult(text);
-        setListening(false);
-      }
-    };
-    rec.onerror = () => {
-      setResponse("I didn't catch that — try again.");
-      setListening(false);
-    };
-    rec.onend = () => setListening(false);
-    recRef.current = rec;
-    try {
-      rec.start();
-      setListening(true);
-    } catch {
-      setListening(false);
-    }
-  }, [listening, handleResult, voiceConsented, onRequestVoiceConsent]);
+    beginListening();
+  }, [listening, voiceConsented, onRequestVoiceConsent, announcements, role, say, onAnnouncementsRead, beginListening]);
 
   if (!supported) return null;
+
+  const hasNews = role === "child" && (announcements?.length ?? 0) > 0;
 
   return (
     <>
@@ -596,7 +765,7 @@ export default function VoiceAssistant({
       <button
         data-voice-assistant
         onClick={toggleListening}
-        aria-label={listening ? "Stop listening" : "Voice assistant"}
+        aria-label={listening ? "Stop listening" : hasNews ? "Hear your news" : "Voice assistant"}
         className={`tt-btn-press fixed bottom-20 right-4 z-50 grid size-14 place-items-center rounded-full shadow-2xl ring-4 transition-all sm:bottom-6 sm:right-6 ${
           listening
             ? "animate-pulse bg-red-500 ring-red-300"
@@ -606,6 +775,11 @@ export default function VoiceAssistant({
         }`}
       >
         <span className="text-2xl">{listening ? "🔴" : speaking ? "🔊" : "🎤"}</span>
+        {hasNews && !listening && (
+          <span className="absolute -right-0.5 -top-0.5 grid size-6 animate-bounce place-items-center rounded-full bg-tt-sun text-xs ring-2 ring-white" aria-hidden="true">
+            🔔
+          </span>
+        )}
       </button>
 
       {/* Voice panel */}
@@ -616,7 +790,7 @@ export default function VoiceAssistant({
               {listening ? "🎤 Listening…" : "✨ Voice"}
             </p>
             <button
-              onClick={() => { setTranscript(""); setResponse(""); setQuiz(null); try { window.speechSynthesis.cancel(); } catch {} setSpeaking(false); }}
+              onClick={() => { setTranscript(""); setResponse(""); setQuiz(null); setPendingConfirm(null); try { window.speechSynthesis.cancel(); } catch {} setSpeaking(false); }}
               className="rounded-full bg-tt-cream px-2 py-0.5 text-xs font-bold text-tt-ink/60"
             >
               ✕
@@ -695,14 +869,14 @@ export default function VoiceAssistant({
               </div>
               {(!quiz.current.choices || quiz.current.choices.length === 0) && (
                 <p className="mt-2 text-xs font-semibold text-tt-ink/50">
-                  Say your answer out loud, or tap the mic 🎤
+                  Just say your answer out loud — I'm listening after each question.
                 </p>
               )}
             </div>
           )}
           {!listening && !transcript && (
             <p className="mt-2 text-xs text-tt-ink/50">
-              Just talk — I see this page and can tap things for you.
+              Just talk — say "my missions", "I did it", or "how many points do I have?"
             </p>
           )}
         </div>

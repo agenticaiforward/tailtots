@@ -1015,6 +1015,9 @@ export function TailTotsApp() {
   const [activeChildId, setActiveChildId] = useState(starterChildren[0]?.id ?? "");
   const [missionNote, setMissionNote] = useState("");
   const [nudgedMissionIds, setNudgedMissionIds] = useState<string[]>([]);
+  /** Points news the voice guide speaks to a child ("You earned 10 points…")
+   *  after a parent approves their work. Queued here, heard via the mic. */
+  const [voiceAnnouncements, setVoiceAnnouncements] = useState<{ childId: string; text: string }[]>([]);
   const [newChild, setNewChild] = useState({ name: "", age: "8" });
   const [newPet, setNewPet] = useState({ name: "", species: "", food: "" });
   const [newGoal, setNewGoal] = useState({ title: "", target: "25", kind: "save" as "save" | "give", cause: "Animal shelter", seed: "" });
@@ -2033,6 +2036,14 @@ export function TailTotsApp() {
       ]);
     }
     setNeighborhoodJobs((items) => items.map((job) => (job.missionId === missionId ? { ...job, status: "completed" } : job)));
+    // Voice news for the child: approval is when points actually land
+    // (Oct 6 Kid Bank rule), so that's the moment the child should hear it.
+    if (mission.points > 0) {
+      setVoiceAnnouncements((items) => [
+        ...items,
+        { childId: mission.completedBy!, text: `You earned ${mission.points} points for "${mission.title}"!` },
+      ]);
+    }
   }
 
   function approveTransaction(transactionId: string) {
@@ -2500,8 +2511,9 @@ export function TailTotsApp() {
     );
   }
 
-  /** Voice AI action handler — the mic button's brain. */
-  function handleVoiceAction(action: VoiceAction) {
+  /** Voice AI action handler — the mic button's brain. May return a short
+   *  spoken feedback string for the guide to say. */
+  function handleVoiceAction(action: VoiceAction): string | void {
     switch (action.type) {
       case "navigate": {
         const tabIds = role === "parent" ? parentTabIds : kidTabIds;
@@ -2522,13 +2534,62 @@ export function TailTotsApp() {
       case "log-skill":
         addRealLifeEntry("skill", action.title);
         break;
+      case "complete-mission-id": {
+        const mission = missions.find((m) => m.id === action.id);
+        if (!mission) return "I couldn't find that mission anymore.";
+        completeMission(mission.id);
+        return mission.points > 0
+          ? `Done! "${mission.title}" is saved. When your grown-up approves it, you get ${mission.points} points.`
+          : `Done! "${mission.title}" is saved for your grown-up to see.`;
+      }
       case "complete-mission": {
+        // No silent first-mission guess (removed Oct 14): the voice layer
+        // resolves and confirms by name; here we only act on a real match.
         const q = action.query.toLowerCase();
         const match = missions.find((m) =>
           !m.completedBy && m.status !== "approved" &&
           (m.title.toLowerCase().includes(q) || q.includes(m.title.toLowerCase().slice(0, 20)))
-        ) ?? missions.find((m) => !m.completedBy && m.status !== "approved");
-        if (match) completeMission(match.id);
+        );
+        if (match) {
+          completeMission(match.id);
+          return `Done! "${match.title}" is saved for your grown-up.`;
+        }
+        return "I couldn't find that mission. Say \"my missions\" to hear them.";
+      }
+      case "allocate-jar": {
+        const txId = kidAllocateJar(action.jar, action.amount);
+        return txId
+          ? `Done — $${action.amount} is in your ${action.jar} jar.`
+          : "That didn't work — there may not be enough waiting to move. A grown-up can check your bank with you.";
+      }
+      case "approve-mission-id": {
+        if (role !== "parent") return "Only a grown-up can approve missions.";
+        const mission = missions.find((m) => m.id === action.id);
+        if (!mission) return "That mission is not waiting anymore.";
+        approveMission(mission.id);
+        return `Approved "${mission.title}". ${mission.points} points credited.`;
+      }
+      case "quiz-complete": {
+        // A finished quiz joins the parent's approval queue as a pending
+        // mission, so correct answers can turn into points on approval —
+        // a voice quiz is never a zero-progress activity.
+        if (!activeChild || action.total < 1) break;
+        setMissions((items) => [
+          {
+            id: `mission-quiz-${Date.now()}`,
+            title: `Voice quiz: ${action.topic}`,
+            category: "kindness" as const,
+            difficulty: "easy" as const,
+            points: action.correct,
+            coins: 0,
+            question: "A voice quiz finished by your child — approve to credit the points.",
+            status: "pending" as const,
+            completedBy: activeChild.id,
+            assignedChildId: activeChild.id,
+            note: `Quiz score ${action.correct}/${action.total} — approving credits ${action.correct} point${action.correct === 1 ? "" : "s"}.`,
+          },
+          ...items,
+        ]);
         break;
       }
       case "read-page":
@@ -3215,13 +3276,46 @@ export function TailTotsApp() {
           parental consent sheet (voice = child's personal information). */}
       <VoiceAssistant
         onAction={handleVoiceAction}
-        pageSummary={`${role === "parent" ? "Parent" : "Kid"} view, ${visibleActiveTab} tab. ${missions.filter((m) => !m.completedBy).length} open missions.`}
+        pageSummary={(() => {
+          const openForChild = missions.filter(
+            (m) => !m.completedBy && m.status !== "approved" && m.status !== "rejected" &&
+              (!m.assignedChildId || m.assignedChildId === activeChild?.id),
+          );
+          const base = `${role === "parent" ? "Parent" : "Kid"} view, ${visibleActiveTab} tab. ${openForChild.length} open missions.`;
+          if (role === "parent") {
+            const waiting = missions.filter((m) => m.completedBy && m.status === "pending").length;
+            return `${base} ${waiting} mission${waiting === 1 ? "" : "s"} waiting for approval.`;
+          }
+          const titles = openForChild.slice(0, 5).map((m) => m.title).join("; ");
+          return `${base}${titles ? ` Today's missions: ${titles}.` : ""} The child has ${activeChild?.points ?? 0} points.`;
+        })()}
         role={role === "parent" ? "parent" : "child"}
         tab={visibleActiveTab}
         tabLabel={tabItems.find((t) => t.id === visibleActiveTab)?.label ?? visibleActiveTab}
         kidAge={role === "child" ? activeChild?.age : undefined}
         voiceConsented={hasConsent(consents, "voice")}
         onRequestVoiceConsent={() => setVoiceConsentOpen(true)}
+        todayMissions={missions
+          .filter(
+            (m) => !m.completedBy && m.status !== "approved" && m.status !== "rejected" &&
+              (!m.assignedChildId || m.assignedChildId === activeChild?.id),
+          )
+          .map((m) => ({ id: m.id, title: m.title, points: m.points }))}
+        pendingApprovals={missions
+          .filter((m) => m.completedBy && m.status === "pending")
+          .map((m) => ({ id: m.id, title: m.title, points: m.points }))}
+        pointsBalance={role === "child" ? activeChild?.points : undefined}
+        announcements={role === "child" && activeChild
+          ? voiceAnnouncements.filter((a) => a.childId === activeChild.id).map((a) => a.text)
+          : []}
+        onAnnouncementsRead={() => {
+          if (activeChild) {
+            setVoiceAnnouncements((items) => items.filter((a) => a.childId !== activeChild.id));
+          }
+        }}
+        onQuizComplete={(result) => {
+          handleVoiceAction({ type: "quiz-complete", ...result });
+        }}
       />
       <VoiceConsentSheet
         open={voiceConsentOpen}
