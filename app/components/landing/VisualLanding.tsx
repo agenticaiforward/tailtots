@@ -300,6 +300,32 @@ export function VisualLanding({
             </div>
           ))}
         </div>
+        {/* LIFE SKILLS — the practice layer under the traits: character grows through real responsibility and real skills, practiced daily */}
+        <div className="mt-4 border-t border-tt-line pt-4">
+          <p className="text-center text-sm font-extrabold text-tt-ink">
+            Grown through real responsibility
+          </p>
+          <p className="mt-0.5 text-center text-xs font-semibold text-tt-ink-soft">
+            Real skills, practiced daily — not taught in lessons.
+          </p>
+          <div className="mt-3 flex flex-wrap justify-center gap-2">
+            {[
+              { icon: "🐾", label: "Pet care" },
+              { icon: "🪙", label: "Money" },
+              { icon: "🏠", label: "Home" },
+              { icon: "🛟", label: "Safety" },
+              { icon: "🤝", label: "People" },
+            ].map((s) => (
+              <span
+                key={s.label}
+                className="inline-flex items-center gap-1.5 rounded-full bg-tt-cream px-3 py-1.5 text-xs font-extrabold text-tt-ink"
+              >
+                <span aria-hidden="true">{s.icon}</span>
+                {s.label}
+              </span>
+            ))}
+          </div>
+        </div>
       </section>
 
       {/* FAMILIES — illustrative lifestyle photography */}
