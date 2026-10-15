@@ -980,7 +980,7 @@ export function TailTotsApp() {
   // Stream: R2 — chosen neighborhood/apartment from the family-setup ZIP picker.
   const [familyNeighborhood, setFamilyNeighborhood] = useState("");
   // Stream: R2 — dedicated signup/signin pages ("signup" | "signin" | null).
-  const [authPage, setAuthPage] = useState<null | "signup" | "signin">(null);
+  const [authPage, setAuthPage] = useState<null | "auth">(null);
   // Anti-addiction pacing: count kid check-ins per calendar day (localStorage so
   // the count survives reloads; ~1-minute sessions keep TailTots a helper, not a habit).
   const dailyChecksStorageKey = "tailtots-daily-checks-v1";
@@ -2574,18 +2574,12 @@ export function TailTotsApp() {
   if (authPage) {
     return (
       <ParentAuthView
-        mode={authPage}
         accountDraft={accountDraft}
         setAccountDraft={setAccountDraft}
         accountStatus={accountStatus}
         accountMessage={accountMessage}
         sendParentSignInLink={sendParentSignInLink}
         magicLinkSent={magicLinkSent}
-        onSwitchMode={() => {
-          setMagicLinkSent(false);
-          setAccountMessage("");
-          setAuthPage(authPage === "signup" ? "signin" : "signup");
-        }}
         onBack={() => setAuthPage(null)}
         onSkip={startFreshFamilySetup}
       />
@@ -2767,8 +2761,8 @@ export function TailTotsApp() {
                     Explore the demo
                   </button>
                   {!cloudAccountEmail && (
-                    <button onClick={() => setAuthPage("signin")} className="tt-btn-press min-h-9 rounded-lg px-3 py-1.5 text-xs font-black text-tt-pine underline">
-                      Have an account? Sign in
+                    <button onClick={() => setAuthPage("auth")} className="tt-btn-press min-h-9 rounded-lg px-3 py-1.5 text-xs font-black text-tt-pine underline">
+                      Parent account
                     </button>
                   )}
                 </>
@@ -2857,7 +2851,7 @@ export function TailTotsApp() {
           {role === "parent" && visibleActiveTab === "vision" && (
             <VisualLanding
               onTryDemo={openKidDemo}
-              onSignup={() => setAuthPage("signup")}
+              onSignup={() => setAuthPage("auth")}
               onTrackSelect={startOnboardingWithTrack}
             />
           )}
@@ -2890,7 +2884,7 @@ export function TailTotsApp() {
                 }
                 setShowOnboarding(false);
                 setOnboardingTrack(null);
-                setAuthPage("signup");
+                setAuthPage("auth");
               }}
             />
           )}
@@ -3101,8 +3095,8 @@ export function TailTotsApp() {
               cloudAccountEmail={cloudAccountEmail}
               accountStatus={accountStatus}
               accountMessage={accountMessage}
-              onOpenSignup={() => setAuthPage("signup")}
-              onOpenSignin={() => setAuthPage("signin")}
+              onOpenSignup={() => setAuthPage("auth")}
+              onOpenSignin={() => setAuthPage("auth")}
               signOutParentAccount={signOutParentAccountFromApp}
               saveCurrentFamilyAccount={saveCurrentFamilyAccount}
               loadCurrentFamilyAccount={loadCurrentFamilyAccount}
@@ -8977,15 +8971,12 @@ function FamilySetupPanel(props: {
           </div>
         </div>
 
-        {/* Stream R2: signup/signin live on dedicated pages now — this card
-            just routes there instead of burying a form inside setup. */}
+        {/* One parent-account entry (founder consolidation, 2026-10-15):
+            signup and signin are the same magic-link page now. */}
         {!props.cloudAccountEmail && (
           <div className="mt-4 flex flex-wrap gap-3">
             <button onClick={props.onOpenSignup} className="min-h-12 rounded-lg bg-tt-pine px-5 py-3 text-sm font-black text-white">
-              Create parent account
-            </button>
-            <button onClick={props.onOpenSignin} className="min-h-12 rounded-lg border border-[#dce6f8] bg-white px-5 py-3 text-sm font-black text-tt-ocean">
-              Sign in
+              Create account / sign in
             </button>
           </div>
         )}
@@ -9533,18 +9524,19 @@ function NeighborhoodPickerCard(props: {
  * the parent in and the main component routes them to Family Setup.
  */
 function ParentAuthView(props: {
-  mode: "signup" | "signin";
   accountDraft: { email: string };
   setAccountDraft: (value: { email: string }) => void;
   accountStatus: "idle" | "saving" | "loading" | "error" | "saved";
   accountMessage: string;
   sendParentSignInLink: () => void;
   magicLinkSent: boolean;
-  onSwitchMode: () => void;
   onBack: () => void;
   onSkip: () => void;
 }) {
-  const isSignup = props.mode === "signup";
+  // ONE parent account page (founder consolidation, 2026-10-15): signup and
+  // signin were the same magic-link form wearing two headlines, and parents
+  // met both in different places. A magic link creates the account when none
+  // exists and signs in when one does — so there is exactly one page now.
   return (
     <main className="tailtots-app grid min-h-screen place-items-center bg-tt-cream px-4 py-10 text-tt-ink">
       <div className="w-full max-w-lg">
@@ -9556,16 +9548,14 @@ function ParentAuthView(props: {
         </div>
 
         <div className="mt-6 rounded-3xl border border-tt-line bg-white p-6 shadow-xl sm:p-8">
-          <p className="text-xs font-black uppercase tracking-[0.22em] text-tt-pine">{isSignup ? "New parent account" : "Returning parent"}</p>
-          <h1 className="mt-2 text-3xl font-black sm:text-4xl">{isSignup ? "Create your parent account" : "Welcome back"}</h1>
+          <p className="text-xs font-black uppercase tracking-[0.22em] text-tt-pine">Parent account</p>
+          <h1 className="mt-2 text-3xl font-black sm:text-4xl">Create account or sign in</h1>
           <p className="mt-3 text-sm font-semibold leading-6 text-tt-ink-soft">
-            {isSignup
-              ? "One email, one magic link — no passwords to remember. Your family setup stays private to your account and syncs across your devices."
-              : "We'll email you a fresh sign-in link — no password needed. Your family's cloud setup is waiting."}
+            One email, one magic link — no passwords to remember. New here? The link creates your account. Already have one? The same link signs you in. Your family setup stays private to your account and syncs across your devices.
           </p>
 
           <ol className="mt-5 grid gap-2">
-            {["Enter your parent email below", "Tap the sign-in link we email you", isSignup ? "Add your kids, pets, and photos in Family Setup" : "Pick up right where you left off"].map((step, index) => (
+            {["Enter your parent email below", "Tap the sign-in link we email you", "Land in Family Setup — new or returning, right where you belong"].map((step, index) => (
               <li key={step} className="flex items-center gap-3 rounded-xl bg-tt-cream px-4 py-3 text-sm font-bold text-tt-ink">
                 <span className="grid size-7 shrink-0 place-items-center rounded-full bg-tt-pine text-xs font-black text-white">{index + 1}</span>
                 {step}
@@ -9595,7 +9585,7 @@ function ParentAuthView(props: {
               disabled={props.accountStatus === "loading"}
               className="tt-btn-press mt-3 min-h-12 w-full rounded-xl bg-tt-pine px-5 py-3 text-sm font-black text-white disabled:opacity-60"
             >
-              {props.accountStatus === "loading" ? "Sending…" : isSignup ? "Email me my sign-in link" : "Email me a sign-in link"}
+              {props.accountStatus === "loading" ? "Sending…" : "Email me a sign-in link"}
             </button>
           </form>
 
@@ -9611,17 +9601,12 @@ function ParentAuthView(props: {
           )}
 
           <div className="mt-6 border-t border-tt-line pt-5 text-center">
-            <button onClick={props.onSwitchMode} className="text-sm font-black text-tt-pine underline">
-              {isSignup ? "Already have a parent account? Sign in" : "New here? Create a parent account"}
-            </button>
-            {isSignup && (
-              <p className="mt-3 text-xs font-semibold text-tt-ink-faint">
-                Just exploring?{" "}
-                <button onClick={props.onSkip} className="font-black text-tt-ink underline">
-                  Set up on this device without an account
-                </button>
-              </p>
-            )}
+            <p className="text-xs font-semibold text-tt-ink-faint">
+              Just exploring?{" "}
+              <button onClick={props.onSkip} className="font-black text-tt-ink underline">
+                Set up on this device without an account
+              </button>
+            </p>
           </div>
         </div>
 
