@@ -1330,7 +1330,11 @@ export function TailTotsApp() {
       setRole("parent");
       setIsParentUnlocked(true);
       setActiveTab("setup");
-      requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "smooth" }));
+      requestAnimationFrame(() => {
+        const el = document.getElementById("family-setup-panel");
+        if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+        else window.scrollTo({ top: 0, behavior: "smooth" });
+      });
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cloudAccountEmail]);
@@ -1578,6 +1582,26 @@ export function TailTotsApp() {
    * If this device already has a saved family with kids, restore that instead
    * of blanking it (signing in later pulls their cloud family anyway).
    */
+  /**
+   * Scroll the Family Setup panel itself into view (not just the page top).
+   * On phones the setup panel renders below the sidebar cards, so a plain
+   * scroll-to-top left the parent staring at the header and thinking the
+   * "Set up my family" button did nothing (founder report, 2026-10-15).
+   */
+  function scrollToFamilySetupPanel() {
+    const go = () => {
+      const el = document.getElementById("family-setup-panel");
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+        return true;
+      }
+      return false;
+    };
+    requestAnimationFrame(() => {
+      if (!go()) window.setTimeout(go, 300);
+    });
+  }
+
   function startFreshFamilySetup() {
     const saved = loadSavedFamilyState();
     if (saved && saved.children.length > 0) {
@@ -1603,7 +1627,7 @@ export function TailTotsApp() {
     setIsParentUnlocked(true);
     setActiveTab("setup");
     setAuthPage(null);
-    requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "smooth" }));
+    scrollToFamilySetupPanel();
   }
 
   async function sendParentSignInLink() {
@@ -8846,7 +8870,7 @@ function FamilySetupPanel(props: {
   const completedSteps = setupSteps.filter(([, done]) => done).length;
 
   return (
-    <section className="space-y-4">
+    <section id="family-setup-panel" className="space-y-4">
       <div className="rounded-lg border border-tt-line bg-[#ffffff] p-5 shadow-sm">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
