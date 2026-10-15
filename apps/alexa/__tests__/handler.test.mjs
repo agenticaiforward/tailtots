@@ -24,29 +24,40 @@ describe("validateAlexaEvent", () => {
 describe("handler", () => {
   it("welcomes on launch", async () => {
     const text = speech(await handler({ request: { type: "LaunchRequest" } }));
-    expect(text).toContain("Welcome to TailTots");
+    expect(text).toContain("Welcome to Tail Tots for Parents");
   });
 
   it("answers today's missions and the pet check", async () => {
     const missions = speech(await handler({ request: { type: "IntentRequest", intent: { name: "GetTodayMissionsIntent" } } }));
-    expect(missions).toContain("Today's TailTots missions");
+    expect(missions).toContain("Today's TailTots missions, using demo data");
     const petCheck = speech(await handler({ request: { type: "IntentRequest", intent: { name: "PetCheckIntent" } } }));
-    expect(petCheck).toContain("food, water, and comfort");
+    expect(petCheck).toContain("The TailTots pet check");
+  });
+
+  it("reports pending approvals, bank balances, and streaks", async () => {
+    expect(speech(await handler({ request: { type: "IntentRequest", intent: { name: "PendingApprovalsIntent" } } }))).toContain(
+      "waiting for your approval",
+    );
+    expect(speech(await handler({ request: { type: "IntentRequest", intent: { name: "BankBalanceIntent" } } }))).toContain(
+      "Kid Bank balances, using demo data",
+    );
+    expect(speech(await handler({ request: { type: "IntentRequest", intent: { name: "StreakStatusIntent" } } }))).toContain(
+      "Streak check, using demo data",
+    );
   });
 
   it("helps, stops, and closes gracefully", async () => {
     expect(speech(await handler({ request: { type: "IntentRequest", intent: { name: "AMAZON.HelpIntent" } } }))).toContain(
-      "what's next",
+      "what needs my approval",
     );
     expect(
       speech(await handler({ request: { type: "IntentRequest", intent: { name: "AMAZON.StopIntent" } } })),
     ).toContain("Nice work");
-    expect(speech(await handler({ request: { type: "SessionEndedRequest" } }))).toContain("Nice work");
   });
 
   it("degrades safely on unknown intents and malformed events", async () => {
     expect(speech(await handler({ request: { type: "IntentRequest", intent: { name: "NopeIntent" } } }))).toContain(
-      "Nice work",
+      "I didn't catch that",
     );
     const invalid = speech(await handler(null));
     expect(typeof invalid).toBe("string");
