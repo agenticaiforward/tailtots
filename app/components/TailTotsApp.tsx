@@ -2776,6 +2776,33 @@ export function TailTotsApp() {
             )}
           </div>
           )}
+          {/* Standard account control (founder, 2026-10-15): like every app
+              people already know — account name top-right, sign in / sign
+              out beside it. Always visible, landing included. */}
+          {role === "parent" && (
+            cloudAccountEmail ? (
+              <div className="flex shrink-0 items-center gap-2 self-end sm:self-center">
+                <span aria-hidden="true" className="flex h-9 w-9 items-center justify-center rounded-full bg-tt-pine text-sm font-black text-white">
+                  {cloudAccountEmail.charAt(0).toUpperCase()}
+                </span>
+                <span className="hidden max-w-44 truncate text-xs font-black text-tt-ink md:block" title={cloudAccountEmail}>
+                  {cloudAccountEmail}
+                </span>
+                <button onClick={goToMyFamily} className="tt-btn-press min-h-10 rounded-full px-3 py-2 text-xs font-black text-tt-pine underline">
+                  My family
+                </button>
+                <button onClick={signOutParentAccountFromApp} className="tt-btn-press min-h-10 rounded-full border border-tt-line bg-white px-4 py-2 text-xs font-black text-tt-ink">
+                  Sign out
+                </button>
+              </div>
+            ) : (
+              <div className="flex shrink-0 items-center gap-2 self-end sm:self-center">
+                <button onClick={() => setAuthPage("auth")} className="tt-btn-press min-h-10 rounded-full bg-tt-pine px-5 py-2 text-xs font-black text-white">
+                  Sign in
+                </button>
+              </div>
+            )
+          )}
         </div>
       </header>
 
@@ -2814,17 +2841,12 @@ export function TailTotsApp() {
                 <>
                   <span aria-hidden="true">🏠</span>
                   <span>
-                    Your family — real setup{cloudAccountEmail ? ` · signed in as ${cloudAccountEmail}` : " · saved on this device"}
+                    Your family — real setup{cloudAccountEmail ? "" : " · saved on this device"}
                     {cloudSyncOn ? " · cloud sync on" : ""}.
                   </span>
                   <button onClick={openParentDemo} className="tt-btn-press min-h-9 rounded-lg border-2 border-tt-pine/40 bg-white px-3 py-1.5 text-xs font-black text-tt-pine-deep">
                     Explore the demo
                   </button>
-                  {!cloudAccountEmail && (
-                    <button onClick={() => setAuthPage("auth")} className="tt-btn-press min-h-9 rounded-lg px-3 py-1.5 text-xs font-black text-tt-pine underline">
-                      Parent account
-                    </button>
-                  )}
                 </>
               )}
             </div>
@@ -2908,18 +2930,6 @@ export function TailTotsApp() {
         </aside>
 
         <div className="space-y-5">
-          {role === "parent" && visibleActiveTab === "vision" && cloudAccountEmail && (
-            <section className="flex flex-wrap items-center gap-3 rounded-3xl border border-tt-line bg-white px-5 py-3 shadow-sm">
-              <p className="text-sm font-bold text-tt-ink">👋 Signed in as <span className="font-black">{cloudAccountEmail}</span></p>
-              <span className="flex-1" />
-              <button onClick={goToMyFamily} className="tt-btn-press min-h-10 rounded-xl bg-tt-pine px-4 py-2 text-xs font-black text-white">
-                Go to my family →
-              </button>
-              <button onClick={signOutParentAccountFromApp} className="tt-btn-press min-h-10 rounded-xl border border-tt-line bg-white px-4 py-2 text-xs font-black text-tt-ink">
-                Sign out
-              </button>
-            </section>
-          )}
           {role === "parent" && visibleActiveTab === "vision" && (
             <VisualLanding
               onTryDemo={openKidDemo}
@@ -9192,9 +9202,9 @@ function FamilySetupPanel(props: {
         <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-pine">Parent account</p>
-            <h2 className="mt-2 text-3xl font-black">Save this family setup</h2>
+            <h2 className="mt-2 text-3xl font-black">Saved automatically</h2>
             <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-tt-ink-soft">
-              A signed-in parent account keeps profiles, photos, kids, pets, goals, points, coins, Kid Bank, badges, and settings together.
+              Sign in once and everything keeps itself together — profiles, photos, kids, pets, goals, points, coins, Kid Bank, badges, and settings. No save buttons, nothing to remember: every change backs itself up to your account, and signing in on a new device brings your family with you.
             </p>
           </div>
           <div className={`rounded-lg px-4 py-3 text-sm font-black ${props.cloudAccountEmail ? "bg-tt-pine-tint text-tt-pine" : "bg-tt-sun-soft text-tt-cocoa"}`}>
@@ -9213,16 +9223,14 @@ function FamilySetupPanel(props: {
         )}
 
         {isSupabaseConfigured && props.cloudAccountEmail && (
-          <div className="mt-4 flex flex-wrap gap-3">
-            <button onClick={props.saveCurrentFamilyAccount} disabled={props.accountStatus === "saving"} className="min-h-12 rounded-lg bg-tt-pine px-5 py-3 text-sm font-black text-white disabled:opacity-60">
-              {props.accountStatus === "saving" ? "Saving..." : "Save to parent account"}
-            </button>
-            <button onClick={props.loadCurrentFamilyAccount} disabled={props.accountStatus === "loading"} className="min-h-12 rounded-lg border border-[#dce6f8] bg-white px-5 py-3 text-sm font-black text-tt-ocean disabled:opacity-60">
-              Load from parent account
-            </button>
-            <button onClick={props.signOutParentAccount} disabled={props.accountStatus === "loading"} className="min-h-12 rounded-lg border border-tt-line bg-tt-cream px-5 py-3 text-sm font-black text-tt-cocoa disabled:opacity-60">
-              Sign out
-            </button>
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <p className="text-sm font-black text-tt-pine">
+              {props.accountStatus === "saving"
+                ? "☁️ Saving to your account…"
+                : props.accountStatus === "loading"
+                  ? "☁️ Bringing your family in…"
+                  : "☁️ Auto-save on — every change saves itself to your account."}
+            </p>
           </div>
         )}
 
