@@ -164,6 +164,7 @@ export default function VoiceAssistant({
   announcements,
   onAnnouncementsRead,
   onQuizComplete,
+  showcase,
 }: {
   /** Fired when the voice layer decides on an action. May return a short
    *  spoken feedback string the guide should say instead of its default. */
@@ -197,6 +198,14 @@ export default function VoiceAssistant({
   onAnnouncementsRead?: () => void;
   /** Fired once when a quiz ends with at least one answered question. */
   onQuizComplete?: (result: { topic: string; correct: number; total: number }) => void;
+  /**
+   * Showcase mode (landing + demo): voice version 1 — SPEAKS only.
+   * The guide reads the page / sample missions aloud via on-device TTS.
+   * It never listens, never asks for microphone or consent, and nothing
+   * is recorded or sent anywhere. The full listening voice (version 2)
+   * exists only inside a real family's account, behind parental consent.
+   */
+  showcase?: boolean;
 }) {
   const [listening, setListening] = useState(false);
   const [transcript, setTranscript] = useState("");
@@ -755,6 +764,22 @@ export default function VoiceAssistant({
     beginListening();
   }, [listening, voiceConsented, onRequestVoiceConsent, announcements, role, say, onAnnouncementsRead, beginListening]);
 
+  // Showcase tap: speak only (TTS). Pending news first (e.g. demo points
+  // announcements), else the page summary, else a one-line intro. A
+  // second tap stops the speech. No mic, no consent sheet, ever.
+  const toggleShowcase = useCallback(() => {
+    if (speaking) {
+      try { window.speechSynthesis?.cancel(); } catch {}
+      setSpeaking(false);
+      return;
+    }
+    const news = announcements?.length ? announcements.join(" ") : "";
+    const text = news || pageSummary?.trim() ||
+      "Hi! I'm the TailTots voice guide. In a real family, I read missions out loud and kids answer by voice — and a parent always approves first.";
+    speak(text);
+    if (news) onAnnouncementsRead?.();
+  }, [speaking, speak, announcements, pageSummary, onAnnouncementsRead]);
+
   if (!supported) return null;
 
   const hasNews = role === "child" && (announcements?.length ?? 0) > 0;
@@ -764,8 +789,8 @@ export default function VoiceAssistant({
       {/* Floating mic button */}
       <button
         data-voice-assistant
-        onClick={toggleListening}
-        aria-label={listening ? "Stop listening" : hasNews ? "Hear your news" : "Voice assistant"}
+        onClick={showcase ? toggleShowcase : toggleListening}
+        aria-label={showcase ? (speaking ? "Stop the voice guide" : "Hear the voice guide") : listening ? "Stop listening" : hasNews ? "Hear your news" : "Voice assistant"}
         className={`tt-btn-press fixed bottom-20 right-4 z-50 grid size-14 place-items-center rounded-full shadow-2xl ring-4 transition-all sm:bottom-6 sm:right-6 ${
           listening
             ? "animate-pulse bg-red-500 ring-red-300"
@@ -774,7 +799,7 @@ export default function VoiceAssistant({
               : "bg-gradient-to-br from-tt-pine to-emerald-600 ring-emerald-200 hover:scale-110"
         }`}
       >
-        <span className="text-2xl">{listening ? "🔴" : speaking ? "🔊" : "🎤"}</span>
+        <span className="text-2xl">{showcase ? (speaking ? "⏸️" : "🔊") : listening ? "🔴" : speaking ? "🔊" : "🎤"}</span>
         {hasNews && !listening && (
           <span className="absolute -right-0.5 -top-0.5 grid size-6 animate-bounce place-items-center rounded-full bg-tt-sun text-xs ring-2 ring-white" aria-hidden="true">
             🔔
@@ -782,8 +807,8 @@ export default function VoiceAssistant({
         )}
       </button>
 
-      {/* Voice panel */}
-      {(listening || transcript || response || quiz?.current) && (
+      {/* Voice panel — never in showcase mode (nothing to listen to) */}
+      {!showcase && (listening || transcript || response || quiz?.current) && (
         <div data-voice-assistant className="tt-animate-pop-in fixed bottom-36 right-4 z-50 w-72 rounded-3xl bg-white p-4 shadow-2xl ring-2 ring-tt-line sm:bottom-24 sm:right-6">
           <div className="flex items-center justify-between">
             <p className="text-xs font-black uppercase tracking-wider text-tt-ink/50">

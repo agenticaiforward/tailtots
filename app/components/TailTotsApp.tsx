@@ -3498,10 +3498,15 @@ export function TailTotsApp() {
           </div>
         );
       })()}
-      {/* Voice AI — listen + speak + do things on any page.
-          COPPA: the mic never hot-starts for a child; first tap opens the
-          parental consent sheet (voice = child's personal information). */}
+      {/* Voice AI — TWO versions (founder, 2026-10-15).
+          Showcase (landing + demo): speaks only — TTS reads the page and
+          sample missions aloud; it never listens, never opens the consent
+          sheet, and asks for no permission a demo visitor can't give.
+          Family voice (real mode): the full loop — COPPA consent sheet
+          first (voice = child's personal information), then mic + actions,
+          with parent approval still gating points. */}
       <VoiceAssistant
+        showcase={appMode === "demo"}
         onAction={handleVoiceAction}
         pageSummary={(() => {
           const openForChild = missions.filter(
