@@ -168,9 +168,28 @@ export function VisualLanding({
     },
   ];
 
+  // Email-first funnel (founder, 2026-10-15): joining the email list
+  // unlocks the demo. Visitors who already joined on this device go
+  // straight in; everyone else meets the list form first.
+  const [heroJoined, setHeroJoined] = useState(false);
+  const [gateNudge, setGateNudge] = useState(false);
+  useEffect(() => {
+    try {
+      if (window.localStorage.getItem("tt-launch-joined") === "1") setHeroJoined(true);
+    } catch { /* private mode */ }
+  }, []);
+  const listJoinedNow = () => {
+    try { return window.localStorage.getItem("tt-launch-joined") === "1"; } catch { return false; }
+  };
+  const gateDemo = (action: () => void) => {
+    if (heroJoined || listJoinedNow()) { action(); return; }
+    setGateNudge(true);
+    document.getElementById("hero-list-form")?.scrollIntoView({ behavior: "smooth", block: "center" });
+  };
+
   return (
     <div className="space-y-6">
-      {/* HERO — one image, 10 words, ONE CTA */}
+      {/* HERO — one image, short copy, email gate → demo */}
       <section className="relative overflow-hidden rounded-3xl bg-tt-navy text-white">
         <img
           src="/landing/hero-candid.jpg"
@@ -192,23 +211,51 @@ export function VisualLanding({
           <p className="mt-2 text-sm font-extrabold text-tt-sun">
             Ages 4–12 · ~10 minutes a day · mostly off-screen
           </p>
-          <div className="mt-6 flex flex-wrap items-center gap-3">
-            <button
-              onClick={onTryDemo}
-              className="tt-btn tt-btn-sun tt-btn-lg tt-motion-pop"
-            >
-              Try a mission free
-            </button>
-            <button
-              onClick={onSignup}
-              className="tt-btn tt-btn-lg border-2 border-white/70 bg-white/10 font-black text-white backdrop-blur transition hover:bg-white/20"
-            >
-              🏠 Start my family — free
-            </button>
-          </div>
-          <p className="mt-3 text-sm font-semibold text-white/70">
-            Demo: sample family, no account needed · Start my family: free for founding families
-          </p>
+          {heroJoined ? (
+            <>
+              <p className="mt-6 inline-flex rounded-full bg-white/15 px-3 py-1.5 text-xs font-black text-tt-sun">
+                🎉 You&apos;re on the launch list — the demo is yours
+              </p>
+              <div className="mt-3 flex flex-wrap items-center gap-3">
+                <button
+                  onClick={onTryDemo}
+                  className="tt-btn tt-btn-sun tt-btn-lg tt-motion-pop"
+                >
+                  Try a mission free
+                </button>
+                <button
+                  onClick={onSignup}
+                  className="tt-btn tt-btn-lg border-2 border-white/70 bg-white/10 font-black text-white backdrop-blur transition hover:bg-white/20"
+                >
+                  🏠 Start my family — free
+                </button>
+              </div>
+              <p className="mt-3 text-sm font-semibold text-white/70">
+                Demo: sample family, no account needed · Start my family: free for founding families
+              </p>
+            </>
+          ) : (
+            <div id="hero-list-form" className="mt-6">
+              <p className="text-sm font-black uppercase tracking-widest text-tt-sun">
+                Get on the email list for updates — then watch the demo
+              </p>
+              <ClaimSpotForm onJoined={() => setHeroJoined(true)} />
+              {gateNudge && (
+                <p className="mt-2 text-sm font-bold text-tt-sun">
+                  👆 Pop your email in above — the demo unlocks right after.
+                </p>
+              )}
+              <button
+                onClick={onSignup}
+                className="tt-btn tt-btn-lg mt-4 border-2 border-white/70 bg-white/10 font-black text-white backdrop-blur transition hover:bg-white/20"
+              >
+                🏠 Start my family — free
+              </button>
+              <p className="mt-3 text-sm font-semibold text-white/70">
+                Free for founding families · One email for launch updates, no spam
+              </p>
+            </div>
+          )}
         </div>
       </section>
 
@@ -219,7 +266,7 @@ export function VisualLanding({
           {TRACKS.map((t) => (
             <button
               key={t.id}
-              onClick={() => onTrackSelect ? onTrackSelect(t.id) : onTryDemo()}
+              onClick={() => gateDemo(() => (onTrackSelect ? onTrackSelect(t.id) : onTryDemo()))}
               className="tt-btn-press group overflow-hidden rounded-2xl border border-tt-line bg-white text-left shadow-sm transition-transform hover:scale-[1.02]"
             >
               <div className="relative h-32 overflow-hidden sm:h-36">
@@ -346,7 +393,7 @@ export function VisualLanding({
           ))}
         </div>
         <button
-          onClick={onTryDemo}
+          onClick={() => gateDemo(onTryDemo)}
           className="tt-btn tt-btn-sun mx-auto mt-5"
         >
           Join them — try free
@@ -370,7 +417,7 @@ export function VisualLanding({
   );
 }
 
-function ClaimSpotForm() {
+function ClaimSpotForm({ onJoined }: { onJoined?: () => void } = {}) {
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [message, setMessage] = useState("");
@@ -389,6 +436,7 @@ function ClaimSpotForm() {
       const result = await submitLaunchInterest({ email, source: "visual-landing" });
       if (result.mode === "cloud") {
         setJoined(true);
+        onJoined?.();
         try { window.localStorage.setItem("tt-launch-joined", "1"); } catch { /* private mode */ }
         setStatus("saved");
         setMessage("🎉 You're on the launch list! Watch your inbox for tail wags.");
