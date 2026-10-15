@@ -925,6 +925,10 @@ export function TailTotsApp() {
   const [cloudDeleteNote, setCloudDeleteNote] = useState<string | null>(null);
   /** Voice consent sheet visibility. */
   const [voiceConsentOpen, setVoiceConsentOpen] = useState(false);  const [gateError, setGateError] = useState(false);
+  // Funnel (founder, 2026-10-15): the demo's first mission approval is the
+  // aha moment — show the free-account card once, right then.
+  const [showAhaCard, setShowAhaCard] = useState(false);
+  const ahaSeenRef = useRef(false);
   const [gateNext, setGateNext] = useState<"approvals" | "contact">("approvals");
   const [hasLoadedSavedState, setHasLoadedSavedState] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
@@ -1257,6 +1261,16 @@ export function TailTotsApp() {
   }, []);
   const operatorLabel = role === "parent" ? "Parent operating" : `${activeChild?.name ?? "Kid"} operating`;
 
+  // Does this visitor already have a REAL family (account or a pre-existing
+  // saved one)? Drives the demo banner's exit: "Back to my family" when one
+  // exists, "Create your free account" when it doesn't. The demo snapshot
+  // itself ("Demo Crew") never counts.
+  const ownFamilyAvailable = useMemo(() => {
+    if (cloudAccountEmail) return true;
+    const saved = loadSavedFamilyState();
+    return Boolean(saved && saved.children.length > 0 && saved.familyName !== "Demo Crew");
+  }, [cloudAccountEmail, hasLoadedSavedState, appMode]);
+
   useEffect(() => {
     queueMicrotask(() => {
       const savedState = loadSavedFamilyState();
@@ -1398,9 +1412,13 @@ export function TailTotsApp() {
 
   useEffect(() => {
     if (!hasLoadedSavedState) return;
+    // Demo is a look-and-feel showcase (founder, 2026-10-15): demo play is
+    // never persisted, so the sample family stays pristine and can never
+    // overwrite a real family's saved state.
+    if (appMode === "demo") return;
     saveFamilyState({ familyName, parentPasscode, parents, children, pets, missions, transactions, goals, badges, neighborhoodJobs, moments, realLifeEntries, studiedAnimals, socialPracticeDone, familyPhotoUrl, activeChildId, certificates, pointsPerDollar, dailyChecksEnabled, maxDailyChecks, familyZip, familyNeighborhood, aiBuddyCategories, aiBuddyDailyRotate, buddyParentQuestions, socialPracticeOverride, consents, parentIdentityVerification: parentIdentityVerification ?? undefined });
     setLastSavedAt(new Date());
-  }, [activeChildId, aiBuddyCategories, aiBuddyDailyRotate, badges, buddyParentQuestions, certificates, children, consents, dailyChecksEnabled, familyName, familyPhotoUrl, familyZip, familyNeighborhood, goals, hasLoadedSavedState, maxDailyChecks, missions, moments, neighborhoodJobs, parentIdentityVerification, parentPasscode, parents, pets, pointsPerDollar, socialPracticeOverride, studiedAnimals, socialPracticeDone, transactions]);
+  }, [activeChildId, aiBuddyCategories, aiBuddyDailyRotate, badges, buddyParentQuestions, certificates, children, consents, dailyChecksEnabled, familyName, familyPhotoUrl, familyZip, familyNeighborhood, goals, hasLoadedSavedState, maxDailyChecks, missions, moments, neighborhoodJobs, parentIdentityVerification, parentPasscode, parents, pets, pointsPerDollar, socialPracticeOverride, studiedAnimals, socialPracticeDone, transactions, appMode]);
 
   // Debounced relational cloud push: mirrors family state into the Supabase
   // tables a couple of seconds after any change, while cloud sync is on.
@@ -1601,12 +1619,9 @@ export function TailTotsApp() {
   }
 
   function openParentDemo() {
-    const saved = loadSavedFamilyState();
-    if (saved && saved.children.length > 0) {
-      applyFamilySnapshot(saved);
-    } else {
-      loadDemoFamily();
-    }
+    // The demo is always the pristine sample family (founder, 2026-10-15):
+    // never the visitor's saved family — the two paths stay separate.
+    loadDemoFamily();
     setRole("parent");
     setIsParentUnlocked(true);
     setActiveTab("approvals");
@@ -1620,15 +1635,10 @@ export function TailTotsApp() {
   }
 
   function openKidDemo() {
-    const saved = loadSavedFamilyState();
-    if (saved && saved.children.length > 0) {
-      applyFamilySnapshot(saved);
-    } else {
-      loadDemoFamily();
-    }
+    loadDemoFamily();
     setRole("child");
     recordCheckIn();
-    setActiveChildId(saved?.activeChildId ?? starterChildren[0]?.id ?? "");
+    setActiveChildId(starterChildren[0]?.id ?? "");
     setActiveTab("missions");
     requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "smooth" }));
   }
@@ -1660,31 +1670,22 @@ export function TailTotsApp() {
   }
 
   function startFreshFamilySetup() {
+    // Real families live behind a parent account now (founder, 2026-10-15):
+    // the device-only "real setup" path is removed. A family this device
+    // already saved (from before this change) still opens as-is; everyone
+    // else goes to the free account page, and sign-in lands them in Setup.
     const saved = loadSavedFamilyState();
-    if (saved && saved.children.length > 0) {
+    if (saved && saved.children.length > 0 && saved.familyName !== "Demo Crew") {
       applyFamilySnapshot(saved);
-    } else {
-      applyFamilySnapshot({
-        familyName: "My Family",
-        parentPasscode: defaultParentPasscode,
-        parents: starterParents,
-        children: [],
-        pets: [],
-        missions: [],
-        transactions: [],
-        goals: [],
-        badges: [],
-        neighborhoodJobs: [],
-        moments: [],
-        activeChildId: "",
-      });
+      setAppMode("real");
+      setRole("parent");
+      setIsParentUnlocked(true);
+      setActiveTab("setup");
+      setAuthPage(null);
+      scrollToFamilySetupPanel();
+      return;
     }
-    setAppMode("real");
-    setRole("parent");
-    setIsParentUnlocked(true);
-    setActiveTab("setup");
-    setAuthPage(null);
-    scrollToFamilySetupPanel();
+    setAuthPage("auth");
   }
 
   async function sendParentSignInLink() {
@@ -2124,6 +2125,12 @@ export function TailTotsApp() {
         ...items,
         { childId: mission.completedBy!, text: `You earned ${mission.points} points for "${mission.title}"!` },
       ]);
+    }
+    // Aha moment: first approval inside the demo → offer the free account
+    // (founding families) once, while the feeling is fresh.
+    if (appMode === "demo" && !cloudAccountEmail && !ahaSeenRef.current) {
+      ahaSeenRef.current = true;
+      setShowAhaCard(true);
     }
   }
 
@@ -2581,7 +2588,10 @@ export function TailTotsApp() {
         sendParentSignInLink={sendParentSignInLink}
         magicLinkSent={magicLinkSent}
         onBack={() => setAuthPage(null)}
-        onSkip={startFreshFamilySetup}
+        onSkip={() => {
+          setAuthPage(null);
+          openParentDemo();
+        }}
       />
     );
   }
@@ -2745,10 +2755,16 @@ export function TailTotsApp() {
               {appMode === "demo" ? (
                 <>
                   <span aria-hidden="true">🧪</span>
-                  <span>Demo mode — you&apos;re exploring the sample family. Nothing here is real.</span>
-                  <button onClick={startFreshFamilySetup} className="tt-btn-press min-h-9 rounded-lg bg-tt-ink px-3 py-1.5 text-xs font-black text-white">
-                    Set up my family →
-                  </button>
+                  <span>Demo — the sample family. Look around freely; nothing here can be changed or saved.</span>
+                  {ownFamilyAvailable ? (
+                    <button onClick={startFreshFamilySetup} className="tt-btn-press min-h-9 rounded-lg bg-tt-ink px-3 py-1.5 text-xs font-black text-white">
+                      Back to my family →
+                    </button>
+                  ) : (
+                    <button onClick={() => setAuthPage("auth")} className="tt-btn-press min-h-9 rounded-lg bg-tt-ink px-3 py-1.5 text-xs font-black text-white">
+                      Create your free account → · free for founding families
+                    </button>
+                  )}
                 </>
               ) : (
                 <>
@@ -2984,9 +3000,9 @@ export function TailTotsApp() {
               <PassportPanel
                 pets={pets}
                 missions={missions}
-                allowEditing={role === "parent"}
+                allowEditing={role === "parent" && appMode !== "demo"}
                 updatePet={updatePet}
-                updatePetPhoto={role === "parent" ? updatePetPhoto : undefined}
+                updatePetPhoto={role === "parent" && appMode !== "demo" ? updatePetPhoto : undefined}
                 onStudyComplete={recordPassportStudy}
                 studiedAnimals={studiedAnimals}
               />
@@ -3090,7 +3106,136 @@ export function TailTotsApp() {
               <SocialPracticeOverrideEditor override={socialPracticeOverride} onChange={setSocialPracticeOverride} />
             </div>
           )}
+            {visibleActiveTab === "setup" && appMode === "demo" && (
+              <section className="rounded-3xl border-2 border-dashed border-[#f0c96a] bg-tt-sun-soft p-5 text-center">
+                <p className="text-2xl" aria-hidden="true">🧪</p>
+                <h2 className="mt-1 text-xl font-black text-tt-ink">This is the sample family’s setup</h2>
+                <p className="mx-auto mt-1 max-w-md text-sm font-semibold leading-6 text-tt-ink-soft">
+                  Look around freely — every screen works. The sample family can’t be changed or saved.
+                  To build YOUR family’s setup, create a free account.
+                </p>
+                {ownFamilyAvailable ? (
+                  <button onClick={startFreshFamilySetup} className="tt-btn-press mt-3 min-h-12 rounded-xl bg-tt-ink px-5 py-3 text-sm font-black text-white">Back to my family →</button>
+                ) : (
+                  <button onClick={() => setAuthPage("auth")} className="tt-btn-press mt-3 min-h-12 rounded-xl bg-tt-ink px-5 py-3 text-sm font-black text-white">Create your free account → · free for founding families</button>
+                )}
+              </section>
+            )}
           {visibleActiveTab === "setup" && (
+            appMode === "demo" ? (
+              <div className="pointer-events-none select-none" aria-hidden="true">
+              <FamilySetupPanel
+                cloudAccountEmail={cloudAccountEmail}
+                accountStatus={accountStatus}
+                accountMessage={accountMessage}
+                onOpenSignup={() => setAuthPage("auth")}
+                onOpenSignin={() => setAuthPage("auth")}
+                signOutParentAccount={signOutParentAccountFromApp}
+                saveCurrentFamilyAccount={saveCurrentFamilyAccount}
+                loadCurrentFamilyAccount={loadCurrentFamilyAccount}
+                cloudFamilyReady={cloudFamilyId !== null}
+                cloudSyncOn={cloudSyncOn}
+                cloudSyncStatus={cloudSyncStatus}
+                cloudSyncMessage={cloudSyncMessage}
+                enableCloudSyncNow={enableCloudSyncNow}
+                familyName={familyName}
+                setFamilyName={setFamilyName}
+                familyZip={familyZip}
+                setFamilyZip={setFamilyZip}
+                familyNeighborhood={familyNeighborhood}
+                setFamilyNeighborhood={setFamilyNeighborhood}
+                lastSavedAt={lastSavedAt}
+                parents={parents}
+                updateParent={updateParent}
+                updateParentPhoto={updateParentPhoto}
+                childProfiles={children}
+                updateChild={updateChild}
+                updateChildPhoto={updateChildPhoto}
+                pets={pets}
+                updatePet={updatePet}
+                updatePetPhoto={updatePetPhoto}
+                newChild={newChild}
+                setNewChild={setNewChild}
+                addChild={addChild}
+                removeChild={removeChild}
+                newPet={newPet}
+                setNewPet={setNewPet}
+                addPet={addPet}
+                updateFamilyPhoto={updateFamilyPhoto}
+                updateFamilyPhotoAndPickProfiles={updateFamilyPhotoAndPickProfiles}
+                pickProfilesFromSavedFamilyPhoto={pickProfilesFromSavedFamilyPhoto}
+                hasFamilyPhoto={Boolean(familyPhotoUrl)}
+                parentPasscode={parentPasscode}
+                setParentPasscode={setParentPasscode}
+                pointsPerDollar={pointsPerDollar}
+                setPointsPerDollar={setPointsPerDollar}
+                dailyChecksEnabled={dailyChecksEnabled}
+                setDailyChecksEnabled={setDailyChecksEnabled}
+                maxDailyChecks={maxDailyChecks}
+                setMaxDailyChecks={setMaxDailyChecks}
+                aiBuddyCategories={aiBuddyCategories}
+                setAiBuddyCategories={setAiBuddyCategories}
+                aiBuddyDailyRotate={aiBuddyDailyRotate}
+                setAiBuddyDailyRotate={setAiBuddyDailyRotate}
+                appMode={appMode}
+                onResetDemo={() => {
+                  loadDemoFamily();
+                  setActiveTab("setup");
+                }}
+                consents={consents}
+                onToggleMarketing={(granted) =>
+                  setConsents((c) =>
+                    granted
+                      ? grantConsent(c, "marketing", { method: cloudAccountEmail ? "parent-account" : "parent-passcode" })
+                      : revokeConsent(c, "marketing"),
+                  )
+                }
+                onRevokeVoice={() => {
+                  setConsents((c) => revokeConsent(c, "voice"));
+                  try { window.speechSynthesis?.cancel(); } catch {}
+                }}
+                onDeleteChildData={() => {
+                  // Parent-invoked deletion: wipe children's local data and
+                  // consent records from this device, then purge the cloud
+                  // database too when the parent is signed in (COPPA §312.10).
+                  try {
+                    window.localStorage.removeItem(savedFamilyStateKey);
+                  } catch {}
+                  setConsents({});
+                  setChildren([]);
+                  setMissions([]);
+                  setTransactions([]);
+                  setGoals([]);
+                  setBadges([]);
+                  setMoments([]);
+                  setRealLifeEntries([]);
+                  setActiveTab("setup");
+                  // Cloud purge (signed-in parents): the worker deletes the
+                  // family's child rows from Supabase and reports per table.
+                  void (async () => {
+                    const token = await getParentAccessToken();
+                    if (!token) {
+                      setCloudDeleteNote("Signed out — only this device was cleared. Sign in to also clear cloud data, or email hello@tailtots.com.");
+                      return;
+                    }
+                    try {
+                      const res = await fetch("/api/family/data", {
+                        method: "DELETE",
+                        headers: { Authorization: `Bearer ${token}` },
+                      });
+                      const data = (await res.json()) as { ok?: boolean; note?: string };
+                      setCloudDeleteNote(data.note ?? (data.ok ? "Cloud data deleted." : "Cloud deletion incomplete — see note above."));
+                    } catch {
+                      setCloudDeleteNote("Cloud deletion failed to reach the server. Email hello@tailtots.com and we'll complete it manually.");
+                    }
+                  })();
+                }}
+                parentIdentityVerification={parentIdentityVerification}
+                onVerifyCard={() => setCardVerifyOpen(true)}
+                cloudDeleteNote={cloudDeleteNote}
+              />
+              </div>
+            ) : (
             <FamilySetupPanel
               cloudAccountEmail={cloudAccountEmail}
               accountStatus={accountStatus}
@@ -3201,7 +3346,8 @@ export function TailTotsApp() {
               onVerifyCard={() => setCardVerifyOpen(true)}
               cloudDeleteNote={cloudDeleteNote}
             />
-          )}
+            ))}
+
           {visibleActiveTab === "growth" && role === "parent" && (
             <GrowthPanel
               childProfiles={children}
@@ -3392,6 +3538,30 @@ export function TailTotsApp() {
           handleVoiceAction({ type: "quiz-complete", ...result });
         }}
       />
+      {showAhaCard && appMode === "demo" && !cloudAccountEmail && (
+        <div className="fixed inset-x-3 bottom-3 z-50 mx-auto max-w-lg rounded-3xl border border-tt-line bg-white p-5 shadow-2xl sm:inset-x-6 sm:bottom-6" role="dialog" aria-label="Make it your family">
+          <p className="text-2xl" aria-hidden="true">🎉</p>
+          <h2 className="mt-1 text-xl font-black text-tt-ink">That&apos;s the TailTots feeling.</h2>
+          <p className="mt-1 text-sm font-semibold leading-6 text-tt-ink-soft">
+            You just approved a mission and the points landed — in the sample family. Make it YOUR family:
+            your real kids, your real pets, saved to your account. <span className="font-black text-tt-pine">Free for founding families.</span>
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              onClick={() => { setShowAhaCard(false); setAuthPage("auth"); }}
+              className="tt-btn-press min-h-12 rounded-xl bg-tt-pine px-5 py-3 text-sm font-black text-white"
+            >
+              Create your free account →
+            </button>
+            <button
+              onClick={() => setShowAhaCard(false)}
+              className="tt-btn-press min-h-12 rounded-xl border border-tt-line bg-white px-5 py-3 text-sm font-black text-tt-ink"
+            >
+              Keep exploring
+            </button>
+          </div>
+        </div>
+      )}
       <VoiceConsentSheet
         open={voiceConsentOpen}
         childName={activeChild?.name ?? "your child"}
@@ -9049,7 +9219,7 @@ function FamilySetupPanel(props: {
               {
                 icon: "🏠",
                 step: "Nothing at all",
-                unlocks: "The demo and your real family on this device — missions, Kid Bank, growth log. No sign-in needed.",
+                unlocks: "The demo — the sample family, every screen, missions, Kid Bank, growth log. Look and feel it all; nothing is saved.",
                 skip: "—",
                 done: true,
                 state: "Always on",
@@ -9057,8 +9227,8 @@ function FamilySetupPanel(props: {
               {
                 icon: "✉️",
                 step: "Parent account",
-                unlocks: "Your family saved to your account — same kids, pets, and progress on your phone and tablet, and sign-in if you get a new device.",
-                skip: "Your setup lives only on this device. Lose it, and the setup goes with it.",
+                unlocks: "YOUR family — set up your real kids and pets, saved to your account and synced across your phone and tablet.",
+                skip: "You can explore the demo, but there's no real family to save your progress to.",
                 done: Boolean(props.cloudAccountEmail),
                 state: props.cloudAccountEmail ? "On" : "Not yet",
               },
@@ -9630,7 +9800,7 @@ function ParentAuthView(props: {
           <p className="text-xs font-black uppercase tracking-[0.22em] text-tt-pine">Parent account</p>
           <h1 className="mt-2 text-3xl font-black sm:text-4xl">Create account or sign in</h1>
           <p className="mt-3 text-sm font-semibold leading-6 text-tt-ink-soft">
-            One email, one magic link — no passwords to remember. New here? The link creates your account. Already have one? The same link signs you in. Your family setup stays private to your account and syncs across your devices.
+            One email, one magic link — no passwords to remember. New here? The link creates your account. Already have one? The same link signs you in. Your family setup stays private to your account and syncs across your devices. <span className="font-black text-tt-pine">Free for founding families.</span>
           </p>
 
           <ol className="mt-5 grid gap-2">
@@ -9681,9 +9851,9 @@ function ParentAuthView(props: {
 
           <div className="mt-6 border-t border-tt-line pt-5 text-center">
             <p className="text-xs font-semibold text-tt-ink-faint">
-              Just exploring?{" "}
+              Just looking?{" "}
               <button onClick={props.onSkip} className="font-black text-tt-ink underline">
-                Set up on this device without an account
+                Explore the demo first
               </button>
             </p>
           </div>

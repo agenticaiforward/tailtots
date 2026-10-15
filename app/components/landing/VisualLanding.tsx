@@ -192,14 +192,22 @@ export function VisualLanding({
           <p className="mt-2 text-sm font-extrabold text-tt-sun">
             Ages 4–12 · ~10 minutes a day · mostly off-screen
           </p>
-          <button
-            onClick={onTryDemo}
-            className="tt-btn tt-btn-sun tt-btn-lg tt-motion-pop mt-6"
-          >
-            Try a mission free
-          </button>
+          <div className="mt-6 flex flex-wrap items-center gap-3">
+            <button
+              onClick={onTryDemo}
+              className="tt-btn tt-btn-sun tt-btn-lg tt-motion-pop"
+            >
+              Try a mission free
+            </button>
+            <button
+              onClick={onSignup}
+              className="tt-btn tt-btn-lg border-2 border-white/70 bg-white/10 font-black text-white backdrop-blur transition hover:bg-white/20"
+            >
+              🏠 Start my family — free
+            </button>
+          </div>
           <p className="mt-3 text-sm font-semibold text-white/70">
-            Try the demo — no account needed · Free for founding families
+            Demo: sample family, no account needed · Start my family: free for founding families
           </p>
         </div>
       </section>
