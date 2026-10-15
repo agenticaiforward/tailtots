@@ -9035,6 +9035,85 @@ function FamilySetupPanel(props: {
         <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-pine">Privacy & permissions</p>
         <h2 className="mt-2 text-2xl font-black">Your family&apos;s data</h2>
 
+        {/* What each step unlocks (founder, 2026-10-15): parents couldn't
+            tell what each sign-in/permission was FOR. One glance: the step,
+            what it opens, and what happens if you skip it. Nothing is
+            bundled — each step opens only what it says. */}
+        <div className="mt-4 rounded-lg border border-tt-line bg-white p-4">
+          <p className="text-sm font-black text-tt-ink">🔑 What each step unlocks</p>
+          <p className="mt-1 text-xs font-semibold leading-5 text-tt-ink-soft">
+            Nothing is bundled. Each step opens only what it says — and skipping a step never breaks the rest.
+          </p>
+          <div className="mt-3 grid gap-2">
+            {[
+              {
+                icon: "🏠",
+                step: "Nothing at all",
+                unlocks: "The demo and your real family on this device — missions, Kid Bank, growth log. No sign-in needed.",
+                skip: "—",
+                done: true,
+                state: "Always on",
+              },
+              {
+                icon: "✉️",
+                step: "Parent account",
+                unlocks: "Your family saved to your account — same kids, pets, and progress on your phone and tablet, and sign-in if you get a new device.",
+                skip: "Your setup lives only on this device. Lose it, and the setup goes with it.",
+                done: Boolean(props.cloudAccountEmail),
+                state: props.cloudAccountEmail ? "On" : "Not yet",
+              },
+              {
+                icon: "👧",
+                step: "Adding your kids in Setup",
+                unlocks: "Your children's own profiles, missions, and points. Adding them here is your permission for us to store their first name and age.",
+                skip: "Kids can explore the sample family, but nothing is theirs yet.",
+                done: props.childProfiles.length > 0,
+                state: props.childProfiles.length > 0 ? "On" : "Not yet",
+              },
+              {
+                icon: "🎤",
+                step: "Voice permission",
+                unlocks: "Your child can talk to the app — voice missions, spoken questions, read-aloud help. Audio and transcripts are never stored.",
+                skip: "Everything still works by tapping and reading. The mic simply stays off.",
+                done: Boolean(props.consents.voice?.granted),
+                state: props.consents.voice?.granted ? "On" : "Off",
+              },
+              {
+                icon: "🛡️",
+                step: "Verify you're the parent",
+                unlocks: "The strong proof an adult approved your kids' data and voice — the $1 card check below (refunded instantly, never charged). This is what makes the permissions above fully verified.",
+                skip: "You can keep using the app on this device, but the permissions stay unverified.",
+                done: Boolean(props.parentIdentityVerification),
+                state: props.parentIdentityVerification ? "Verified" : "Not yet",
+              },
+              {
+                icon: "📣",
+                step: "News & offers (optional)",
+                unlocks: "Occasional parent-only news and offers from TailTots. Never shown to kids, never required.",
+                skip: "Nothing in the app changes. Off by default — the switch is right below.",
+                done: Boolean(props.consents.marketing?.granted),
+                state: props.consents.marketing?.granted ? "On" : "Off",
+              },
+            ].map((row) => (
+              <div key={row.step} className="flex items-start gap-3 rounded-lg bg-tt-cream/60 px-3 py-2.5">
+                <span aria-hidden="true" className="text-lg leading-6">{row.icon}</span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-black text-tt-ink">
+                    {row.step}
+                    <span className={`ml-2 rounded-full px-2 py-0.5 text-[10px] font-black ${row.done ? "bg-tt-pine text-white" : "bg-white text-tt-ink-soft ring-1 ring-tt-line"}`}>
+                      {row.state}
+                    </span>
+                  </p>
+                  <p className="mt-0.5 text-xs font-semibold leading-5 text-tt-ink-soft">{row.unlocks}</p>
+                  {row.skip !== "—" && (
+                    <p className="mt-0.5 text-xs font-semibold leading-5 text-tt-ink-faint">Skip it: {row.skip}</p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
         <div className="mt-4 space-y-3">
           <div className="flex flex-col gap-2 rounded-lg border border-tt-line bg-tt-cream/50 p-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
