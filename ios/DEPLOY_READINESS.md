@@ -33,7 +33,7 @@ signing, and upload inherently need a Mac + Apple Developer access.
 - **Icons**: full `AppIcon.appiconset` populated from brand art (1024px wordmark on TailTots green). Branded, ship-ready. (Optional polish later: a simplified glyph reads better at 60px, but the wordmark is acceptable.)
 - **Launch screen**: `LaunchScreen.storyboard` + branded 2732px splash (logo on green). No placeholder.
 - **Web bundle refreshed**: `npm run mobile:web:build` re-ran from the current repo (includes the new pet-buddy species library + the 4 generated pet portraits), copied to `ios/www/`, `npx cap sync ios` completed clean (web assets copied into `ios/App/App/public/`, `Package.swift` regenerated).
-- **Repo script fixed**: `ios:sync` was `npm run build && cap sync ios` (wrong — that builds the server bundle); now `npm run mobile:web:build && cap sync ios`, matching `android:sync`. (Uncommitted in `~/workspace/tailtots-supabase-work/package.json` — will ride along with the parent's next commit.)
+- **Repo script fixed**: `ios:sync` was `npm run build && cap sync ios` (wrong — that builds the server bundle); now `npm run mobile:web:build && cap sync ios`, matching `android:sync`. (Verified committed in the repo's `package.json` as of 2026-10-15.)
 - **No tracking**: bundle scan found zero analytics/tracking SDKs, zero `*.supabase.co` URLs (all data stays on-device in `localStorage` in this build), no third-party sign-in, no IAP, no UIWebView, no tappable external links (`tailtots.com` appears only in share-text strings and the printed certificate).
 - **Encryption**: no `ITSAppUsesNonExemptEncryption` key — answer "standard encryption only / exempt" in App Store Connect.
 
