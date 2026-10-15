@@ -764,21 +764,55 @@ export default function VoiceAssistant({
     beginListening();
   }, [listening, voiceConsented, onRequestVoiceConsent, announcements, role, say, onAnnouncementsRead, beginListening]);
 
-  // Showcase tap: speak only (TTS). Pending news first (e.g. demo points
+  // Showcase speech = the ONE TailTots voice: server-synthesized (Deepgram
+  // Aura via /api/voice/speak) so every visitor hears the same warm voice
+  // on every device, instead of whatever robotic voice their phone ships.
+  // Falls back to device TTS only if the server voice is unreachable.
+  const showcaseAudioRef = useRef<HTMLAudioElement | null>(null);
+  const stopShowcaseAudio = useCallback(() => {
+    const audio = showcaseAudioRef.current;
+    if (audio) {
+      try { audio.pause(); } catch {}
+      if (audio.src) URL.revokeObjectURL(audio.src);
+      showcaseAudioRef.current = null;
+    }
+    try { window.speechSynthesis?.cancel(); } catch {}
+    setSpeaking(false);
+  }, []);
+  const speakShowcase = useCallback(async (text: string) => {
+    const trimmed = text.trim().slice(0, 580);
+    if (!trimmed) return;
+    try {
+      const res = await fetch("/api/voice/speak", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ text: trimmed }),
+      });
+      if (!res.ok) throw new Error("speak failed");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      showcaseAudioRef.current = audio;
+      audio.onended = () => { URL.revokeObjectURL(url); if (showcaseAudioRef.current === audio) showcaseAudioRef.current = null; setSpeaking(false); };
+      audio.onerror = () => { URL.revokeObjectURL(url); if (showcaseAudioRef.current === audio) showcaseAudioRef.current = null; setSpeaking(false); };
+      setSpeaking(true);
+      await audio.play();
+    } catch {
+      speak(trimmed);
+    }
+  }, [speak]);
+
+  // Showcase tap: speak only. Pending news first (e.g. demo points
   // announcements), else the page summary, else a one-line intro. A
   // second tap stops the speech. No mic, no consent sheet, ever.
   const toggleShowcase = useCallback(() => {
-    if (speaking) {
-      try { window.speechSynthesis?.cancel(); } catch {}
-      setSpeaking(false);
-      return;
-    }
+    if (speaking) { stopShowcaseAudio(); return; }
     const news = announcements?.length ? announcements.join(" ") : "";
     const text = news || pageSummary?.trim() ||
       "Hi! I'm the TailTots voice guide. In a real family, I read missions out loud and kids answer by voice — and a parent always approves first.";
-    speak(text);
+    void speakShowcase(text);
     if (news) onAnnouncementsRead?.();
-  }, [speaking, speak, announcements, pageSummary, onAnnouncementsRead]);
+  }, [speaking, stopShowcaseAudio, speakShowcase, announcements, pageSummary, onAnnouncementsRead]);
 
   if (!supported) return null;
 

@@ -265,6 +265,53 @@ async function handleVoiceIntent(request: Request, env: Env): Promise<Response> 
 }
 
 /**
+ * POST /api/voice/speak — the ONE TailTots voice (showcase/demo speech).
+ *
+ * Device text-to-speech sounds robotic and differs on every phone, so the
+ * demo's speak-only guide uses a single server voice instead: Deepgram
+ * Aura "asteria" (warm, natural) through the Workers AI binding, streamed
+ * back as MP3. Speak-only by design — the client sends text it already
+ * displays (page summaries, sample missions); no audio, no PII ever
+ * arrives here. Tight caps (600 chars, per-IP rate limit) keep cost ~0.
+ */
+const voiceSpeakRateLimiter = new InMemoryRateLimiter(30, 60 * 60 * 1000);
+
+async function handleVoiceSpeak(request: Request, env: Env): Promise<Response> {
+  if (voiceSpeakRateLimiter.isLimited(`voice-speak:${clientIp(request)}`)) {
+    return jsonResponse({ error: "Too many requests. Please try again later." }, 429);
+  }
+  if (!env.AI) {
+    log.warn("AI binding missing for /api/voice/speak");
+    return jsonResponse({ error: "The voice guide is not configured yet." }, 503);
+  }
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonResponse({ error: "Request body must be valid JSON." }, 400);
+  }
+  const text = (body as { text?: unknown })?.text;
+  if (typeof text !== "string" || text.trim().length === 0 || text.length > 600) {
+    return jsonResponse({ error: "Text must be 1-600 characters." }, 400);
+  }
+  try {
+    const resp = await env.AI.run(
+      "@cf/deepgram/aura-1",
+      { text: text.trim(), speaker: "asteria", encoding: "mp3" } as never,
+      { returnRawResponse: true },
+    );
+    const audio = resp as unknown as Response;
+    return new Response(audio.body, {
+      status: 200,
+      headers: { "content-type": "audio/mpeg", "cache-control": "no-store" },
+    });
+  } catch (error) {
+    log.error("Workers AI voice-speak request failed", { error });
+    return jsonResponse({ error: "The voice guide is unavailable right now." }, 502);
+  }
+}
+
+/**
  * POST /api/voice/quiz — AI quiz host for kids (ADHD/autism-friendly).
  *
  * Two actions: "start" (new quiz on a topic) and "answer" (evaluate the
@@ -2086,6 +2133,13 @@ const worker = {
         return new Response("Method Not Allowed", { status: 405 });
       }
       return handleVoiceQuiz(request, env);
+    }
+
+    if (url.pathname === "/api/voice/speak") {
+      if (request.method !== "POST") {
+        return new Response("Method Not Allowed", { status: 405 });
+      }
+      return handleVoiceSpeak(request, env);
     }
 
     if (url.pathname === "/api/ai/ideas") {
