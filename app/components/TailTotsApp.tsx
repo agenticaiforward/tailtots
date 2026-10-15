@@ -559,6 +559,25 @@ const tabItems = [
 
 const kidTabIds = ["missions", "schedule", "pets", "pet-helper", "bank", "neighborhood"];
 const parentTabIds = ["vision", "approvals", "setup", "schedule", "pets", "neighborhood", "growth", "village", "plan"];
+
+/**
+ * Section URLs (founder request, 2026-10-15): the app is a single page, so
+ * sections live in the URL hash — tailtots.com/#/parent/setup,
+ * tailtots.com/#/kid/missions — making every section linkable, shareable,
+ * and back-button friendly without server routes. Only "#/…" hashes are
+ * app routes; plain "#landing-…" anchors stay in-page scroll targets.
+ */
+function parseAppHash(hash: string): { role: "parent" | "child"; tab: string } | null {
+  const match = /^#\/(parent|kid)\/([a-z-]+)$/.exec(hash);
+  if (!match) return null;
+  const role = match[1] === "kid" ? ("child" as const) : ("parent" as const);
+  const valid = role === "parent" ? parentTabIds : kidTabIds;
+  return valid.includes(match[2]) ? { role, tab: match[2] } : null;
+}
+
+function appHashFor(role: string, tab: string): string {
+  return `#/${role === "child" ? "kid" : "parent"}/${tab}`;
+}
 const defaultParentPasscode = "4321";
 
 const savedFamilyStateKey = "tailtots-family-state-v1";
@@ -1198,6 +1217,44 @@ export function TailTotsApp() {
   );
   const visibleActiveTab = visibleTabs.some((tab) => tab.id === activeTab) ? activeTab : visibleTabs[0]?.id;
   const isRouteChooser = role === "parent" && visibleActiveTab === "vision";
+
+  // Section URL sync (see parseAppHash): apply a #/role/tab deep link once
+  // on first load, before the outbound sync below starts writing hashes.
+  const hashAppliedRef = useRef(false);
+  useEffect(() => {
+    const parsed = parseAppHash(window.location.hash);
+    if (parsed) {
+      setRole(parsed.role);
+      if (parsed.role === "parent") setIsParentUnlocked(true);
+      setActiveTab(parsed.tab);
+    }
+    hashAppliedRef.current = true;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Section URL sync: keep the hash matched to the visible section so each
+  // section has its own URL and the back button walks section history.
+  useEffect(() => {
+    if (!hashAppliedRef.current || authPage || !visibleActiveTab) return;
+    const desired = appHashFor(role, visibleActiveTab);
+    if (window.location.hash !== desired) {
+      window.history.pushState(null, "", desired);
+    }
+  }, [role, visibleActiveTab, authPage]);
+
+  // Section URL sync: honor back/forward and manually edited hashes.
+  useEffect(() => {
+    const onHashChange = () => {
+      const parsed = parseAppHash(window.location.hash);
+      if (!parsed) return;
+      setRole(parsed.role);
+      if (parsed.role === "parent") setIsParentUnlocked(true);
+      setActiveTab(parsed.tab);
+    };
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const operatorLabel = role === "parent" ? "Parent operating" : `${activeChild?.name ?? "Kid"} operating`;
 
   useEffect(() => {
