@@ -1332,7 +1332,11 @@ export function TailTotsApp() {
         setCloudSyncOn(false);
         setCloudSyncStatus("idle");
         setCloudSyncMessage("");
-        setAppMode("demo");
+        // Signed-out does not automatically mean demo: a family this
+        // device already saved (grandfathered local family) stays in
+        // real mode across reloads. Only true demo devices drop here.
+        const savedLocal = loadSavedFamilyState();
+        setAppMode(savedLocal && savedLocal.children.length > 0 && savedLocal.familyName !== "Demo Crew" ? "real" : "demo");
         if (pushTimerRef.current) {
           clearTimeout(pushTimerRef.current);
           pushTimerRef.current = null;
