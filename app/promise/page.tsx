@@ -32,6 +32,16 @@ const PROMISES: { illustration: IllustrationKind; title: string; line: string; m
     more: "If you leave, your data leaves with you — or is deleted, your choice.",
   },
   {
+    illustration: "growth",
+    title: "Growth, never grades",
+    line: "We notice strengths blooming and nurture the rest. Your child is compared only to their own last week — never to other children.",
+  },
+  {
+    illustration: "hands",
+    title: "Parents approve everything",
+    line: "Nothing reaches your child without you. The AI suggests; you decide.",
+  },
+  {
     illustration: "shield",
     title: "Your child never talks to the AI",
     line: "All AI runs parent-side. Kids see missions and pets — never a chatbot.",

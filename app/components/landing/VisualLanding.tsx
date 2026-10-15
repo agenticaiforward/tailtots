@@ -369,10 +369,7 @@ export function VisualLanding({
             ))}
           </div>
         </div>
-        <p className="mt-4 text-center text-xs font-semibold text-tt-ink-faint">
-          Traits drawn from published resilience research ·{" "}
-          <a href="/science" className="font-bold text-tt-pine underline decoration-tt-sun decoration-2 underline-offset-2">Our Science</a>
-        </p>
+
       </section>
 
       {/* FAMILIES — illustrative lifestyle photography */}
