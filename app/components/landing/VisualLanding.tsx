@@ -228,57 +228,31 @@ export function VisualLanding({
         </div>
       </section>
 
-      {/* SAFETY — moved up (Oct 14): the first question every parent asks gets answered first */}
-      <section className="rounded-3xl border border-tt-line bg-tt-cream p-5 sm:p-6">
-        <p className="text-center text-xs font-black uppercase tracking-[0.18em] text-tt-pine">Safety, by design</p>
-        <h2 className="mt-1 text-center text-xl font-black text-tt-ink">Your child will never talk to a stranger on TailTots. Period.</h2>
-        <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
-          {[
-            ["🚫", "No strangers"],
-            ["💬", "No open chats"],
-            ["✅", "You approve everything"],
-            ["🔒", "Closed family circle"],
-          ].map(([emoji, title]) => (
-            <div key={title} className="rounded-2xl border border-tt-line bg-white p-4 text-center">
-              <p className="text-3xl" aria-hidden="true">{emoji}</p>
-              <p className="mt-2 text-sm font-black text-tt-ink">{title}</p>
+      {/* SAFETY — scrolling banner (Oct 15): the whole trust story in one moving band, details live on /promise */}
+      <section aria-label="Safety by design" className="overflow-hidden rounded-3xl bg-tt-pine py-3 text-white">
+        <div className="tt-marquee-track flex w-max items-center gap-8 pr-8">
+          {[0, 1].map((dup) => (
+            <div key={dup} className="flex items-center gap-8" aria-hidden={dup === 1}>
+              {[
+                "🛡️ Safety, by design",
+                "🚫 No strangers. Ever.",
+                "💬 No open chat",
+                "✅ You approve everything",
+                "🔒 Closed family circle",
+                "🎤 AI guide only — off until you turn it on",
+                "⏱️ ~10 minutes a day, mostly off-screen",
+              ].map((item) => (
+                <span key={item} className="flex items-center gap-8 whitespace-nowrap text-sm font-black">
+                  {item}
+                  <span className="text-white/40" aria-hidden="true">•</span>
+                </span>
+              ))}
             </div>
           ))}
         </div>
-        <p className="mx-auto mt-4 max-w-xl text-center text-sm font-bold leading-relaxed text-tt-ink-soft">
-          No people. Ever. The only voice is our AI guide — and it only asks the mission
-          and quiz questions you approved. Off until you turn it on.
+        <p className="mt-1.5 text-center text-[11px] font-bold text-white/70">
+          Your child will never talk to a stranger on TailTots. <a href="/promise" className="underline decoration-tt-sun decoration-2 underline-offset-2">Our Promise</a>
         </p>
-      </section>
-
-      {/* PARENT PROMISE — why parents trust this */}
-      <section className="rounded-3xl border border-tt-line bg-tt-paper p-5 sm:p-6">
-        <div className="text-center">
-          <h2 className="text-2xl font-black text-tt-ink">You see the growth. They just see play.</h2>
-          <ul className="mx-auto mt-4 max-w-md space-y-2.5">
-            {[
-              "AI missions built for your child's age and pet",
-              "One weekly insight — never a dashboard to obsess over",
-              "You approve everything. Your child only sees what you allow.",
-            ].map((b) => (
-              <li key={b} className="flex items-center justify-center gap-2 text-sm font-bold text-tt-ink-soft">
-                <svg viewBox="0 0 20 20" className="size-4 shrink-0 text-tt-pine" fill="currentColor" aria-hidden="true">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm3.7-9.3a1 1 0 0 0-1.4-1.4L9 10.6 7.7 9.3a1 1 0 0 0-1.4 1.4l2 2a1 1 0 0 0 1.4 0l4-4Z" clipRule="evenodd" />
-                </svg>
-                {b}
-              </li>
-            ))}
-          </ul>
-          <button
-            onClick={onTryDemo}
-            className="tt-btn tt-btn-primary mt-5"
-          >
-            Try a mission free
-          </button>
-          <p className="mt-4 text-xs font-semibold text-tt-ink-faint">
-            Working with schools or shelters? <a href="/for-schools" className="underline">Schools</a> · <a href="/for-shelters" className="underline">Shelters</a> · <a href="/for-ptos" className="underline">PTOs</a>
-          </p>
-        </div>
       </section>
 
       {/* HOW IT WORKS — 3 icons, not paragraphs */}
@@ -294,36 +268,21 @@ export function VisualLanding({
             </div>
           ))}
         </div>
-      </section>
-
-      {/* HOW THE AI WORKS — 3 icons, links to /ai-insights deep dive */}
-      <section className="rounded-3xl border border-tt-line bg-tt-paper p-5 sm:p-6">
-        <h2 className="text-center text-xl font-black text-tt-ink">How the AI works</h2>
-        <p className="mt-1 text-center text-sm font-semibold text-tt-ink-soft">Personalized missions. No black box.</p>
-        <div className="mt-4 grid grid-cols-3 gap-3">
-          {[
-            { icon: "🎯", title: "Personalizes", line: "Missions matched to age, pet & traits" },
-            { icon: "🌱", title: "Notices", line: "Spots growing strengths from behavior" },
-            { icon: "💛", title: "Guides", line: "One weekly insight for parents" },
-          ].map((s) => (
-            <div key={s.title} className="flex flex-col items-center rounded-2xl bg-tt-cream p-4 text-center">
-              <p className="text-3xl" aria-hidden="true">{s.icon}</p>
-              <p className="mt-2 text-sm font-extrabold text-tt-ink">{s.title}</p>
-              <p className="text-xs font-semibold text-tt-ink-soft">{s.line}</p>
-            </div>
-          ))}
-        </div>
+        <p className="mt-4 border-t border-tt-line pt-3 text-center text-sm font-semibold text-tt-ink-soft">
+          🤖 The AI personalizes missions, notices growing strengths, and writes one weekly insight.{" "}
+          <a href="/ai-insights" className="font-bold text-tt-pine underline decoration-tt-sun decoration-2 underline-offset-2">See how</a>
+        </p>
       </section>
 
       {/* TRAIT METAPHORS — pictures, not definitions */}
       <section className="rounded-3xl border border-tt-line bg-tt-paper p-5 sm:p-6">
         <h2 className="text-center text-xl font-black text-tt-ink">What kids grow here</h2>
-        <p className="mt-1 text-center text-sm font-semibold text-tt-ink-soft">Eight strengths. Zero lectures.</p>
+        <p className="mt-1 text-center text-sm font-semibold text-tt-ink-soft">Eight strengths. Zero lectures. You see the growth — they just see play.</p>
         <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
           {TRAIT_METAPHORS.map((t) => (
-            <div key={t.trait} className="flex flex-col items-center rounded-2xl bg-tt-cream p-4 text-center transition-transform hover:scale-105">
+            <div key={t.trait} className="flex flex-col items-center rounded-2xl bg-tt-cream p-3 text-center transition-transform hover:scale-105 [&_svg]:size-11">
               {t.svg}
-              <p className="mt-2 text-sm font-extrabold text-tt-ink">{t.trait}</p>
+              <p className="mt-1.5 text-sm font-extrabold text-tt-ink">{t.trait}</p>
               <p className="text-xs font-semibold text-tt-ink-soft">{t.caption}</p>
             </div>
           ))}
@@ -395,6 +354,9 @@ export function VisualLanding({
         </p>
         <ClaimSpotForm />
       </section>
+      <p className="pb-2 text-center text-xs font-semibold text-tt-ink-faint">
+        Working with schools or shelters? <a href="/for-schools" className="underline">Schools</a> · <a href="/for-shelters" className="underline">Shelters</a> · <a href="/for-ptos" className="underline">PTOs</a>
+      </p>
     </div>
   );
 }

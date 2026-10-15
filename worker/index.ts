@@ -1995,7 +1995,20 @@ const worker = {
       }, allowedWidths);
     }
 
-    return handler.fetch(request, env, ctx);
+    const response = await handler.fetch(request, env, ctx);
+    if (url.pathname.startsWith("/api/")) return response;
+    // Baseline security headers on every app/document response (added Oct 15 —
+    // the standard-parameter audit found HSTS/CSP/X-Frame-Options all absent).
+    const secured = new Response(response.body, response);
+    secured.headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+    secured.headers.set("X-Content-Type-Options", "nosniff");
+    secured.headers.set("X-Frame-Options", "SAMEORIGIN");
+    secured.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+    secured.headers.set(
+      "Content-Security-Policy",
+      "default-src 'self'; img-src 'self' data: blob: https:; media-src 'self' blob: https:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' https://js.stripe.com; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.stripe.com; frame-src https://js.stripe.com https://hooks.stripe.com; font-src 'self' data:; object-src 'none'; base-uri 'self'; frame-ancestors 'self'",
+    );
+    return secured;
   },
 };
 

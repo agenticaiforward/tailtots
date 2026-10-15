@@ -50,8 +50,7 @@ export function GivingShareContent({ share }: { share: GivingShareRecord | null 
               <p className="text-xs font-black uppercase tracking-[0.18em] text-[#b3541e]">Link no longer active</p>
               <h1 className="mt-2 text-3xl font-black">This family link isn&apos;t active anymore</h1>
               <p className="mt-2 text-sm font-semibold leading-6 text-[#4f625b]">
-                The parent may have stopped sharing this goal, or the link was mistyped. Ask the parent to send a
-                fresh TailTots family link.
+                The parent may have stopped sharing this goal, or the link was mistyped. Ask them for a fresh link.
               </p>
               <p className="mt-4 rounded-lg bg-[#faf8f0] p-4 text-center text-sm font-bold text-[#4f625b]">
                 🐾 Shared securely via TailTots
@@ -93,8 +92,8 @@ export function GivingShareContent({ share }: { share: GivingShareRecord | null 
               <div className="mt-5 rounded-lg border-2 border-dashed border-[#ded8c7] p-4 text-center">
                 <p className="text-sm font-black">💛 Want to chip in?</p>
                 <p className="mt-1 text-sm font-semibold leading-6 text-[#4f625b]">
-                  Chipping in goes through the parent — just let {share.parentName} know, and they&apos;ll add it to
-                  the goal in TailTots. No accounts to create, no payments here.
+                  Chipping in goes through the parent — let {share.parentName} know and they'll add it to the goal.
+                  No account, no payment here.
                 </p>
               </div>
 

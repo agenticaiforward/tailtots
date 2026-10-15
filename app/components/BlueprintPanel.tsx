@@ -182,10 +182,8 @@ export function BlueprintPanel({
           ))}
         </div>
         <p className="mt-4 rounded-2xl bg-tt-cream px-4 py-3 text-[11px] font-semibold leading-5 text-tt-ink-soft">
-          This guide is built from {childName}&apos;s mission patterns — what
-          they do, not a label on who they are. It refreshes as new patterns
-          emerge. For worries about your child&apos;s wellbeing, your
-          pediatrician is always the right first call.
+          Built from {childName}&apos;s mission patterns — what they do, not a label on who they are.
+          For wellbeing worries, your pediatrician is always the right first call.
         </p>
       </section>
     </div>

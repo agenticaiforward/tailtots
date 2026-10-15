@@ -84,8 +84,7 @@ export function PlaydateClaimView({ inviteId }: { inviteId: string }) {
               <p className="text-xs font-black uppercase tracking-[0.18em] text-[#b3541e]">Invite not found</p>
               <h1 className="mt-2 text-3xl font-black">This invite link doesn&apos;t work</h1>
               <p className="mt-2 text-sm font-semibold leading-6 text-[#4f625b]">
-                The link may be mistyped, or the invite was removed. Ask the other parent to send a fresh TailTots
-                playdate link.
+                The link may be mistyped, or the invite was removed. Ask the other parent for a fresh link.
               </p>
             </>
           )}
@@ -141,9 +140,8 @@ export function PlaydateClaimView({ inviteId }: { inviteId: string }) {
               <p className="text-xs font-black uppercase tracking-[0.18em] text-[#165a4b]">Playdate invite</p>
               <h1 className="mt-2 text-3xl font-black">The {invite.familyName} family invited you</h1>
               <p className="mt-2 text-sm font-semibold leading-6 text-[#4f625b]">
-                {invite.hostName} shared these playdate times. Pick one — a parent from each family will be present,
-                and {invite.hostName} confirms every plan before the kids hear about it. No addresses or contact
-                details are shared on this page.
+                {invite.hostName} shared these times. Pick one — a parent from each family will be present, and
+                {invite.hostName} confirms every plan first. No addresses or contact details on this page.
               </p>
 
               <div className="mt-5 grid gap-3">

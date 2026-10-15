@@ -15,8 +15,9 @@ import { detectTranscriptionPath, transcriptionPathLabel } from "@/lib/privacy/c
  *   marketing consent may never be bundled with collection consent).
  * - Confirmed with the family parent passcode so a child can't self-approve.
  *
- * PRODUCTION: replace the passcode check with a verifiable-parental-consent
- * vendor (PRIVO / credit-card / KBA) before launch with real families.
+ * PRODUCTION: passcode remains the in-app gate; the launch consent record is
+ * upgraded by the card-verification VPC flow (ParentCardVerificationSheet).
+ * No third-party consent vendors — the founder chose the vendor-free path.
  */
 export function VoiceConsentSheet({
   open,
@@ -63,18 +64,18 @@ export function VoiceConsentSheet({
         <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-pine">For parents · permission needed</p>
         <h2 className="mt-2 text-2xl font-black text-tt-ink">🎤 Voice for {childName}</h2>
         <p className="mt-2 text-sm font-semibold leading-6 text-tt-ink-soft">
-          Voice lets {childName} talk to TailTots — give commands (“put $2 in the save jar”) and play
-          quiz games. A parent must approve before the mic turns on.
+          Talk instead of tap — commands like “put $2 in the save jar”, plus quiz games.
+          The mic stays off until a parent approves.
         </p>
 
         <div className="mt-4 rounded-2xl bg-tt-cream/70 p-4 text-sm font-semibold leading-6 text-tt-ink-soft">
-          <p className="font-black text-tt-ink">What happens to your child&apos;s voice</p>
+          <p className="font-black text-tt-ink">Your child&apos;s voice</p>
           <ul className="mt-2 list-disc space-y-1.5 pl-5">
             <li>{transcriptionPathLabel(path)}</li>
-            <li>Spoken replies are read aloud by your device&apos;s speech system. On some browsers (like Chrome) the text being spoken may be sent to Google for voice synthesis.</li>
-            <li>Transcripts are used only to understand the request or score a quiz answer, then discarded. We never store transcripts or audio recordings — there is nothing of TailTots&apos; to delete later.</li>
+            <li>Replies are spoken by your device. In some browsers (like Chrome), the words may be sent to Google to be voiced.</li>
+            <li>Transcripts are used only to understand a request or score a quiz, then discarded — we never store transcripts or audio, so there is nothing to delete later.</li>
             <li>Voice is never used for advertising, and never shared with sponsors.</li>
-            <li>You can turn voice off anytime in Family Setup — this removes the voice permission immediately.</li>
+            <li>Turn it off anytime in Family Setup — permission is removed immediately.</li>
           </ul>
         </div>
 
@@ -102,8 +103,8 @@ export function VoiceConsentSheet({
             />
             <span className="text-sm font-semibold leading-6 text-tt-ink-soft">
               Also send <strong className="text-tt-ink">me (the parent, never {childName})</strong> occasional
-              recommendations — animal shelters, schools, kid products — matched to our family&apos;s interests.
-              I can turn this off anytime; it never affects {childName}&apos;s app.
+              picks — shelters, schools, kid products — matched to our family.
+              Off anytime; it never affects {childName}&apos;s app.
             </span>
           </label>
         </div>

@@ -4412,8 +4412,7 @@ function CalendarImportCard({
             <p className="mt-1 text-xs font-bold text-tt-ink-soft">+ {review.events.length - 8} more</p>
           )}
           <p className="mt-2 text-xs font-semibold leading-5 text-tt-ink-soft">
-            These will block the matching weekday in your weekly grid (a Tuesday event blocks Tuesdays). Any
-            currently-selected times that overlap will be cleared — you can undo the whole import afterwards.
+            Imported events block that weekday in your grid. Overlapping picks are cleared — you can undo the import.
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             <button
@@ -4790,11 +4789,8 @@ function SchedulePanel({
         <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-blue">Schedule · parent tool</p>
         <h2 className="mt-2 text-3xl font-black">Playdate availability</h2>
         <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-tt-ink-soft">
-          Mark each kid&apos;s free times on the 15-minute weekly grid (or import your calendar to block busy times),
-          create a real invite link, and send it to the other parents. The first parent to pick a time books it — the
-          slot instantly becomes unavailable to everyone else, and you&apos;ll both be notified here the moment it
-          happens. Only first names and time windows are ever shared; parent approves every plan before kids hear
-          about it.
+          Mark free times on the weekly grid, share the invite link — first parent to pick a time books it.
+          First names and time windows only; you approve every plan.
         </p>
       </div>
 
@@ -4826,7 +4822,7 @@ function SchedulePanel({
 
       <section className="rounded-lg border border-tt-line bg-white p-5 shadow-sm">
         <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-pine">Step 1 · free time per kid</p>
-        <h3 className="mt-2 text-2xl font-black">When is each kid free for a playdate?</h3>
+        <h3 className="mt-2 text-2xl font-black">Playdate times</h3>
         <p className="mt-1 max-w-3xl text-sm font-semibold text-tt-ink-soft">
           Tap 15-minute blocks — adjacent picks merge into tidy windows on the invite. Booked times lock automatically.
         </p>
@@ -4891,9 +4887,7 @@ function SchedulePanel({
           Create playdate invite
         </button>
         <p className="mt-2 text-xs font-semibold text-tt-ink-soft">
-          The link opens a claim page for the other parent — first names and time windows only. No addresses, no kid
-          last names, no contact details. Share it with 2–3 parents: the first to accept books the time, and it
-          becomes unavailable to everyone else.
+          The other parent sees first names and time windows only — no addresses, no last names, no contact details. First to accept books it.
         </p>
       </section>
 
@@ -4922,8 +4916,7 @@ function SchedulePanel({
         </div>
         {notifications.length === 0 ? (
           <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-tt-ink-soft">
-            Nothing yet. When another parent claims one of your invites you&apos;ll be notified here the moment it
-            happens — and they get a confirmation receipt on their side too.
+            Nothing yet. When a parent claims an invite, you'll be notified here — they get a receipt too.
           </p>
         ) : (
           <ul className="mt-3 grid gap-2">
@@ -4996,8 +4989,7 @@ function SchedulePanel({
           </h3>
           <p className="mt-1 text-sm font-semibold text-tt-ink-soft">
             {latestClaim.claimedAt ? `Confirmed ${formatClaimedAt(latestClaim.claimedAt)}. ` : ""}
-            That time is now closed everywhere — it can&apos;t be double-booked. Reach out parent-to-parent to
-            coordinate pickup; kids don&apos;t see this thread.
+            That time is now closed everywhere — it can&apos;t be double-booked. Coordinate pickup parent-to-parent.
           </p>
         </section>
       )}
@@ -5073,7 +5065,7 @@ function hashDayKey(dayKey: string): number {
  * Kid PII is never sent to the endpoint (species, counts, age band only).
  */
 const BUDDY_GUARDRAIL_NOTE =
-  "Safe topics only: pets, kindness, chores, saving, and growing up. The Buddy answers picked questions — there is no open chat.";
+  "Safe topics only — pets, kindness, chores, saving, growing up. Picked questions, no open chat.";
 
 function isBuddySafeIdea(label: string): boolean {
   const text = label.trim();
@@ -5264,7 +5256,7 @@ function KidAiBuddyPanel({
     <section className="space-y-4">
       <div className="rounded-lg border border-tt-line bg-tt-pine-tint p-5 shadow-sm">
         <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-pine">Kid-safe AI buddy</p>
-        <h2 className="mt-2 text-3xl font-black">Your AI Buddy has answers ✨</h2>
+        <h2 className="mt-2 text-3xl font-black">AI Buddy ✨</h2>
         <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-tt-ink-soft">
           One safe question, one helpful answer — {activeChild?.name ?? "kiddo"} picks the question, the helper does the rest.
         </p>
@@ -5499,11 +5491,9 @@ function BuddyParentQuestionsEditor({
   return (
     <section className="rounded-lg border border-tt-line bg-white p-5 shadow-sm">
       <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-grape">Parent only · AI Buddy</p>
-      <h3 className="mt-2 text-2xl font-black">Questions you want your kid to explore</h3>
+      <h3 className="mt-2 text-2xl font-black">Your Buddy questions</h3>
       <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-tt-ink-soft">
-        Add a question and the answer you&apos;d like the Buddy to give. It appears in your kid&apos;s AI Buddy as a
-        predefined question — no open chat — and follows the same topic filters as the built-in questions. When your
-        kid asks it, the moment is logged in the activity feed so you can track it.
+        Add a question and your answer — it appears in your kid&apos;s Buddy as a preset question (no open chat), and asking it is logged for you.
       </p>
       {questions.length > 0 && (
         <ul className="mt-4 grid gap-2">
@@ -6471,9 +6461,9 @@ function PassportPanel({ pets, missions, allowEditing, updatePet, updatePetPhoto
     <section className="space-y-4">
       <div className="rounded-lg border border-tt-line bg-white p-5 shadow-sm">
         <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-pine">Pet passports</p>
-        <h2 className="mt-2 text-3xl font-black">Everything kids need to care correctly</h2>
+        <h2 className="mt-2 text-3xl font-black">Pet passports</h2>
         <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-tt-ink-soft">
-          Each passport keeps the pet&apos;s food, care notes, vet, and medicine in one place so kids do not have to guess.
+          Each pet's food, care notes, vet, and medicine — in one place, no guessing.
         </p>
       </div>
       {pets.length === 0 && (
@@ -6481,8 +6471,7 @@ function PassportPanel({ pets, missions, allowEditing, updatePet, updatePetPhoto
           <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-grape">📚 No pet yet? Start here</p>
           <h3 className="mt-2 text-2xl font-black">Learning passports</h3>
           <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-tt-ink-soft">
-            No pet needed to start becoming responsible. Study an animal&apos;s real needs — food, space, costs, lifespan —
-            and it counts as journey progress in the Growth Log.
+            No pet needed. Study an animal&apos;s real needs — food, space, costs, lifespan — and it counts in the Growth Log.
           </p>
           <div className="mt-4 grid gap-4 lg:grid-cols-2">
             {learningPassports.map((passport) => {
@@ -8135,7 +8124,7 @@ function MissionAssignmentPanel(props: {
       <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-blue">Fair mission assignment</p>
       <h2 className="mt-2 text-2xl font-black sm:text-3xl">One owner per task, balanced points</h2>
       <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-tt-ink-soft">
-        Kids only see missions assigned to their profile. Harder work is worth more, and auto-balance prefers age-fit tasks before evening out points.
+        Kids only see their own missions. Harder work earns more; auto-balance prefers age-fit tasks.
       </p>
       <div className="mt-4 flex flex-wrap gap-3">
         <button onClick={props.autoBalanceMissions} className="min-h-11 rounded-lg bg-tt-blue px-5 py-2 text-sm font-black text-white">
@@ -8454,10 +8443,9 @@ function PetChoreBuilderCard(props: {
   return (
     <section className="rounded-lg border border-tt-line bg-white p-5 shadow-sm" aria-label="AI pet-chores builder">
       <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-blue">AI pet-chores builder</p>
-      <h2 className="mt-2 text-2xl font-black sm:text-3xl">Teach one skill today — AI builds the chores</h2>
+      <h2 className="mt-2 text-2xl font-black sm:text-3xl">Teach a skill</h2>
       <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-tt-ink-soft">
-        Pick the character or life skill to teach. The builder uses your family’s exact pets and returns 4–5 trackable
-        chores, each tagged with the skill it grows. Nothing becomes a mission until you save it.
+        Pick a skill — the builder uses your real pets and drafts 4–5 chores. Nothing becomes a mission until you save it.
       </p>
       {props.pets.length === 0 ? (
         <p className="mt-4 rounded-lg bg-tt-sun-soft p-4 text-sm font-semibold text-tt-cocoa">
@@ -8653,8 +8641,7 @@ function AskKidPromptCard({ childProfiles, parentSignedIn }: { childProfiles: Ch
       <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-grape">AI in the background</p>
       <h2 className="mt-2 text-2xl font-black">Ask your kid with AI 💬</h2>
       <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-tt-ink-soft">
-        Pick a topic — AI writes one conversation prompt you can ask your kid tonight. Signed-in parents get a fresh
-        AI-written prompt; otherwise a built-in demo prompt.
+        Pick a topic — AI writes one question to ask your kid tonight.
       </p>
       <div className="mt-3 flex flex-wrap gap-2" role="group" aria-label="Conversation topic">
         {["kindness", "patience", "honesty", "responsibility"].map((topic) => (
@@ -8682,8 +8669,7 @@ function AskKidPromptCard({ childProfiles, parentSignedIn }: { childProfiles: Ch
       </button>
       {!parentSignedIn && (
         <p className="mt-2 text-xs font-semibold text-tt-cocoa">
-          AI prompts need a signed-in parent account — set one up in Family Setup, under Parent account. Until then you
-          get the built-in demo prompts.
+          Signed-in parents get fresh AI prompts. Until then, you get the built-in demo prompts.
         </p>
       )}
       {askPrompt && (
@@ -8727,8 +8713,7 @@ function KidPasscodeCard(props: {
       <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-tang">Kid profiles</p>
       <h2 className="mt-2 text-2xl font-black">Profile passcodes</h2>
       <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-tt-ink-soft">
-        Set a passcode for each kid’s profile — settable when the profile is created or any time after, right here.
-        Only a parent on this tab can set or change them.
+        One passcode per kid profile. Only a parent here can set or change them.
       </p>
       {flash && <p className="mt-3 rounded-lg bg-tt-pine-tint p-3 text-sm font-semibold text-tt-pine">{flash}</p>}
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -8903,7 +8888,7 @@ function FamilySetupPanel(props: {
             <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-pine">Parent account</p>
             <h2 className="mt-2 text-3xl font-black">Save this family setup</h2>
             <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-tt-ink-soft">
-              A signed-in parent account can keep this family&apos;s profiles, family photos, kids, pets, goals, points, coins, Kid Bank, badges, and parent settings together.
+              A signed-in parent account keeps profiles, photos, kids, pets, goals, points, coins, Kid Bank, badges, and settings together.
             </p>
           </div>
           <div className={`rounded-lg px-4 py-3 text-sm font-black ${props.cloudAccountEmail ? "bg-tt-pine-tint text-tt-pine" : "bg-tt-sun-soft text-tt-cocoa"}`}>
@@ -8984,8 +8969,8 @@ function FamilySetupPanel(props: {
               <p className="text-sm font-black text-tt-ink">🛡️ Parent identity verification</p>
               <p className="mt-1 text-xs font-semibold leading-5 text-tt-ink-soft">
                 {props.parentIdentityVerification
-                  ? `Verified ${new Date(props.parentIdentityVerification.at).toLocaleDateString()} — ${props.parentIdentityVerification.brand} •••• ${props.parentIdentityVerification.last4}. This is the legally recognized proof (COPPA verifiable parental consent) behind your permissions above.`
-                  : "Not verified yet. A quick card check ($1 authorization, immediately refunded — never charged) proves an adult approved data collection, as children's-privacy law requires."}
+                  ? `Verified ${new Date(props.parentIdentityVerification.at).toLocaleDateString()} — ${props.parentIdentityVerification.brand} •••• ${props.parentIdentityVerification.last4}. Your COPPA parental consent — the proof behind the permissions above.`
+                  : "Not verified yet. A $1 card authorization — refunded instantly, never charged — proves an adult approved data collection."}
               </p>
             </div>
             {!props.parentIdentityVerification && (
@@ -9021,9 +9006,8 @@ function FamilySetupPanel(props: {
             <div>
               <p className="text-sm font-black text-tt-ink">💌 Recommendations for parents</p>
               <p className="mt-1 text-xs font-semibold leading-5 text-tt-ink-soft">
-                Optional and separate. When on, <strong>you (never your child)</strong> may get occasional
-                recommendations — shelters, schools, kid products — matched to your family&apos;s interests.
-                Nothing about this affects your child&apos;s app. Turn off anytime.
+                Optional. When on, <strong>you (never your child)</strong> get occasional picks —
+                shelters, schools, kid products — matched to your family. Never affects your child&apos;s app. Off anytime.
               </p>
             </div>
             <button
@@ -9072,7 +9056,7 @@ function FamilySetupPanel(props: {
           )}
         </div>
         <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-tt-ink-soft">
-          This is the control room for who uses TailTots. Keep parent info simple, make each kid easy to recognize, and make every pet passport easy to scan.
+          Who uses TailTots, in one place — make each kid easy to recognize and every pet passport easy to scan.
         </p>
         <label className="mt-5 block text-sm font-black text-tt-ink">
           Household name
@@ -9104,9 +9088,9 @@ function FamilySetupPanel(props: {
 
       <div className="rounded-lg border border-tt-line bg-white p-5 shadow-sm">
         <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-pine">Healthy app habits</p>
-        <h3 className="mt-2 text-2xl font-black">Pacing and points, set by you</h3>
+        <h3 className="mt-2 text-2xl font-black">Pacing &amp; points</h3>
         <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-tt-ink-soft">
-          About a minute per visit keeps TailTots a helper, not a habit. Limit how many times kids can open the app each day, and set what their points are worth in dollars.
+          About a minute per visit — a helper, not a habit. Set daily open limits and what points are worth.
         </p>
         <label className="mt-4 flex cursor-pointer items-center gap-3 rounded-lg bg-tt-cream p-4">
           <input
@@ -9145,7 +9129,7 @@ function FamilySetupPanel(props: {
 
       <div className="rounded-lg border border-tt-line bg-white p-5 shadow-sm">
         <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-grape">AI Buddy questions</p>
-        <h3 className="mt-2 text-2xl font-black">Choose what your kid may ask the AI Buddy</h3>
+        <h3 className="mt-2 text-2xl font-black">Buddy topics</h3>
         <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-tt-ink-soft">
           The AI Buddy only suggests predefined questions — no open chat. Pick the topics your kid can explore.
         </p>
@@ -9191,7 +9175,7 @@ function FamilySetupPanel(props: {
         <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-grape">Photo setup</p>
         <h3 className="mt-2 text-2xl font-black">One photo, guided cropping</h3>
         <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-tt-ink-soft">
-          Upload one family picture and TailTots walks you through cropping the parent and kids from that same photo — or set the picture as-is and skip cropping. Pets keep their own passport photos below.
+          One family picture — crop the parent and kids from the same photo, or set it as-is. Pets keep their passport photos below.
         </p>
         <div className="mt-4 flex flex-wrap gap-3">
           {props.hasFamilyPhoto ? (
@@ -9393,9 +9377,9 @@ function NeighborhoodPickerCard(props: {
   return (
     <div className="rounded-lg border border-tt-line bg-white p-5 shadow-sm">
       <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-blue">Neighborhood</p>
-      <h3 className="mt-2 text-2xl font-black">Where does your family live?</h3>
+      <h3 className="mt-2 text-2xl font-black">Your neighborhood</h3>
       <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-tt-ink-soft">
-        Your ZIP plus your neighborhood or apartment community powers future neighborhood job and chore discovery. Only a ZIP and a place name are stored — never a street address.
+        Only a ZIP and a place name are stored — never a street address. They power local job and chore discovery.
       </p>
       {props.familyNeighborhood ? (
         <div className="mt-4 flex flex-wrap items-center gap-3 rounded-lg bg-tt-sky p-4">
@@ -9739,10 +9723,9 @@ function SocialPracticeOverrideEditor({
   return (
     <section className="rounded-lg border border-tt-line bg-white p-5 shadow-sm">
       <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-blue">Parent only · Safe social practice</p>
-      <h3 className="mt-2 text-2xl font-black">Your family&apos;s social practice content</h3>
+      <h3 className="mt-2 text-2xl font-black">Social practice</h3>
       <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-tt-ink-soft">
-        Override the heading and the practice scenarios your kid sees — or leave it alone and kids keep the TailTots
-        default: Safe social practice (6 built-in scenarios).{" "}
+        Customize the scenarios your kid practices — or keep the 6 built-in ones.{" "}
         <span className="font-black text-tt-ink">
           {hasOverride ? "Your custom content is live in your kid's Safe social practice." : "Kids currently see the TailTots default."}
         </span>
@@ -9894,15 +9877,15 @@ function SocialPracticeSection({ childProfiles, activeChildId, onSelectChild, do
   const doneAll = childId ? done[childId] ?? [] : [];
   const completed = doneAll.filter((id) => scenarios.some((scenario) => scenario.id === id));
   const intro = introOverride?.trim() || (isOverride
-    ? `Practice tricky online moments with zero strangers, zero feeds, zero DMs — picked by your parent. ${child?.name ?? "Your kid"} thinks about what they'd do, then reveals the coaching.`
-    : `Practice tricky online moments with zero strangers, zero feeds, zero DMs. Pick what you'd do, get instant coaching, and earn the Safe Social Star badge when ${child?.name ?? "your kid"} finishes all ${scenarios.length}.`);
+    ? `Tricky online moments — zero strangers, zero feeds, zero DMs. Picked by your parent.`
+    : `Tricky online moments — zero strangers, zero feeds, zero DMs. Finish all ${scenarios.length}, earn the Safe Social Star.`);
   if (!child) return null;
   return (
     <section className="mt-5 rounded-lg border border-tt-line bg-white p-5">
       <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-blue">
         🌐 Safe social practice{isOverride && <span className="ml-2 rounded-full bg-tt-sky px-2 py-0.5 text-tt-ocean">Picked by your parent</span>}
       </p>
-      <h3 className="mt-2 text-2xl font-black">{headingOverride?.trim() || "Training wheels for real-world social life"}</h3>
+      <h3 className="mt-2 text-2xl font-black">{headingOverride?.trim() || "Social practice"}</h3>
       <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-tt-ink-soft">
         {intro}
       </p>
@@ -9994,9 +9977,7 @@ function CharacterCurriculumPanel(props: {
       <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-grape">Character curriculum</p>
       <h2 className="mt-2 text-2xl font-black sm:text-3xl">Character, on purpose — taught through missions</h2>
       <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-tt-ink-soft">
-        Pick a trait and a level, then assign the whole mission pack with one tap. Missions land in your kid&apos;s
-        normal Today checklist; when every mission in a level is approved, they earn a trait-level badge and their
-        skill meters grow.
+        Pick a trait and level — one tap assigns the pack. Finish a level, earn its badge.
       </p>
 
       {props.childProfiles.length > 1 && (
@@ -10355,10 +10336,9 @@ function SkillJobBuilder({ fillJobTemplate, onUseTemplate }: {
   return (
     <section className="rounded-lg border border-tt-line bg-white p-5 shadow-sm">
       <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-grape">Skill job builder</p>
-      <h3 className="mt-2 text-2xl font-black">Post a job around the life skill you want to teach</h3>
+      <h3 className="mt-2 text-2xl font-black">Post a job</h3>
       <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-tt-ink-soft">
-        Parents can start from a value, not just a task. TailTots can suggest checklist, points, money, and badge language before anything is visible to kids or neighbors.
-        Using a template fills the job draft — finish and post it from the Neighborhood tab.
+        Start from a value — TailTots drafts the checklist, points, and badge. Nothing is visible to kids until you post it.
       </p>
       <div className="mt-4 grid gap-3 lg:grid-cols-4">
         {SKILL_JOB_TEMPLATES.map(([skill, title, detail]) => (
@@ -10556,7 +10536,7 @@ function NeighborhoodPanel({
         <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-pine">Neighborhood</p>
         <h2 className="mt-2 text-3xl font-black">Parent-led pet jobs and safe playdates</h2>
         <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-tt-ink-soft">
-          Parents post and approve every detail before kids can see anything. Kids only see parent-approved helper jobs, simple checklists, and rewards that teach responsibility, empathy, teamwork, leadership, and time management.
+          You approve every detail first. Kids only see approved jobs and checklists — never who posted them.
         </p>
       </div>
       )}
@@ -10585,7 +10565,7 @@ function NeighborhoodPanel({
               <h3 className="mt-2 text-2xl font-black">Choose which neighborhood jobs your kids may see</h3>
               <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-tt-ink-soft">
                 {postedJobs.length === 0
-                  ? "No posted jobs are waiting right now. New jobs from the neighborhood land here first — never directly with kids."
+                  ? "No posted jobs waiting. New neighborhood jobs land here first — never directly with kids."
                   : `${postedJobs.length} posted job${postedJobs.length === 1 ? " is" : "s are"} waiting for your pick. Only jobs you allow appear in your kid's profile.`}
               </p>
             </div>
@@ -10607,7 +10587,7 @@ function NeighborhoodPanel({
                 <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-blue">Neighborhood job inbox</p>
                 <h3 className="mt-2 text-2xl font-black">Allow jobs for your kids</h3>
                 <p className="mt-2 text-sm font-semibold text-tt-ink-soft">
-                  Pick the jobs your kids may see. Nothing here reaches a kid profile until you allow it — and kids never see who posted.
+                  Pick the jobs your kids may see. Nothing reaches a kid until you allow it.
                 </p>
               </div>
               <button
@@ -10799,9 +10779,9 @@ function NeighborhoodPanel({
       {role === "parent" && (
         <div className="rounded-lg border border-tt-line bg-white p-5 shadow-sm">
           <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-blue">Choose what kids can see</p>
-          <h3 className="mt-2 text-2xl font-black">You control what's visible</h3>
+          <h3 className="mt-2 text-2xl font-black">You control visibility</h3>
           <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-tt-ink-soft">
-            Approved missions and donation goals are visible to kids by default. Hide any you&apos;re not ready to show yet — neighborhood jobs are picked separately in the review popup above.
+            Approved missions and goals are visible to kids. Hide any you're not ready to show.
           </p>
           <div className="mt-4 grid gap-4 lg:grid-cols-2">
             <div>
@@ -10975,7 +10955,7 @@ function NeighborhoodPanel({
           <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-blue">Nearby families</p>
           <h3 className="mt-2 text-2xl font-black">Discover families near you</h3>
           <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-tt-ink-soft">
-            Make friends with TailTots families in your ZIP code. Demo preview: families are anonymized and parent-gated — in the real app only opted-in families appear, and no child information is ever shown.
+            Meet TailTots families in your ZIP. Demo families are anonymized; in the real app only opted-in families appear — no child info, ever.
           </p>
           {!zipReady ? (
             <div className="mt-4 rounded-lg bg-tt-cream p-4">
@@ -11007,7 +10987,7 @@ function NeighborhoodPanel({
                     ))}
                   </div>
                   <p className="mt-2 text-[11px] font-semibold text-tt-ink-soft">
-                    Demo: friends are saved on this device only. In the real app both families opt in — and no child details are ever shown.
+                    Demo: friends live on this device only. Real app: both families opt in — no child details shown.
                   </p>
                 </div>
               )}
@@ -11174,9 +11154,9 @@ function LegacyNeighborhoodPanel({ goals, childProfiles }: { goals: SavingsGoal[
     <section className="space-y-4">
       <div className="rounded-lg border border-tt-line bg-white p-5 shadow-sm">
         <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-pine">Neighborhood</p>
-        <h2 className="mt-2 text-3xl font-black">Parent-led pet friends and helper requests</h2>
+        <h2 className="mt-2 text-3xl font-black">Pet friends &amp; helpers</h2>
         <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-tt-ink-soft">
-          Kids do not browse or message other kids. Parents discover nearby pet families, compare pets and schedules, then decide whether a playdate, shared care task, or pet-sitting request is safe to show.
+          Kids never browse or message kids. Parents find nearby pet families and decide what's safe to share.
         </p>
       </div>
 
@@ -11255,9 +11235,9 @@ function LegacyNeighborhoodPanel({ goals, childProfiles }: { goals: SavingsGoal[
 
       <div className="rounded-lg border border-tt-line bg-white p-5 shadow-sm">
         <p className="text-xs font-black uppercase tracking-[0.18em] text-tt-pine">Family-supported goals</p>
-        <h3 className="mt-2 text-2xl font-black">Trusted families can help a cause</h3>
+        <h3 className="mt-2 text-2xl font-black">Help a cause</h3>
         <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-tt-ink-soft">
-          Parents can expose selected goals to trusted families so a neighbor can support the purpose, like pet enrichment or care supplies. The child is not publicly searchable, and parents control who sees it.
+          Share a goal with trusted families so a neighbor can chip in. Your child is never publicly searchable — you control who sees it.
         </p>
         <div className="mt-4 grid gap-3 lg:grid-cols-2">
           {sharedGoals.map((goal) => {

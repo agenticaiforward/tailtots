@@ -152,6 +152,25 @@ button {
   }
 }
 
+@keyframes marquee-scroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.tt-marquee-track {
+  animation: marquee-scroll 30s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tt-marquee-track {
+    animation: none;
+  }
+}
+
 @keyframes character-bob {
   0%,
   100% {
