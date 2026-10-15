@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+
+import { submitLaunchInterest } from "@/lib/supabase";
 
 /**
  * Visual-first landing — 70% less text than the previous version.
@@ -385,6 +387,90 @@ export function VisualLanding({
           Where animals raise good humans.
         </p>
       </section>
+      {/* CLAIM YOUR SPOT — Founding 500 launch list (same capture as production) */}
+      <section className="rounded-3xl border border-tt-line bg-tt-sand p-5 text-center sm:p-6">
+        <h2 className="text-xl font-black">Claim your spot 🚀</h2>
+        <p className="mx-auto mt-1 max-w-md text-sm font-semibold text-tt-ink-soft">
+          Founding 500 — free for founding families. One email when your spot opens. No spam, ever.
+        </p>
+        <ClaimSpotForm />
+      </section>
+    </div>
+  );
+}
+
+function ClaimSpotForm() {
+  const [email, setEmail] = useState("");
+  const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [message, setMessage] = useState("");
+  const [joined, setJoined] = useState(false);
+
+  useEffect(() => {
+    try {
+      if (window.localStorage.getItem("tt-launch-joined") === "1") setJoined(true);
+    } catch { /* private mode */ }
+  }, []);
+
+  async function claim() {
+    setStatus("saving");
+    setMessage("");
+    try {
+      const result = await submitLaunchInterest({ email, source: "visual-landing" });
+      if (result.mode === "cloud") {
+        setJoined(true);
+        try { window.localStorage.setItem("tt-launch-joined", "1"); } catch { /* private mode */ }
+        setStatus("saved");
+        setMessage("🎉 You're on the launch list! Watch your inbox for tail wags.");
+        setEmail("");
+      } else {
+        // Not connected to the signup service — say so honestly instead of
+        // pretending the email reached the list (the Oct 8 silent-loss lesson).
+        setStatus("error");
+        setMessage("We couldn't reach the signup service just now — please try again in a moment.");
+      }
+    } catch (error) {
+      setStatus("error");
+      setMessage(error instanceof Error ? error.message : "Could not save this signup yet.");
+    }
+  }
+
+  if (joined && status !== "error") {
+    return (
+      <p className="mx-auto mt-4 max-w-md rounded-2xl bg-white px-4 py-3 text-sm font-bold text-tt-pine ring-1 ring-tt-line">
+        🎉 You're on the launch list! Watch your inbox for tail wags.
+      </p>
+    );
+  }
+
+  return (
+    <div className="mx-auto mt-4 max-w-md">
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <label className="sr-only" htmlFor="tt-claim-email">Parent email</label>
+        <input
+          id="tt-claim-email"
+          type="email"
+          inputMode="email"
+          autoComplete="email"
+          placeholder="Parent email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter" && status !== "saving") void claim(); }}
+          className="min-h-12 flex-1 rounded-xl border border-tt-line bg-white px-4 text-sm font-semibold text-tt-ink placeholder:text-tt-ink-faint"
+        />
+        <button
+          type="button"
+          onClick={() => void claim()}
+          disabled={status === "saving"}
+          className="tt-btn tt-btn-sun min-h-12 shrink-0 disabled:opacity-60"
+        >
+          {status === "saving" ? "Saving…" : "Claim your spot"}
+        </button>
+      </div>
+      {message ? (
+        <p className={`mt-3 text-sm font-bold ${status === "error" ? "text-red-700" : "text-tt-pine"}`} role="status">
+          {message}
+        </p>
+      ) : null}
     </div>
   );
 }
