@@ -271,6 +271,7 @@ export function VisualLanding({
         <p className="mt-4 border-t border-tt-line pt-3 text-center text-sm font-semibold text-tt-ink-soft">
           🤖 The AI personalizes missions, notices growing strengths, and writes one weekly insight.{" "}
           <a href="/ai-insights" className="font-bold text-tt-pine underline decoration-tt-sun decoration-2 underline-offset-2">See how</a>
+          <span className="text-tt-ink-faint"> · Patent pending</span>
         </p>
       </section>
 
