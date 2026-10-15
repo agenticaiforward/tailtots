@@ -66,9 +66,26 @@ export async function submitLaunchInterest(input: LaunchInterestInput): Promise<
   const { error } = await client.from("launch_interest_signups").insert(payload);
   if (error) {
     log.error("submitLaunchInterest failed", { error });
+    // First-party fallback (2026-10-15): some phones block the direct
+    // database call (content blockers / tracking protection refuse the
+    // supabase.co domain). The site's own /api/launch-signup performs
+    // the same insert server-side — a signup must never be lost to a
+    // blocked third-party domain.
+    const savedViaSite = await saveLaunchInterestViaSite(payload).catch(() => false);
+    if (savedViaSite) return { mode: "cloud" };
     throw new AppError(ErrorCode.NETWORK, toUserMessage(error), { cause: error });
   }
   return { mode: "cloud" };
+}
+
+async function saveLaunchInterestViaSite(payload: { email: string; city?: string | null; source?: string }): Promise<boolean> {
+  if (typeof window === "undefined" || typeof fetch !== "function") return false;
+  const resp = await fetch("/api/launch-signup", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  return resp.ok;
 }
 
 export async function submitFeedback(input: FeedbackInput): Promise<{ mode: SubmitMode }> {

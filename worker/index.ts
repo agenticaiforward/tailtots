@@ -186,6 +186,7 @@ const dailyBoostRateLimiter = new InMemoryRateLimiter(10, 60 * 60 * 1000);
 const missionSetRateLimiter = new InMemoryRateLimiter(20, 60 * 60 * 1000);
 const copilotRateLimiter = new InMemoryRateLimiter(20, 60 * 60 * 1000);
 const flourishRateLimiter = new InMemoryRateLimiter(20, 60 * 60 * 1000);
+const launchSignupRateLimiter = new InMemoryRateLimiter(10, 60 * 60 * 1000);
 const flowRateLimiter = new InMemoryRateLimiter(20, 60 * 60 * 1000);
 // Voice intent planning: interactive use, so a per-minute allowance. No parent
 // auth required (kids use voice too) — input is strictly validated, PII-free
@@ -275,6 +276,58 @@ async function handleVoiceIntent(request: Request, env: Env): Promise<Response> 
  * arrives here. Tight caps (600 chars, per-IP rate limit) keep cost ~0.
  */
 const voiceSpeakRateLimiter = new InMemoryRateLimiter(30, 60 * 60 * 1000);
+
+/**
+ * First-party launch-list signup (founder phone failure, 2026-10-15).
+ * The landing form normally writes straight to Supabase from the
+ * browser, but some phones (content blockers, strict tracking
+ * protection) refuse that third-party call and the signup is lost —
+ * the exact silent-loss class of the Oct 8 incident. This endpoint
+ * performs the same insert server-side from tailtots.com itself, and
+ * the form falls back to it automatically.
+ */
+async function handleLaunchSignup(request: Request, env: Env): Promise<Response> {
+  if (launchSignupRateLimiter.isLimited(`launch-signup:${clientIp(request)}`)) {
+    return jsonResponse({ ok: false, error: "Too many signups from this connection — try again in a bit." }, 429);
+  }
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonResponse({ ok: false, error: "Invalid request." }, 400);
+  }
+  const email = (body as { email?: unknown })?.email;
+  const source = (body as { source?: unknown })?.source;
+  if (typeof email !== "string" || email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+    return jsonResponse({ ok: false, error: "Enter a valid parent email address." }, 400);
+  }
+  const supabaseUrl = env.SUPABASE_URL;
+  const supabaseAnonKey = env.SUPABASE_ANON_KEY;
+  if (!supabaseUrl || !supabaseAnonKey) {
+    return jsonResponse({ ok: false, error: "Signup service is not configured." }, 503);
+  }
+  try {
+    const resp = await fetch(`${supabaseUrl}/rest/v1/launch_interest_signups`, {
+      method: "POST",
+      headers: {
+        apikey: supabaseAnonKey,
+        Authorization: `Bearer ${supabaseAnonKey}`,
+        "content-type": "application/json",
+        Prefer: "return=minimal",
+      },
+      body: JSON.stringify({
+        email: email.trim().toLowerCase(),
+        source: typeof source === "string" ? source.slice(0, 60) : "visual-landing",
+      }),
+    });
+    if (!resp.ok) {
+      return jsonResponse({ ok: false, error: "The signup service refused the save." }, 502);
+    }
+    return jsonResponse({ ok: true }, 201);
+  } catch {
+    return jsonResponse({ ok: false, error: "Could not reach the signup service." }, 502);
+  }
+}
 
 async function handleVoiceSpeak(request: Request, env: Env): Promise<Response> {
   if (voiceSpeakRateLimiter.isLimited(`voice-speak:${clientIp(request)}`)) {
@@ -2145,6 +2198,13 @@ const worker = {
         return new Response("Method Not Allowed", { status: 405 });
       }
       return handleVoiceSpeak(request, env);
+    }
+
+    if (url.pathname === "/api/launch-signup") {
+      if (request.method !== "POST") {
+        return new Response("Method Not Allowed", { status: 405 });
+      }
+      return handleLaunchSignup(request, env);
     }
 
     if (url.pathname === "/api/ai/ideas") {
