@@ -29,6 +29,7 @@ const HOW: { illustration: IllustrationKind; title: string; line: string }[] = [
 const TRUST = [
   "Campaign live within a week",
   "Free to join for every family",
+  "Money goes straight to your PTO — never through TailTots",
   "No kid data collected or shared",
 ];
 
@@ -63,6 +64,16 @@ export default function ForPTOs() {
               <p className="mt-1.5 text-center text-sm font-semibold leading-5 text-tt-ink-soft">{b.line}</p>
             </div>
           ))}
+        </div>
+
+        <div className="mt-8 rounded-3xl bg-tt-pine p-6 text-center sm:p-8">
+          <div className="mx-auto w-fit"><TtIllustration kind="hands" className="size-14" /></div>
+          <p className="mt-3 text-2xl font-black text-white">100% reaches your PTO</p>
+          <p className="mx-auto mt-2 max-w-xl text-[15px] font-semibold leading-6 text-white/85">
+            No platform cut. No processing deduction. Just connect your PTO&rsquo;s free
+            Zeffy account to TailTots once — every dollar parents give lands directly
+            in your PTO&rsquo;s bank account, never through us.
+          </p>
         </div>
 
         <h2 className="mt-14 text-center text-2xl font-black text-tt-navy">Campaign ideas</h2>
