@@ -227,9 +227,12 @@ export function VisualLanding({
                   onClick={onSignup}
                   className="tt-btn tt-btn-lg border-2 border-white/70 bg-white/10 font-black text-white backdrop-blur transition hover:bg-white/20"
                 >
-                  🏠 Start free — for founding families only
+                  🏠 Start my family for free
                 </button>
               </div>
+              <p className="mt-3 text-sm font-semibold text-white/70">
+                For founding families only · No spam, ever
+              </p>
             </>
           ) : (
             <div id="hero-list-form" className="mt-6">
@@ -246,8 +249,11 @@ export function VisualLanding({
                 onClick={onSignup}
                 className="tt-btn tt-btn-lg mt-4 border-2 border-white/70 bg-white/10 font-black text-white backdrop-blur transition hover:bg-white/20"
               >
-                🏠 Start free — for founding families only
+                🏠 Start my family for free
               </button>
+              <p className="mt-3 text-sm font-semibold text-white/70">
+                For founding families only · No spam, ever
+              </p>
             </div>
           )}
         </div>
