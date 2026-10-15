@@ -67,6 +67,12 @@ import {
 import { InMemoryRateLimiter } from "../lib/ai/rate-limit";
 import { authenticateParentRequest, extractBearerToken } from "../lib/ai/supabase-auth";
 import {
+  buildAuthorizationRedirect,
+  exchangeAuthorizationCode,
+  issueAuthorizationCode,
+  verifyAlexaAccessToken,
+} from "../lib/alexa/oauth";
+import {
   FLOURISH_MODEL_ID,
   brightestPillar,
   buildFlourishSystemPrompt,
@@ -140,6 +146,15 @@ interface Env {
    * Never expose to the client — only the publishable key is public.
    */
   STRIPE_SECRET_KEY?: string;
+  /**
+   * OAuth credentials for the Alexa parent skill's account linking
+   * (authorization code grant). Set all three as Worker secrets in the
+   * Cloudflare dashboard. ALEXA_CLIENT_ID is public-ish (embedded in
+   * skill.json); ALEXA_CLIENT_SECRET and ALEXA_TOKEN_SECRET are true secrets.
+   */
+  ALEXA_CLIENT_ID?: string;
+  ALEXA_CLIENT_SECRET?: string;
+  ALEXA_TOKEN_SECRET?: string;
   IMAGES: {
     input(stream: ReadableStream): {
       transform(options: Record<string, unknown>): {
@@ -179,6 +194,9 @@ const voiceIntentRateLimiter = new InMemoryRateLimiter(30, 60 * 1000);
 // Voice quiz: same kid-safe posture as voice intent — no parent auth,
 // strict validation, PII-free, rate limited. Short sessions by design.
 const voiceQuizRateLimiter = new InMemoryRateLimiter(20, 60 * 1000);
+// Alexa account-linking OAuth endpoints: interactive use, tight allowance.
+const alexaOauthRateLimiter = new InMemoryRateLimiter(30, 60 * 1000);
+const alexaSummaryRateLimiter = new InMemoryRateLimiter(30, 60 * 1000);
 
 function jsonResponse(data: unknown, status: number): Response {
   return new Response(JSON.stringify(data), {
@@ -1896,6 +1914,162 @@ async function handleDeleteFamilyData(request: Request, env: Env): Promise<Respo
   );
 }
 
+/**
+ * GET /oauth/alexa/authorize — Alexa account linking, step 1.
+ *
+ * The parent opens this URL from the Alexa app (in a webview) while signed
+ * in to TailTots. Their Supabase access token is validated exactly like on
+ * every other parent endpoint; on success we mint a single-use,
+ * short-lived authorization code and 302-redirect to Amazon's redirect_uri
+ * with ?code=...&state=.... Without a valid session we return 401 — the
+ * parent signs in on tailtots.com first, then retries linking.
+ */
+async function handleAlexaAuthorize(request: Request, env: Env): Promise<Response> {
+  if (alexaOauthRateLimiter.isLimited(`oauth-authorize:${clientIp(request)}`)) {
+    return jsonResponse({ error: "Too many attempts. Please try again later." }, 429);
+  }
+  if (!env.ALEXA_CLIENT_ID) {
+    log.warn("ALEXA_CLIENT_ID missing for /oauth/alexa/authorize");
+    return jsonResponse({ error: "Alexa account linking is not configured yet." }, 503);
+  }
+  const parent = await authenticateParentRequest({
+    supabaseUrl: env.SUPABASE_URL,
+    anonKey: env.SUPABASE_ANON_KEY,
+    authorizationHeader: request.headers.get("Authorization"),
+  });
+  if (!parent) {
+    return jsonResponse(
+      { error: "Sign in to your TailTots parent account first, then link from the Alexa app." },
+      401,
+    );
+  }
+  const url = new URL(request.url);
+  const redirectUri = url.searchParams.get("redirect_uri");
+  const state = url.searchParams.get("state");
+  const issued = issueAuthorizationCode({
+    userId: parent.userId,
+    responseType: url.searchParams.get("response_type"),
+    clientId: url.searchParams.get("client_id"),
+    redirectUri,
+    expectedClientId: env.ALEXA_CLIENT_ID,
+    nowMs: Date.now(),
+  });
+  if (!issued.ok) {
+    // Per RFC 6749 §4.1.2.1 we do NOT redirect error responses to an
+    // untrusted redirect_uri — the Alexa app shows the error instead.
+    return jsonResponse({ error: "invalid_request", error_description: issued.error }, 400);
+  }
+  return Response.redirect(buildAuthorizationRedirect(redirectUri as string, issued.code, state), 302);
+}
+
+/**
+ * POST /oauth/alexa/token — Alexa account linking, step 2.
+ *
+ * Called server-to-server by Amazon with the authorization code plus the
+ * skill's client credentials (form body and/or Basic auth — Amazon uses both
+ * styles). On success returns a standard access_token response; the token is
+ * an HMAC-signed envelope bound to the parent's Supabase user id.
+ */
+async function handleAlexaToken(request: Request, env: Env): Promise<Response> {
+  if (alexaOauthRateLimiter.isLimited(`oauth-token:${clientIp(request)}`)) {
+    return jsonResponse({ error: "Too many attempts. Please try again later." }, 429);
+  }
+  if (!env.ALEXA_CLIENT_ID || !env.ALEXA_CLIENT_SECRET || !env.ALEXA_TOKEN_SECRET) {
+    log.warn("Alexa OAuth secrets missing for /oauth/alexa/token");
+    return jsonResponse({ error: "Alexa account linking is not configured yet." }, 503);
+  }
+  let form: FormData;
+  try {
+    form = await request.formData();
+  } catch {
+    return jsonResponse({ error: "invalid_request", error_description: "Expected a form-encoded body." }, 400);
+  }
+  let clientId = form.get("client_id");
+  let clientSecret = form.get("client_secret");
+  const basicAuth = request.headers.get("Authorization");
+  if (basicAuth && /^Basic\s+/i.test(basicAuth)) {
+    try {
+      const decoded = atob(basicAuth.replace(/^Basic\s+/i, "").trim());
+      const colon = decoded.indexOf(":");
+      if (colon > 0) {
+        clientId = decoded.slice(0, colon);
+        clientSecret = decoded.slice(colon + 1);
+      }
+    } catch {
+      // fall through to client_secret_post validation
+    }
+  }
+  const exchanged = await exchangeAuthorizationCode({
+    grantType: typeof form.get("grant_type") === "string" ? (form.get("grant_type") as string) : null,
+    code: typeof form.get("code") === "string" ? (form.get("code") as string) : null,
+    clientId: typeof clientId === "string" ? clientId : null,
+    clientSecret: typeof clientSecret === "string" ? clientSecret : null,
+    redirectUri: typeof form.get("redirect_uri") === "string" ? (form.get("redirect_uri") as string) : null,
+    expectedClientId: env.ALEXA_CLIENT_ID,
+    expectedClientSecret: env.ALEXA_CLIENT_SECRET,
+    tokenSecret: env.ALEXA_TOKEN_SECRET,
+    nowMs: Date.now(),
+  });
+  if (!exchanged.ok) {
+    const status = exchanged.error === "invalid_client" ? 401 : 400;
+    return jsonResponse(
+      { error: exchanged.error, error_description: exchanged.errorDescription },
+      status,
+    );
+  }
+  return jsonResponse(
+    {
+      access_token: exchanged.accessToken,
+      token_type: exchanged.tokenType,
+      expires_in: exchanged.expiresIn,
+    },
+    200,
+  );
+}
+
+export interface AlexaFamilySummary {
+  kids: Array<{ name: string; streakDays: number; bankCents: number; savedCents: number; givenCents: number }>;
+  pendingApprovals: Array<{ title: string; child: string }>;
+  todayMissions: Array<{ title: string; child: string; state: string }>;
+}
+
+/**
+ * GET /api/alexa/family-summary — live family data for the Alexa Lambda.
+ *
+ * Auth: Bearer <Alexa access token> (the HMAC-signed token from the OAuth
+ * exchange). The token is verified here; the family rows are then read
+ * through the SECURITY DEFINER RPC get_alexa_family_summary (migration
+ * supabase/migrations/20261015_alexa_family_summary.sql), which is the only
+ * worker code path allowed to read a family's data without the parent's own
+ * Supabase session token.
+ */
+async function handleAlexaFamilySummary(request: Request, env: Env): Promise<Response> {
+  if (alexaSummaryRateLimiter.isLimited(`alexa-summary:${clientIp(request)}`)) {
+    return jsonResponse({ error: "Too many attempts. Please try again later." }, 429);
+  }
+  if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY || !env.ALEXA_TOKEN_SECRET) {
+    return jsonResponse({ error: "Alexa account linking is not configured yet." }, 503);
+  }
+  const token = extractBearerToken(request.headers.get("Authorization"));
+  const verified = await verifyAlexaAccessToken(token, env.ALEXA_TOKEN_SECRET, Date.now());
+  if (!verified) {
+    return jsonResponse({ error: "Link your TailTots account in the Alexa app first." }, 401);
+  }
+  const client: SupabaseRestClient = {
+    supabaseUrl: env.SUPABASE_URL,
+    anonKey: env.SUPABASE_ANON_KEY,
+    token: env.SUPABASE_ANON_KEY,
+  };
+  const summary = await restPost<AlexaFamilySummary>(client, "rpc/get_alexa_family_summary", {
+    p_user_id: verified.userId,
+  });
+  if (!summary) {
+    log.warn("get_alexa_family_summary RPC failed", { userId: verified.userId });
+    return jsonResponse({ error: "Could not load your family's TailTots data right now." }, 502);
+  }
+  return jsonResponse({ ok: true, ...summary }, 200);
+}
+
 const worker = {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
@@ -1975,6 +2149,27 @@ const worker = {
         return new Response("Method Not Allowed", { status: 405 });
       }
       return handleParentVerifyCard(request, env);
+    }
+
+    if (url.pathname === "/oauth/alexa/authorize") {
+      if (request.method !== "GET") {
+        return new Response("Method Not Allowed", { status: 405 });
+      }
+      return handleAlexaAuthorize(request, env);
+    }
+
+    if (url.pathname === "/oauth/alexa/token") {
+      if (request.method !== "POST") {
+        return new Response("Method Not Allowed", { status: 405 });
+      }
+      return handleAlexaToken(request, env);
+    }
+
+    if (url.pathname === "/api/alexa/family-summary") {
+      if (request.method !== "GET") {
+        return new Response("Method Not Allowed", { status: 405 });
+      }
+      return handleAlexaFamilySummary(request, env);
     }
 
     if (url.pathname === "/api/family/data") {

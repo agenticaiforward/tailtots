@@ -35,7 +35,7 @@
           "termsOfUseUrl": "https://tailtots.com/terms"
         }
       },
-      "usesPersonalInfo": false
+      "usesPersonalInfo": true
     },
     "publishingInformation": {
       "category": "LIFESTYLE",
@@ -43,7 +43,7 @@
       "isAvailableWorldwide": true,
       "locales": {
         "en-US": {
-          "description": "TailTots for Parents keeps you in the loop while your kids build real-world responsibility. Ask what missions are on deck today, what needs your approval, how Kid Bank balances look, and how streaks are going. TailTots turns everyday care, chores, and kindness into missions kids complete — you approve in about 30 seconds, and their streaks prove the habits are sticking. Note: this first release uses demo family data; account linking with your TailTots family is coming next.",
+          "description": "TailTots for Parents is the voice companion for your real TailTots family. After you link your TailTots parent account in the Alexa app, just ask: what's on today's missions, what needs my approval, how the Kid Bank looks, or how the streaks are going. TailTots turns everyday care, chores, and kindness into real-world missions kids complete — you approve in about 30 seconds, and their streaks prove the habits are sticking. TailTots is parent-led by design: no open chat, no ads, and your family's data stays yours. Linking is free; a TailTots parent account is required.",
           "examplePhrases": [
             "Alexa, open Tail Tots Parent",
             "Alexa, ask Tail Tots Parent what needs my approval",
@@ -59,10 +59,10 @@
             "pet care"
           ],
           "name": "TailTots for Parents",
-          "summary": "A parent companion for TailTots: hear today's missions, pending approvals, Kid Bank balances, and streaks."
+          "summary": "Link your TailTots parent account and hear your family's live updates: today's missions, pending approvals, Kid Bank balances, and streaks."
         },
         "en-GB": {
-          "description": "TailTots for Parents keeps you in the loop while your kids build real-world responsibility. Ask what missions are on deck today, what needs your approval, how Kid Bank balances look, and how streaks are going. TailTots turns everyday care, chores, and kindness into missions kids complete — you approve in about 30 seconds, and their streaks prove the habits are sticking. Note: this first release uses demo family data; account linking with your TailTots family is coming next.",
+          "description": "TailTots for Parents is the voice companion for your real TailTots family. After you link your TailTots parent account in the Alexa app, just ask: what's on today's missions, what needs my approval, how the Kid Bank looks, or how the streaks are going. TailTots turns everyday care, chores, and kindness into real-world missions kids complete — you approve in about 30 seconds, and their streaks prove the habits are sticking. TailTots is parent-led by design: no open chat, no ads, and your family's data stays yours. Linking is free; a TailTots parent account is required.",
           "examplePhrases": [
             "Alexa, open Tail Tots Parent",
             "Alexa, ask Tail Tots Parent what needs my approval",
@@ -78,10 +78,10 @@
             "pet care"
           ],
           "name": "TailTots for Parents",
-          "summary": "A parent companion for TailTots: hear today's missions, pending approvals, Kid Bank balances, and streaks."
+          "summary": "Link your TailTots parent account and hear your family's live updates: today's missions, pending approvals, Kid Bank balances, and streaks."
         },
         "en-CA": {
-          "description": "TailTots for Parents keeps you in the loop while your kids build real-world responsibility. Ask what missions are on deck today, what needs your approval, how Kid Bank balances look, and how streaks are going. TailTots turns everyday care, chores, and kindness into missions kids complete — you approve in about 30 seconds, and their streaks prove the habits are sticking. Note: this first release uses demo family data; account linking with your TailTots family is coming next.",
+          "description": "TailTots for Parents is the voice companion for your real TailTots family. After you link your TailTots parent account in the Alexa app, just ask: what's on today's missions, what needs my approval, how the Kid Bank looks, or how the streaks are going. TailTots turns everyday care, chores, and kindness into real-world missions kids complete — you approve in about 30 seconds, and their streaks prove the habits are sticking. TailTots is parent-led by design: no open chat, no ads, and your family's data stays yours. Linking is free; a TailTots parent account is required.",
           "examplePhrases": [
             "Alexa, open Tail Tots Parent",
             "Alexa, ask Tail Tots Parent what needs my approval",
@@ -97,10 +97,10 @@
             "pet care"
           ],
           "name": "TailTots for Parents",
-          "summary": "A parent companion for TailTots: hear today's missions, pending approvals, Kid Bank balances, and streaks."
+          "summary": "Link your TailTots parent account and hear your family's live updates: today's missions, pending approvals, Kid Bank balances, and streaks."
         },
         "en-AU": {
-          "description": "TailTots for Parents keeps you in the loop while your kids build real-world responsibility. Ask what missions are on deck today, what needs your approval, how Kid Bank balances look, and how streaks are going. TailTots turns everyday care, chores, and kindness into missions kids complete — you approve in about 30 seconds, and their streaks prove the habits are sticking. Note: this first release uses demo family data; account linking with your TailTots family is coming next.",
+          "description": "TailTots for Parents is the voice companion for your real TailTots family. After you link your TailTots parent account in the Alexa app, just ask: what's on today's missions, what needs my approval, how the Kid Bank looks, or how the streaks are going. TailTots turns everyday care, chores, and kindness into real-world missions kids complete — you approve in about 30 seconds, and their streaks prove the habits are sticking. TailTots is parent-led by design: no open chat, no ads, and your family's data stays yours. Linking is free; a TailTots parent account is required.",
           "examplePhrases": [
             "Alexa, open Tail Tots Parent",
             "Alexa, ask Tail Tots Parent what needs my approval",
@@ -116,10 +116,10 @@
             "pet care"
           ],
           "name": "TailTots for Parents",
-          "summary": "A parent companion for TailTots: hear today's missions, pending approvals, Kid Bank balances, and streaks."
+          "summary": "Link your TailTots parent account and hear your family's live updates: today's missions, pending approvals, Kid Bank balances, and streaks."
         },
         "en-IN": {
-          "description": "TailTots for Parents keeps you in the loop while your kids build real-world responsibility. Ask what missions are on deck today, what needs your approval, how Kid Bank balances look, and how streaks are going. TailTots turns everyday care, chores, and kindness into missions kids complete — you approve in about 30 seconds, and their streaks prove the habits are sticking. Note: this first release uses demo family data; account linking with your TailTots family is coming next.",
+          "description": "TailTots for Parents is the voice companion for your real TailTots family. After you link your TailTots parent account in the Alexa app, just ask: what's on today's missions, what needs my approval, how the Kid Bank looks, or how the streaks are going. TailTots turns everyday care, chores, and kindness into real-world missions kids complete — you approve in about 30 seconds, and their streaks prove the habits are sticking. TailTots is parent-led by design: no open chat, no ads, and your family's data stays yours. Linking is free; a TailTots parent account is required.",
           "examplePhrases": [
             "Alexa, open Tail Tots Parent",
             "Alexa, ask Tail Tots Parent what needs my approval",
@@ -135,10 +135,19 @@
             "pet care"
           ],
           "name": "TailTots for Parents",
-          "summary": "A parent companion for TailTots: hear today's missions, pending approvals, Kid Bank balances, and streaks."
+          "summary": "Link your TailTots parent account and hear your family's live updates: today's missions, pending approvals, Kid Bank balances, and streaks."
         }
       },
-      "testingInstructions": "Open the skill and say 'what needs my approval' or 'today's missions'. The MVP uses clearly-labeled demo family data until TailTots account linking is added."
+      "testingInstructions": "1. Enable the skill. 2. In the Alexa app choose Link account and sign in with your TailTots parent account (email magic-link sign-in). 3. Say 'Alexa, open Tail Tots Parent', then 'what needs my approval' or 'today's missions'. If the account is not linked, the skill asks you to link it and reads no family data."
+    },
+    "accountLinking": {
+      "type": "AUTH_CODE",
+      "authorizationUrl": "https://tailtots.com/oauth/alexa/authorize",
+      "accessTokenUrl": "https://tailtots.com/oauth/alexa/token",
+      "clientId": "tailtots-alexa-parent-skill",
+      "accessTokenScheme": "HTTP_BASIC",
+      "skipOnEnablement": false,
+      "defaultTokenExpirationInSeconds": 2592000
     }
   }
 }

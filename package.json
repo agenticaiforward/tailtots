@@ -23,6 +23,7 @@
     "ios:sync": "npm run mobile:web:build && cap sync ios",
     "ios:open": "cap open ios",
     "alexa:validate": "node apps/alexa/validate-skill.mjs",
+    "test:alexa": "vitest run --config apps/alexa/vitest.config.mjs",
     "supabase:apply-schema": "node scripts/apply-supabase-schema.mjs",
     "supabase:check": "node scripts/check-supabase-ready.mjs",
     "verify:first-three": "node scripts/verify-first-three-apps.mjs",

@@ -1,27 +1,28 @@
 /**
- * TailTots for Parents — Alexa skill lambda.
+ * TailTots for Parents — Alexa skill lambda (REAL data).
  *
  * Parent-facing companion: today's missions, pending approvals, Kid Bank
- * balances, streaks, and the pet-care routine. MVP serves clearly-labeled
- * demo family data; account linking with the family's real TailTots data
- * is the next milestone (see skill.json testingInstructions).
+ * balances, and streaks — all from the family's LIVE TailTots data via the
+ * account-linked access token (event.session.user.accessToken).
+ *
+ * With no linked account, every family-data intent asks the user to link
+ * their TailTots account in the Alexa app. No demo data is ever served.
+ * The pet check is static educational content and works without linking.
+ *
+ * Env:
+ *   TAILTOTS_API_URL — worker origin, e.g. https://tailtots.com
+ *     (defaults to https://tailtots.com)
+ *
+ * OAuth endpoints on the worker:
+ *   GET  /oauth/alexa/authorize (parent Supabase session -> code -> 302)
+ *   POST /oauth/alexa/token     (code + client credentials -> access token)
+ *   GET  /api/alexa/family-summary (Bearer access token -> live family data)
  */
 
-// Demo family data — replaced by account-linked data after account linking ships.
-const demoFamily = {
-  children: [
-    { name: "Maya", streakDays: 12, bankCents: 1250, savedCents: 800, givenCents: 200 },
-    { name: "Leo", streakDays: 5, bankCents: 600, savedCents: 350, givenCents: 50 },
-  ],
-  missions: [
-    { title: "Feed the guinea pigs", child: "Maya", state: "awaiting approval" },
-    { title: "Refill the water bottle", child: "Maya", state: "awaiting approval" },
-    { title: "Tidy the hutch", child: "Leo", state: "not done yet" },
-    { title: "Ten minutes of reading", child: "Leo", state: "not done yet" },
-  ],
-};
+const API_BASE = (process.env.TAILTOTS_API_URL || "https://tailtots.com").replace(/\/+$/, "");
+const SUMMARY_URL = `${API_BASE}/api/alexa/family-summary`;
 
-const dollars = (cents) => `$${(cents / 100).toFixed(2)}`;
+const dollars = (cents) => `$${(Number(cents) / 100).toFixed(2)}`;
 
 function speak(text, { endSession = true, reprompt = null } = {}) {
   const response = {
@@ -37,21 +38,46 @@ function speak(text, { endSession = true, reprompt = null } = {}) {
   return response;
 }
 
-function launchText() {
-  return (
-    "Welcome to Tail Tots for Parents. Using demo family data for now. " +
-    "You can ask: what needs my approval, what are today's missions, " +
-    "kid bank balance, or how are the streaks. What would you like to hear?"
-  );
+const LINK_PROMPT = {
+  text: "To use TailTots on Alexa, link your TailTots parent account first. Open the Alexa app, find TailTots for Parents, and choose Link account. What would you like to do once that's set up?",
+  reprompt: "Link your TailTots account in the Alexa app, then come back and ask what's on today's missions.",
+};
+
+function askToLink() {
+  return speak(LINK_PROMPT.text, { endSession: false, reprompt: LINK_PROMPT.reprompt });
 }
 
-function todayMissionsText() {
-  const lines = demoFamily.missions.map((m) => `${m.title}, for ${m.child}: ${m.state}.`);
-  return `Today's TailTots missions, using demo data. ${lines.join(" ")}`;
+/**
+ * Fetch the family's live summary. `fetchFn` is injected in tests.
+ */
+export async function fetchFamilySummary(accessToken, { fetchFn = fetch, timeoutMs = 8000 } = {}) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetchFn(SUMMARY_URL, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+      signal: controller.signal,
+    });
+    if (!response.ok) return null;
+    return await response.json();
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
-function pendingApprovalsText() {
-  const pending = demoFamily.missions.filter((m) => m.state === "awaiting approval");
+function todayMissionsText(summary) {
+  const missions = summary.todayMissions ?? [];
+  if (!missions.length) {
+    return "There are no missions on today's TailTots list. Enjoy the quiet day — or add one in the app.";
+  }
+  const lines = missions.slice(0, 8).map((m) => `${m.title}, for ${m.child}: ${m.state}.`);
+  return `Today's TailTots missions. ${lines.join(" ")}`;
+}
+
+function pendingApprovalsText(summary) {
+  const pending = summary.pendingApprovals ?? [];
   if (!pending.length) {
     return "Nothing needs your approval right now. Nice — the kids are either done or still working.";
   }
@@ -62,18 +88,24 @@ function pendingApprovalsText() {
   );
 }
 
-function bankBalanceText() {
-  const lines = demoFamily.children.map(
+function bankBalanceText(summary) {
+  const kids = summary.kids ?? [];
+  if (!kids.length) {
+    return "Your TailTots account doesn't have any kids set up yet. Add a kid profile in the app first.";
+  }
+  const lines = kids.map(
     (c) => `${c.name} has ${dollars(c.bankCents)} in the Kid Bank, with ${dollars(c.savedCents)} saved and ${dollars(c.givenCents)} given to good causes.`,
   );
-  return `Kid Bank balances, using demo data. ${lines.join(" ")}`;
+  return `Kid Bank balances. ${lines.join(" ")}`;
 }
 
-function streakStatusText() {
-  const lines = demoFamily.children.map(
-    (c) => `${c.name} is on a ${c.streakDays}-day streak.`,
-  );
-  return `Streak check, using demo data. ${lines.join(" ")} Consistency is the whole game — every approved day keeps it going.`;
+function streakStatusText(summary) {
+  const kids = summary.kids ?? [];
+  if (!kids.length) {
+    return "Your TailTots account doesn't have any kids set up yet. Add a kid profile in the app first.";
+  }
+  const lines = kids.map((c) => `${c.name} is on a ${c.streakDays}-day streak.`);
+  return `Streak check. ${lines.join(" ")} Consistency is the whole game — every approved day keeps it going.`;
 }
 
 function petCheckText() {
@@ -84,28 +116,62 @@ function petCheckText() {
   );
 }
 
-export async function handler(event) {
+export async function handler(event, deps = {}) {
   const request = event?.request ?? {};
   const intentName = request.intent?.name;
+  const accessToken = event?.session?.user?.accessToken ?? null;
 
   if (request.type === "LaunchRequest") {
-    return speak(launchText(), { endSession: false, reprompt: "You can ask what needs your approval, or for today's missions." });
+    if (!accessToken) {
+      return speak(
+        "Welcome to Tail Tots for Parents. " + LINK_PROMPT.text,
+        { endSession: false, reprompt: LINK_PROMPT.reprompt },
+      );
+    }
+    return speak(
+      "Welcome to Tail Tots for Parents. You can ask: what needs my approval, what are today's missions, " +
+        "kid bank balance, or how are the streaks. What would you like to hear?",
+      { endSession: false, reprompt: "You can ask what needs your approval, or for today's missions." },
+    );
+  }
+
+  // Static educational content — works without account linking.
+  if (intentName === "PetCheckIntent") {
+    return speak(petCheckText());
+  }
+
+  const needsSummary = new Set([
+    "GetTodayMissionsIntent",
+    "PendingApprovalsIntent",
+    "BankBalanceIntent",
+    "StreakStatusIntent",
+  ]);
+
+  if (needsSummary.has(intentName)) {
+    if (!accessToken) return askToLink();
+    const summary = await fetchFamilySummary(accessToken, deps);
+    if (!summary) {
+      return speak(
+        "I couldn't reach your family's TailTots data just now. Check that your account is still linked in the Alexa app, then try again.",
+      );
+    }
+    switch (intentName) {
+      case "GetTodayMissionsIntent":
+        return speak(todayMissionsText(summary));
+      case "PendingApprovalsIntent":
+        return speak(pendingApprovalsText(summary));
+      case "BankBalanceIntent":
+        return speak(bankBalanceText(summary));
+      case "StreakStatusIntent":
+        return speak(streakStatusText(summary));
+    }
   }
 
   switch (intentName) {
-    case "GetTodayMissionsIntent":
-      return speak(todayMissionsText());
-    case "PendingApprovalsIntent":
-      return speak(pendingApprovalsText());
-    case "PetCheckIntent":
-      return speak(petCheckText());
-    case "BankBalanceIntent":
-      return speak(bankBalanceText());
-    case "StreakStatusIntent":
-      return speak(streakStatusText());
     case "AMAZON.HelpIntent":
       return speak(
-        "Try: what needs my approval, what are today's missions, kid bank balance, or how are the streaks.",
+        "Try: what needs my approval, what are today's missions, kid bank balance, or how are the streaks. " +
+          (accessToken ? "" : "First, link your TailTots account in the Alexa app."),
         { endSession: false },
       );
     case "AMAZON.CancelIntent":
