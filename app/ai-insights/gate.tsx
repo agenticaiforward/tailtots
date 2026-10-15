@@ -11,7 +11,8 @@
  * so this gate protects disclosure, not secrets.
  */
 import { useEffect, useState, type ReactNode } from "react";
-import { getBrowserSupabaseClient } from "../../lib/supabase-browser";
+import type { Session } from "@supabase/supabase-js";
+import { supabase } from "../../lib/supabase";
 
 const FOUNDER_EMAILS = ["hello@tailtots.com"];
 
@@ -23,16 +24,15 @@ export function FounderGate({ children }: { children: ReactNode }) {
   const [state, setState] = useState<"checking" | "ok" | "denied">("checking");
 
   useEffect(() => {
-    const client = getBrowserSupabaseClient();
-    if (!client) {
+    if (!supabase) {
       setState("denied");
       return;
     }
     let cancelled = false;
-    client.auth.getSession().then(({ data }) => {
+    supabase.auth.getSession().then(({ data }: { data: { session: Session | null } }) => {
       if (!cancelled) setState(isFounderEmail(data.session?.user?.email) ? "ok" : "denied");
     });
-    const { data: sub } = client.auth.onAuthStateChange((_event, session) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((_event: string, session: Session | null) => {
       if (!cancelled) setState(isFounderEmail(session?.user?.email) ? "ok" : "denied");
     });
     return () => {
