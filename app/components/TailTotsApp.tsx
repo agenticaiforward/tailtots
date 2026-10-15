@@ -1225,9 +1225,11 @@ export function TailTotsApp() {
   // Section URL sync (see parseAppHash): apply a #/role/tab deep link once
   // on first load, before the outbound sync below starts writing hashes.
   const hashAppliedRef = useRef(false);
+  const hashHadSectionRef = useRef(false);
   useEffect(() => {
     const parsed = parseAppHash(window.location.hash);
     if (parsed) {
+      hashHadSectionRef.current = true;
       setRole(parsed.role);
       if (parsed.role === "parent") setIsParentUnlocked(true);
       setActiveTab(parsed.tab);
@@ -1419,6 +1421,22 @@ export function TailTotsApp() {
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cloudAccountEmail]);
+
+  // Cycle breaker (founder report, 2026-10-15): a parent who returns via
+  // the emailed sign-in link lands on a FRESH page load, where the effect
+  // above never fires (no auth page was open) — so they met the landing's
+  // "demo or create account?" question again despite being signed in.
+  // Now: a fresh load with a live session lands the parent in their
+  // family, once. Deep links (#/parent/...) are respected, and a parent
+  // mid-auth-flow is left to the effect above.
+  const autoLandedRef = useRef(false);
+  useEffect(() => {
+    if (!cloudAccountEmail || !hasLoadedSavedState || authPage || autoLandedRef.current) return;
+    autoLandedRef.current = true;
+    if (hashHadSectionRef.current) return;
+    queueMicrotask(() => goToMyFamily());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cloudAccountEmail, hasLoadedSavedState, authPage]);
 
   useEffect(() => {
     if (!hasLoadedSavedState) return;
@@ -1677,6 +1695,16 @@ export function TailTotsApp() {
     requestAnimationFrame(() => {
       if (!go()) window.setTimeout(go, 300);
     });
+  }
+
+  /** Land a signed-in parent in their family — never back at the
+   *  demo-or-account chooser (founder cycle report, 2026-10-15). */
+  function goToMyFamily() {
+    setAppMode("real");
+    setRole("parent");
+    setIsParentUnlocked(true);
+    setActiveTab("setup");
+    scrollToFamilySetupPanel();
   }
 
   function startFreshFamilySetup() {
@@ -2602,6 +2630,12 @@ export function TailTotsApp() {
           setAuthPage(null);
           openParentDemo();
         }}
+        signedInEmail={cloudAccountEmail}
+        onGoToFamily={() => {
+          setAuthPage(null);
+          goToMyFamily();
+        }}
+        onSignOut={signOutParentAccountFromApp}
       />
     );
   }
@@ -2874,6 +2908,18 @@ export function TailTotsApp() {
         </aside>
 
         <div className="space-y-5">
+          {role === "parent" && visibleActiveTab === "vision" && cloudAccountEmail && (
+            <section className="flex flex-wrap items-center gap-3 rounded-3xl border border-tt-line bg-white px-5 py-3 shadow-sm">
+              <p className="text-sm font-bold text-tt-ink">👋 Signed in as <span className="font-black">{cloudAccountEmail}</span></p>
+              <span className="flex-1" />
+              <button onClick={goToMyFamily} className="tt-btn-press min-h-10 rounded-xl bg-tt-pine px-4 py-2 text-xs font-black text-white">
+                Go to my family →
+              </button>
+              <button onClick={signOutParentAccountFromApp} className="tt-btn-press min-h-10 rounded-xl border border-tt-line bg-white px-4 py-2 text-xs font-black text-tt-ink">
+                Sign out
+              </button>
+            </section>
+          )}
           {role === "parent" && visibleActiveTab === "vision" && (
             <VisualLanding
               onTryDemo={openKidDemo}
@@ -9796,6 +9842,12 @@ function ParentAuthView(props: {
   magicLinkSent: boolean;
   onBack: () => void;
   onSkip: () => void;
+  /** When a session already exists, the page must say so — never loop a
+   *  signed-in parent back through the email form (founder report,
+   *  2026-10-15: "click sign in, go back to the same cycle"). */
+  signedInEmail?: string;
+  onGoToFamily?: () => void;
+  onSignOut?: () => void;
 }) {
   // ONE parent account page (founder consolidation, 2026-10-15): signup and
   // signin were the same magic-link form wearing two headlines, and parents
@@ -9813,6 +9865,35 @@ function ParentAuthView(props: {
 
         <div className="mt-6 rounded-3xl border border-tt-line bg-white p-6 shadow-xl sm:p-8">
           <p className="text-xs font-black uppercase tracking-[0.22em] text-tt-pine">Parent account</p>
+          {props.signedInEmail ? (
+            <>
+              <h1 className="mt-2 text-3xl font-black sm:text-4xl">You&apos;re signed in ✅</h1>
+              <p className="mt-3 text-sm font-semibold leading-6 text-tt-ink-soft">
+                Signed in as <span className="font-black text-tt-ink">{props.signedInEmail}</span>. No need for another link — your family is right here.
+              </p>
+              <button
+                onClick={props.onGoToFamily}
+                className="tt-btn-press mt-5 min-h-12 w-full rounded-xl bg-tt-pine px-5 py-3 text-sm font-black text-white"
+              >
+                Go to my family →
+              </button>
+              <button
+                onClick={props.onSignOut}
+                className="tt-btn-press mt-2 min-h-11 w-full rounded-xl border border-tt-line bg-white px-5 py-2.5 text-sm font-black text-tt-ink"
+              >
+                Sign out
+              </button>
+              <div className="mt-6 border-t border-tt-line pt-5 text-center">
+                <p className="text-xs font-semibold text-tt-ink-faint">
+                  Just looking?{" "}
+                  <button onClick={props.onSkip} className="font-black text-tt-ink underline">
+                    Explore the demo first
+                  </button>
+                </p>
+              </div>
+            </>
+          ) : (
+          <>
           <h1 className="mt-2 text-3xl font-black sm:text-4xl">Create account or sign in</h1>
           <p className="mt-3 text-sm font-semibold leading-6 text-tt-ink-soft">
             One email, one magic link — no passwords to remember. New here? The link creates your account. Already have one? The same link signs you in. Your family setup stays private to your account and syncs across your devices. <span className="font-black text-tt-pine">Free for founding families.</span>
@@ -9872,6 +9953,8 @@ function ParentAuthView(props: {
               </button>
             </p>
           </div>
+          </>
+          )}
         </div>
 
         <p className="mt-4 text-center text-xs font-semibold text-[#8a8f8b]">

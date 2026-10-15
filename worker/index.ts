@@ -294,10 +294,15 @@ async function handleVoiceSpeak(request: Request, env: Env): Promise<Response> {
   if (typeof text !== "string" || text.trim().length === 0 || text.length > 600) {
     return jsonResponse({ error: "Text must be 1-600 characters." }, 400);
   }
+  // The family picks the guide's voice (samples offered 2026-10-15);
+  // anything off the allowlist falls back to the default.
+  const AURA_SPEAKERS = ["asteria", "luna", "stella", "athena", "hera", "arcas", "orion", "orpheus", "perseus", "helios", "zeus", "angus"];
+  const requestedSpeaker = (body as { speaker?: unknown })?.speaker;
+  const speaker = typeof requestedSpeaker === "string" && AURA_SPEAKERS.includes(requestedSpeaker) ? requestedSpeaker : "asteria";
   try {
     const resp = await env.AI.run(
       "@cf/deepgram/aura-1",
-      { text: text.trim(), speaker: "asteria", encoding: "mp3" } as never,
+      { text: text.trim(), speaker, encoding: "mp3" } as never,
       { returnRawResponse: true },
     );
     const audio = resp as unknown as Response;
