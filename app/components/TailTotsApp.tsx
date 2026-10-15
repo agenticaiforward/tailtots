@@ -1293,6 +1293,12 @@ export function TailTotsApp() {
         setFamilyPhotoUrl(savedState.familyPhotoUrl);
         setActiveChildId(savedState.activeChildId ?? savedState.children?.[0]?.id ?? "");
       }
+      // A pre-existing real family on this device loads in real mode (the
+      // demo never persists, so a reload always lands back on the real
+      // family — never a real family wearing the demo banner).
+      if (savedState && savedState.children.length > 0 && savedState.familyName !== "Demo Crew") {
+        setAppMode("real");
+      }
       setHasLoadedSavedState(true);
     });
   }, []);
