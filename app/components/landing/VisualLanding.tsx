@@ -401,9 +401,6 @@ export function VisualLanding({
       {/* CLAIM YOUR SPOT — founding families launch list (same capture as production) */}
       <section className="rounded-3xl border border-tt-line bg-tt-sand p-5 text-center sm:p-6">
         <h2 className="text-xl font-black">Claim your spot 🚀</h2>
-        <p className="mx-auto mt-1 max-w-md text-sm font-semibold text-tt-ink-soft">
-          Free for founding families. One email when your spot opens. No spam, ever.
-        </p>
         <ClaimSpotForm />
       </section>
       <p className="pb-2 text-center text-xs font-semibold text-tt-ink-faint">
