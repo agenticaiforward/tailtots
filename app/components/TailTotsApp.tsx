@@ -9910,17 +9910,8 @@ function ParentAuthView(props: {
           <>
           <h1 className="mt-2 text-3xl font-black sm:text-4xl">Create account or sign in</h1>
           <p className="mt-3 text-sm font-semibold leading-6 text-tt-ink-soft">
-            One email, one magic link — no passwords to remember. New here? The link creates your account. Already have one? The same link signs you in. Your family setup stays private to your account and syncs across your devices. <span className="font-black text-tt-pine">Free for founding families.</span>
+            We email you a sign-in link — no password. New here, it creates your account; returning, it signs you in. <span className="font-black text-tt-pine">Free for founding families.</span>
           </p>
-
-          <ol className="mt-5 grid gap-2">
-            {["Enter your parent email below", "Tap the sign-in link we email you", "Land in Family Setup — new or returning, right where you belong"].map((step, index) => (
-              <li key={step} className="flex items-center gap-3 rounded-xl bg-tt-cream px-4 py-3 text-sm font-bold text-tt-ink">
-                <span className="grid size-7 shrink-0 place-items-center rounded-full bg-tt-pine text-xs font-black text-white">{index + 1}</span>
-                {step}
-              </li>
-            ))}
-          </ol>
 
           <form
             className="mt-6"
@@ -9950,7 +9941,7 @@ function ParentAuthView(props: {
 
           {props.magicLinkSent && (
             <div className="mt-4 rounded-xl bg-tt-pine-tint px-4 py-3 text-sm font-bold text-tt-pine" role="status">
-              ✉️ Check your inbox — tap the sign-in link to finish. The link expires in about an hour. You&apos;ll land straight in Family Setup.
+              ✉️ Check your inbox and tap the link — it works once, expires in an hour, and lands you in Family Setup.
             </div>
           )}
           {props.accountMessage && !props.magicLinkSent && (
