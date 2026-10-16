@@ -1,11 +1,17 @@
 /**
  * VoiceAssistant — listen + speak + do things on any page, powered by AI.
  *
- * Floating mic button, always available:
+ * ONE floating voice button, always available, in demo and family
+ * accounts alike (founder, 2026-10-16): a single context-aware button
+ * like a smart speaker — it listens, then DOES what was asked:
  * - TAP: starts listening (speech-to-text). Speak naturally — "go to missions",
  *   "put $2 in the save jar", "quiz me on dinosaurs", "read this page to me".
  * - AI sees the page, interprets intent, and DOES it: multi-step actions,
  *   quiz mode, navigation, or reading aloud (text-to-speech).
+ * - Context first: if spoken news is waiting, the tap reads it aloud
+ *   instead of listening; while it speaks, a tap stops it. The panel
+ *   also offers tappable Read this page / My missions / My points for
+ *   anyone who would rather tap than talk.
  *
  * The core kid loop is handled locally and deterministically (same behavior
  * online and offline): hear today's missions, hear your points, say "I did
@@ -870,17 +876,9 @@ export default function VoiceAssistant({
   }, [speak]);
   speakShowcaseRef.current = speakShowcase;
 
-  // Showcase tap: speak only. Pending news first (e.g. demo points
-  // announcements), else the page summary, else a one-line intro. A
-  // second tap stops the speech. No mic, no consent sheet, ever.
-  const toggleShowcase = useCallback(() => {
-    if (speaking) { stopShowcaseAudio(); return; }
-    const news = announcements?.length ? announcements.join(" ") : "";
-    const text = news || pageSummary?.trim() ||
-      "Hi! I'm the TailTots voice guide. In a real family, I read missions out loud and kids answer by voice — and a parent always approves first.";
-    void speakShowcase(text);
-    if (news) onAnnouncementsRead?.();
-  }, [speaking, stopShowcaseAudio, speakShowcase, announcements, pageSummary, onAnnouncementsRead]);
+  // (The old speak-only showcase tap was merged into the ONE context-
+  // aware button below on 2026-10-16 — founder: a single button that
+  // listens, acts, and reads aloud when the context calls for reading.)
 
   /* ---------- showcase tap-to-talk (transient, local-only) ---------- */
 
@@ -918,15 +916,28 @@ export default function VoiceAssistant({
   }, [resolveConfirm, say, handleLocalAction]);
   handleDemoResultRef.current = handleDemoResult;
 
-  /** Demo 🎤 tap: first time per session shows the transparency notice;
-   *  after that it opens the mic directly. Tap again stops. */
-  const toggleDemoTalk = useCallback(() => {
+  /**
+   * THE one demo button (founder, 2026-10-16): context-aware, like a
+   * smart speaker. If it's talking, a tap stops it. If a kid has unheard
+   * news, a tap SPEAKS the news first (reading is what the moment asks
+   * for). Otherwise a tap LISTENS — first time per session via the
+   * transparency notice — and what the visitor says drives everything:
+   * asking drives actions, "read this page" drives reading.
+   */
+  const toggleDemoVoice = useCallback(() => {
     if (listening) {
       try { recRef.current?.stop(); } catch {}
       setListening(false);
       return;
     }
     if (speaking) { stopShowcaseAudio(); return; }
+    const news = announcements ?? [];
+    if (role === "child" && news.length > 0) {
+      setTranscript("");
+      void speakShowcase(news.join(" "));
+      onAnnouncementsRead?.();
+      return;
+    }
     setDemoTalk(true);
     setTranscript("");
     setResponse("");
@@ -936,9 +947,8 @@ export default function VoiceAssistant({
       setDemoNoticeOpen(true);
       return;
     }
-    setResponse("");
     beginListening(true);
-  }, [listening, speaking, stopShowcaseAudio, beginListening]);
+  }, [listening, speaking, stopShowcaseAudio, announcements, role, speakShowcase, onAnnouncementsRead, beginListening]);
 
   const acceptDemoNotice = useCallback(() => {
     try { window.sessionStorage.setItem("tt-demo-voice-notice", "1"); } catch {}
@@ -956,11 +966,14 @@ export default function VoiceAssistant({
 
   return (
     <>
-      {/* Floating mic button */}
+      {/* THE one voice button — same in demo and family accounts
+          (founder, 2026-10-16). Context-aware: 🎤 idle (tap to talk),
+          🔴 listening, 🔊 speaking; the 🔔 badge means news is waiting
+          and the next tap reads it aloud instead of listening. */}
       <button
         data-voice-assistant
-        onClick={showcase ? toggleShowcase : toggleListening}
-        aria-label={showcase ? (speaking ? "Stop the voice guide" : "Hear the voice guide") : listening ? "Stop listening" : hasNews ? "Hear your news" : "Voice assistant"}
+        onClick={showcase ? toggleDemoVoice : toggleListening}
+        aria-label={listening ? "Stop listening" : speaking ? "Stop the voice guide" : hasNews ? "Hear your news" : "Voice assistant — tap and talk"}
         className={`tt-btn-press fixed bottom-20 right-4 z-50 grid size-14 place-items-center rounded-full shadow-2xl ring-4 transition-all sm:bottom-6 sm:right-6 ${
           listening
             ? "animate-pulse bg-red-500 ring-red-300"
@@ -969,7 +982,7 @@ export default function VoiceAssistant({
               : "bg-gradient-to-br from-tt-pine to-emerald-600 ring-emerald-200 hover:scale-110"
         }`}
       >
-        <span className="text-2xl">{showcase ? (speaking ? "⏸️" : "🔊") : listening ? "🔴" : speaking ? "🔊" : "🎤"}</span>
+        <span className="text-2xl">{listening ? "🔴" : speaking ? "🔊" : "🎤"}</span>
         {hasNews && !listening && (
           <span className="absolute -right-0.5 -top-0.5 grid size-6 animate-bounce place-items-center rounded-full bg-tt-sun text-xs ring-2 ring-white" aria-hidden="true">
             🔔
@@ -977,26 +990,9 @@ export default function VoiceAssistant({
         )}
       </button>
 
-      {/* Showcase tap-to-talk — a separate 🎤 above the speaker button:
-          🔊 only ever speaks; 🎤 listens (transiently, demo rules). */}
-      {showcase && (
-        <button
-          data-voice-assistant
-          onClick={toggleDemoTalk}
-          aria-label={listening ? "Stop listening" : "Talk to the voice guide"}
-          className={`tt-btn-press fixed bottom-[9.25rem] right-4 z-50 grid size-14 place-items-center rounded-full shadow-2xl ring-4 transition-all sm:bottom-[5.75rem] sm:right-6 ${
-            listening
-              ? "animate-pulse bg-red-500 ring-red-300"
-              : "bg-white ring-tt-line hover:scale-110"
-          }`}
-        >
-          <span className="text-2xl">{listening ? "🔴" : "🎤"}</span>
-        </button>
-      )}
-
-      {/* Voice panel — in showcase it appears only for tap-to-talk */}
+      {/* Voice panel — in showcase it appears for the notice / a talk */}
       {panelVisible && (
-        <div data-voice-assistant className={`tt-animate-pop-in fixed right-4 z-50 w-72 rounded-3xl bg-white p-4 shadow-2xl ring-2 ring-tt-line sm:right-6 ${showcase ? "bottom-[13.5rem] sm:bottom-40" : "bottom-36 sm:bottom-24"}`}>
+        <div data-voice-assistant className="tt-animate-pop-in fixed bottom-36 right-4 z-50 w-72 rounded-3xl bg-white p-4 shadow-2xl ring-2 ring-tt-line sm:bottom-24 sm:right-6">
           <div className="flex items-center justify-between">
             <p className="text-xs font-black uppercase tracking-wider text-tt-ink/50">
               {demoNoticeOpen ? "🎤 Talk to the guide" : listening ? "🎤 Listening…" : "✨ Voice"}
@@ -1108,6 +1104,28 @@ export default function VoiceAssistant({
                   Just say your answer out loud — I'm listening after each question.
                 </p>
               )}
+            </div>
+          )}
+          {!demoNoticeOpen && !quiz?.current && (
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              <button
+                onClick={() => handleLocalAction({ type: "read-page" }, "")}
+                className="tt-btn-press rounded-full bg-tt-cream px-2.5 py-1.5 text-xs font-black text-tt-ink ring-1 ring-tt-line"
+              >
+                📖 Read this page
+              </button>
+              <button
+                onClick={() => handleLocalAction({ type: "read-missions" }, "")}
+                className="tt-btn-press rounded-full bg-tt-cream px-2.5 py-1.5 text-xs font-black text-tt-ink ring-1 ring-tt-line"
+              >
+                🎯 My missions
+              </button>
+              <button
+                onClick={() => handleLocalAction({ type: "read-balance" }, "")}
+                className="tt-btn-press rounded-full bg-tt-cream px-2.5 py-1.5 text-xs font-black text-tt-ink ring-1 ring-tt-line"
+              >
+                ⭐ My points
+              </button>
             </div>
           )}
           {!listening && !transcript && !demoNoticeOpen && (
