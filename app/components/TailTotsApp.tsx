@@ -3558,10 +3558,14 @@ export function TailTotsApp() {
           </div>
         );
       })()}
-      {/* Voice AI — TWO versions (founder, 2026-10-15).
-          Showcase (landing + demo): speaks only — TTS reads the page and
-          sample missions aloud; it never listens, never opens the consent
-          sheet, and asks for no permission a demo visitor can't give.
+      {/* Voice AI — TWO versions (founder, 2026-10-15; demo intake added
+          2026-10-16 on his instruction so visitors don't feel it's one-way).
+          Showcase (demo): Stella speaks (page + sample missions aloud) AND
+          takes tap-to-talk questions — answered locally and transiently:
+          browser speech service transcribes, on-device intents + a fixed
+          demo FAQ answer, the transcript never reaches our servers and
+          nothing is stored; one-time transparency notice, no consent
+          sheet (nothing is collected). Approvals stay a grown-up's job.
           Family voice (real mode): the full loop — COPPA consent sheet
           first (voice = child's personal information), then mic + actions,
           with parent approval still gating points. */}

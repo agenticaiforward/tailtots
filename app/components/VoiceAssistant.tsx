@@ -60,6 +60,34 @@ const YES_RE = /^(yes|yeah|yep|yup|ok|okay|sure|do it|yes please)[.!]?$/i;
 const NO_RE = /^(no|nope|not yet|cancel|stop|never mind|nevermind)[.!]?$/i;
 
 /**
+ * Demo FAQ — the only non-local answers the showcase voice may give.
+ * Fixed strings, matched on-device: no model, no server call, and the
+ * visitor's words never leave the browser's own speech service.
+ */
+const DEMO_FAQ: { re: RegExp; answer: string }[] = [
+  {
+    re: /\b(how much|price|cost|is it free|free)\b/,
+    answer: "TailTots is free for founding families. A grown-up joins with just an email — no card, no password.",
+  },
+  {
+    re: /\b(privacy|private|safe|safety|secure|data|information|record)/,
+    answer: "Family information stays with the family, and grown-ups approve everything. This demo saves nothing — voice answers here are heard live and never stored.",
+  },
+  {
+    re: /\b(what is tailtots|who are you|your name|about tailtots)\b/,
+    answer: "I'm Stella, the TailTots guide. TailTots turns pet care into short daily missions that build character and life skills — about ten minutes a day.",
+  },
+  {
+    re: /\b(sign ?up|join|get started|create (an )?account|start my family)\b/,
+    answer: "Tap 'Start my family for free' — a grown-up signs up with an email link. It takes about a minute.",
+  },
+  {
+    re: /\b(school|pto|teacher|shelter)\b/,
+    answer: "Schools, shelters, and PTOs use TailTots free — they're how more kids get to practice. Grown-ups can reach us at hello@tailtots.com.",
+  },
+];
+
+/**
  * Find a clickable element by its visible label and click it.
  * Searches buttons, links, tabs, and elements with click handlers —
  * best text match wins. Returns what it clicked, or null.
@@ -199,11 +227,16 @@ export default function VoiceAssistant({
   /** Fired once when a quiz ends with at least one answered question. */
   onQuizComplete?: (result: { topic: string; correct: number; total: number }) => void;
   /**
-   * Showcase mode (landing + demo): voice version 1 — SPEAKS only.
-   * The guide reads the page / sample missions aloud via on-device TTS.
-   * It never listens, never asks for microphone or consent, and nothing
-   * is recorded or sent anywhere. The full listening voice (version 2)
-   * exists only inside a real family's account, behind parental consent.
+   * Showcase mode (landing + demo): the public voice. The guide SPEAKS
+   * with the one TailTots voice (Stella, via /api/voice/speak) and —
+   * since Oct 16 — also takes TAP-TO-TALK questions, answered locally
+   * and transiently: the browser's own speech service transcribes,
+   * answers come only from on-device intent parsing + a small demo FAQ,
+   * the transcript NEVER reaches TailTots servers, and nothing is
+   * stored. No consent sheet (nothing is collected); a one-time notice
+   * says exactly that before the first listen. The full voice loop
+   * (points news, approvals history, AI planner) exists only inside a
+   * real family's account, behind parental consent.
    */
   showcase?: boolean;
 }) {
@@ -213,6 +246,16 @@ export default function VoiceAssistant({
   const [speaking, setSpeaking] = useState(false);
   const [thinking, setThinking] = useState(false);
   const [supported, setSupported] = useState(true);
+  /** Showcase tap-to-talk: panel open / one-time notice showing. */
+  const [demoTalk, setDemoTalk] = useState(false);
+  const [demoNoticeOpen, setDemoNoticeOpen] = useState(false);
+  /** Which result handler the active listening session routes to. */
+  const listeningModeRef = useRef<"family" | "demo">("family");
+  /** Late-bound refs so shared handlers can use the showcase speaker and
+   *  the demo listener before their definitions below. */
+  const speakShowcaseRef = useRef<(text: string, onDone?: () => void) => void>(() => {});
+  const beginDemoListeningRef = useRef<() => void>(() => {});
+  const handleDemoResultRef = useRef<(text: string) => void>(() => {});
   const [pendingConfirm, setPendingConfirm] = useState<PendingConfirm | null>(null);
   const recRef = useRef<SpeechRecognitionLike | null>(null);
   /** Recent turns so follow-ups like "yes, the save one" resolve. */
@@ -251,11 +294,16 @@ export default function VoiceAssistant({
   const handleResultRef = useRef<(text: string) => void>(() => {});
   const beginListeningRef = useRef<() => void>(() => {});
 
-  const beginListening = useCallback(() => {
-    if (!voiceConsented) {
+  const beginListening = useCallback((demo = false) => {
+    // Family mode is consent-gated (COPPA). Demo mode collects nothing —
+    // the transcript never reaches our servers and nothing is stored —
+    // so it runs without the consent sheet, behind its own one-time
+    // transparency notice instead.
+    if (!demo && !voiceConsented) {
       onRequestVoiceConsent();
       return;
     }
+    listeningModeRef.current = demo ? "demo" : "family";
     const w = window as any;
     const Rec = w.SpeechRecognition ?? w.webkitSpeechRecognition;
     if (!Rec) {
@@ -292,10 +340,11 @@ export default function VoiceAssistant({
     }
   }, [voiceConsented, onRequestVoiceConsent]);
   beginListeningRef.current = beginListening;
+  beginDemoListeningRef.current = () => beginListening(true);
 
   /* ---------- speaking ---------- */
 
-  const speak = useCallback((text: string, opts?: { resume?: boolean; rate?: number }) => {
+  const speak = useCallback((text: string, opts?: { resume?: boolean; rate?: number; onDone?: () => void }) => {
     try {
       window.speechSynthesis.cancel();
       const u = new SpeechSynthesisUtterance(text);
@@ -311,8 +360,9 @@ export default function VoiceAssistant({
         if (opts?.resume) {
           window.setTimeout(() => beginListeningRef.current(), 250);
         }
+        opts?.onDone?.();
       };
-      u.onerror = () => setSpeaking(false);
+      u.onerror = () => { setSpeaking(false); opts?.onDone?.(); };
       if (!voice && window.speechSynthesis.getVoices().length === 0) {
         window.speechSynthesis.onvoiceschanged = () => {
           const v = pickFeminineVoice();
@@ -323,10 +373,22 @@ export default function VoiceAssistant({
     } catch {}
   }, []);
 
+  /**
+   * Say it through the right voice for the mode. In a family account:
+   * the device voice, and "resume" re-opens the family mic after the
+   * line finishes. In showcase: Stella via speakShowcase, and "resume"
+   * re-opens the DEMO mic instead — so the shared handlers (missions,
+   * confirms, jars) sound like the guide in the demo and never touch
+   * the family consent path.
+   */
   const say = useCallback((text: string, opts?: { resume?: boolean; rate?: number }) => {
     setResponse(text);
-    speak(text, opts);
-  }, [speak]);
+    if (showcase) {
+      speakShowcaseRef.current(text, opts?.resume ? () => beginDemoListeningRef.current() : undefined);
+    } else {
+      speak(text, opts);
+    }
+  }, [speak, showcase]);
 
   /* ---------- dispatch: run an action against the app, with feedback ------ */
 
@@ -735,7 +797,12 @@ export default function VoiceAssistant({
       handleLocalFallback(text);
     }
   }, [role, tab, tabLabel, pageSummary, say, executeAction, handleLocalFallback, handleLocalAction, answerQuiz, resolveConfirm]);
-  handleResultRef.current = handleResult;
+  handleResultRef.current = (text: string) => {
+    // Demo listening routes to the local-only handler — the transcript
+    // is never posted to /api/voice/intent from the public pages.
+    if (listeningModeRef.current === "demo") handleDemoResultRef.current(text);
+    else void handleResult(text);
+  };
 
   /* ---------- mic button ---------- */
 
@@ -779,9 +846,9 @@ export default function VoiceAssistant({
     try { window.speechSynthesis?.cancel(); } catch {}
     setSpeaking(false);
   }, []);
-  const speakShowcase = useCallback(async (text: string) => {
+  const speakShowcase = useCallback(async (text: string, onDone?: () => void) => {
     const trimmed = text.trim().slice(0, 580);
-    if (!trimmed) return;
+    if (!trimmed) { onDone?.(); return; }
     try {
       const res = await fetch("/api/voice/speak", {
         method: "POST",
@@ -793,14 +860,15 @@ export default function VoiceAssistant({
       const url = URL.createObjectURL(blob);
       const audio = new Audio(url);
       showcaseAudioRef.current = audio;
-      audio.onended = () => { URL.revokeObjectURL(url); if (showcaseAudioRef.current === audio) showcaseAudioRef.current = null; setSpeaking(false); };
-      audio.onerror = () => { URL.revokeObjectURL(url); if (showcaseAudioRef.current === audio) showcaseAudioRef.current = null; setSpeaking(false); };
+      audio.onended = () => { URL.revokeObjectURL(url); if (showcaseAudioRef.current === audio) showcaseAudioRef.current = null; setSpeaking(false); onDone?.(); };
+      audio.onerror = () => { URL.revokeObjectURL(url); if (showcaseAudioRef.current === audio) showcaseAudioRef.current = null; setSpeaking(false); onDone?.(); };
       setSpeaking(true);
       await audio.play();
     } catch {
-      speak(trimmed);
+      speak(trimmed, { onDone });
     }
   }, [speak]);
+  speakShowcaseRef.current = speakShowcase;
 
   // Showcase tap: speak only. Pending news first (e.g. demo points
   // announcements), else the page summary, else a one-line intro. A
@@ -814,9 +882,77 @@ export default function VoiceAssistant({
     if (news) onAnnouncementsRead?.();
   }, [speaking, stopShowcaseAudio, speakShowcase, announcements, pageSummary, onAnnouncementsRead]);
 
+  /* ---------- showcase tap-to-talk (transient, local-only) ---------- */
+
+  /**
+   * Demo result handling: the SAME deterministic local intents as the
+   * family loop (missions, points, jars, navigation, read-page),
+   * resolved against the sample family — plus the fixed demo FAQ.
+   * Approvals stay a grown-up's job, quizzes stay in real accounts,
+   * and NOTHING here calls the AI endpoints: the transcript never
+   * reaches TailTots servers and is never stored.
+   */
+  const handleDemoResult = useCallback((text: string) => {
+    if (pendingConfirmRef.current && resolveConfirm(text)) return;
+    setTranscript(text);
+    if (/\b(quiz|test)\s+me\b|\bask\s+me\s+(some\s+)?questions\b/i.test(text)) {
+      say("Quizzes live inside a real family account, set up by a grown-up. Here in the demo, try asking for your missions or your points!");
+      return;
+    }
+    const local = parseVoiceIntent(text);
+    if (local.type === "approve-mission") {
+      say("Approving is a grown-up's job. In the demo, finished missions wait for a parent — just like the real thing.");
+      return;
+    }
+    if (local.type !== "unknown") {
+      if (pendingConfirmRef.current) setPendingConfirm(null);
+      handleLocalAction(local, text);
+      return;
+    }
+    const faq = DEMO_FAQ.find((f) => f.re.test(text.toLowerCase()));
+    if (faq) {
+      say(faq.answer);
+      return;
+    }
+    say(`I heard "${text}". In this demo I can read the sample missions, share the points, or read this page out loud — try "what are my missions?"`);
+  }, [resolveConfirm, say, handleLocalAction]);
+  handleDemoResultRef.current = handleDemoResult;
+
+  /** Demo 🎤 tap: first time per session shows the transparency notice;
+   *  after that it opens the mic directly. Tap again stops. */
+  const toggleDemoTalk = useCallback(() => {
+    if (listening) {
+      try { recRef.current?.stop(); } catch {}
+      setListening(false);
+      return;
+    }
+    if (speaking) { stopShowcaseAudio(); return; }
+    setDemoTalk(true);
+    setTranscript("");
+    setResponse("");
+    let seen = false;
+    try { seen = window.sessionStorage.getItem("tt-demo-voice-notice") === "1"; } catch {}
+    if (!seen) {
+      setDemoNoticeOpen(true);
+      return;
+    }
+    setResponse("");
+    beginListening(true);
+  }, [listening, speaking, stopShowcaseAudio, beginListening]);
+
+  const acceptDemoNotice = useCallback(() => {
+    try { window.sessionStorage.setItem("tt-demo-voice-notice", "1"); } catch {}
+    setDemoNoticeOpen(false);
+    setResponse("");
+    beginListening(true);
+  }, [beginListening]);
+
   if (!supported) return null;
 
   const hasNews = role === "child" && (announcements?.length ?? 0) > 0;
+  const panelVisible = showcase
+    ? demoTalk || demoNoticeOpen || listening || !!transcript || !!response
+    : listening || !!transcript || !!response || !!quiz?.current;
 
   return (
     <>
@@ -841,20 +977,61 @@ export default function VoiceAssistant({
         )}
       </button>
 
-      {/* Voice panel — never in showcase mode (nothing to listen to) */}
-      {!showcase && (listening || transcript || response || quiz?.current) && (
-        <div data-voice-assistant className="tt-animate-pop-in fixed bottom-36 right-4 z-50 w-72 rounded-3xl bg-white p-4 shadow-2xl ring-2 ring-tt-line sm:bottom-24 sm:right-6">
+      {/* Showcase tap-to-talk — a separate 🎤 above the speaker button:
+          🔊 only ever speaks; 🎤 listens (transiently, demo rules). */}
+      {showcase && (
+        <button
+          data-voice-assistant
+          onClick={toggleDemoTalk}
+          aria-label={listening ? "Stop listening" : "Talk to the voice guide"}
+          className={`tt-btn-press fixed bottom-[9.25rem] right-4 z-50 grid size-14 place-items-center rounded-full shadow-2xl ring-4 transition-all sm:bottom-[5.75rem] sm:right-6 ${
+            listening
+              ? "animate-pulse bg-red-500 ring-red-300"
+              : "bg-white ring-tt-line hover:scale-110"
+          }`}
+        >
+          <span className="text-2xl">{listening ? "🔴" : "🎤"}</span>
+        </button>
+      )}
+
+      {/* Voice panel — in showcase it appears only for tap-to-talk */}
+      {panelVisible && (
+        <div data-voice-assistant className={`tt-animate-pop-in fixed right-4 z-50 w-72 rounded-3xl bg-white p-4 shadow-2xl ring-2 ring-tt-line sm:right-6 ${showcase ? "bottom-[13.5rem] sm:bottom-40" : "bottom-36 sm:bottom-24"}`}>
           <div className="flex items-center justify-between">
             <p className="text-xs font-black uppercase tracking-wider text-tt-ink/50">
-              {listening ? "🎤 Listening…" : "✨ Voice"}
+              {demoNoticeOpen ? "🎤 Talk to the guide" : listening ? "🎤 Listening…" : "✨ Voice"}
             </p>
             <button
-              onClick={() => { setTranscript(""); setResponse(""); setQuiz(null); setPendingConfirm(null); try { window.speechSynthesis.cancel(); } catch {} setSpeaking(false); }}
+              onClick={() => { setTranscript(""); setResponse(""); setQuiz(null); setPendingConfirm(null); setDemoTalk(false); setDemoNoticeOpen(false); try { recRef.current?.stop(); } catch {} setListening(false); stopShowcaseAudio(); try { window.speechSynthesis.cancel(); } catch {} setSpeaking(false); }}
               className="rounded-full bg-tt-cream px-2 py-0.5 text-xs font-bold text-tt-ink/60"
             >
               ✕
             </button>
           </div>
+          {showcase && demoNoticeOpen && (
+            <div className="mt-2">
+              <p className="text-sm font-semibold leading-6 text-tt-ink">
+                Your voice is heard <span className="font-black">live and never saved</span>. Your browser turns your words into text on the spot, and the guide answers from this page only.
+              </p>
+              <p className="mt-2 text-xs font-semibold leading-5 text-tt-ink/60">
+                Grown-ups: this demo collects nothing — no account, no recording, no stored transcript.
+              </p>
+              <div className="mt-3 grid gap-1.5">
+                <button
+                  onClick={acceptDemoNotice}
+                  className="tt-btn-press rounded-xl bg-tt-pine px-3 py-2.5 text-sm font-black text-white"
+                >
+                  🎤 Start talking
+                </button>
+                <button
+                  onClick={() => { setDemoNoticeOpen(false); setDemoTalk(false); }}
+                  className="tt-btn-press rounded-xl bg-tt-cream px-3 py-2 text-xs font-black text-tt-ink/70"
+                >
+                  Not now
+                </button>
+              </div>
+            </div>
+          )}
           {listening && (
             <div className="mt-2 flex items-center gap-1.5">
               {[0, 1, 2, 3, 4].map((i) => (
@@ -933,9 +1110,14 @@ export default function VoiceAssistant({
               )}
             </div>
           )}
-          {!listening && !transcript && (
+          {!listening && !transcript && !demoNoticeOpen && (
             <p className="mt-2 text-xs text-tt-ink/50">
               Just talk — say "my missions", "I did it", or "how many points do I have?"
+            </p>
+          )}
+          {showcase && !demoNoticeOpen && (
+            <p className="mt-2 border-t border-tt-line pt-2 text-[11px] font-bold leading-4 text-tt-ink/50">
+              🎤 Heard live, never saved — demo answers come from this page only.
             </p>
           )}
         </div>
