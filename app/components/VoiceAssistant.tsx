@@ -33,6 +33,7 @@ import type { VoiceIntentPlan, VoicePlannedAction } from "@/lib/voice/intent-pla
 import type { QuizTurn } from "@/lib/voice/quiz";
 import {
   parseVoiceIntent,
+  cleanTranscript,
   LOCAL_FIRST_TYPES,
   type VoiceAction,
 } from "@/lib/voice/intent-local";
@@ -62,6 +63,28 @@ type PendingConfirm =
   | { kind: "approve"; id: string; title: string; points: number }
   | { kind: "choose-mission"; options: VoiceMissionRef[] };
 
+/** Split long replies into <=560-char sentence chunks for the speak
+ *  endpoint (600-char cap) so a long missions list is spoken in full,
+ *  in order, instead of being cut off mid-thought. */
+function chunkForSpeech(text: string, max = 560): string[] {
+  if (text.length <= max) return [text];
+  const sentences = text.match(/[^.!?]+[.!?]+\s*/g) ?? [text];
+  const chunks: string[] = [];
+  let cur = "";
+  const flush = () => { if (cur.trim()) chunks.push(cur.trim()); cur = ""; };
+  for (const s of sentences) {
+    if (s.length > max) {
+      flush();
+      for (let i = 0; i < s.length; i += max) chunks.push(s.slice(i, i + max).trim());
+      continue;
+    }
+    if ((cur + s).length > max && cur) flush();
+    cur += s;
+  }
+  flush();
+  return chunks.length ? chunks : [text.slice(0, max)];
+}
+
 const YES_RE = /^(yes|yeah|yep|yup|ok|okay|sure|do it|yes please)[.!]?$/i;
 const NO_RE = /^(no|nope|not yet|cancel|stop|never mind|nevermind)[.!]?$/i;
 
@@ -71,6 +94,42 @@ const NO_RE = /^(no|nope|not yet|cancel|stop|never mind|nevermind)[.!]?$/i;
  * visitor's words never leave the browser's own speech service.
  */
 const DEMO_FAQ: { re: RegExp; answer: string }[] = [
+  {
+    re: /\b(jars?|spend|spending|buy|buying|purchase|rewards?)\b/,
+    answer: "Yes — spending is the fun part! When a kid finishes a mission and a grown-up approves it, the points land in their bank. Kids split points into three jars: Save, Spend, and Give. Spend points buy rewards their grown-ups set up — like picking Friday's movie. Grown-ups see every point that moves.",
+  },
+  {
+    re: /\b(save|saving|give|giving|donate|donation|charity)\b/,
+    answer: "The three jars teach three habits. Save is for a big goal. Give turns points into real kindness — like a donation to the shelter the family picks. And Spend is for rewards at home. Kids choose where points go; grown-ups watch it all.",
+  },
+  {
+    re: /\b(earn|get (the )?points|how do (kids|you|they) get)\b/,
+    answer: "Kids earn points by finishing missions — feeding their pet, brushing them, tidying up. A grown-up approves each finished mission, and the points land in the kid's bank right away.",
+  },
+  {
+    re: /\b(how (do|does) (missions?|it|this) work|what (are|is) (the )?missions?|missions? (do|work))\b/,
+    answer: "Every day, kids get short missions built around their real pet — feeding, brushing, playing, tidying. Each takes a few minutes. Finishing them grows character traits like responsibility and kindness — and earns points.",
+  },
+  {
+    re: /\b(how (does|do) (approval|approving)|who approves|grown-?ups? approve|parents? approve)\b/,
+    answer: "When a kid finishes a mission, it waits for a grown-up. A parent taps approve — and only then do the points count. Grown-ups stay in charge of every point.",
+  },
+  {
+    re: /\b(no pet|don'?t have a pet|without a pet|can'?t have a pet|want a pet|no dog|no cat)\b/,
+    answer: "No pet at home? No problem. Kids can sponsor a shelter buddy and do kindness missions, or follow a real wild animal's journey on a real map. Every kid gets the full TailTots.",
+  },
+  {
+    re: /\b(how old|what age|ages|too young|too old)\b/,
+    answer: "TailTots is made for kids about 4 to 12. Missions grow with them — Sprouts, Growers, and Thrivers.",
+  },
+  {
+    re: /\b(character|traits?|values|learn|teach|skills?)\b/,
+    answer: "TailTots practices eight traits: confidence, empathy, self-control, integrity, curiosity, perseverance, optimism, and respect — through real pet care. Character isn't taught. It's practiced.",
+  },
+  {
+    re: /\b(what (kind|type) of (pet|animal)|which pets|dogs? (or|and) cats?|rabbits?|animals?)\b/,
+    answer: "Any pet works — dogs, cats, rabbits, birds, fish. Missions adapt to the animal your family actually has.",
+  },
   {
     re: /\b(how much|price|cost|is it free|free)\b/,
     answer: "TailTots is free for founding families. A grown-up joins with just an email — no card, no password.",
@@ -259,7 +318,7 @@ export default function VoiceAssistant({
   const listeningModeRef = useRef<"family" | "demo">("family");
   /** Late-bound refs so shared handlers can use the showcase speaker and
    *  the demo listener before their definitions below. */
-  const speakShowcaseRef = useRef<(text: string, onDone?: () => void) => void>(() => {});
+  const speakShowcaseRef = useRef<(text: string, onDone?: () => void, allowDeviceFallback?: boolean) => void>(() => {});
   const beginDemoListeningRef = useRef<() => void>(() => {});
   const handleDemoResultRef = useRef<(text: string) => void>(() => {});
   const [pendingConfirm, setPendingConfirm] = useState<PendingConfirm | null>(null);
@@ -392,9 +451,12 @@ export default function VoiceAssistant({
     if (showcase) {
       speakShowcaseRef.current(text, opts?.resume ? () => beginDemoListeningRef.current() : undefined);
     } else {
-      speak(text, opts);
+      // Real accounts speak as Stella too (founder, 2026-10-16) — the
+      // device voice remains only as the family-mode fallback inside
+      // the Stella speaker, in case she can't be reached.
+      speakShowcaseRef.current(text, opts?.resume ? () => beginListeningRef.current() : undefined, true);
     }
-  }, [speak, showcase]);
+  }, [showcase]);
 
   /* ---------- dispatch: run an action against the app, with feedback ------ */
 
@@ -804,10 +866,14 @@ export default function VoiceAssistant({
     }
   }, [role, tab, tabLabel, pageSummary, say, executeAction, handleLocalFallback, handleLocalAction, answerQuiz, resolveConfirm]);
   handleResultRef.current = (text: string) => {
+    // Fillers ("um", "uh") are stripped ONCE here, before display,
+    // matching, confirms ("um yes" must still mean yes), and any
+    // planner call — kids hear their meaning echoed back, not the ums.
+    const cleaned = cleanTranscript(text) || text;
     // Demo listening routes to the local-only handler — the transcript
     // is never posted to /api/voice/intent from the public pages.
-    if (listeningModeRef.current === "demo") handleDemoResultRef.current(text);
-    else void handleResult(text);
+    if (listeningModeRef.current === "demo") handleDemoResultRef.current(cleaned);
+    else void handleResult(cleaned);
   };
 
   /* ---------- mic button ---------- */
@@ -852,28 +918,57 @@ export default function VoiceAssistant({
     try { window.speechSynthesis?.cancel(); } catch {}
     setSpeaking(false);
   }, []);
-  const speakShowcase = useCallback(async (text: string, onDone?: () => void) => {
-    const trimmed = text.trim().slice(0, 580);
-    if (!trimmed) { onDone?.(); return; }
-    try {
-      const res = await fetch("/api/voice/speak", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ text: trimmed }),
-      });
-      if (!res.ok) throw new Error("speak failed");
-      const blob = await res.blob();
+  const speakGenRef = useRef(0);
+  /**
+   * Stella speaks — in the demo AND in real family accounts (founder,
+   * 2026-10-16: "the voice is not enabled Stella in the real accounts").
+   * ONE voice, one line at a time: every new line stops the current
+   * audio and supersedes any in-flight fetch (the "two people talking"
+   * bug). Long replies are chunked under the endpoint's 600-char cap
+   * and played in order. Fallback rule differs by mode: the DEMO never
+   * uses the device voice (Stella or the on-screen text); a FAMILY
+   * account falls back to the device voice so a kid is never left in
+   * silence if Stella can't be reached.
+   */
+  const speakShowcase = useCallback(async (text: string, onDone?: () => void, allowDeviceFallback = false) => {
+    const full = text.trim();
+    if (!full) { onDone?.(); return; }
+    const gen = ++speakGenRef.current;
+    stopShowcaseAudio();
+    const playBlob = (blob: Blob) => new Promise<void>((resolve, reject) => {
       const url = URL.createObjectURL(blob);
       const audio = new Audio(url);
       showcaseAudioRef.current = audio;
-      audio.onended = () => { URL.revokeObjectURL(url); if (showcaseAudioRef.current === audio) showcaseAudioRef.current = null; setSpeaking(false); onDone?.(); };
-      audio.onerror = () => { URL.revokeObjectURL(url); if (showcaseAudioRef.current === audio) showcaseAudioRef.current = null; setSpeaking(false); onDone?.(); };
+      audio.onended = () => { URL.revokeObjectURL(url); if (showcaseAudioRef.current === audio) showcaseAudioRef.current = null; resolve(); };
+      audio.onpause = () => { if (gen !== speakGenRef.current) resolve(); };
+      audio.onerror = () => { URL.revokeObjectURL(url); if (showcaseAudioRef.current === audio) showcaseAudioRef.current = null; reject(new Error("audio failed")); };
       setSpeaking(true);
-      await audio.play();
+      audio.play().catch(reject);
+    });
+    try {
+      for (const chunk of chunkForSpeech(full)) {
+        if (gen !== speakGenRef.current) return; // superseded
+        const res = await fetch("/api/voice/speak", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ text: chunk }),
+        });
+        if (!res.ok) throw new Error("speak failed");
+        const blob = await res.blob();
+        if (gen !== speakGenRef.current) return; // superseded while fetching
+        await playBlob(blob);
+      }
+      if (gen === speakGenRef.current) { setSpeaking(false); onDone?.(); }
     } catch {
-      speak(trimmed, { onDone });
+      if (gen !== speakGenRef.current) return;
+      if (allowDeviceFallback) {
+        speak(full, { onDone });
+      } else {
+        setSpeaking(false);
+        onDone?.();
+      }
     }
-  }, [speak]);
+  }, [stopShowcaseAudio, speak]);
   speakShowcaseRef.current = speakShowcase;
 
   // (The old speak-only showcase tap was merged into the ONE context-
@@ -912,7 +1007,7 @@ export default function VoiceAssistant({
       say(faq.answer);
       return;
     }
-    say(`I heard "${text}". In this demo I can read the sample missions, share the points, or read this page out loud — try "what are my missions?"`);
+    say(`I heard "${text}". I don't know that one yet — but ask me about missions, points, or the money jars, and I'll show you.`);
   }, [resolveConfirm, say, handleLocalAction]);
   handleDemoResultRef.current = handleDemoResult;
 

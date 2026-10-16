@@ -49,6 +49,23 @@ function capitalize(s: string) {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
+/**
+ * Strip the filler sounds kids (and grown-ups) pepper speech with —
+ * um, uh, erm, hmm — plus stuttered repeats of little words ("the the",
+ * "I I"), so intent matching and the on-screen "I heard" echo show what
+ * was MEANT, not every sound along the way (founder, 2026-10-16).
+ * "like" is left alone — it's a real verb too often to strip safely.
+ */
+export function cleanTranscript(text: string): string {
+  return text
+    .replace(/\b(?:um+|uh+|erm+|er|hmm+|uhm+)\b/gi, " ")
+    .replace(/\b(the|a|an|i|you|it|is|to|and|my|me|do|can|what|is)\s+(?=\1\b)/gi, "")
+    .replace(/\s+([,.!?])/g, "$1")
+    .replace(/\s{2,}/g, " ")
+    .replace(/^[\s,.!?]+/, "")
+    .trim();
+}
+
 const JAR_WORDS: Record<string, VoiceJar> = {
   save: "save",
   saving: "save",
@@ -62,7 +79,7 @@ const JAR_WORDS: Record<string, VoiceJar> = {
 };
 
 export function parseVoiceIntent(text: string): VoiceAction {
-  const t = text.toLowerCase().trim().replace(/[.!?]+$/, "");
+  const t = cleanTranscript(text).toLowerCase().trim().replace(/[.!?]+$/, "");
 
   // --- Kid-loop reads (before navigation: "show my missions" is a read) ---
   if (/\b(any|some)\s+news\b/.test(t) || /what'?s new/.test(t) || t === "news") {
@@ -146,9 +163,9 @@ export function parseVoiceIntent(text: string): VoiceAction {
     }
   }
 
-  // Real-life logging — titles are extracted from the ORIGINAL text so a
+  // Real-life logging — titles are extracted from the CLEANED text so a
   // book keeps its real capitalization ("Harry Potter", not "Harry potter").
-  const raw = text.trim().replace(/[.!?]+$/, "");
+  const raw = cleanTranscript(text).replace(/[.!?]+$/, "");
   const bookMatch = raw.match(/(?:i read|read|finished reading|book)\s+(.+)/i);
   if (bookMatch && /(read|book|finished)/.test(t)) {
     const title = bookMatch[1].replace(/^(called|titled)\s+/i, "").trim();

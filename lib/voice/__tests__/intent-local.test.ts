@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseVoiceIntent } from "../intent-local";
+import { parseVoiceIntent, cleanTranscript } from "../intent-local";
 
 describe("parseVoiceIntent — kid loop (Oct 14 voice-everywhere pass)", () => {
   it("hears today's missions", () => {
@@ -85,5 +85,29 @@ describe("parseVoiceIntent — regressions from the original parser", () => {
 
   it("unknown stays unknown", () => {
     expect(parseVoiceIntent("flibberty gibbet")).toEqual({ type: "unknown", text: "flibberty gibbet" });
+  });
+});
+
+describe("cleanTranscript — kids' fillers stripped (Oct 16)", () => {
+  it("removes um/uh/erm/hmm but keeps the meaning", () => {
+    expect(cleanTranscript("Umm, if kids umm have a money jar")).toBe("if kids have a money jar");
+    expect(cleanTranscript("uh what are my missions")).toBe("what are my missions");
+    expect(cleanTranscript("erm, I did it")).toBe("I did it");
+  });
+
+  it("collapses stuttered little words", () => {
+    expect(cleanTranscript("what what are my points")).toBe("what are my points");
+    expect(cleanTranscript("I I did it")).toBe("I did it");
+  });
+
+  it("leaves real words alone, including 'like' as a verb", () => {
+    expect(cleanTranscript("I like dogs")).toBe("I like dogs");
+    expect(cleanTranscript("read Harry Potter")).toBe("read Harry Potter");
+  });
+
+  it("intents still parse through the fillers", () => {
+    expect(parseVoiceIntent("umm what are my missions")).toEqual({ type: "read-missions" });
+    expect(parseVoiceIntent("uh, I did it")).toEqual({ type: "complete-mission", query: "" });
+    expect(parseVoiceIntent("um how many points do I have")).toEqual({ type: "read-balance" });
   });
 });
