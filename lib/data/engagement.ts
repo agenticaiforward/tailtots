@@ -51,7 +51,22 @@ function writeQueue<T>(key: string, items: T[]): void {
 
 export type SubmitMode = "local" | "cloud";
 
-export async function submitLaunchInterest(input: LaunchInterestInput): Promise<{ mode: SubmitMode }> {
+export type LaunchInterestSubmitResult = {
+  mode: SubmitMode;
+  alreadyJoined: boolean;
+};
+
+function isDuplicateLaunchSignup(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const candidate = error as { code?: unknown; message?: unknown; details?: unknown; hint?: unknown };
+  const text = [candidate.message, candidate.details, candidate.hint]
+    .filter((value): value is string => typeof value === "string")
+    .join(" ")
+    .toLowerCase();
+  return candidate.code === "23505" || text.includes("duplicate key") || text.includes("launch_interest_signups_email_source_idx");
+}
+
+export async function submitLaunchInterest(input: LaunchInterestInput): Promise<LaunchInterestSubmitResult> {
   const parsed = launchInterestSchema.safeParse(input);
   if (!parsed.success) {
     throw new AppError(ErrorCode.VALIDATION, parsed.error.issues[0]?.message ?? "Enter a valid parent email address.");
@@ -61,31 +76,36 @@ export async function submitLaunchInterest(input: LaunchInterestInput): Promise<
   const client = getSupabaseClient();
   if (!client) {
     writeQueue(LAUNCH_QUEUE_KEY, [payload, ...readQueue(LAUNCH_QUEUE_KEY, launchInterestSchema)]);
-    return { mode: "local" };
+    return { mode: "local", alreadyJoined: false };
   }
   const { error } = await client.from("launch_interest_signups").insert(payload);
-  if (error) {
-    log.error("submitLaunchInterest failed", { error });
-    // First-party fallback (2026-10-15): some phones block the direct
-    // database call (content blockers / tracking protection refuse the
-    // supabase.co domain). The site's own /api/launch-signup performs
-    // the same insert server-side — a signup must never be lost to a
-    // blocked third-party domain.
-    const savedViaSite = await saveLaunchInterestViaSite(payload).catch(() => false);
-    if (savedViaSite) return { mode: "cloud" };
-    throw new AppError(ErrorCode.NETWORK, toUserMessage(error), { cause: error });
+  if (!error) return { mode: "cloud", alreadyJoined: false };
+  if (isDuplicateLaunchSignup(error)) {
+    return { mode: "cloud", alreadyJoined: true };
   }
-  return { mode: "cloud" };
+  log.error("submitLaunchInterest failed", { error });
+  // First-party fallback (2026-10-15): some phones block the direct
+  // database call (content blockers / tracking protection refuse the
+  // supabase.co domain). The site's own /api/launch-signup performs
+  // the same insert server-side — a signup must never be lost to a
+  // blocked third-party domain.
+  const savedViaSite = await saveLaunchInterestViaSite(payload).catch(() => null);
+  if (savedViaSite) return { mode: "cloud", alreadyJoined: savedViaSite.alreadyJoined };
+  throw new AppError(ErrorCode.NETWORK, toUserMessage(error), { cause: error });
 }
 
-async function saveLaunchInterestViaSite(payload: { email: string; city?: string | null; source?: string }): Promise<boolean> {
-  if (typeof window === "undefined" || typeof fetch !== "function") return false;
+async function saveLaunchInterestViaSite(
+  payload: { email: string; city?: string | null; source?: string },
+): Promise<{ alreadyJoined: boolean } | null> {
+  if (typeof window === "undefined" || typeof fetch !== "function") return null;
   const resp = await fetch("/api/launch-signup", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(payload),
   });
-  return resp.ok;
+  if (!resp.ok) return null;
+  const data = (await resp.json().catch(() => null)) as { alreadyJoined?: unknown } | null;
+  return { alreadyJoined: data?.alreadyJoined === true };
 }
 
 export async function submitFeedback(input: FeedbackInput): Promise<{ mode: SubmitMode }> {

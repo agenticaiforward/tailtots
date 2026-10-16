@@ -30,6 +30,39 @@ export type LaunchInterestInput = {
   source?: string;
 };
 
+export type LaunchInterestResult = {
+  mode: "cloud" | "local";
+  alreadyJoined: boolean;
+};
+
+type LaunchSignupPayload = {
+  email: string;
+  city?: string;
+  source: string;
+};
+
+function isDuplicateLaunchSignup(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const candidate = error as { code?: unknown; message?: unknown; details?: unknown; hint?: unknown };
+  const text = [candidate.message, candidate.details, candidate.hint]
+    .filter((value): value is string => typeof value === "string")
+    .join(" ")
+    .toLowerCase();
+  return candidate.code === "23505" || text.includes("duplicate key") || text.includes("launch_interest_signups_email_source_idx");
+}
+
+async function saveLaunchInterestViaSite(payload: LaunchSignupPayload): Promise<LaunchInterestResult | null> {
+  if (typeof window === "undefined" || typeof fetch !== "function") return null;
+  const response = await fetch("/api/launch-signup", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) return null;
+  const data = (await response.json().catch(() => null)) as { alreadyJoined?: unknown } | null;
+  return { mode: "cloud", alreadyJoined: data?.alreadyJoined === true };
+}
+
 export type FeedbackInput = {
   email?: string;
   message: string;
@@ -54,12 +87,23 @@ export async function submitLaunchInterest(input: LaunchInterestInput) {
   if (!supabase) {
     const saved = JSON.parse(localStorage.getItem("tailtots-launch-interest") ?? "[]") as typeof payload[];
     localStorage.setItem("tailtots-launch-interest", JSON.stringify([payload, ...saved].slice(0, 50)));
-    return { mode: "local" as const };
+    return { mode: "local" as const, alreadyJoined: false };
   }
 
   const { error } = await supabase.from("launch_interest_signups").insert(payload);
-  if (error) throw error;
-  return { mode: "cloud" as const };
+  if (!error) return { mode: "cloud" as const, alreadyJoined: false };
+  if (isDuplicateLaunchSignup(error)) {
+    // The email is already captured for this source. Treat it as a
+    // successful return visit so the UI can say so and unlock the demo.
+    return { mode: "cloud" as const, alreadyJoined: true };
+  }
+
+  // The live landing uses this module. If a phone/browser blocks the direct
+  // Supabase call, retry through TailTots' own first-party endpoint before
+  // surfacing an error; that endpoint also reports duplicate signups.
+  const savedViaSite = await saveLaunchInterestViaSite(payload).catch(() => null);
+  if (savedViaSite) return savedViaSite;
+  throw error;
 }
 
 export async function submitFeedback(input: FeedbackInput) {

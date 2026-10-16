@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   signInWithOtp: vi.fn(),
   getUser: vi.fn(),
+  insert: vi.fn(),
   upsert: vi.fn(),
   maybeSingle: vi.fn(),
 }));
@@ -14,7 +15,7 @@ vi.mock("@supabase/supabase-js", () => ({
       getUser: mocks.getUser,
     },
     from: () => ({
-      insert: vi.fn().mockResolvedValue({ error: null }),
+      insert: mocks.insert,
       upsert: mocks.upsert,
       select: () => ({
         eq: () => ({ maybeSingle: mocks.maybeSingle }),
@@ -41,6 +42,7 @@ describe("parent supabase auth wiring", () => {
     vi.clearAllMocks();
     mocks.signInWithOtp.mockResolvedValue({ data: {}, error: null });
     mocks.getUser.mockResolvedValue({ data: { user: null }, error: null });
+    mocks.insert.mockResolvedValue({ error: null });
     mocks.upsert.mockResolvedValue({ error: null });
     mocks.maybeSingle.mockResolvedValue({ data: null, error: null });
   });
@@ -115,6 +117,20 @@ describe("parent supabase auth wiring", () => {
     it("submitLaunchInterest accepts a valid email in cloud mode", async () => {
       await expect(submitLaunchInterest({ email: "Parent@Example.com", city: "Frisco" })).resolves.toEqual({
         mode: "cloud",
+        alreadyJoined: false,
+      });
+    });
+
+    it("submitLaunchInterest treats a duplicate signup as already joined", async () => {
+      mocks.insert.mockResolvedValue({
+        error: {
+          code: "23505",
+          message: 'duplicate key value violates unique constraint "launch_interest_signups_email_source_idx"',
+        },
+      });
+      await expect(submitLaunchInterest({ email: "Parent@Example.com" })).resolves.toEqual({
+        mode: "cloud",
+        alreadyJoined: true,
       });
     });
 

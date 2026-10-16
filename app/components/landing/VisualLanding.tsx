@@ -172,7 +172,12 @@ export function VisualLanding({
   // unlocks the demo. Visitors who already joined on this device go
   // straight in; everyone else meets the list form first.
   const [heroJoined, setHeroJoined] = useState(false);
+  const [heroAlreadyJoined, setHeroAlreadyJoined] = useState(false);
   const [gateNudge, setGateNudge] = useState(false);
+  const handleListJoined = (alreadyJoined = false) => {
+    setHeroJoined(true);
+    if (alreadyJoined) setHeroAlreadyJoined(true);
+  };
   useEffect(() => {
     try {
       if (window.localStorage.getItem("tt-launch-joined") === "1") setHeroJoined(true);
@@ -214,7 +219,9 @@ export function VisualLanding({
           {heroJoined ? (
             <>
               <p className="mt-6 inline-flex rounded-full bg-white/15 px-3 py-1.5 text-xs font-black text-tt-sun">
-                🎉 You&apos;re on the launch list — the demo is yours
+                {heroAlreadyJoined
+                  ? "🎉 You’re already on the launch list — the demo is yours"
+                  : "🎉 You’re on the launch list — the demo is yours"}
               </p>
               <div className="mt-3 flex flex-wrap items-center gap-3">
                 <button
@@ -239,7 +246,7 @@ export function VisualLanding({
               <p className="text-sm font-black uppercase tracking-widest text-tt-sun">
                 Get on the email list for updates — then watch the demo
               </p>
-              <ClaimSpotForm onJoined={() => setHeroJoined(true)} />
+              <ClaimSpotForm onJoined={handleListJoined} onShowDemo={onTryDemo} />
               {gateNudge && (
                 <p className="mt-2 text-sm font-bold text-tt-sun">
                   👆 Pop your email in above — the demo unlocks right after.
@@ -401,7 +408,7 @@ export function VisualLanding({
       {/* CLAIM YOUR SPOT — founding families launch list (same capture as production) */}
       <section className="rounded-3xl border border-tt-line bg-tt-sand p-5 text-center sm:p-6">
         <h2 className="text-xl font-black">Claim your spot 🚀</h2>
-        <ClaimSpotForm />
+        <ClaimSpotForm onJoined={handleListJoined} onShowDemo={onTryDemo} />
       </section>
       <p className="pb-2 text-center text-xs font-semibold text-tt-ink-faint">
         Working with schools or shelters? <a href="/for-schools" className="underline">Schools</a> · <a href="/for-shelters" className="underline">Shelters</a> · <a href="/for-ptos" className="underline">PTOs</a>
@@ -410,7 +417,13 @@ export function VisualLanding({
   );
 }
 
-function ClaimSpotForm({ onJoined }: { onJoined?: () => void } = {}) {
+function ClaimSpotForm({
+  onJoined,
+  onShowDemo,
+}: {
+  onJoined?: (alreadyJoined: boolean) => void;
+  onShowDemo?: () => void;
+} = {}) {
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [message, setMessage] = useState("");
@@ -428,11 +441,16 @@ function ClaimSpotForm({ onJoined }: { onJoined?: () => void } = {}) {
     try {
       const result = await submitLaunchInterest({ email, source: "visual-landing" });
       if (result.mode === "cloud") {
+        const alreadyJoined = result.alreadyJoined === true;
         setJoined(true);
-        onJoined?.();
+        onJoined?.(alreadyJoined);
         try { window.localStorage.setItem("tt-launch-joined", "1"); } catch { /* private mode */ }
         setStatus("saved");
-        setMessage("🎉 You're on the launch list! Watch your inbox for tail wags.");
+        setMessage(
+          alreadyJoined
+            ? "🎉 You’re already on the launch list — the demo is open for you."
+            : "🎉 You're on the launch list! Watch your inbox for tail wags.",
+        );
         setEmail("");
       } else {
         // Not connected to the signup service — say so honestly instead of
@@ -448,9 +466,16 @@ function ClaimSpotForm({ onJoined }: { onJoined?: () => void } = {}) {
 
   if (joined && status !== "error") {
     return (
-      <p className="mx-auto mt-4 max-w-md rounded-2xl bg-white px-4 py-3 text-sm font-bold text-tt-pine ring-1 ring-tt-line">
-        🎉 You're on the launch list! Watch your inbox for tail wags.
-      </p>
+      <div className="mx-auto mt-4 max-w-md rounded-2xl bg-white px-4 py-3 ring-1 ring-tt-line">
+        <p className="text-sm font-bold text-tt-pine">
+          {message || "🎉 You're on the launch list! Watch your inbox for tail wags."}
+        </p>
+        {onShowDemo ? (
+          <button type="button" onClick={onShowDemo} className="tt-btn tt-btn-sun mt-3 min-h-11 px-4 py-2 text-sm">
+            Try the demo →
+          </button>
+        ) : null}
+      </div>
     );
   }
 

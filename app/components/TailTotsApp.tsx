@@ -3727,7 +3727,13 @@ function VisionLandingPanel({
         source: "vision-landing",
       });
       setLaunchInterestStatus("saved");
-      setLaunchInterestMessage(result.mode === "cloud" ? "You’re on the list! Check your inbox for tail wags soon. 🐾" : "Thanks — saved on this device. It will join the launch list once this site is fully connected.");
+      setLaunchInterestMessage(
+        result.mode === "cloud"
+          ? result.alreadyJoined
+            ? "You’re already on the launch list — the demo is open for you. 🐾"
+            : "You’re on the list! Check your inbox for tail wags soon. 🐾"
+          : "Thanks — saved on this device. It will join the launch list once this site is fully connected.",
+      );
       setLaunchInterest({ email: "" });
       // Only collapse into the "you're in" note when the signup actually reached
       // the launch list. In local mode the email stays queued on this device, so

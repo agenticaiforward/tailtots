@@ -321,9 +321,20 @@ async function handleLaunchSignup(request: Request, env: Env): Promise<Response>
       }),
     });
     if (!resp.ok) {
+      const upstream = await resp.text().catch(() => "");
+      const isDuplicate =
+        resp.status === 409 ||
+        upstream.includes('"code":"23505"') ||
+        upstream.toLowerCase().includes("duplicate key") ||
+        upstream.toLowerCase().includes("launch_interest_signups_email_source_idx");
+      if (isDuplicate) {
+        // A repeat signup is success, not an error: the visitor is already
+        // on the list and should be shown the demo (founder, 2026-10-15).
+        return jsonResponse({ ok: true, alreadyJoined: true }, 200);
+      }
       return jsonResponse({ ok: false, error: "The signup service refused the save." }, 502);
     }
-    return jsonResponse({ ok: true }, 201);
+    return jsonResponse({ ok: true, alreadyJoined: false }, 201);
   } catch {
     return jsonResponse({ ok: false, error: "Could not reach the signup service." }, 502);
   }
