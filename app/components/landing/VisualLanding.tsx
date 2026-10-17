@@ -208,7 +208,7 @@ export function VisualLanding({
             Character isn&apos;t taught. It&apos;s practiced.
           </h1>
           <p className="mt-4 text-sm font-extrabold text-tt-sun">
-            Ages 4–12 · ~10 minutes a day · mostly off-screen
+            Ages 4–12 · ~10 minutes a day for parents · kids practice mostly off-screen
           </p>
           {heroJoined ? (
             <>
