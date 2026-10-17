@@ -207,13 +207,7 @@ export function VisualLanding({
           <h1 className="max-w-lg text-4xl font-black leading-[1.05] sm:text-5xl">
             Character isn&apos;t taught. It&apos;s practiced.
           </h1>
-          <p className="mt-3 text-sm font-extrabold uppercase tracking-widest text-tt-sun">
-            Have a pet? Want one? Can't have one? There's a track for you.
-          </p>
-          <p className="mt-4 max-w-md text-base font-semibold leading-relaxed text-white/85">
-            Daily pet missions build real-world skills. One weekly report for you.
-          </p>
-          <p className="mt-2 text-sm font-extrabold text-tt-sun">
+          <p className="mt-4 text-sm font-extrabold text-tt-sun">
             Ages 4–12 · ~10 minutes a day · mostly off-screen
           </p>
           {heroJoined ? (
