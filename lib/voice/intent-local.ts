@@ -31,6 +31,9 @@ export type VoiceAction =
   | { type: "approve-mission"; query: string }
   | { type: "approve-mission-id"; id: string }
   | { type: "quiz-complete"; topic: string; correct: number; total: number }
+  | { type: "log-reflection"; title: string; detail: string }
+  | { type: "log-parent-checkin"; win: string; worry: string; practice: string }
+  | { type: "prefill-setup"; familyName: string; kidName: string; kidAge: number; petName: string; petKind: string }
   | { type: "click"; label: string }
   | { type: "unknown"; text: string };
 

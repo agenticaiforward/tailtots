@@ -54,7 +54,7 @@ export type Pet = {
 export type RealLifeEntry = {
   id: string;
   childId: string;
-  kind: "book" | "chore" | "kind-act" | "skill";
+  kind: "book" | "chore" | "kind-act" | "skill" | "reflection";
   /** Book title, chore name, or short label — the kid's own words. */
   title: string;
   /** Optional extra: author, what they did, who it helped. */
@@ -65,6 +65,21 @@ export type RealLifeEntry = {
   traits?: string[];
   /** A reflective question the AI asked about this entry (kid answers verbally/with parent). */
   wonderQuestion?: string;
+};
+
+/**
+ * ParentCheckIn — the parent's weekly voice interview (Oct 17, 2026):
+ * three spoken answers (a win, a watch-out, one practice focus), saved
+ * with the family state and shown back to the parent. Text only — the
+ * audio is never stored.
+ */
+export type ParentCheckIn = {
+  id: string;
+  /** Local YYYY-MM-DD of the check-in. */
+  date: string;
+  win: string;
+  worry: string;
+  practice: string;
 };
 
 export type Mission = {

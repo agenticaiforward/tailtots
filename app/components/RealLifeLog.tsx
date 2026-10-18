@@ -58,6 +58,7 @@ const KIND_META: Record<RealLifeEntry["kind"], { emoji: string; label: string }>
   chore: { emoji: "🧹", label: "Chore" },
   "kind-act": { emoji: "💛", label: "Kind act" },
   skill: { emoji: "⭐", label: "Practiced" },
+  reflection: { emoji: "💬", label: "Reflection" },
 };
 
 export default function RealLifeLog({

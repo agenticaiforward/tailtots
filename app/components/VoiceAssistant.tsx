@@ -37,6 +37,16 @@ import {
   LOCAL_FIRST_TYPES,
   type VoiceAction,
 } from "@/lib/voice/intent-local";
+import {
+  INTERVIEWS,
+  briefingInterview,
+  startInterview,
+  advanceInterview,
+  matchInterviewTrigger,
+  type InterviewContext,
+  type InterviewDef,
+  type InterviewSession,
+} from "@/lib/voice/interview";
 
 export { parseVoiceIntent };
 export type { VoiceAction };
@@ -258,6 +268,7 @@ export default function VoiceAssistant({
   onAnnouncementsRead,
   onQuizComplete,
   showcase,
+  kidName,
 }: {
   /** Fired when the voice layer decides on an action. May return a short
    *  spoken feedback string the guide should say instead of its default. */
@@ -291,6 +302,8 @@ export default function VoiceAssistant({
   onAnnouncementsRead?: () => void;
   /** Fired once when a quiz ends with at least one answered question. */
   onQuizComplete?: (result: { topic: string; correct: number; total: number }) => void;
+  /** Active child's name — interviews greet them by it. */
+  kidName?: string;
   /**
    * Showcase mode (landing + demo): the public voice. The guide SPEAKS
    * with the one TailTots voice (Stella, via /api/voice/speak) and —
@@ -340,6 +353,17 @@ export default function VoiceAssistant({
   pendingConfirmRef.current = pendingConfirm;
   /** Guards onQuizComplete to once per quiz session. */
   const quizReportedRef = useRef(false);
+  /** Active voice interview (reflection, briefing, check-in, setup,
+   *  demo) — one conversation at a time; starting one ends the quiz. */
+  const [interview, setInterview] = useState<{
+    def: InterviewDef;
+    session: InterviewSession;
+    ctx: InterviewContext;
+  } | null>(null);
+  const interviewRef = useRef<typeof interview>(null);
+  interviewRef.current = interview;
+  /** Briefing requested with several missions open — awaiting the pick. */
+  const briefingPickRef = useRef(false);
   const propsRef = useRef({ todayMissions, pendingApprovals, pointsBalance, announcements });
   propsRef.current = { todayMissions, pendingApprovals, pointsBalance, announcements };
 
@@ -589,6 +613,9 @@ export default function VoiceAssistant({
   /* ---------- quiz ---------- */
 
   const startQuiz = useCallback(async (topic: string, easy = false) => {
+    // One conversation at a time: a quiz supersedes any interview.
+    setInterview(null);
+    briefingPickRef.current = false;
     setThinking(true);
     quizReportedRef.current = false;
     try {
@@ -675,6 +702,131 @@ export default function VoiceAssistant({
       say("Hmm, I missed that. Say your answer again?", { resume: true });
     }
   }, [say, onQuizComplete]);
+
+  /* ---------- interviews (guided voice conversations) ---------- */
+
+  /** Side effects when an interview finishes (or stops with a partial
+   *  save): the engine stays pure; saving happens here, once. */
+  const finishInterviewSideEffects = useCallback((defId: string, saveAnswers?: Record<string, string>) => {
+    if (!saveAnswers) return;
+    if (defId === "reflection") {
+      const parts = [
+        saveAnswers.proud ? `Proudest: ${saveAnswers.proud}.` : "",
+        saveAnswers.hard ? `A little hard: ${saveAnswers.hard}.` : "",
+        saveAnswers.tomorrow ? `Tomorrow: ${saveAnswers.tomorrow}.` : "",
+      ].filter(Boolean).join(" ");
+      if (parts) onAction({ type: "log-reflection", title: "Talked about my day", detail: parts });
+    } else if (defId === "parent-weekly") {
+      onAction({
+        type: "log-parent-checkin",
+        win: saveAnswers.win ?? "",
+        worry: saveAnswers.worry ?? "",
+        practice: saveAnswers.practice ?? "",
+      });
+    } else if (defId === "setup") {
+      onAction({
+        type: "prefill-setup",
+        familyName: saveAnswers.familyName ?? "",
+        kidName: saveAnswers.kidName ?? "",
+        kidAge: Number(saveAnswers.kidAge) || 6,
+        petName: saveAnswers.petName ?? "",
+        petKind: saveAnswers.petKind ?? "",
+      });
+    }
+  }, [onAction]);
+
+  const runInterviewTurn = useCallback((turn: ReturnType<typeof advanceInterview>, def: InterviewDef, ctx: InterviewContext) => {
+    if (turn.done) {
+      finishInterviewSideEffects(def.id, turn.saveAnswers);
+      setInterview(null);
+      if (def.id === "demo" && turn.saveAnswers?.seeMissions === "yes") {
+        const titles = (propsRef.current.todayMissions ?? []).map((m) => m.title);
+        say(`${turn.speak}${titles.length ? ` The sample missions are: ${titles.join(", ")}.` : ""}`);
+      } else {
+        say(turn.speak);
+      }
+      return;
+    }
+    setInterview({ def, session: turn.session, ctx });
+    say(turn.speak, { resume: true });
+  }, [finishInterviewSideEffects, say]);
+
+  const beginInterview = useCallback((def: InterviewDef, ctx: InterviewContext) => {
+    // One conversation at a time: an interview supersedes any quiz.
+    setQuiz(null);
+    setPendingConfirm(null);
+    briefingPickRef.current = false;
+    runInterviewTurn(startInterview(def, ctx), def, ctx);
+  }, [runInterviewTurn]);
+
+  const startBriefing = useCallback((query?: string) => {
+    const missions = propsRef.current.todayMissions ?? [];
+    if (missions.length === 0) {
+      say("There are no open missions to brief right now.");
+      return;
+    }
+    const q = (query ?? "").trim().toLowerCase();
+    const matched = q
+      ? missions.find((m) => m.title.toLowerCase().includes(q) || q.includes(m.title.toLowerCase().slice(0, 20)))
+      : undefined;
+    const target = matched ?? (missions.length === 1 ? missions[0] : undefined);
+    if (target) {
+      beginInterview(briefingInterview(target.title), { kidName, missions, missionTitle: target.title });
+      return;
+    }
+    briefingPickRef.current = true;
+    say(
+      `Which mission should we brief? ${missions.map((m, i) => `${i + 1}. ${m.title}`).join(". ")}. Say the name or the number.`,
+      { resume: true },
+    );
+  }, [beginInterview, kidName, say]);
+
+  const resolveBriefingPick = useCallback((text: string): boolean => {
+    if (!briefingPickRef.current) return false;
+    const missions = propsRef.current.todayMissions ?? [];
+    const t = text.toLowerCase();
+    const num = t.match(/\b(\d)\b/);
+    let target = num ? missions[Number(num[1]) - 1] : undefined;
+    if (!target) {
+      target = missions.find((m) => t.includes(m.title.toLowerCase()) || m.title.toLowerCase().includes(t));
+    }
+    if (!target) {
+      say("I didn't catch which one — say the name or the number.", { resume: true });
+      return true;
+    }
+    briefingPickRef.current = false;
+    beginInterview(briefingInterview(target.title), { kidName, missions, missionTitle: target.title });
+    return true;
+  }, [beginInterview, kidName, say]);
+
+  /** If an interview is active, this utterance is its next answer. */
+  const advanceActiveInterview = useCallback((text: string): boolean => {
+    const active = interviewRef.current;
+    if (!active) return false;
+    setTranscript(text);
+    runInterviewTurn(
+      advanceInterview(active.def, active.session, text, active.ctx),
+      active.def,
+      active.ctx,
+    );
+    return true;
+  }, [runInterviewTurn]);
+
+  /** Detect "ask me about my day" / "brief me" / "set up by voice" etc. */
+  const startInterviewByTrigger = useCallback((text: string): boolean => {
+    const trig = matchInterviewTrigger(text, {
+      role: role === "parent" ? "parent" : "kid",
+      showcase: !!showcase,
+    });
+    if (!trig) return false;
+    if (trig.id === "demo") beginInterview(INTERVIEWS.demo, {});
+    else if (trig.id === "reflection") beginInterview(INTERVIEWS.reflection, { kidName, missions: propsRef.current.todayMissions });
+    else if (trig.id === "parent-weekly") beginInterview(INTERVIEWS["parent-weekly"], {});
+    else if (trig.id === "setup") beginInterview(INTERVIEWS.setup, {});
+    else if (trig.id === "briefing") startBriefing(trig.missionQuery);
+    else return false;
+    return true;
+  }, [beginInterview, kidName, role, showcase, startBriefing]);
 
   /* ---------- planned (AI) actions ---------- */
 
@@ -796,7 +948,20 @@ export default function VoiceAssistant({
     if (pendingConfirmRef.current && resolveConfirm(text)) {
       return;
     }
+    // An interview is running: every utterance is its next answer.
+    if (advanceActiveInterview(text)) {
+      return;
+    }
     setTranscript(text);
+    // Briefing asked with several missions open — this is the pick.
+    if (resolveBriefingPick(text)) {
+      return;
+    }
+    // Interview starts ("ask me about my day", "brief me", "set up by
+    // voice") beat the planner — they're conversations, not commands.
+    if (startInterviewByTrigger(text)) {
+      return;
+    }
 
     // Deterministic kid-loop intents run locally even when online — same
     // confirmations, same wording, no model round-trip, no guessing.
@@ -864,7 +1029,7 @@ export default function VoiceAssistant({
       setThinking(false);
       handleLocalFallback(text);
     }
-  }, [role, tab, tabLabel, pageSummary, say, executeAction, handleLocalFallback, handleLocalAction, answerQuiz, resolveConfirm]);
+  }, [role, tab, tabLabel, pageSummary, say, executeAction, handleLocalFallback, handleLocalAction, answerQuiz, resolveConfirm, advanceActiveInterview, resolveBriefingPick, startInterviewByTrigger]);
   handleResultRef.current = (text: string) => {
     // Fillers ("um", "uh") are stripped ONCE here, before display,
     // matching, confirms ("um yes" must still mean yes), and any
@@ -987,7 +1152,12 @@ export default function VoiceAssistant({
    */
   const handleDemoResult = useCallback((text: string) => {
     if (pendingConfirmRef.current && resolveConfirm(text)) return;
+    // An interview is running: every utterance is its next answer.
+    if (advanceActiveInterview(text)) return;
     setTranscript(text);
+    // "Interview me" starts the local demo interview — the demo's own
+    // answer to "ask me questions" (checked before the quiz redirect).
+    if (startInterviewByTrigger(text)) return;
     if (/\b(quiz|test)\s+me\b|\bask\s+me\s+(some\s+)?questions\b/i.test(text)) {
       say("Quizzes live inside a real family account, set up by a grown-up. Here in the demo, try asking for your missions or your points!");
       return;
@@ -1008,7 +1178,7 @@ export default function VoiceAssistant({
       return;
     }
     say(`I heard "${text}". I don't know that one yet — but ask me about missions, points, or the money jars, and I'll show you.`);
-  }, [resolveConfirm, say, handleLocalAction]);
+  }, [resolveConfirm, say, handleLocalAction, advanceActiveInterview, startInterviewByTrigger]);
   handleDemoResultRef.current = handleDemoResult;
 
   /**
@@ -1093,7 +1263,7 @@ export default function VoiceAssistant({
               {demoNoticeOpen ? "🎤 Talk to the guide" : listening ? "🎤 Listening…" : "✨ Voice"}
             </p>
             <button
-              onClick={() => { setTranscript(""); setResponse(""); setQuiz(null); setPendingConfirm(null); setDemoTalk(false); setDemoNoticeOpen(false); try { recRef.current?.stop(); } catch {} setListening(false); stopShowcaseAudio(); try { window.speechSynthesis.cancel(); } catch {} setSpeaking(false); }}
+              onClick={() => { setTranscript(""); setResponse(""); setQuiz(null); setInterview(null); briefingPickRef.current = false; setPendingConfirm(null); setDemoTalk(false); setDemoNoticeOpen(false); try { recRef.current?.stop(); } catch {} setListening(false); stopShowcaseAudio(); try { window.speechSynthesis.cancel(); } catch {} setSpeaking(false); }}
               className="rounded-full bg-tt-cream px-2 py-0.5 text-xs font-bold text-tt-ink/60"
             >
               ✕
@@ -1201,7 +1371,7 @@ export default function VoiceAssistant({
               )}
             </div>
           )}
-          {!demoNoticeOpen && !quiz?.current && (
+          {!demoNoticeOpen && !quiz?.current && !interview && (
             <div className="mt-2 flex flex-wrap gap-1.5">
               <button
                 onClick={() => handleLocalAction({ type: "read-page" }, "")}
@@ -1220,6 +1390,63 @@ export default function VoiceAssistant({
                 className="tt-btn-press rounded-full bg-tt-cream px-2.5 py-1.5 text-xs font-black text-tt-ink ring-1 ring-tt-line"
               >
                 ⭐ My points
+              </button>
+              {showcase && (
+                <button
+                  onClick={() => beginInterview(INTERVIEWS.demo, {})}
+                  className="tt-btn-press rounded-full bg-violet-100 px-2.5 py-1.5 text-xs font-black text-violet-900 ring-1 ring-violet-200"
+                >
+                  🗣️ Try an interview
+                </button>
+              )}
+              {!showcase && role !== "parent" && (
+                <>
+                  <button
+                    onClick={() => beginInterview(INTERVIEWS.reflection, { kidName, missions: todayMissions })}
+                    className="tt-btn-press rounded-full bg-violet-100 px-2.5 py-1.5 text-xs font-black text-violet-900 ring-1 ring-violet-200"
+                  >
+                    💬 Talk about my day
+                  </button>
+                  <button
+                    onClick={() => startBriefing()}
+                    className="tt-btn-press rounded-full bg-violet-100 px-2.5 py-1.5 text-xs font-black text-violet-900 ring-1 ring-violet-200"
+                  >
+                    🧭 Mission briefing
+                  </button>
+                </>
+              )}
+              {!showcase && role === "parent" && (
+                <button
+                  onClick={() => beginInterview(INTERVIEWS["parent-weekly"], {})}
+                  className="tt-btn-press rounded-full bg-violet-100 px-2.5 py-1.5 text-xs font-black text-violet-900 ring-1 ring-violet-200"
+                >
+                  🗣️ Weekly check-in
+                </button>
+              )}
+              {!showcase && role === "parent" && tab === "setup" && (
+                <button
+                  onClick={() => beginInterview(INTERVIEWS.setup, {})}
+                  className="tt-btn-press rounded-full bg-violet-100 px-2.5 py-1.5 text-xs font-black text-violet-900 ring-1 ring-violet-200"
+                >
+                  🎙️ Set up by voice
+                </button>
+              )}
+            </div>
+          )}
+          {interview && (
+            <div className="mt-2 rounded-2xl bg-violet-50 p-3 ring-1 ring-violet-200">
+              <p className="text-xs font-black text-violet-900">
+                🗣️ {interview.def.title} — just say your answer out loud. Say “skip” or “stop” anytime.
+              </p>
+              <button
+                onClick={() => runInterviewTurn(
+                  advanceInterview(interview.def, interview.session, "stop", interview.ctx),
+                  interview.def,
+                  interview.ctx,
+                )}
+                className="tt-btn-press mt-2 rounded-full bg-white px-2.5 py-1.5 text-xs font-black text-violet-900 ring-1 ring-violet-200"
+              >
+                ⏹ Stop interview
               </button>
             </div>
           )}

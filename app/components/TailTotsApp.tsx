@@ -104,6 +104,7 @@ import type {
   LevelKey,
   MemoryMoment,
   Mission,
+  ParentCheckIn,
   Pet,
   RealLifeEntry,
   Role,
@@ -598,6 +599,7 @@ type SavedFamilyState = {
   neighborhoodJobs?: NeighborhoodJob[];
   moments?: MemoryMoment[];
   realLifeEntries?: RealLifeEntry[];
+  parentCheckIns?: ParentCheckIn[];
   studiedAnimals?: string[];
   socialPracticeDone?: Record<string, string[]>;
   certificates?: Certificate[];
@@ -1031,6 +1033,17 @@ export function TailTotsApp() {
   const [scheduleItems] = useState(starterScheduleItems);
   const [moments, setMoments] = useState<MemoryMoment[]>(starterMoments);
   const [realLifeEntries, setRealLifeEntries] = useState<RealLifeEntry[]>([]);
+  /** Parent weekly voice-interview check-ins (Oct 17, 2026). */
+  const [parentCheckIns, setParentCheckIns] = useState<ParentCheckIn[]>([]);
+  /** Spoken setup answers awaiting the parent's on-screen review —
+   *  nothing from the setup interview applies until Apply is tapped. */
+  const [voiceSetupDraft, setVoiceSetupDraft] = useState<{
+    familyName: string;
+    kidName: string;
+    kidAge: number;
+    petName: string;
+    petKind: string;
+  } | null>(null);
   const [studiedAnimals, setStudiedAnimals] = useState<string[]>([]);
   const [socialPracticeDone, setSocialPracticeDone] = useState<Record<string, string[]>>({});
   const [certificates, setCertificates] = useState<Certificate[]>([]);
@@ -1289,6 +1302,7 @@ export function TailTotsApp() {
         setNeighborhoodJobs(savedState.neighborhoodJobs ? savedState.neighborhoodJobs.map(normalizeNeighborhoodJob) : starterNeighborhoodJobs);
         setMoments(savedState.moments ?? starterMoments);
         setRealLifeEntries(savedState.realLifeEntries ?? []);
+        setParentCheckIns(savedState.parentCheckIns ?? []);
         setStudiedAnimals(savedState.studiedAnimals ?? []);
         setSocialPracticeDone(savedState.socialPracticeDone ?? {});
         setCertificates(savedState.certificates ?? []);
@@ -1444,7 +1458,7 @@ export function TailTotsApp() {
     // never persisted, so the sample family stays pristine and can never
     // overwrite a real family's saved state.
     if (appMode === "demo") return;
-    saveFamilyState({ familyName, parentPasscode, parents, children, pets, missions, transactions, goals, badges, neighborhoodJobs, moments, realLifeEntries, studiedAnimals, socialPracticeDone, familyPhotoUrl, activeChildId, certificates, pointsPerDollar, dailyChecksEnabled, maxDailyChecks, familyZip, familyNeighborhood, aiBuddyCategories, aiBuddyDailyRotate, buddyParentQuestions, socialPracticeOverride, consents, parentIdentityVerification: parentIdentityVerification ?? undefined });
+    saveFamilyState({ familyName, parentPasscode, parents, children, pets, missions, transactions, goals, badges, neighborhoodJobs, moments, realLifeEntries, parentCheckIns, studiedAnimals, socialPracticeDone, familyPhotoUrl, activeChildId, certificates, pointsPerDollar, dailyChecksEnabled, maxDailyChecks, familyZip, familyNeighborhood, aiBuddyCategories, aiBuddyDailyRotate, buddyParentQuestions, socialPracticeOverride, consents, parentIdentityVerification: parentIdentityVerification ?? undefined });
     setLastSavedAt(new Date());
   }, [activeChildId, aiBuddyCategories, aiBuddyDailyRotate, badges, buddyParentQuestions, certificates, children, consents, dailyChecksEnabled, familyName, familyPhotoUrl, familyZip, familyNeighborhood, goals, hasLoadedSavedState, maxDailyChecks, missions, moments, neighborhoodJobs, parentIdentityVerification, parentPasscode, parents, pets, pointsPerDollar, socialPracticeOverride, studiedAnimals, socialPracticeDone, transactions, appMode]);
 
@@ -1928,6 +1942,51 @@ export function TailTotsApp() {
       },
     ]);
     setNewPet({ name: "", species: "", food: "" });
+  }
+
+  /**
+   * Apply the voice-setup interview draft (parent tapped Apply on the
+   * review card). Mirrors addChild/addPet construction, including the
+   * data-collection consent grant — kid and pet from the interview
+   * REPLACE the ones in Setup, exactly as the review card states.
+   */
+  function applyVoiceSetupDraft() {
+    const draft = voiceSetupDraft;
+    if (!draft) return;
+    if (draft.familyName.trim()) setFamilyName(draft.familyName.trim());
+    if (draft.kidName.trim()) {
+      const child: Child = {
+        id: `child-${Date.now()}`,
+        name: draft.kidName.trim(),
+        age: Math.max(3, Math.min(18, Number(draft.kidAge) || 8)),
+        secretCode: "",
+        points: 0,
+        coins: 0,
+        level: "easy",
+        streakDays: 0,
+      };
+      setChildren([child]);
+      setActiveChildId(child.id);
+      setConsents((c) =>
+        grantConsent(c, "data-collection", {
+          method: cloudAccountEmail ? "parent-account" : "parent-passcode",
+        }),
+      );
+    }
+    if (draft.petName.trim()) {
+      setPets([
+        {
+          id: `pet-${Date.now()}`,
+          name: draft.petName.trim(),
+          species: draft.petKind.trim() || "pet",
+          favoriteFood: "Add favorite food",
+          careNotes: "Add care notes in the passport.",
+          vet: "Add vet",
+          medicine: "Add medicine",
+        },
+      ]);
+    }
+    setVoiceSetupDraft(null);
   }
 
   function updateParent(parentId: string, updates: Partial<ParentProfile>) {
@@ -2663,6 +2722,31 @@ export function TailTotsApp() {
       case "log-skill":
         addRealLifeEntry("skill", action.title);
         break;
+      case "log-reflection":
+        // Kid reflection interview answers → growth log (parent-visible).
+        addRealLifeEntry("reflection", action.title, action.detail);
+        break;
+      case "log-parent-checkin": {
+        const now = new Date();
+        const date = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+        setParentCheckIns((items) => [
+          { id: `checkin-${Date.now()}`, date, win: action.win, worry: action.worry, practice: action.practice },
+          ...items,
+        ]);
+        break;
+      }
+      case "prefill-setup":
+        // Setup interview answers land as a REVIEW draft on the Setup
+        // tab — nothing applies until the parent taps Apply there.
+        setVoiceSetupDraft({
+          familyName: action.familyName,
+          kidName: action.kidName,
+          kidAge: action.kidAge,
+          petName: action.petName,
+          petKind: action.petKind,
+        });
+        setActiveTab("setup");
+        break;
       case "complete-mission-id": {
         const mission = missions.find((m) => m.id === action.id);
         if (!mission) return "I couldn't find that mission anymore.";
@@ -3149,6 +3233,7 @@ export function TailTotsApp() {
               />
               <AskKidPromptCard childProfiles={children} parentSignedIn={Boolean(cloudAccountEmail)} />
               <CopilotPanel childProfiles={children} cloudFamilyId={cloudFamilyId} />
+              <ParentCheckInsCard checkIns={parentCheckIns} />
               <BlueprintSection childProfiles={children} cloudFamilyId={cloudFamilyId} />
               <ApprovalsPanel
                 missions={missions}
@@ -3187,6 +3272,30 @@ export function TailTotsApp() {
                 )}
               </section>
             )}
+          {visibleActiveTab === "setup" && appMode !== "demo" && voiceSetupDraft && (
+            <section className="rounded-3xl border-2 border-violet-300 bg-violet-50 p-5">
+              <h2 className="text-lg font-black text-tt-ink">🎙️ Stella heard this — review before it saves</h2>
+              <ul className="mt-2 space-y-1 text-sm font-semibold leading-6 text-tt-ink-soft">
+                {voiceSetupDraft.familyName && <li>Family: <strong className="text-tt-ink">{voiceSetupDraft.familyName}</strong></li>}
+                {voiceSetupDraft.kidName && <li>Child: <strong className="text-tt-ink">{voiceSetupDraft.kidName}, age {voiceSetupDraft.kidAge}</strong></li>}
+                {voiceSetupDraft.petName
+                  ? <li>Pet: <strong className="text-tt-ink">{voiceSetupDraft.petName} the {voiceSetupDraft.petKind || "pet"}</strong></li>
+                  : <li>Pet: <strong className="text-tt-ink">none yet</strong> (your current pets stay as they are)</li>}
+              </ul>
+              <p className="mt-2 text-xs font-semibold leading-5 text-tt-ink-soft">
+                Applying replaces the child (and pet, if one was named) currently in Setup with what Stella heard.
+                Misheard something? Discard and just type it below instead.
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button onClick={applyVoiceSetupDraft} className="tt-btn-press min-h-12 rounded-xl bg-tt-ink px-5 py-3 text-sm font-black text-white">
+                  ✓ Looks right — apply
+                </button>
+                <button onClick={() => setVoiceSetupDraft(null)} className="tt-btn-press min-h-12 rounded-xl bg-white px-5 py-3 text-sm font-black text-tt-ink ring-1 ring-tt-line">
+                  Discard
+                </button>
+              </div>
+            </section>
+          )}
           {visibleActiveTab === "setup" && (
             appMode === "demo" ? (
               <div className="pointer-events-none select-none" aria-hidden="true">
@@ -3589,6 +3698,7 @@ export function TailTotsApp() {
         tab={visibleActiveTab}
         tabLabel={tabItems.find((t) => t.id === visibleActiveTab)?.label ?? visibleActiveTab}
         kidAge={role === "child" ? activeChild?.age : undefined}
+        kidName={activeChild?.name}
         voiceConsented={hasConsent(consents, "voice")}
         onRequestVoiceConsent={() => setVoiceConsentOpen(true)}
         todayMissions={missions
@@ -7930,6 +8040,33 @@ function choreSkillToCategory(skill: PetChoreSkill): Mission["category"] {
     time: "chore",
   };
   return map[skill];
+}
+
+/**
+ * Parent's weekly voice-interview check-ins (Oct 17, 2026) — the three
+ * spoken answers from the "Weekly check-in" interview, newest first.
+ * Text only; the audio was never stored.
+ */
+function ParentCheckInsCard(props: { checkIns: ParentCheckIn[] }) {
+  if (props.checkIns.length === 0) return null;
+  return (
+    <section className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-tt-line">
+      <h3 className="text-base font-black text-tt-ink">🗣️ Your weekly check-ins</h3>
+      <p className="mt-0.5 text-xs font-semibold text-tt-ink-soft">
+        From your voice check-ins with Stella — tap the mic and say “weekly check-in” anytime.
+      </p>
+      <ul className="mt-3 space-y-3">
+        {props.checkIns.slice(0, 4).map((c) => (
+          <li key={c.id} className="rounded-2xl bg-tt-cream p-3 text-sm font-semibold leading-6 text-tt-ink-soft">
+            <p className="text-xs font-black uppercase tracking-wide text-tt-ink/50">{c.date}</p>
+            {c.win && <p>🌟 Win: <span className="text-tt-ink">{c.win}</span></p>}
+            {c.worry && <p>👀 Watching: <span className="text-tt-ink">{c.worry}</span></p>}
+            {c.practice && <p>🎯 Next week: <span className="text-tt-ink">{c.practice}</span></p>}
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
 }
 
 /**
