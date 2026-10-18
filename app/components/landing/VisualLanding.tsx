@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { submitLaunchInterest } from "@/lib/supabase";
 
@@ -130,6 +130,143 @@ const HOW_IT_WORKS = [
     ),
   },
 ];
+
+/**
+ * The bond is ancient — REAL artifacts, REAL findings (founder, Oct 18,
+ * 2026: replace the generated family photos with the actual evidence).
+ * Every image is a photograph of the real artifact, openly licensed
+ * (credits under the slideshow). Captions stick to what archaeologists
+ * and researchers actually found — no invented history.
+ */
+const HISTORY_SLIDES = [
+  {
+    era: "≈ 36,000 years ago",
+    place: "Chauvet Cave · France",
+    img: "/landing/history-chauvet.jpg",
+    alt: "Lions painted on the wall of Chauvet Cave, France, about 36,000 years ago",
+    headline: "Worth painting forever",
+    text: "By torchlight, someone painted lions, horses and rhinos deep inside a cave. The oldest art humans ever made is full of animals — we have lived beside them, and looked up to them, from the very beginning.",
+  },
+  {
+    era: "≈ 14,000 years ago",
+    place: "Bonn-Oberkassel · Germany",
+    img: "/landing/history-oberkassel.jpg",
+    alt: "Skeleton of the Bonn-Oberkassel dog, buried with two humans about 14,000 years ago",
+    headline: "A sick puppy, nursed back to health",
+    text: "Archaeologists found this dog buried beside a man and a woman — the oldest dog burial known. Its teeth show the puppy survived weeks of a deadly illness it could not have beaten alone. Someone nursed it. Then the family buried it with them.",
+  },
+  {
+    era: "≈ 3,400 years ago",
+    place: "Tomb of Nakht · Egypt",
+    img: "/landing/history-egypt.jpg",
+    alt: "Wall painting from the Tomb of Nakht showing oxen plowing beside farmers, about 3,400 years ago",
+    headline: "Partners in the everyday",
+    text: "A scribe painted his whole world to take into eternity — family, harvests, and oxen plowing alongside the farmers. Animals were never separate from family life. They were woven through it, every single day.",
+  },
+  {
+    era: "≈ 1,950 years ago",
+    place: "Pompeii · Italy",
+    img: "/landing/history-pompeii.jpg",
+    alt: "Cave Canem mosaic of a guard dog at the entrance of a Pompeii home, about 1,950 years old",
+    headline: "The dog at the door",
+    text: "At a family's front entrance in Pompeii, a mosaic guard dog and the words CAVE CANEM — beware of the dog. The dog protected the home, and the home honored the dog at its very threshold.",
+  },
+  {
+    era: "Today",
+    place: "The science",
+    img: "/landing/kid-dog.jpg",
+    alt: "A child with their dog today",
+    headline: "Your brain still answers theirs",
+    text: "When you and your dog look at each other, oxytocin — the bonding hormone — rises in both of you (Science, 2015). Petting an animal lowers cortisol, the stress hormone. And studies link growing up with a pet to lower anxiety in children.",
+  },
+  {
+    era: "Today",
+    place: "Your family",
+    img: "/landing/household-african-american-dog.jpg",
+    alt: "A family with their dog at home today (illustrative photo)",
+    headline: "The newest chapter is yours",
+    text: "Tens of thousands of years of kids growing up beside animals — learning patience, gentleness, responsibility, and how to care for a life smaller than their own. TailTots just gives that ancient practice a daily shape.",
+  },
+];
+
+function HistorySlideshow() {
+  const [index, setIndex] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const touchX = useRef<number | null>(null);
+  const count = HISTORY_SLIDES.length;
+
+  useEffect(() => {
+    if (paused) return;
+    const t = setInterval(() => setIndex((i) => (i + 1) % count), 6500);
+    return () => clearInterval(t);
+  }, [paused, count]);
+
+  const go = (dir: number) => {
+    setPaused(true);
+    setIndex((i) => (i + dir + count) % count);
+  };
+  const slide = HISTORY_SLIDES[index];
+
+  return (
+    <div>
+      <div
+        className="relative overflow-hidden rounded-2xl"
+        onMouseEnter={() => setPaused(true)}
+        onMouseLeave={() => setPaused(false)}
+        onTouchStart={(e) => { touchX.current = e.touches[0].clientX; }}
+        onTouchEnd={(e) => {
+          if (touchX.current === null) return;
+          const dx = e.changedTouches[0].clientX - touchX.current;
+          touchX.current = null;
+          if (Math.abs(dx) > 40) go(dx < 0 ? 1 : -1);
+        }}
+      >
+        <img
+          key={slide.img}
+          src={slide.img}
+          alt={slide.alt}
+          className="aspect-[16/10] w-full object-cover"
+          loading="lazy"
+        />
+        <span className="absolute left-3 top-3 rounded-full bg-black/60 px-3 py-1 text-[11px] font-black uppercase tracking-wide text-tt-sun backdrop-blur-sm">
+          {slide.era} · {slide.place}
+        </span>
+        <button
+          onClick={() => go(-1)}
+          aria-label="Previous story"
+          className="tt-btn-press absolute left-2 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/45 text-xl font-black text-white backdrop-blur-sm"
+        >
+          ‹
+        </button>
+        <button
+          onClick={() => go(1)}
+          aria-label="Next story"
+          className="tt-btn-press absolute right-2 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/45 text-xl font-black text-white backdrop-blur-sm"
+        >
+          ›
+        </button>
+      </div>
+      <div className="px-1 pt-4 text-left sm:px-2">
+        <h3 className="text-lg font-black leading-snug">{slide.headline}</h3>
+        <p className="mt-1 max-w-2xl text-sm font-semibold leading-6 text-white/70">{slide.text}</p>
+      </div>
+      <div className="mt-3 flex items-center justify-center gap-1.5">
+        {HISTORY_SLIDES.map((s, i) => (
+          <button
+            key={s.img}
+            onClick={() => { setPaused(true); setIndex(i); }}
+            aria-label={`Story ${i + 1}: ${s.headline}`}
+            className={`h-2 rounded-full transition-all ${i === index ? "w-6 bg-tt-sun" : "w-2 bg-white/30"}`}
+          />
+        ))}
+      </div>
+      <p className="mt-3 text-center text-[11px] font-semibold leading-4 text-white/35">
+        Real artifacts, photographed as found. Chauvet lions (public domain) · Oberkassel dog — Don Hitchcock, CC BY-SA 4.0 ·
+        Tomb of Nakht — The Met, CC0 · Cave Canem, Pompeii — Yair Haklai, CC BY-SA 4.0 · via Wikimedia Commons
+      </p>
+    </div>
+  );
+}
 
 export function VisualLanding({
   onTryDemo,
@@ -372,22 +509,15 @@ export function VisualLanding({
 
       </section>
 
-      {/* FAMILIES — illustrative lifestyle photography */}
+      {/* THE ANCIENT BOND — real artifacts, real findings (replaces the
+          generated family-photo gallery, founder Oct 18, 2026) */}
       <section className="overflow-hidden rounded-3xl bg-tt-night p-5 text-white sm:p-6">
-        <h2 className="text-center text-xl font-black">Made for families like yours</h2>
-        <p className="mt-1 text-center text-xs font-semibold text-white/50">Illustrative photos</p>
-        <div className="mt-4 flex flex-wrap justify-center gap-3">
-          {[
-            ["African American family with their dog", "/landing/household-african-american-dog.jpg"],
-            ["South Asian girl with her cat", "/landing/household-south-asian-girl-cat-bedroom.jpg"],
-            ["East Asian siblings with their rabbit", "/landing/household-east-asian-siblings-rabbit-garden.jpg"],
-            ["Latina girl with her guinea pig", "/landing/household-latina-girl-guineapig-livingroom.jpg"],
-            ["Caucasian siblings with their cat", "/landing/household-caucasian-siblings-cat-livingroom.jpg"],
-          ].map(([alt, src]) => (
-            <div key={src} className="w-[calc(50%-6px)] overflow-hidden rounded-2xl sm:w-[calc(20%-10px)]">
-              <img src={src} alt={`Family with pet — illustrative photo: ${alt}`} className="aspect-square w-full object-cover" loading="lazy" />
-            </div>
-          ))}
+        <h2 className="text-center text-xl font-black">Not a trend. A 36,000-year-old story.</h2>
+        <p className="mt-1 text-center text-xs font-semibold text-white/50">
+          Real artifacts. Real science. The human–animal bond is the oldest classroom there is.
+        </p>
+        <div className="mt-4">
+          <HistorySlideshow />
         </div>
         <button
           onClick={() => gateDemo(onTryDemo)}
