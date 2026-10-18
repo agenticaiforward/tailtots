@@ -523,7 +523,7 @@ export function VisualLanding({
           onClick={() => gateDemo(onTryDemo)}
           className="tt-btn tt-btn-sun mx-auto mt-5"
         >
-          Join them — try free
+          Start your family's chapter — free
         </button>
         <p className="mt-6 text-center text-sm font-bold text-white/60">
           Where animals raise good humans.
